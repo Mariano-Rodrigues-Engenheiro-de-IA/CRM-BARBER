@@ -1,6 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({
@@ -10,13 +8,13 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Organize seus clientes assinantes, crie campanhas de cobrança e fidelização e dispare mensagens diretamente pelo WhatsApp Web.",
+          "Extensão de Chrome que transforma seu WhatsApp Web em um CRM completo pra gerenciar clientes assinantes, campanhas e disparos — sem trocar de ferramenta.",
       },
       { property: "og:title", content: "CRM de Assinaturas para Barbearias" },
       {
         property: "og:description",
         content:
-          "Organize seus clientes assinantes, crie campanhas de cobrança e fidelização e dispare mensagens diretamente pelo WhatsApp Web.",
+          "Extensão de Chrome que transforma seu WhatsApp Web em um CRM completo pra gerenciar clientes assinantes e campanhas.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -26,43 +24,25 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
-  const navigate = useNavigate();
-  const [checked, setChecked] = useState(false);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/app", replace: true });
-      else setChecked(true);
-    });
-  }, [navigate]);
-
-  if (!checked) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
-        Carregando…
-      </div>
-    );
-  }
-
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 py-16 text-center">
       <div className="max-w-2xl space-y-6">
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-          CRM de assinaturas para barbearias
+          O CRM que vive dentro do seu WhatsApp Web
         </h1>
         <p className="text-lg text-muted-foreground">
-          Organize seus clientes assinantes, crie campanhas de cobrança, reativação e
-          fidelização, e dispare mensagens direto no seu WhatsApp Web — sem servidor de
-          disparo, sem instância paga rodando 24h.
+          Instale a extensão, abra o WhatsApp Web e pronto — cadastre clientes assinantes,
+          crie campanhas de cobrança e reativação, e dispare mensagens direto da sua
+          própria sessão. Sem trocar de aba, sem servidor rodando 24h.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Button asChild size="lg">
-            <Link to="/auth">Entrar</Link>
-          </Button>
-          <Button asChild size="lg" variant="outline">
-            <Link to="/auth">Criar conta</Link>
+            <Link to="/ativar">Já tenho um código de ativação</Link>
           </Button>
         </div>
+        <p className="pt-8 text-xs text-muted-foreground">
+          Página de vendas e checkout entram aqui em breve.
+        </p>
       </div>
     </div>
   );

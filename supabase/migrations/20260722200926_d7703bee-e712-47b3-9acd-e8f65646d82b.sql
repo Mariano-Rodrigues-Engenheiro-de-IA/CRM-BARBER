@@ -1,0 +1,1 @@
+ALTER TABLE public.extension_tokens ALTER COLUMN created_by DROP NOT NULL;

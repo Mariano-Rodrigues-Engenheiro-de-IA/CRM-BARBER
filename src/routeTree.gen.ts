@@ -9,18 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AtivarRouteImport } from './routes/ativar'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
+import { Route as ApiPublicExtensionCustomersRouteImport } from './routes/api/public/extension/customers'
+import { Route as ApiPublicExtensionActivateRouteImport } from './routes/api/public/extension/activate'
+import { Route as ApiPublicExtensionJobsNextRouteImport } from './routes/api/public/extension/jobs.next'
+import { Route as ApiPublicExtensionJobsIdRouteImport } from './routes/api/public/extension/jobs.$id'
 
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
+const AtivarRoute = AtivarRouteImport.update({
+  id: '/ativar',
+  path: '/ativar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -28,57 +26,99 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
-  id: '/app',
-  path: '/app',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
+const ApiPublicExtensionCustomersRoute =
+  ApiPublicExtensionCustomersRouteImport.update({
+    id: '/api/public/extension/customers',
+    path: '/api/public/extension/customers',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionActivateRoute =
+  ApiPublicExtensionActivateRouteImport.update({
+    id: '/api/public/extension/activate',
+    path: '/api/public/extension/activate',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionJobsNextRoute =
+  ApiPublicExtensionJobsNextRouteImport.update({
+    id: '/api/public/extension/jobs/next',
+    path: '/api/public/extension/jobs/next',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionJobsIdRoute =
+  ApiPublicExtensionJobsIdRouteImport.update({
+    id: '/api/public/extension/jobs/$id',
+    path: '/api/public/extension/jobs/$id',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
-  '/app': typeof AuthenticatedAppRoute
+  '/ativar': typeof AtivarRoute
+  '/api/public/extension/activate': typeof ApiPublicExtensionActivateRoute
+  '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRoute
+  '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
+  '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
-  '/app': typeof AuthenticatedAppRoute
+  '/ativar': typeof AtivarRoute
+  '/api/public/extension/activate': typeof ApiPublicExtensionActivateRoute
+  '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRoute
+  '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
+  '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
-  '/auth': typeof AuthRoute
-  '/_authenticated/app': typeof AuthenticatedAppRoute
+  '/ativar': typeof AtivarRoute
+  '/api/public/extension/activate': typeof ApiPublicExtensionActivateRoute
+  '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRoute
+  '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
+  '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/app'
+  fullPaths:
+    | '/'
+    | '/ativar'
+    | '/api/public/extension/activate'
+    | '/api/public/extension/customers'
+    | '/api/public/extension/jobs/$id'
+    | '/api/public/extension/jobs/next'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/app'
-  id: '__root__' | '/' | '/_authenticated' | '/auth' | '/_authenticated/app'
+  to:
+    | '/'
+    | '/ativar'
+    | '/api/public/extension/activate'
+    | '/api/public/extension/customers'
+    | '/api/public/extension/jobs/$id'
+    | '/api/public/extension/jobs/next'
+  id:
+    | '__root__'
+    | '/'
+    | '/ativar'
+    | '/api/public/extension/activate'
+    | '/api/public/extension/customers'
+    | '/api/public/extension/jobs/$id'
+    | '/api/public/extension/jobs/next'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
-  AuthRoute: typeof AuthRoute
+  AtivarRoute: typeof AtivarRoute
+  ApiPublicExtensionActivateRoute: typeof ApiPublicExtensionActivateRoute
+  ApiPublicExtensionCustomersRoute: typeof ApiPublicExtensionCustomersRoute
+  ApiPublicExtensionJobsIdRoute: typeof ApiPublicExtensionJobsIdRoute
+  ApiPublicExtensionJobsNextRoute: typeof ApiPublicExtensionJobsNextRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated': {
-      id: '/_authenticated'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+    '/ativar': {
+      id: '/ativar'
+      path: '/ativar'
+      fullPath: '/ativar'
+      preLoaderRoute: typeof AtivarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -88,31 +128,44 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/app': {
-      id: '/_authenticated/app'
-      path: '/app'
-      fullPath: '/app'
-      preLoaderRoute: typeof AuthenticatedAppRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/api/public/extension/customers': {
+      id: '/api/public/extension/customers'
+      path: '/api/public/extension/customers'
+      fullPath: '/api/public/extension/customers'
+      preLoaderRoute: typeof ApiPublicExtensionCustomersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/activate': {
+      id: '/api/public/extension/activate'
+      path: '/api/public/extension/activate'
+      fullPath: '/api/public/extension/activate'
+      preLoaderRoute: typeof ApiPublicExtensionActivateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/jobs/next': {
+      id: '/api/public/extension/jobs/next'
+      path: '/api/public/extension/jobs/next'
+      fullPath: '/api/public/extension/jobs/next'
+      preLoaderRoute: typeof ApiPublicExtensionJobsNextRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/jobs/$id': {
+      id: '/api/public/extension/jobs/$id'
+      path: '/api/public/extension/jobs/$id'
+      fullPath: '/api/public/extension/jobs/$id'
+      preLoaderRoute: typeof ApiPublicExtensionJobsIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
 
-interface AuthenticatedRouteRouteChildren {
-  AuthenticatedAppRoute: typeof AuthenticatedAppRoute
-}
-
-const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedAppRoute: AuthenticatedAppRoute,
-}
-
-const AuthenticatedRouteRouteWithChildren =
-  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
-  AuthRoute: AuthRoute,
+  AtivarRoute: AtivarRoute,
+  ApiPublicExtensionActivateRoute: ApiPublicExtensionActivateRoute,
+  ApiPublicExtensionCustomersRoute: ApiPublicExtensionCustomersRoute,
+  ApiPublicExtensionJobsIdRoute: ApiPublicExtensionJobsIdRoute,
+  ApiPublicExtensionJobsNextRoute: ApiPublicExtensionJobsNextRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
