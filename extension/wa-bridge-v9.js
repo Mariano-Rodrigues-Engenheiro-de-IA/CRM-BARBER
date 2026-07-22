@@ -36,8 +36,13 @@
     if (hasSilentApi()) return true;
     return await new Promise((resolve) => {
       const t = setTimeout(() => resolve(false), timeout);
-      if (window.WPP?.webpack?.onFullReady) {
-        window.WPP.webpack.onFullReady.push(() => {
+      const onFullReady = window.WPP?.webpack?.onFullReady;
+      if (Array.isArray(onFullReady)) {
+        onFullReady.push(() => {
+          if (hasSilentApi()) { clearTimeout(t); resolve(true); }
+        });
+      } else if (typeof onFullReady === "function") {
+        onFullReady(() => {
           if (hasSilentApi()) { clearTimeout(t); resolve(true); }
         });
       } else {
