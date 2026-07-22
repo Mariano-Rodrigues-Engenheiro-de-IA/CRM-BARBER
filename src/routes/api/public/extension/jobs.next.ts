@@ -36,15 +36,27 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
           .not("expires_at", "is", null)
           .lte("expires_at", nowIso);
 
+        // Descobre campanhas pausadas/canceladas — jobs dessas ficam de fora.
+        const { data: blockedCampaigns } = await supabaseAdmin
+          .from("campaigns")
+          .select("id")
+          .eq("barbershop_id", auth.token.barbershop_id)
+          .in("status", ["paused", "canceled"]);
+        const blockedIds = (blockedCampaigns ?? []).map((c) => c.id);
+
         // Pick the oldest pending job that's due. Skip jobs whose TTL has
         // passed; jobs without expires_at are treated as non-expiring.
-        const { data: candidate, error: pickErr } = await supabaseAdmin
+        let pickQ = supabaseAdmin
           .from("message_jobs")
-          .select("id, customer_id, rendered_body, scheduled_for, attempts, expires_at")
+          .select("id, customer_id, rendered_body, scheduled_for, attempts, expires_at, campaign_id")
           .eq("barbershop_id", auth.token.barbershop_id)
           .eq("status", "pending")
           .lte("scheduled_for", nowIso)
-          .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+          .or(`expires_at.is.null,expires_at.gt.${nowIso}`);
+        if (blockedIds.length > 0) {
+          pickQ = pickQ.not("campaign_id", "in", `(${blockedIds.join(",")})`);
+        }
+        const { data: candidate, error: pickErr } = await pickQ
           .order("scheduled_for", { ascending: true })
           .limit(1)
           .maybeSingle();

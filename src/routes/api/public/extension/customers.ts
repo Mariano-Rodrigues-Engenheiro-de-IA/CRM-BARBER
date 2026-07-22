@@ -30,12 +30,16 @@ export const Route = createFileRoute("/api/public/extension/customers")({
         if (!auth.ok) {
           return jsonResponse(request, { ok: false, error: auth.error }, { status: auth.status });
         }
-        const { data, error } = await supabaseAdmin
+        const url = new URL(request.url);
+        const includeArchived = url.searchParams.get("include_archived") === "1";
+        let query = supabaseAdmin
           .from("customers")
-          .select("id, name, phone, notes, tags, status, created_at, updated_at")
+          .select("id, name, phone, notes, tags, status, source, spreadsheet_batch_id, archived_at, created_at, updated_at")
           .eq("barbershop_id", auth.token.barbershop_id)
           .order("created_at", { ascending: false })
-          .limit(500);
+          .limit(2000);
+        if (!includeArchived) query = query.is("archived_at", null);
+        const { data, error } = await query;
         if (error) {
           return jsonResponse(request, { ok: false, error: "Query failed" }, { status: 500 });
         }

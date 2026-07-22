@@ -132,8 +132,11 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          message_variants: string[]
           name: string
           pace_seconds: number
+          pace_seconds_max: number | null
+          pace_seconds_min: number | null
           scheduled_for: string | null
           status: string
           template_id: string | null
@@ -145,8 +148,11 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          message_variants?: string[]
           name: string
           pace_seconds?: number
+          pace_seconds_max?: number | null
+          pace_seconds_min?: number | null
           scheduled_for?: string | null
           status?: string
           template_id?: string | null
@@ -158,8 +164,11 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          message_variants?: string[]
           name?: string
           pace_seconds?: number
+          pace_seconds_max?: number | null
+          pace_seconds_min?: number | null
           scheduled_for?: string | null
           status?: string
           template_id?: string | null
@@ -184,6 +193,7 @@ export type Database = {
       }
       customers: {
         Row: {
+          archived_at: string | null
           barbershop_id: string
           created_at: string
           email: string | null
@@ -191,6 +201,8 @@ export type Database = {
           name: string
           notes: string | null
           phone: string
+          source: string
+          spreadsheet_batch_id: string | null
           status: string
           subscription_price_cents: number | null
           subscription_started_at: string | null
@@ -198,6 +210,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
           barbershop_id: string
           created_at?: string
           email?: string | null
@@ -205,6 +218,8 @@ export type Database = {
           name: string
           notes?: string | null
           phone: string
+          source?: string
+          spreadsheet_batch_id?: string | null
           status?: string
           subscription_price_cents?: number | null
           subscription_started_at?: string | null
@@ -212,6 +227,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
           barbershop_id?: string
           created_at?: string
           email?: string | null
@@ -219,6 +235,8 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string
+          source?: string
+          spreadsheet_batch_id?: string | null
           status?: string
           subscription_price_cents?: number | null
           subscription_started_at?: string | null

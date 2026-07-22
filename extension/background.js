@@ -96,7 +96,7 @@ async function reportJob(id, status, error) {
 async function ensureScripts(tabId) {
   await chrome.scripting.executeScript({ target: { tabId }, files: ["wa-js.js", "wa-bridge-v9.js"], world: "MAIN" }).catch(() => null);
   await chrome.scripting.insertCSS({ target: { tabId }, files: ["content.css"] }).catch(() => null);
-  await chrome.scripting.executeScript({ target: { tabId }, files: ["content-v9.js"] }).catch(() => null);
+  await chrome.scripting.executeScript({ target: { tabId }, files: ["content-v10.js"] }).catch(() => null);
 }
 
 async function sendToTab(job) {
@@ -173,7 +173,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       sendResponse(r);
     } else if (msg?.type === "get_status") {
       const auth = await getAuth();
-      sendResponse({ paired: !!auth.token, barbershop: auth.barbershop || null });
+      const api_base = await getApiBase();
+      sendResponse({ paired: !!auth.token, barbershop: auth.barbershop || null, token: auth.token || null, api_base });
     } else if (msg?.type === "unpair") {
       await chrome.storage.local.remove(["token", "barbershop"]);
       clearTimeout(pollTimer);

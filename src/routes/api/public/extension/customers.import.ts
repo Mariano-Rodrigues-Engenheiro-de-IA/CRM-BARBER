@@ -1,8 +1,17 @@
 // POST /api/public/extension/customers/import
 // Bulk-imports customers into the token's barbershop.
-// Body: { customers: [{ name, phone, tags?, status?, notes? }, ...] }
-// Dedupe: existing customers (same barbershop_id + phone) are UPDATED
-// (tags merged, status/notes overwritten if provided); new ones inserted.
+// Body: {
+//   customers: [{ name, phone, tags?, status?, notes? }, ...],
+//   mode?: 'merge' | 'replace_spreadsheet'  // default 'merge'
+// }
+//
+// mode='merge' (default): dedup por telefone; existentes atualizam (tags mescladas),
+// novos inserem. Não mexe em contatos ausentes.
+//
+// mode='replace_spreadsheet': cria um novo batch_id. Cada linha vira/atualiza
+// customer com source='spreadsheet' e spreadsheet_batch_id=novo. Todos os
+// customers com source='spreadsheet' que NÃO fazem parte do novo batch são
+// arquivados (archived_at=now). Contatos manuais/WA não são afetados.
 
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
@@ -19,7 +28,9 @@ const rowSchema = z.object({
 });
 
 const bodySchema = z.object({
-  customers: z.array(rowSchema).min(1).max(1000),
+  customers: z.array(rowSchema).min(1).max(2000),
+  mode: z.enum(["merge", "replace_spreadsheet"]).optional(),
+  source: z.enum(["manual", "spreadsheet", "whatsapp_contacts"]).optional(),
 });
 
 export const Route = createFileRoute("/api/public/extension/customers/import")({
@@ -51,8 +62,11 @@ export const Route = createFileRoute("/api/public/extension/customers/import")({
 
         const barbershopId = auth.token.barbershop_id;
         const rows = parsed.data.customers;
+        const mode = parsed.data.mode ?? "merge";
+        const isReplace = mode === "replace_spreadsheet";
+        const source = parsed.data.source ?? (isReplace ? "spreadsheet" : "manual");
+        const batchId = isReplace ? crypto.randomUUID() : null;
 
-        // Load existing customers by phone for dedupe
         const phones = Array.from(new Set(rows.map((r) => r.phone)));
         const { data: existing, error: exErr } = await supabaseAdmin
           .from("customers")
@@ -71,12 +85,17 @@ export const Route = createFileRoute("/api/public/extension/customers/import")({
           notes: string | null;
           tags: string[];
           status: string;
+          source: string;
+          spreadsheet_batch_id: string | null;
         };
         type UpdatePatch = {
           tags: string[];
           status?: string;
           notes?: string | null;
           name?: string;
+          source?: string;
+          spreadsheet_batch_id?: string | null;
+          archived_at?: null;
         };
         const toInsert: InsertRow[] = [];
         const updates: Array<{ id: string; patch: UpdatePatch }> = [];
@@ -85,10 +104,14 @@ export const Route = createFileRoute("/api/public/extension/customers/import")({
           const found = byPhone.get(r.phone);
           if (found) {
             const merged = Array.from(new Set([...(found.tags ?? []), ...(r.tags ?? [])]));
-            const patch: UpdatePatch = { tags: merged };
+            const patch: UpdatePatch = { tags: merged, archived_at: null };
             if (r.status) patch.status = r.status;
             if (r.notes !== undefined) patch.notes = r.notes;
             if (r.name) patch.name = r.name;
+            if (isReplace) {
+              patch.source = "spreadsheet";
+              patch.spreadsheet_batch_id = batchId;
+            }
             updates.push({ id: found.id, patch });
           } else {
             toInsert.push({
@@ -98,6 +121,8 @@ export const Route = createFileRoute("/api/public/extension/customers/import")({
               notes: r.notes ?? null,
               tags: r.tags ?? [],
               status: r.status ?? "active",
+              source,
+              spreadsheet_batch_id: batchId,
             });
           }
         }
@@ -119,11 +144,28 @@ export const Route = createFileRoute("/api/public/extension/customers/import")({
             .from("customers")
             .update(u.patch)
             .eq("id", u.id)
-            .eq("barbershop_id", barbershopId); // defense-in-depth
+            .eq("barbershop_id", barbershopId);
           if (upErr) {
             return jsonResponse(request, { ok: false, error: upErr.message }, { status: 500 });
           }
           updated += 1;
+        }
+
+        let archived = 0;
+        if (isReplace && batchId) {
+          // Arquiva planilhas antigas (source=spreadsheet e batch diferente).
+          const { data: arch, error: archErr } = await supabaseAdmin
+            .from("customers")
+            .update({ archived_at: new Date().toISOString() })
+            .eq("barbershop_id", barbershopId)
+            .eq("source", "spreadsheet")
+            .is("archived_at", null)
+            .neq("spreadsheet_batch_id", batchId)
+            .select("id");
+          if (archErr) {
+            return jsonResponse(request, { ok: false, error: archErr.message }, { status: 500 });
+          }
+          archived = arch?.length ?? 0;
         }
 
         return jsonResponse(request, {
@@ -131,6 +173,9 @@ export const Route = createFileRoute("/api/public/extension/customers/import")({
           received: rows.length,
           inserted,
           updated,
+          archived,
+          batch_id: batchId,
+          mode,
         });
       },
     },
