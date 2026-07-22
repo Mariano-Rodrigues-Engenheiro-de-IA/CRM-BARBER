@@ -14,16 +14,437 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      barbershop_members: {
+        Row: {
+          barbershop_id: string
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          barbershop_id: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          barbershop_id?: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "barbershop_members_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      barbershops: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      campaign_targets: {
+        Row: {
+          barbershop_id: string
+          campaign_id: string
+          customer_id: string
+          id: string
+          status: string
+        }
+        Insert: {
+          barbershop_id: string
+          campaign_id: string
+          customer_id: string
+          id?: string
+          status?: string
+        }
+        Update: {
+          barbershop_id?: string
+          campaign_id?: string
+          customer_id?: string
+          id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_targets_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_targets_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_targets_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          audience_filter: Json
+          barbershop_id: string
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          pace_seconds: number
+          scheduled_for: string | null
+          status: string
+          template_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          audience_filter?: Json
+          barbershop_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          pace_seconds?: number
+          scheduled_for?: string | null
+          status?: string
+          template_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          audience_filter?: Json
+          barbershop_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          pace_seconds?: number
+          scheduled_for?: string | null
+          status?: string
+          template_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "message_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          barbershop_id: string
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string
+          status: string
+          subscription_price_cents: number | null
+          subscription_started_at: string | null
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          barbershop_id: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone: string
+          status?: string
+          subscription_price_cents?: number | null
+          subscription_started_at?: string | null
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          barbershop_id?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string
+          status?: string
+          subscription_price_cents?: number | null
+          subscription_started_at?: string | null
+          tags?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      extension_tokens: {
+        Row: {
+          barbershop_id: string
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          label: string
+          last_used_at: string | null
+          revoked_at: string | null
+          token_hash: string
+        }
+        Insert: {
+          barbershop_id: string
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          label: string
+          last_used_at?: string | null
+          revoked_at?: string | null
+          token_hash: string
+        }
+        Update: {
+          barbershop_id?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          label?: string
+          last_used_at?: string | null
+          revoked_at?: string | null
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extension_tokens_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      health_events: {
+        Row: {
+          barbershop_id: string
+          created_at: string
+          details: Json
+          id: string
+          kind: string
+          severity: string
+        }
+        Insert: {
+          barbershop_id: string
+          created_at?: string
+          details?: Json
+          id?: string
+          kind: string
+          severity?: string
+        }
+        Update: {
+          barbershop_id?: string
+          created_at?: string
+          details?: Json
+          id?: string
+          kind?: string
+          severity?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "health_events_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_jobs: {
+        Row: {
+          attempts: number
+          barbershop_id: string
+          campaign_id: string | null
+          claimed_at: string | null
+          claimed_by_token: string | null
+          created_at: string
+          customer_id: string
+          expires_at: string | null
+          id: string
+          last_error: string | null
+          max_attempts: number
+          phone: string
+          rendered_body: string
+          scheduled_for: string
+          sent_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          barbershop_id: string
+          campaign_id?: string | null
+          claimed_at?: string | null
+          claimed_by_token?: string | null
+          created_at?: string
+          customer_id: string
+          expires_at?: string | null
+          id?: string
+          last_error?: string | null
+          max_attempts?: number
+          phone: string
+          rendered_body: string
+          scheduled_for?: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          barbershop_id?: string
+          campaign_id?: string | null
+          claimed_at?: string | null
+          claimed_by_token?: string | null
+          created_at?: string
+          customer_id?: string
+          expires_at?: string | null
+          id?: string
+          last_error?: string | null
+          max_attempts?: number
+          phone?: string
+          rendered_body?: string
+          scheduled_for?: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_jobs_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_jobs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_jobs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_templates: {
+        Row: {
+          barbershop_id: string
+          body: string
+          category: string | null
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          barbershop_id: string
+          body: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          barbershop_id?: string
+          body?: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_templates_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_barbershop_role: {
+        Args: {
+          _barbershop_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_barbershop_member: {
+        Args: { _barbershop_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "owner" | "staff"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +571,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["owner", "staff"],
+    },
   },
 } as const
