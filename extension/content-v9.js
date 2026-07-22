@@ -1,10 +1,10 @@
-// Content script v0.8.0 — dockado no WhatsApp Web, integrado ao rail.
+// Content script v0.9.0 — dockado no WhatsApp Web, integrado ao rail.
 // Navegação: Home → Assinaturas (Ativos/Inadimplentes/Todos) → Disparo → Progresso.
 //
 // O disparo usa a ponte wa-js no MAIN world. Não há fallback que abre conversa.
 
 (function () {
-  const CRM_VERSION = "0.8.0";
+  const CRM_VERSION = "0.9.0";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -147,16 +147,17 @@
         <label class="crm-csv-btn">
           Importar CSV<input type="file" class="crm-csv-in" accept=".csv,.tsv,.txt,text/csv,text/plain" hidden />
         </label>
+        <button class="crm-wa-import" title="Puxar contatos salvos/conhecidos no WhatsApp">Contatos WA</button>
         <button class="crm-add-toggle">+ Adicionar</button>
       </div>
 
       <details class="crm-format-box">
         <summary>Formato da planilha</summary>
-        <p>Use CSV UTF-8, separado por ponto e vírgula.</p>
-        <pre>nome;telefone;status;tags
-João Silva;61999998888;ativo;vip,mensalista
-Maria Souza;5561988887777;inadimplente;trimestral</pre>
-        <p>Status aceitos: ativo, inadimplente, reativar, cancelado, lead.</p>
+        <p>Use CSV simples com apenas nome e telefone. O status vem da aba aberta.</p>
+        <pre>nome;telefone
+João Silva;61999998888
+Maria Souza;5561988887777</pre>
+        <p>Também aceito uma coluna só com telefone; nesse caso o nome vira “Contato 8877”.</p>
       </details>
 
       <div class="crm-add-form crm-hidden">
@@ -185,6 +186,37 @@ Maria Souza;5561988887777;inadimplente;trimestral</pre>
 
     $(".crm-add-toggle").addEventListener("click", () => {
       $(".crm-add-form").classList.toggle("crm-hidden");
+    });
+
+    $(".crm-wa-import").addEventListener("click", async () => {
+      const msg = $(".crm-msg");
+      msg.classList.remove("crm-err");
+      msg.textContent = "Lendo contatos do WhatsApp...";
+      const contacts = await readWhatsAppContacts();
+      if (!contacts.ok) {
+        msg.classList.add("crm-err");
+        msg.textContent = contacts.error || "Não consegui ler os contatos do WhatsApp.";
+        return;
+      }
+      const status = currentSegment === "all" ? "active" : currentSegment;
+      const customers = (contacts.contacts || []).map((c) => ({ name: c.name, phone: c.phone, status, tags: ["whatsapp"] }));
+      if (!customers.length) {
+        msg.classList.add("crm-err");
+        msg.textContent = "Não achei contatos importáveis no WhatsApp.";
+        return;
+      }
+      msg.textContent = `Importando ${customers.length} contatos...`;
+      const r = await api("/api/public/extension/customers/import", {
+        method: "POST",
+        body: JSON.stringify({ customers }),
+      });
+      if (r?.ok) {
+        msg.textContent = `Importado do WhatsApp: ${r.inserted} novos, ${r.updated} atualizados.`;
+        loadList();
+      } else {
+        msg.classList.add("crm-err");
+        msg.textContent = r?.error || "Erro ao importar contatos do WhatsApp";
+      }
     });
 
     $(".crm-add-sub").addEventListener("click", async () => {
@@ -226,7 +258,7 @@ Maria Souza;5561988887777;inadimplente;trimestral</pre>
         const rows = parseSpreadsheet(text, currentSegment === "all" ? "active" : currentSegment);
         if (!rows.length) {
           msg.classList.add("crm-err");
-          msg.textContent = "Não achei linhas válidas. Use CSV com cabeçalho: nome;telefone;status;tags";
+          msg.textContent = "Não achei linhas válidas. Use CSV simples: nome;telefone";
           e.target.value = ""; return;
         }
         msg.textContent = `Importando ${rows.length}...`;
@@ -378,9 +410,9 @@ Maria Souza;5561988887777;inadimplente;trimestral</pre>
     }
   }
 
-  // --- Parser de planilha (CSV/TSV, cabeçalho opcional) ---
+  // --- Parser de planilha simples (CSV/TSV, cabeçalho opcional) ---
   function parseSpreadsheet(text, defaultStatus) {
-    // Auto-detecta delimitador: ; (comum no Brasil), , ou tab.
+    // Formato esperado: nome;telefone ou telefone. Status/tags vêm da aba.
     const firstLine = (text.split(/\r?\n/).find((l) => l.trim()) || "");
     const counts = { ";": (firstLine.match(/;/g) || []).length,
                      ",": (firstLine.match(/,/g) || []).length,
@@ -394,7 +426,7 @@ Maria Souza;5561988887777;inadimplente;trimestral</pre>
     const firstCells = splitLine(lines[0], delim);
     const hasHeader = !firstCells.some((c) => /\d{8,}/.test(c.replace(/\D+/g, "")));
 
-    let iName = 0, iPhone = 1, iStatus = -1, iTags = -1;
+    let iName = 0, iPhone = 1;
     let startIdx = 0;
     if (hasHeader) {
       startIdx = 1;
@@ -408,8 +440,6 @@ Maria Souza;5561988887777;inadimplente;trimestral</pre>
       };
       iName = find("nome", "name", "cliente", "contato");
       iPhone = find("telefone", "celular", "whats", "phone", "numero", "número");
-      iStatus = find("status", "situa");
-      iTags = find("tag", "etiqueta");
       if (iPhone < 0) {
         // sem coluna telefone identificada — procura primeira coluna com número
         iPhone = firstCells.findIndex((_, i) =>
@@ -417,7 +447,7 @@ Maria Souza;5561988887777;inadimplente;trimestral</pre>
         );
         if (iPhone < 0) return [];
       }
-      if (iName < 0) iName = iPhone === 0 ? 1 : 0;
+      if (iName < 0 || iName === iPhone) iName = iPhone === 0 ? 1 : 0;
     } else {
       // Sem cabeçalho: tenta achar coluna com telefone.
       iPhone = firstCells.findIndex((c) => /\d{8,}/.test(c.replace(/\D+/g, "")));
@@ -432,23 +462,7 @@ Maria Souza;5561988887777;inadimplente;trimestral</pre>
       const phone = rawPhone.replace(/\D+/g, "");
       if (phone.length < 8) continue;
       const name = (cells[iName] || "").trim() || `Contato ${phone.slice(-4)}`;
-      const row = { name, phone };
-      if (iStatus >= 0) {
-        const st = (cells[iStatus] || "").trim().toLowerCase();
-        const map = { ativo: "active", active: "active",
-                      inadimplente: "overdue", atrasado: "overdue", overdue: "overdue",
-                      reativar: "reactivate", reactivate: "reactivate",
-                      cancelado: "canceled", canceled: "canceled",
-                      lead: "lead" };
-        row.status = map[st] || defaultStatus;
-      } else {
-        row.status = defaultStatus;
-      }
-      if (iTags >= 0) {
-        const tg = (cells[iTags] || "").trim();
-        if (tg) row.tags = tg.split(/[;,|]/).map((t) => t.trim()).filter(Boolean);
-      }
-      out.push(row);
+      out.push({ name, phone, status: defaultStatus });
     }
     return out;
   }
@@ -490,7 +504,7 @@ Maria Souza;5561988887777;inadimplente;trimestral</pre>
   window.addEventListener("message", (ev) => {
     if (ev.source !== window) return;
     const d = ev.data;
-    if (!d || d.__crm !== "bridge_ready_v8") return;
+    if (!d || d.__crm !== "bridge_ready_v9") return;
     silentBridgeReady = !!d.ok;
     lastBridgeStatus = d;
     console.info(`[CRM ct v${CRM_VERSION}] bridge_ready`, d);
@@ -514,7 +528,27 @@ Maria Souza;5561988887777;inadimplente;trimestral</pre>
         resolve(d);
       }
       window.addEventListener("message", handler);
-      window.postMessage({ __crm: "bridge_ping_v8", id }, "*");
+      window.postMessage({ __crm: "bridge_ping_v9", id }, "*");
+    });
+  }
+
+  function readWhatsAppContacts(timeout = 20000) {
+    const id = Math.random().toString(36).slice(2);
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        window.removeEventListener("message", handler);
+        resolve({ ok: false, error: "Tempo esgotado lendo contatos do WhatsApp" });
+      }, timeout);
+      function handler(ev) {
+        if (ev.source !== window) return;
+        const d = ev.data;
+        if (!d || d.__crm !== "contacts_v9" || d.id !== id) return;
+        clearTimeout(timer);
+        window.removeEventListener("message", handler);
+        resolve(d);
+      }
+      window.addEventListener("message", handler);
+      window.postMessage({ __crm: "contacts_request_v9", id }, "*");
     });
   }
 
@@ -548,7 +582,7 @@ Maria Souza;5561988887777;inadimplente;trimestral</pre>
         resolve({ ok: !!d.ok, error: d.error });
       }
       window.addEventListener("message", handler);
-      window.postMessage({ __crm: "send_v8", id, phone, text: body }, "*");
+      window.postMessage({ __crm: "send_v9", id, phone, text: body }, "*");
     });
   }
 
