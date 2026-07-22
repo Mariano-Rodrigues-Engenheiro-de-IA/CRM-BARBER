@@ -26,11 +26,28 @@ function normalizePhone(input: string): string {
 
 function phoneLookupCandidates(phone: string): string[] {
   const candidates = new Set([phone]);
+
+  const addBrazilVariants = (digits: string) => {
+    const national = digits.startsWith("55") ? digits.slice(2) : digits;
+    if (national.length < 10 || national.length > 11) return;
+
+    const ddd = national.slice(0, 2);
+    const local = national.slice(2);
+    const withNinthDigit = local.length === 8 ? `${ddd}9${local}` : national;
+    const withoutNinthDigit = local.length === 9 && local.startsWith("9") ? `${ddd}${local.slice(1)}` : national;
+
+    candidates.add(withNinthDigit);
+    candidates.add(withoutNinthDigit);
+    candidates.add(`55${withNinthDigit}`);
+    candidates.add(`55${withoutNinthDigit}`);
+  };
+
   if (phone.startsWith("55") && phone.length > 11) {
     candidates.add(phone.slice(2));
   } else if (phone.length >= 10) {
     candidates.add(`55${phone}`);
   }
+  addBrazilVariants(phone);
   return [...candidates];
 }
 
