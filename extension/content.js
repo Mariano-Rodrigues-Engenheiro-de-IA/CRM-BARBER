@@ -8,6 +8,9 @@
 (function () {
   if (window.__crmAssinaturasInjected) return;
   window.__crmAssinaturasInjected = true;
+  console.info("[CRM ct] content script carregado", location.href);
+
+  let panelRef = null;
 
   // --- Descoberta do número logado ------------------------------------
   function readLoggedPhone() {
@@ -30,6 +33,12 @@
 
   // --- Painel ---------------------------------------------------------
   function buildPanel() {
+    const existing = document.getElementById("crm-assinaturas-panel");
+    if (existing) {
+      panelRef = existing;
+      return existing;
+    }
+
     const panel = document.createElement("div");
     panel.id = "crm-assinaturas-panel";
     panel.innerHTML = `
@@ -99,6 +108,8 @@
       </div>
     `;
     document.body.appendChild(panel);
+    panelRef = panel;
+    console.info("[CRM ct] painel montado com abas");
 
     const $ = (s, r = panel) => r.querySelector(s);
     const $$ = (s, r = panel) => Array.from(r.querySelectorAll(s));
@@ -293,6 +304,22 @@
     });
 
     refreshLink();
+    return panel;
+  }
+
+  function ensurePanelVisible() {
+    if (!document.body) return false;
+    try {
+      const panel = panelRef || buildPanel();
+      panel.classList.remove("crm-collapsed");
+      panel.style.display = "flex";
+      panel.style.visibility = "visible";
+      panel.style.opacity = "1";
+      return true;
+    } catch (e) {
+      console.error("[CRM ct] erro ao montar painel", e);
+      return false;
+    }
   }
 
   // --- Helpers --------------------------------------------------------
@@ -329,11 +356,15 @@
     return out;
   }
 
-  // WhatsApp Web demora pra montar.
+  // WhatsApp Web demora pra montar; tentamos algumas vezes e registramos erro real.
+  let attempts = 0;
   const wait = setInterval(() => {
-    if (document.body) {
+    attempts += 1;
+    if (ensurePanelVisible()) {
       clearInterval(wait);
-      buildPanel();
+    } else if (attempts >= 30) {
+      clearInterval(wait);
+      console.error("[CRM ct] painel não montou após 15s");
     }
   }, 500);
 
@@ -369,6 +400,10 @@
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (msg?.type === "send_message") {
       sendMessage(msg.job).then(sendResponse).catch((e) => sendResponse({ ok: false, error: String(e) }));
+      return true;
+    }
+    if (msg?.type === "show_panel") {
+      sendResponse({ ok: ensurePanelVisible() });
       return true;
     }
   });

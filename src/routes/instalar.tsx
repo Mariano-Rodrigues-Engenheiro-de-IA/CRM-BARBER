@@ -72,6 +72,10 @@ function Install() {
               Abra o <strong>WhatsApp Web</strong> — o painel do CRM aparece no
               canto inferior direito. Clique em <em>Vincular esta conta</em>.
             </li>
+            <li>
+              Se o painel não aparecer sozinho, clique no ícone da extensão e depois em
+              <strong> Mostrar painel no WhatsApp</strong>.
+            </li>
           </ol>
           <p className="text-xs text-muted-foreground">
             Quando publicarmos na Chrome Web Store, esta página vai virar um
