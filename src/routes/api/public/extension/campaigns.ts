@@ -4,14 +4,15 @@
 // Body:
 // {
 //   name: string,
-//   message: string,                    // corpo já renderizado (MVP: sem placeholders)
-//   pace_seconds?: number,              // ritmo entre disparos, default 30
-//   customer_ids?: string[],            // alvo explícito por id, OU
-//   filter?: { status?: string, tags?: string[] } // resolve dinamicamente
+//   message?: string,                   // corpo único (legado)
+//   message_variants?: string[],        // 1..3 variações (rotacionadas por job)
+//   pace_seconds?: number,              // ritmo fixo (default 30)
+//   pace_seconds_min?, pace_seconds_max?: number, // faixa aleatória
+//   customer_ids?: string[],
+//   filter?: { status?: string, tags?: string[] }
 // }
 //
-// Tenant isolation: barbershop_id vem SEMPRE do token; qualquer valor no
-// body é ignorado. TTL de 48h aplicado em cada job (regra do plano).
+// TTL de 48h aplicado em cada job. Tenant vem SEMPRE do token.
 
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
@@ -22,15 +23,21 @@ import { CUSTOMER_STATUS_VALUES } from "@/lib/customer-presets";
 const bodySchema = z
   .object({
     name: z.string().trim().min(1).max(120),
-    message: z.string().trim().min(1).max(4000),
+    message: z.string().trim().min(1).max(4000).optional(),
+    message_variants: z.array(z.string().trim().min(1).max(4000)).min(1).max(3).optional(),
     pace_seconds: z.number().int().min(5).max(600).optional(),
-    customer_ids: z.array(z.string().uuid()).max(1000).optional(),
+    pace_seconds_min: z.number().int().min(5).max(600).optional(),
+    pace_seconds_max: z.number().int().min(5).max(600).optional(),
+    customer_ids: z.array(z.string().uuid()).max(2000).optional(),
     filter: z
       .object({
         status: z.enum(CUSTOMER_STATUS_VALUES).optional(),
         tags: z.array(z.string().min(1).max(40)).max(10).optional(),
       })
       .optional(),
+  })
+  .refine((v) => v.message || (v.message_variants && v.message_variants.length > 0), {
+    message: "Informe message ou message_variants",
   })
   .refine((v) => (v.customer_ids && v.customer_ids.length > 0) || v.filter, {
     message: "Informe customer_ids ou filter",
@@ -66,13 +73,26 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
         }
 
         const barbershopId = auth.token.barbershop_id;
-        const { name, message, pace_seconds, customer_ids, filter } = parsed.data;
+        const { name, message, message_variants, pace_seconds, pace_seconds_min, pace_seconds_max, customer_ids, filter } = parsed.data;
+
+        const variants = (message_variants && message_variants.length > 0)
+          ? message_variants
+          : [message as string];
+
+        // Faixa de pace: se min/max informados, aleatório dentro da faixa.
+        // Senão usa pace_seconds fixo (default 30).
+        const paceMin = pace_seconds_min ?? pace_seconds ?? 30;
+        const paceMax = pace_seconds_max ?? pace_seconds ?? paceMin;
+        const paceLo = Math.min(paceMin, paceMax);
+        const paceHi = Math.max(paceMin, paceMax);
+        const nextDelayMs = () => (paceLo + Math.floor(Math.random() * (paceHi - paceLo + 1))) * 1000;
 
         // Resolve alvo → lista de customers {id, phone}
         let customersQ = supabaseAdmin
           .from("customers")
           .select("id, phone")
-          .eq("barbershop_id", barbershopId);
+          .eq("barbershop_id", barbershopId)
+          .is("archived_at", null);
 
         if (customer_ids && customer_ids.length > 0) {
           customersQ = customersQ.in("id", customer_ids);
@@ -82,7 +102,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
             customersQ = customersQ.overlaps("tags", filter.tags);
           }
         }
-        const { data: targets, error: tErr } = await customersQ.limit(1000);
+        const { data: targets, error: tErr } = await customersQ.limit(2000);
         if (tErr) {
           return jsonResponse(request, { ok: false, error: tErr.message }, { status: 500 });
         }
@@ -94,17 +114,19 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
           );
         }
 
-        // Cria a campanha
         const { data: campaign, error: cErr } = await supabaseAdmin
           .from("campaigns")
           .insert({
             barbershop_id: barbershopId,
             name,
             status: "running",
-            pace_seconds: pace_seconds ?? 30,
+            pace_seconds: paceLo,
+            pace_seconds_min: paceLo,
+            pace_seconds_max: paceHi,
+            message_variants: variants,
             audience_filter: filter ? filter : { customer_ids: customer_ids ?? [] },
           })
-          .select("id, name, status, pace_seconds, created_at")
+          .select("id, name, status, pace_seconds, pace_seconds_min, pace_seconds_max, created_at")
           .single();
         if (cErr || !campaign) {
           return jsonResponse(
@@ -114,20 +136,23 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
           );
         }
 
-        // Enfileira jobs com scheduled_for escalonado (pace * i) e TTL 48h.
         const now = Date.now();
-        const pace = (campaign.pace_seconds ?? 30) * 1000;
         const expiresAt = new Date(now + TTL_HOURS * 3600 * 1000).toISOString();
-        const jobs = targets.map((t, i) => ({
-          barbershop_id: barbershopId,
-          campaign_id: campaign.id,
-          customer_id: t.id,
-          phone: t.phone,
-          rendered_body: message,
-          status: "pending" as const,
-          scheduled_for: new Date(now + i * pace).toISOString(),
-          expires_at: expiresAt,
-        }));
+        let cursor = now;
+        const jobs = targets.map((t, i) => {
+          if (i > 0) cursor += nextDelayMs();
+          const variant = variants[i % variants.length];
+          return {
+            barbershop_id: barbershopId,
+            campaign_id: campaign.id,
+            customer_id: t.id,
+            phone: t.phone,
+            rendered_body: variant,
+            status: "pending" as const,
+            scheduled_for: new Date(cursor).toISOString(),
+            expires_at: expiresAt,
+          };
+        });
 
         const { error: jErr, count } = await supabaseAdmin
           .from("message_jobs")
@@ -140,7 +165,6 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
           );
         }
 
-        // targets vira campaign_targets também (histórico)
         await supabaseAdmin.from("campaign_targets").insert(
           targets.map((t) => ({
             barbershop_id: barbershopId,
@@ -165,7 +189,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
         }
         const { data, error } = await supabaseAdmin
           .from("campaigns")
-          .select("id, name, status, pace_seconds, created_at")
+          .select("id, name, status, pace_seconds, pace_seconds_min, pace_seconds_max, message_variants, created_at")
           .eq("barbershop_id", auth.token.barbershop_id)
           .order("created_at", { ascending: false })
           .limit(50);
@@ -173,7 +197,6 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
         }
 
-        // conta jobs por campanha (simples, sem group by nativo)
         const ids = (data ?? []).map((c) => c.id);
         const stats: Record<string, { pending: number; sent: number; failed: number }> = {};
         if (ids.length > 0) {
