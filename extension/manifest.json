@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CRM Assinaturas — Barbearias",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "CRM de assinaturas para barbearias, direto no WhatsApp Web.",
   "permissions": ["storage", "activeTab", "tabs", "scripting"],
   "host_permissions": [
@@ -20,7 +20,7 @@
   "content_scripts": [
     {
       "matches": ["https://web.whatsapp.com/*"],
-      "js": ["content.js"],
+      "js": ["content-v4.js"],
       "css": ["content.css"],
       "run_at": "document_idle"
     }

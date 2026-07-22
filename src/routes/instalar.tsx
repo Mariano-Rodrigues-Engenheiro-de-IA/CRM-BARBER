@@ -27,7 +27,7 @@ export const Route = createFileRoute("/instalar")({
 
 // Fetch+blob evita a auth do preview em links diretos pra /public.
 function downloadZip() {
-  fetch(`/crm-assinaturas-extension-v3.zip?v=${Date.now()}`, { cache: "no-store" })
+  fetch(`/crm-assinaturas-extension-v4.zip?v=${Date.now()}`, { cache: "no-store" })
     .then((res) => {
       if (!res.ok) throw new Error(`Falha ao baixar: ${res.status}`);
       return res.blob();
@@ -35,7 +35,7 @@ function downloadZip() {
     .then((blob) => {
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = "crm-assinaturas-extension-v3.zip";
+      a.download = "crm-assinaturas-extension-v4.zip";
       a.click();
       URL.revokeObjectURL(a.href);
     })
@@ -55,11 +55,11 @@ function Install() {
         </CardHeader>
         <CardContent className="space-y-4">
           <Button size="lg" className="w-full" onClick={downloadZip}>
-            Baixar extensão v0.3.0 (.zip)
+            Baixar extensão v0.4.0 (.zip)
           </Button>
           <p className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
             Importante: apague qualquer pasta/ZIP antigo da extensão antes de instalar esta versão.
-            No <code className="rounded bg-muted px-1">chrome://extensions</code>, a versão precisa aparecer como <strong>0.3.0</strong>.
+            No <code className="rounded bg-muted px-1">chrome://extensions</code>, a versão precisa aparecer como <strong>0.4.0</strong>.
           </p>
           <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
             <li>Descompacte o arquivo baixado em uma pasta.</li>
