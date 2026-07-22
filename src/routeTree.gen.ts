@@ -13,9 +13,11 @@ import { Route as InstalarRouteImport } from './routes/instalar'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPublicSignupRouteImport } from './routes/api/public/signup'
 import { Route as ApiPublicExtensionPairRouteImport } from './routes/api/public/extension/pair'
+import { Route as ApiPublicExtensionMetaRouteImport } from './routes/api/public/extension/meta'
 import { Route as ApiPublicExtensionCustomersRouteImport } from './routes/api/public/extension/customers'
 import { Route as ApiPublicExtensionJobsNextRouteImport } from './routes/api/public/extension/jobs.next'
 import { Route as ApiPublicExtensionJobsIdRouteImport } from './routes/api/public/extension/jobs.$id'
+import { Route as ApiPublicExtensionCustomersImportRouteImport } from './routes/api/public/extension/customers.import'
 
 const InstalarRoute = InstalarRouteImport.update({
   id: '/instalar',
@@ -37,6 +39,11 @@ const ApiPublicExtensionPairRoute = ApiPublicExtensionPairRouteImport.update({
   path: '/api/public/extension/pair',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicExtensionMetaRoute = ApiPublicExtensionMetaRouteImport.update({
+  id: '/api/public/extension/meta',
+  path: '/api/public/extension/meta',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicExtensionCustomersRoute =
   ApiPublicExtensionCustomersRouteImport.update({
     id: '/api/public/extension/customers',
@@ -55,13 +62,21 @@ const ApiPublicExtensionJobsIdRoute =
     path: '/api/public/extension/jobs/$id',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicExtensionCustomersImportRoute =
+  ApiPublicExtensionCustomersImportRouteImport.update({
+    id: '/import',
+    path: '/import',
+    getParentRoute: () => ApiPublicExtensionCustomersRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/instalar': typeof InstalarRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
-  '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRoute
+  '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
+  '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
+  '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
 }
@@ -69,8 +84,10 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/instalar': typeof InstalarRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
-  '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRoute
+  '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
+  '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
+  '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
 }
@@ -79,8 +96,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/instalar': typeof InstalarRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
-  '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRoute
+  '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
+  '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
+  '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
 }
@@ -91,7 +110,9 @@ export interface FileRouteTypes {
     | '/instalar'
     | '/api/public/signup'
     | '/api/public/extension/customers'
+    | '/api/public/extension/meta'
     | '/api/public/extension/pair'
+    | '/api/public/extension/customers/import'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
   fileRoutesByTo: FileRoutesByTo
@@ -100,7 +121,9 @@ export interface FileRouteTypes {
     | '/instalar'
     | '/api/public/signup'
     | '/api/public/extension/customers'
+    | '/api/public/extension/meta'
     | '/api/public/extension/pair'
+    | '/api/public/extension/customers/import'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
   id:
@@ -109,7 +132,9 @@ export interface FileRouteTypes {
     | '/instalar'
     | '/api/public/signup'
     | '/api/public/extension/customers'
+    | '/api/public/extension/meta'
     | '/api/public/extension/pair'
+    | '/api/public/extension/customers/import'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
   fileRoutesById: FileRoutesById
@@ -118,7 +143,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   InstalarRoute: typeof InstalarRoute
   ApiPublicSignupRoute: typeof ApiPublicSignupRoute
-  ApiPublicExtensionCustomersRoute: typeof ApiPublicExtensionCustomersRoute
+  ApiPublicExtensionCustomersRoute: typeof ApiPublicExtensionCustomersRouteWithChildren
+  ApiPublicExtensionMetaRoute: typeof ApiPublicExtensionMetaRoute
   ApiPublicExtensionPairRoute: typeof ApiPublicExtensionPairRoute
   ApiPublicExtensionJobsIdRoute: typeof ApiPublicExtensionJobsIdRoute
   ApiPublicExtensionJobsNextRoute: typeof ApiPublicExtensionJobsNextRoute
@@ -154,6 +180,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensionPairRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/extension/meta': {
+      id: '/api/public/extension/meta'
+      path: '/api/public/extension/meta'
+      fullPath: '/api/public/extension/meta'
+      preLoaderRoute: typeof ApiPublicExtensionMetaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/extension/customers': {
       id: '/api/public/extension/customers'
       path: '/api/public/extension/customers'
@@ -175,14 +208,38 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensionJobsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/extension/customers/import': {
+      id: '/api/public/extension/customers/import'
+      path: '/import'
+      fullPath: '/api/public/extension/customers/import'
+      preLoaderRoute: typeof ApiPublicExtensionCustomersImportRouteImport
+      parentRoute: typeof ApiPublicExtensionCustomersRoute
+    }
   }
 }
+
+interface ApiPublicExtensionCustomersRouteChildren {
+  ApiPublicExtensionCustomersImportRoute: typeof ApiPublicExtensionCustomersImportRoute
+}
+
+const ApiPublicExtensionCustomersRouteChildren: ApiPublicExtensionCustomersRouteChildren =
+  {
+    ApiPublicExtensionCustomersImportRoute:
+      ApiPublicExtensionCustomersImportRoute,
+  }
+
+const ApiPublicExtensionCustomersRouteWithChildren =
+  ApiPublicExtensionCustomersRoute._addFileChildren(
+    ApiPublicExtensionCustomersRouteChildren,
+  )
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   InstalarRoute: InstalarRoute,
   ApiPublicSignupRoute: ApiPublicSignupRoute,
-  ApiPublicExtensionCustomersRoute: ApiPublicExtensionCustomersRoute,
+  ApiPublicExtensionCustomersRoute:
+    ApiPublicExtensionCustomersRouteWithChildren,
+  ApiPublicExtensionMetaRoute: ApiPublicExtensionMetaRoute,
   ApiPublicExtensionPairRoute: ApiPublicExtensionPairRoute,
   ApiPublicExtensionJobsIdRoute: ApiPublicExtensionJobsIdRoute,
   ApiPublicExtensionJobsNextRoute: ApiPublicExtensionJobsNextRoute,

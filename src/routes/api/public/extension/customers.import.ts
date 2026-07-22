@@ -64,14 +64,28 @@ export const Route = createFileRoute("/api/public/extension/customers/import")({
         }
         const byPhone = new Map((existing ?? []).map((c) => [c.phone, c]));
 
-        const toInsert: Array<Record<string, unknown>> = [];
-        const updates: Array<{ id: string; patch: Record<string, unknown> }> = [];
+        type InsertRow = {
+          barbershop_id: string;
+          name: string;
+          phone: string;
+          notes: string | null;
+          tags: string[];
+          status: string;
+        };
+        type UpdatePatch = {
+          tags: string[];
+          status?: string;
+          notes?: string | null;
+          name?: string;
+        };
+        const toInsert: InsertRow[] = [];
+        const updates: Array<{ id: string; patch: UpdatePatch }> = [];
 
         for (const r of rows) {
           const found = byPhone.get(r.phone);
           if (found) {
             const merged = Array.from(new Set([...(found.tags ?? []), ...(r.tags ?? [])]));
-            const patch: Record<string, unknown> = { tags: merged };
+            const patch: UpdatePatch = { tags: merged };
             if (r.status) patch.status = r.status;
             if (r.notes !== undefined) patch.notes = r.notes;
             if (r.name) patch.name = r.name;
