@@ -19,6 +19,8 @@ import { Route as ApiPublicExtensionCampaignsRouteImport } from './routes/api/pu
 import { Route as ApiPublicExtensionJobsNextRouteImport } from './routes/api/public/extension/jobs.next'
 import { Route as ApiPublicExtensionJobsIdRouteImport } from './routes/api/public/extension/jobs.$id'
 import { Route as ApiPublicExtensionCustomersImportRouteImport } from './routes/api/public/extension/customers.import'
+import { Route as ApiPublicExtensionCustomersIdRouteImport } from './routes/api/public/extension/customers.$id'
+import { Route as ApiPublicExtensionCampaignsIdRouteImport } from './routes/api/public/extension/campaigns.$id'
 
 const InstalarRoute = InstalarRouteImport.update({
   id: '/instalar',
@@ -75,15 +77,29 @@ const ApiPublicExtensionCustomersImportRoute =
     path: '/import',
     getParentRoute: () => ApiPublicExtensionCustomersRoute,
   } as any)
+const ApiPublicExtensionCustomersIdRoute =
+  ApiPublicExtensionCustomersIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicExtensionCustomersRoute,
+  } as any)
+const ApiPublicExtensionCampaignsIdRoute =
+  ApiPublicExtensionCampaignsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicExtensionCampaignsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/instalar': typeof InstalarRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
-  '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRoute
+  '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
+  '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
+  '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
@@ -92,10 +108,12 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/instalar': typeof InstalarRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
-  '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRoute
+  '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
+  '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
+  '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
@@ -105,10 +123,12 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/instalar': typeof InstalarRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
-  '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRoute
+  '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
+  '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
+  '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
@@ -123,6 +143,8 @@ export interface FileRouteTypes {
     | '/api/public/extension/customers'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
+    | '/api/public/extension/campaigns/$id'
+    | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
@@ -135,6 +157,8 @@ export interface FileRouteTypes {
     | '/api/public/extension/customers'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
+    | '/api/public/extension/campaigns/$id'
+    | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
@@ -147,6 +171,8 @@ export interface FileRouteTypes {
     | '/api/public/extension/customers'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
+    | '/api/public/extension/campaigns/$id'
+    | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
@@ -156,7 +182,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   InstalarRoute: typeof InstalarRoute
   ApiPublicSignupRoute: typeof ApiPublicSignupRoute
-  ApiPublicExtensionCampaignsRoute: typeof ApiPublicExtensionCampaignsRoute
+  ApiPublicExtensionCampaignsRoute: typeof ApiPublicExtensionCampaignsRouteWithChildren
   ApiPublicExtensionCustomersRoute: typeof ApiPublicExtensionCustomersRouteWithChildren
   ApiPublicExtensionMetaRoute: typeof ApiPublicExtensionMetaRoute
   ApiPublicExtensionPairRoute: typeof ApiPublicExtensionPairRoute
@@ -236,15 +262,45 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensionCustomersImportRouteImport
       parentRoute: typeof ApiPublicExtensionCustomersRoute
     }
+    '/api/public/extension/customers/$id': {
+      id: '/api/public/extension/customers/$id'
+      path: '/$id'
+      fullPath: '/api/public/extension/customers/$id'
+      preLoaderRoute: typeof ApiPublicExtensionCustomersIdRouteImport
+      parentRoute: typeof ApiPublicExtensionCustomersRoute
+    }
+    '/api/public/extension/campaigns/$id': {
+      id: '/api/public/extension/campaigns/$id'
+      path: '/$id'
+      fullPath: '/api/public/extension/campaigns/$id'
+      preLoaderRoute: typeof ApiPublicExtensionCampaignsIdRouteImport
+      parentRoute: typeof ApiPublicExtensionCampaignsRoute
+    }
   }
 }
 
+interface ApiPublicExtensionCampaignsRouteChildren {
+  ApiPublicExtensionCampaignsIdRoute: typeof ApiPublicExtensionCampaignsIdRoute
+}
+
+const ApiPublicExtensionCampaignsRouteChildren: ApiPublicExtensionCampaignsRouteChildren =
+  {
+    ApiPublicExtensionCampaignsIdRoute: ApiPublicExtensionCampaignsIdRoute,
+  }
+
+const ApiPublicExtensionCampaignsRouteWithChildren =
+  ApiPublicExtensionCampaignsRoute._addFileChildren(
+    ApiPublicExtensionCampaignsRouteChildren,
+  )
+
 interface ApiPublicExtensionCustomersRouteChildren {
+  ApiPublicExtensionCustomersIdRoute: typeof ApiPublicExtensionCustomersIdRoute
   ApiPublicExtensionCustomersImportRoute: typeof ApiPublicExtensionCustomersImportRoute
 }
 
 const ApiPublicExtensionCustomersRouteChildren: ApiPublicExtensionCustomersRouteChildren =
   {
+    ApiPublicExtensionCustomersIdRoute: ApiPublicExtensionCustomersIdRoute,
     ApiPublicExtensionCustomersImportRoute:
       ApiPublicExtensionCustomersImportRoute,
   }
@@ -258,7 +314,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   InstalarRoute: InstalarRoute,
   ApiPublicSignupRoute: ApiPublicSignupRoute,
-  ApiPublicExtensionCampaignsRoute: ApiPublicExtensionCampaignsRoute,
+  ApiPublicExtensionCampaignsRoute:
+    ApiPublicExtensionCampaignsRouteWithChildren,
   ApiPublicExtensionCustomersRoute:
     ApiPublicExtensionCustomersRouteWithChildren,
   ApiPublicExtensionMetaRoute: ApiPublicExtensionMetaRoute,
