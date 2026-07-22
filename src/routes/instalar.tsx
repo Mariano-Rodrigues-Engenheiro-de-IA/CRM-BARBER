@@ -11,6 +11,14 @@ export const Route = createFileRoute("/instalar")({
         content:
           "Baixe a extensão e carregue no seu Chrome para começar a usar o CRM dentro do WhatsApp Web.",
       },
+      { property: "og:title", content: "Instalar extensão — CRM de Assinaturas" },
+      {
+        property: "og:description",
+        content:
+          "Baixe a extensão e carregue no seu Chrome para começar a usar o CRM dentro do WhatsApp Web.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
     ],
   }),
