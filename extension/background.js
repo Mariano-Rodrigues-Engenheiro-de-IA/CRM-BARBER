@@ -114,6 +114,30 @@ async function pollLoop() {
   pollTimer = setTimeout(pollLoop, randDelay());
 }
 
+async function apiCall(path, opts = {}) {
+  const { token } = await getAuth();
+  if (!token) return { ok: false, error: "Não vinculado" };
+  const apiBase = await getApiBase();
+  try {
+    const res = await fetch(`${apiBase}${path}`, {
+      method: opts.method || "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        ...(opts.headers || {}),
+      },
+      body: opts.body,
+    });
+    const text = await res.text();
+    let data = {};
+    try { data = JSON.parse(text); } catch { /* */ }
+    if (!res.ok) return { ok: false, error: data.error || `HTTP ${res.status}` };
+    return data;
+  } catch (e) {
+    return { ok: false, error: String(e?.message || e) };
+  }
+}
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   (async () => {
     if (msg?.type === "pair") {
@@ -127,9 +151,11 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       await chrome.storage.local.remove(["token", "barbershop"]);
       clearTimeout(pollTimer);
       sendResponse({ ok: true });
+    } else if (msg?.type === "api") {
+      sendResponse(await apiCall(msg.path, msg.opts || {}));
     }
   })();
-  return true; // keep the message channel open for async response
+  return true;
 });
 
 // Kick off polling if already paired on startup.
