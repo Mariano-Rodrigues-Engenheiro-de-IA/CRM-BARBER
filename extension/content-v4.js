@@ -6,12 +6,12 @@
 // falhas via health_events.
 
 (function () {
-  const CRM_VERSION = "0.3.0";
+  const CRM_VERSION = "0.4.0";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
   window.__crmAssinaturasInjectedVersion = CRM_VERSION;
   window.__crmAssinaturasInjected = false;
   document.getElementById("crm-assinaturas-panel")?.remove();
-  console.info(`[CRM ct v${CRM_VERSION}] content script carregado`, location.href);
+  console.info(`[CRM ct v${CRM_VERSION}] content-v4 carregado`, location.href);
 
   let panelRef = null;
 
@@ -320,7 +320,7 @@
       panel.style.opacity = "1";
       return true;
     } catch (e) {
-      console.error("[CRM ct] erro ao montar painel", e);
+      console.error(`[CRM ct v${CRM_VERSION}] erro ao montar painel`, e);
       return false;
     }
   }
@@ -367,7 +367,7 @@
       clearInterval(wait);
     } else if (attempts >= 30) {
       clearInterval(wait);
-      console.error("[CRM ct] painel não montou após 15s");
+      console.error(`[CRM ct v${CRM_VERSION}] painel não montou após 15s`);
     }
   }, 500);
 

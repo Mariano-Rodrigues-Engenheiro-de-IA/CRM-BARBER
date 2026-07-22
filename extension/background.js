@@ -106,7 +106,7 @@ async function showPanel() {
   }
   try {
     await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ["content.css"] });
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] });
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content-v4.js"] });
     const response = await chrome.tabs.sendMessage(tab.id, { type: "show_panel" });
     return response?.ok ? { ok: true } : { ok: false, error: "Content script não respondeu." };
   } catch (e) {
