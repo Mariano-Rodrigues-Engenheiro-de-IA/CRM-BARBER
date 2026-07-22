@@ -76,13 +76,23 @@
         return;
       }
       const phone = readLoggedPhone();
+      console.log("[CRM ct] readLoggedPhone →", phone);
       if (!phone) {
-        statusEl.textContent = "Abra o WhatsApp Web logado e recarregue.";
+        statusEl.textContent = "Não achei o número logado. Abra uma conversa no WhatsApp Web e tente de novo.";
         return;
       }
       pairBtn.disabled = true;
       statusEl.textContent = "Vinculando...";
-      const r = await chrome.runtime.sendMessage({ type: "pair", phone });
+      let r;
+      try {
+        r = await Promise.race([
+          chrome.runtime.sendMessage({ type: "pair", phone }),
+          new Promise((_, rej) => setTimeout(() => rej(new Error("Sem resposta do background em 20s")), 20000)),
+        ]);
+      } catch (e) {
+        r = { ok: false, error: String(e?.message || e) };
+      }
+      console.log("[CRM ct] pair result", r);
       pairBtn.disabled = false;
       if (r?.ok) {
         await refresh();

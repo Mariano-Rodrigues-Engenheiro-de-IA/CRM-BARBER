@@ -34,32 +34,39 @@ async function getAuth() {
 }
 
 async function pair(phone) {
+  const install_id = await getInstallId();
+  const apiBase = await getApiBase();
+  const url = `${apiBase}/api/public/extension/pair`;
+  console.log("[CRM bg] pair →", url, { phone, install_id });
   try {
-    const install_id = await getInstallId();
-    const apiBase = await getApiBase();
-    const url = `${apiBase}/api/public/extension/pair`;
-    console.log("[CRM] pair →", url, { phone, install_id });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone, install_id, label: "Chrome" }),
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
     const text = await res.text();
     let data = {};
     try { data = JSON.parse(text); } catch { /* HTML response */ }
-    console.log("[CRM] pair response", res.status, data, text.slice(0, 200));
+    console.log("[CRM bg] pair response", res.status, data, text.slice(0, 200));
     if (!res.ok || !data.ok) {
       return {
         ok: false,
-        error: data.error || `HTTP ${res.status} — endpoint pode não estar publicado nessa URL (${apiBase})`,
+        error: data.error || `HTTP ${res.status} — verifique se ${apiBase} está no ar`,
         code: data.code,
       };
     }
     await chrome.storage.local.set({ token: data.token, barbershop: data.barbershop });
     return { ok: true, barbershop: data.barbershop };
   } catch (e) {
-    console.error("[CRM] pair error", e);
-    return { ok: false, error: `Erro de rede: ${String(e?.message || e)}` };
+    console.error("[CRM bg] pair error", e);
+    const msg = e?.name === "AbortError"
+      ? `Timeout: ${apiBase} não respondeu em 15s`
+      : `Erro de rede: ${String(e?.message || e)}`;
+    return { ok: false, error: msg };
   }
 }
 
