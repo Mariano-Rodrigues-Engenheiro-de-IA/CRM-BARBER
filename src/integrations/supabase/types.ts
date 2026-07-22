@@ -130,7 +130,7 @@ export type Database = {
           audience_filter: Json
           barbershop_id: string
           created_at: string
-          created_by: string
+          created_by: string | null
           id: string
           name: string
           pace_seconds: number
@@ -143,7 +143,7 @@ export type Database = {
           audience_filter?: Json
           barbershop_id: string
           created_at?: string
-          created_by: string
+          created_by?: string | null
           id?: string
           name: string
           pace_seconds?: number
@@ -156,7 +156,7 @@ export type Database = {
           audience_filter?: Json
           barbershop_id?: string
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           id?: string
           name?: string
           pace_seconds?: number
