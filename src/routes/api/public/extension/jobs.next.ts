@@ -26,22 +26,25 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
 
         const nowIso = new Date().toISOString();
 
-        // Expire old jobs first (batch, cheap).
+        // Expire old jobs first (batch, cheap). expires_at is nullable in the
+        // schema — only expire jobs that actually carry a TTL.
         await supabaseAdmin
           .from("message_jobs")
           .update({ status: "expired" })
           .eq("barbershop_id", auth.token.barbershop_id)
           .eq("status", "pending")
+          .not("expires_at", "is", null)
           .lte("expires_at", nowIso);
 
-        // Pick the oldest pending job that's due.
+        // Pick the oldest pending job that's due. Skip jobs whose TTL has
+        // passed; jobs without expires_at are treated as non-expiring.
         const { data: candidate, error: pickErr } = await supabaseAdmin
           .from("message_jobs")
           .select("id, customer_id, rendered_body, scheduled_for, attempts, expires_at")
           .eq("barbershop_id", auth.token.barbershop_id)
           .eq("status", "pending")
           .lte("scheduled_for", nowIso)
-          .gt("expires_at", nowIso)
+          .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
           .order("scheduled_for", { ascending: true })
           .limit(1)
           .maybeSingle();
@@ -53,7 +56,12 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
         // Claim it (compare-and-swap on status).
         const { data: claimed, error: claimErr } = await supabaseAdmin
           .from("message_jobs")
-          .update({ status: "in_flight", attempts: candidate.attempts + 1 })
+          .update({
+            status: "in_flight",
+            attempts: candidate.attempts + 1,
+            claimed_at: nowIso,
+            claimed_by_token: auth.token.id,
+          })
           .eq("id", candidate.id)
           .eq("status", "pending")
           .select("id, customer_id, rendered_body, scheduled_for, attempts")

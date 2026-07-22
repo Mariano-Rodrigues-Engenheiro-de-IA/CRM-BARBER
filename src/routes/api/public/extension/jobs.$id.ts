@@ -39,13 +39,12 @@ export const Route = createFileRoute("/api/public/extension/jobs/$id")({
           return jsonResponse(request, { ok: false, error: "Invalid body" }, { status: 400 });
         }
 
-        const patch: Record<string, unknown> = {
+        const nowIso = new Date().toISOString();
+        const patch = {
           status: parsed.data.status,
           last_error: parsed.data.error ?? null,
+          sent_at: parsed.data.status === "sent" ? nowIso : null,
         };
-        if (parsed.data.status === "sent") {
-          patch.sent_at = new Date().toISOString();
-        }
 
         const { data, error } = await supabaseAdmin
           .from("message_jobs")

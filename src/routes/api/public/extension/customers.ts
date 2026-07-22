@@ -15,7 +15,7 @@ const createSchema = z.object({
   phone: z.string().min(3).max(40),
   notes: z.string().max(1000).optional(),
   tags: z.array(z.string().min(1).max(40)).max(20).optional(),
-  subscription_status: z.enum(["active", "overdue", "canceled", "lead"]).optional(),
+  status: z.enum(["active", "overdue", "canceled", "lead"]).optional(),
 });
 
 export const Route = createFileRoute("/api/public/extension/customers")({
@@ -31,7 +31,7 @@ export const Route = createFileRoute("/api/public/extension/customers")({
         }
         const { data, error } = await supabaseAdmin
           .from("customers")
-          .select("id, name, phone, notes, tags, subscription_status, created_at, updated_at")
+          .select("id, name, phone, notes, tags, status, created_at, updated_at")
           .eq("barbershop_id", auth.token.barbershop_id)
           .order("created_at", { ascending: false })
           .limit(500);
@@ -67,11 +67,11 @@ export const Route = createFileRoute("/api/public/extension/customers")({
             barbershop_id: auth.token.barbershop_id, // tenant from token, NEVER from body
             name: parsed.data.name,
             phone: parsed.data.phone,
-            notes: parsed.data.notes,
-            tags: parsed.data.tags,
-            subscription_status: parsed.data.subscription_status ?? "active",
+            notes: parsed.data.notes ?? null,
+            tags: parsed.data.tags ?? [],
+            status: parsed.data.status ?? "active",
           })
-          .select("id, name, phone, notes, tags, subscription_status, created_at")
+          .select("id, name, phone, notes, tags, status, created_at")
           .single();
         if (error) {
           return jsonResponse(
