@@ -66,22 +66,24 @@ async function pair(phone) {
 async function fetchNextJob() {
   const { token } = await getAuth();
   if (!token) return null;
-  const res = await fetch(`${API_BASE}/api/public/extension/jobs/next`, {
+  const apiBase = await getApiBase();
+  const res = await fetch(`${apiBase}/api/public/extension/jobs/next`, {
     headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) return null;
-  const data = await res.json();
+  }).catch(() => null);
+  if (!res || !res.ok) return null;
+  const data = await res.json().catch(() => ({}));
   return data.job || null;
 }
 
 async function reportJob(id, status, error) {
   const { token } = await getAuth();
   if (!token) return;
-  await fetch(`${API_BASE}/api/public/extension/jobs/${id}`, {
+  const apiBase = await getApiBase();
+  await fetch(`${apiBase}/api/public/extension/jobs/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ status, error }),
-  });
+  }).catch(() => {});
 }
 
 async function sendToTab(job) {
