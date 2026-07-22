@@ -6,9 +6,12 @@
 // falhas via health_events.
 
 (function () {
-  if (window.__crmAssinaturasInjected) return;
-  window.__crmAssinaturasInjected = true;
-  console.info("[CRM ct v0.2.0] content script carregado", location.href);
+  const CRM_VERSION = "0.3.0";
+  if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
+  window.__crmAssinaturasInjectedVersion = CRM_VERSION;
+  window.__crmAssinaturasInjected = false;
+  document.getElementById("crm-assinaturas-panel")?.remove();
+  console.info(`[CRM ct v${CRM_VERSION}] content script carregado`, location.href);
 
   let panelRef = null;
 
@@ -109,7 +112,7 @@
     `;
     document.body.appendChild(panel);
     panelRef = panel;
-    console.info("[CRM ct v0.2.0] painel montado com abas");
+    console.info(`[CRM ct v${CRM_VERSION}] painel montado com abas`);
 
     const $ = (s, r = panel) => r.querySelector(s);
     const $$ = (s, r = panel) => Array.from(r.querySelectorAll(s));
