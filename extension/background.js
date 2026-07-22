@@ -8,12 +8,17 @@
 //
 // Rate limit: espaçamento aleatório entre 8s e 20s entre jobs (ritmo humano).
 
-const API_BASE = "https://buzz-boost-crm.lovable.app";
+const DEFAULT_API_BASE = "https://project--652f97f5-da54-4335-aff1-092273b48f7a-dev.lovable.app";
 const POLL_MIN_MS = 8000;
 const POLL_MAX_MS = 20000;
 
 function randDelay() {
   return POLL_MIN_MS + Math.floor(Math.random() * (POLL_MAX_MS - POLL_MIN_MS));
+}
+
+async function getApiBase() {
+  const { api_base } = await chrome.storage.local.get("api_base");
+  return api_base || DEFAULT_API_BASE;
 }
 
 async function getInstallId() {
@@ -29,18 +34,33 @@ async function getAuth() {
 }
 
 async function pair(phone) {
-  const install_id = await getInstallId();
-  const res = await fetch(`${API_BASE}/api/public/extension/pair`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ phone, install_id, label: "Chrome" }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.ok) {
-    return { ok: false, error: data.error || `HTTP ${res.status}`, code: data.code };
+  try {
+    const install_id = await getInstallId();
+    const apiBase = await getApiBase();
+    const url = `${apiBase}/api/public/extension/pair`;
+    console.log("[CRM] pair →", url, { phone, install_id });
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, install_id, label: "Chrome" }),
+    });
+    const text = await res.text();
+    let data = {};
+    try { data = JSON.parse(text); } catch { /* HTML response */ }
+    console.log("[CRM] pair response", res.status, data, text.slice(0, 200));
+    if (!res.ok || !data.ok) {
+      return {
+        ok: false,
+        error: data.error || `HTTP ${res.status} — endpoint pode não estar publicado nessa URL (${apiBase})`,
+        code: data.code,
+      };
+    }
+    await chrome.storage.local.set({ token: data.token, barbershop: data.barbershop });
+    return { ok: true, barbershop: data.barbershop };
+  } catch (e) {
+    console.error("[CRM] pair error", e);
+    return { ok: false, error: `Erro de rede: ${String(e?.message || e)}` };
   }
-  await chrome.storage.local.set({ token: data.token, barbershop: data.barbershop });
-  return { ok: true, barbershop: data.barbershop };
 }
 
 async function fetchNextJob() {
