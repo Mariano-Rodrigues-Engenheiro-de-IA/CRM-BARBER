@@ -9,14 +9,26 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as InstalarRouteImport } from './routes/instalar'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicSignupRouteImport } from './routes/api/public/signup'
 import { Route as ApiPublicExtensionCustomersRouteImport } from './routes/api/public/extension/customers'
 import { Route as ApiPublicExtensionJobsNextRouteImport } from './routes/api/public/extension/jobs.next'
 import { Route as ApiPublicExtensionJobsIdRouteImport } from './routes/api/public/extension/jobs.$id'
 
+const InstalarRoute = InstalarRouteImport.update({
+  id: '/instalar',
+  path: '/instalar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicSignupRoute = ApiPublicSignupRouteImport.update({
+  id: '/api/public/signup',
+  path: '/api/public/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicExtensionCustomersRoute =
@@ -40,12 +52,16 @@ const ApiPublicExtensionJobsIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/instalar': typeof InstalarRoute
+  '/api/public/signup': typeof ApiPublicSignupRoute
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/instalar': typeof InstalarRoute
+  '/api/public/signup': typeof ApiPublicSignupRoute
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
@@ -53,6 +69,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/instalar': typeof InstalarRoute
+  '/api/public/signup': typeof ApiPublicSignupRoute
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
@@ -61,18 +79,24 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/instalar'
+    | '/api/public/signup'
     | '/api/public/extension/customers'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/instalar'
+    | '/api/public/signup'
     | '/api/public/extension/customers'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
   id:
     | '__root__'
     | '/'
+    | '/instalar'
+    | '/api/public/signup'
     | '/api/public/extension/customers'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
@@ -80,6 +104,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  InstalarRoute: typeof InstalarRoute
+  ApiPublicSignupRoute: typeof ApiPublicSignupRoute
   ApiPublicExtensionCustomersRoute: typeof ApiPublicExtensionCustomersRoute
   ApiPublicExtensionJobsIdRoute: typeof ApiPublicExtensionJobsIdRoute
   ApiPublicExtensionJobsNextRoute: typeof ApiPublicExtensionJobsNextRoute
@@ -87,11 +113,25 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/instalar': {
+      id: '/instalar'
+      path: '/instalar'
+      fullPath: '/instalar'
+      preLoaderRoute: typeof InstalarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/signup': {
+      id: '/api/public/signup'
+      path: '/api/public/signup'
+      fullPath: '/api/public/signup'
+      preLoaderRoute: typeof ApiPublicSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/extension/customers': {
@@ -120,6 +160,8 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  InstalarRoute: InstalarRoute,
+  ApiPublicSignupRoute: ApiPublicSignupRoute,
   ApiPublicExtensionCustomersRoute: ApiPublicExtensionCustomersRoute,
   ApiPublicExtensionJobsIdRoute: ApiPublicExtensionJobsIdRoute,
   ApiPublicExtensionJobsNextRoute: ApiPublicExtensionJobsNextRoute,
