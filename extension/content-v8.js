@@ -1,13 +1,10 @@
-// Content script v0.6.0 — dockado no WhatsApp Web, integrado ao rail.
+// Content script v0.8.0 — dockado no WhatsApp Web, integrado ao rail.
 // Navegação: Home → Assinaturas (Ativos/Inadimplentes/Todos) → Disparo → Progresso.
 //
-// AVISO: seletores do WhatsApp podem quebrar sem aviso — mesma limitação do
-// WaSeller e afins. O disparo abre a conversa do contato (limitação do
-// WhatsApp Web SPA), mas o painel permanece visível o tempo todo e mostra o
-// progresso da campanha em andamento.
+// O disparo usa a ponte wa-js no MAIN world. Não há fallback que abre conversa.
 
 (function () {
-  const CRM_VERSION = "0.7.0";
+  const CRM_VERSION = "0.8.0";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -21,6 +18,8 @@
   let currentSegment = "active"; // active | overdue | all
   let cachedCustomers = [];
   let campaignProgress = null; // { total, sent, failed, name }
+  let silentBridgeReady = false;
+  let lastBridgeStatus = null;
 
   // --- Helpers ---
   const el = (tag, attrs = {}, children = []) => {
@@ -146,10 +145,19 @@
 
       <div class="crm-actions">
         <label class="crm-csv-btn">
-          Importar planilha<input type="file" class="crm-csv-in" accept=".csv,.tsv,.txt,text/csv,text/plain" hidden />
+          Importar CSV<input type="file" class="crm-csv-in" accept=".csv,.tsv,.txt,text/csv,text/plain" hidden />
         </label>
         <button class="crm-add-toggle">+ Adicionar</button>
       </div>
+
+      <details class="crm-format-box">
+        <summary>Formato da planilha</summary>
+        <p>Use CSV UTF-8, separado por ponto e vírgula.</p>
+        <pre>nome;telefone;status;tags
+João Silva;61999998888;ativo;vip,mensalista
+Maria Souza;5561988887777;inadimplente;trimestral</pre>
+        <p>Status aceitos: ativo, inadimplente, reativar, cancelado, lead.</p>
+      </details>
 
       <div class="crm-add-form crm-hidden">
         <input class="crm-in-name" placeholder="Nome" />
@@ -206,13 +214,19 @@
       if (!file) return;
       const msg = $(".crm-msg");
       msg.classList.remove("crm-err");
+      if (/\.xlsx?$/i.test(file.name)) {
+        msg.classList.add("crm-err");
+        msg.textContent = "Por enquanto importe como CSV. No Excel/Sheets: Arquivo → Salvar/Baixar como CSV UTF-8.";
+        e.target.value = "";
+        return;
+      }
       msg.textContent = "Lendo planilha...";
       try {
         const text = await file.text();
         const rows = parseSpreadsheet(text, currentSegment === "all" ? "active" : currentSegment);
         if (!rows.length) {
           msg.classList.add("crm-err");
-          msg.textContent = "Não achei linhas válidas. Precisa ter uma coluna com telefone.";
+          msg.textContent = "Não achei linhas válidas. Use CSV com cabeçalho: nome;telefone;status;tags";
           e.target.value = ""; return;
         }
         msg.textContent = `Importando ${rows.length}...`;
@@ -473,49 +487,51 @@
   }, 500);
 
   // --- Execução de disparo (recebe do background) ---
-  async function waitFor(selector, timeout = 15000) {
-    const t0 = Date.now();
-    while (Date.now() - t0 < timeout) {
-      const e = document.querySelector(selector);
-      if (e) return e;
-      await sleep(300);
-    }
-    return null;
+  window.addEventListener("message", (ev) => {
+    if (ev.source !== window) return;
+    const d = ev.data;
+    if (!d || d.__crm !== "bridge_ready_v8") return;
+    silentBridgeReady = !!d.ok;
+    lastBridgeStatus = d;
+    console.info(`[CRM ct v${CRM_VERSION}] bridge_ready`, d);
+  });
+
+  function pingBridge(timeout = 2500) {
+    const id = Math.random().toString(36).slice(2);
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        window.removeEventListener("message", handler);
+        resolve({ ok: false, error: "Ponte silenciosa não respondeu" });
+      }, timeout);
+      function handler(ev) {
+        if (ev.source !== window) return;
+        const d = ev.data;
+        if (!d || d.__crm !== "bridge_pong" || d.id !== id) return;
+        clearTimeout(timer);
+        window.removeEventListener("message", handler);
+        silentBridgeReady = !!d.ok;
+        lastBridgeStatus = d;
+        resolve(d);
+      }
+      window.addEventListener("message", handler);
+      window.postMessage({ __crm: "bridge_ping_v8", id }, "*");
+    });
   }
-  function clickLikeUser(target) {
-    if (!target) return false;
-    const btn = target.closest?.('button,[role="button"]') || target;
-    btn.scrollIntoView?.({ block: "center" });
-    for (const type of ["pointerdown", "mousedown", "pointerup", "mouseup", "click"]) {
-      btn.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
-    }
-    return true;
-  }
-  function findSendButton() {
-    const cands = Array.from(document.querySelectorAll('button[aria-label], div[role="button"][aria-label]'));
-    const byLabel = cands.find((e) => /^(enviar|send)$/i.test((e.getAttribute("aria-label") || "").trim()));
-    if (byLabel) return byLabel;
-    const icon = document.querySelector('span[data-icon="send"], span[data-testid="send"]');
-    return icon?.closest?.('button,[role="button"]') || icon || null;
-  }
-  async function waitForSendButton(t = 15000) {
-    const t0 = Date.now();
-    while (Date.now() - t0 < t) { const b = findSendButton(); if (b) return b; await sleep(250); }
-    return null;
-  }
-  function fillComposerIfNeeded(box, body) {
-    const cur = (box.innerText || box.textContent || "").trim();
-    if (cur) return;
-    box.focus();
-    document.execCommand("insertText", false, body);
-    box.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: body }));
-  }
+
   // Envio silencioso via ponte com wa-js (WPP.chat.sendTextMessage) no MAIN world.
   // Não abre a conversa — a mensagem sai direto da API interna do WhatsApp Web.
-  function sendMessage(job) {
+  async function sendMessage(job) {
     const phone = (job.customer?.phone || job.phone || "").replace(/\D+/g, "");
-    if (!phone) return Promise.resolve({ ok: false, error: "Sem telefone" });
+    if (!phone) return { ok: false, error: "Sem telefone" };
     const body = job.body || job.rendered_body || "";
+    const bridge = silentBridgeReady ? lastBridgeStatus : await pingBridge();
+    if (!bridge?.ok) {
+      console.warn(`[CRM ct v${CRM_VERSION}] envio bloqueado: bridge indisponível`, bridge);
+      return {
+        ok: false,
+        error: `${bridge?.error || "Ponte silenciosa indisponível"}. Atualize a aba do WhatsApp depois de instalar a extensão v${CRM_VERSION}.`,
+      };
+    }
     const id = Math.random().toString(36).slice(2);
     console.info(`[CRM ct v${CRM_VERSION}] enviando (silencioso)`, { id: job.id, phone });
     return new Promise((resolve) => {
@@ -532,7 +548,7 @@
         resolve({ ok: !!d.ok, error: d.error });
       }
       window.addEventListener("message", handler);
-      window.postMessage({ __crm: "send", id, phone, text: body }, "*");
+      window.postMessage({ __crm: "send_v8", id, phone, text: body }, "*");
     });
   }
 
