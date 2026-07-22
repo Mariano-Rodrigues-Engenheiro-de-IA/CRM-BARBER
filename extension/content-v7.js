@@ -7,7 +7,7 @@
 // progresso da campanha em andamento.
 
 (function () {
-  const CRM_VERSION = "0.6.0";
+  const CRM_VERSION = "0.7.0";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -510,23 +510,32 @@
     document.execCommand("insertText", false, body);
     box.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: body }));
   }
-  async function sendMessage(job) {
+  // Envio silencioso via ponte com wa-js (WPP.chat.sendTextMessage) no MAIN world.
+  // Não abre a conversa — a mensagem sai direto da API interna do WhatsApp Web.
+  function sendMessage(job) {
     const phone = (job.customer?.phone || job.phone || "").replace(/\D+/g, "");
-    if (!phone) return { ok: false, error: "Sem telefone" };
+    if (!phone) return Promise.resolve({ ok: false, error: "Sem telefone" });
     const body = job.body || job.rendered_body || "";
-    console.info(`[CRM ct v${CRM_VERSION}] enviando`, { id: job.id, phone });
-    // Navegação interna do SPA (não recarrega a página; painel continua visível)
-    window.location.href = `https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(body)}`;
-    const box = await waitFor('footer div[contenteditable="true"][role="textbox"], div[contenteditable="true"][data-tab="10"], footer div[contenteditable="true"]', 25000);
-    if (!box) return { ok: false, error: "Caixa de mensagem não carregou" };
-    await sleep(900);
-    fillComposerIfNeeded(box, body);
-    const btn = await waitForSendButton(15000);
-    if (!btn) return { ok: false, error: "Botão enviar não apareceu" };
-    if (!clickLikeUser(btn)) return { ok: false, error: "Não consegui clicar em enviar" };
-    await sleep(2500);
-    return { ok: true };
+    const id = Math.random().toString(36).slice(2);
+    console.info(`[CRM ct v${CRM_VERSION}] enviando (silencioso)`, { id: job.id, phone });
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        window.removeEventListener("message", handler);
+        resolve({ ok: false, error: "Timeout no envio" });
+      }, 45000);
+      function handler(ev) {
+        if (ev.source !== window) return;
+        const d = ev.data;
+        if (!d || d.__crm !== "sent" || d.id !== id) return;
+        clearTimeout(timeout);
+        window.removeEventListener("message", handler);
+        resolve({ ok: !!d.ok, error: d.error });
+      }
+      window.addEventListener("message", handler);
+      window.postMessage({ __crm: "send", id, phone, text: body }, "*");
+    });
   }
+
 
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
     if (msg?.type === "send_message") {

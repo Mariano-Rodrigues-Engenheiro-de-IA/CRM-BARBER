@@ -106,7 +106,7 @@ async function showPanel() {
   }
   try {
     await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ["content.css"] });
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content-v6.js"] });
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content-v7.js"] });
     const response = await chrome.tabs.sendMessage(tab.id, { type: "show_panel" });
     return response?.ok ? { ok: true } : { ok: false, error: "Content script não respondeu." };
   } catch (e) {
@@ -187,7 +187,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 chrome.action.onClicked.addListener(async (tab) => {
   if (tab?.id && tab.url?.startsWith("https://web.whatsapp.com/")) {
     await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ["content.css"] });
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content-v6.js"] });
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content-v7.js"] });
     await chrome.tabs.sendMessage(tab.id, { type: "show_panel" }).catch(() => null);
     return;
   }
