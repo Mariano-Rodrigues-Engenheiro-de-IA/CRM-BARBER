@@ -5,6 +5,11 @@
 
 (function () {
   const TAG = "[CRM wa-bridge]";
+  if (window.__crmWaBridgeVersion === "0.8.0") {
+    window.postMessage({ __crm: "bridge_ready_v8", ok: !!window.WPP, hasWPP: !!window.WPP, isReady: !!window.WPP, version: "0.8.0" }, "*");
+    return;
+  }
+  window.__crmWaBridgeVersion = "0.8.0";
   let readyLogged = false;
 
   function ready() {
@@ -86,16 +91,16 @@
     if (ev.source !== window) return;
     const d = ev.data;
     if (!d || !d.__crm) return;
-    if (d.__crm === "bridge_ping") {
+    if (d.__crm === "bridge_ping_v8") {
       window.postMessage(status({ id: d.id }), "*");
       return;
     }
-    if (d.__crm !== "send") return;
+    if (d.__crm !== "send_v8") return;
     sendOne(d.id, String(d.phone || ""), String(d.text || ""));
   });
 
   // Sinaliza prontidão pro isolated world
   waitReady().then((ok) => {
-    window.postMessage({ __crm: "bridge_ready", ok, hasWPP: !!window.WPP, isReady: ready(), version: "0.8.0" }, "*");
+    window.postMessage({ __crm: "bridge_ready_v8", ok, hasWPP: !!window.WPP, isReady: ready(), version: "0.8.0" }, "*");
   });
 })();

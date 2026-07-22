@@ -490,7 +490,7 @@ Maria Souza;5561988887777;inadimplente;trimestral</pre>
   window.addEventListener("message", (ev) => {
     if (ev.source !== window) return;
     const d = ev.data;
-    if (!d || d.__crm !== "bridge_ready") return;
+    if (!d || d.__crm !== "bridge_ready_v8") return;
     silentBridgeReady = !!d.ok;
     lastBridgeStatus = d;
     console.info(`[CRM ct v${CRM_VERSION}] bridge_ready`, d);
@@ -514,7 +514,7 @@ Maria Souza;5561988887777;inadimplente;trimestral</pre>
         resolve(d);
       }
       window.addEventListener("message", handler);
-      window.postMessage({ __crm: "bridge_ping", id }, "*");
+      window.postMessage({ __crm: "bridge_ping_v8", id }, "*");
     });
   }
 
@@ -548,7 +548,7 @@ Maria Souza;5561988887777;inadimplente;trimestral</pre>
         resolve({ ok: !!d.ok, error: d.error });
       }
       window.addEventListener("message", handler);
-      window.postMessage({ __crm: "send", id, phone, text: body }, "*");
+      window.postMessage({ __crm: "send_v8", id, phone, text: body }, "*");
     });
   }
 
