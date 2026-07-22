@@ -93,9 +93,16 @@ async function reportJob(id, status, error) {
   }).catch(() => {});
 }
 
+async function ensureScripts(tabId) {
+  await chrome.scripting.executeScript({ target: { tabId }, files: ["wa-js.js", "wa-bridge.js"], world: "MAIN" }).catch(() => null);
+  await chrome.scripting.insertCSS({ target: { tabId }, files: ["content.css"] }).catch(() => null);
+  await chrome.scripting.executeScript({ target: { tabId }, files: ["content-v8.js"] }).catch(() => null);
+}
+
 async function sendToTab(job) {
   const [tab] = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
   if (!tab?.id) return { ok: false, error: "WhatsApp Web não está aberto" };
+  await ensureScripts(tab.id);
   return await chrome.tabs.sendMessage(tab.id, { type: "send_message", job });
 }
 
@@ -105,8 +112,7 @@ async function showPanel() {
     return { ok: false, error: "Abra o WhatsApp Web e tente de novo." };
   }
   try {
-    await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ["content.css"] });
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content-v7.js"] });
+    await ensureScripts(tab.id);
     const response = await chrome.tabs.sendMessage(tab.id, { type: "show_panel" });
     return response?.ok ? { ok: true } : { ok: false, error: "Content script não respondeu." };
   } catch (e) {
@@ -186,8 +192,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
 chrome.action.onClicked.addListener(async (tab) => {
   if (tab?.id && tab.url?.startsWith("https://web.whatsapp.com/")) {
-    await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ["content.css"] });
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content-v7.js"] });
+    await ensureScripts(tab.id);
     await chrome.tabs.sendMessage(tab.id, { type: "show_panel" }).catch(() => null);
     return;
   }
