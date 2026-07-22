@@ -1,0 +1,62 @@
+#crm-assinaturas-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: 280px;
+  background: #ffffff;
+  border: 1px solid #d1d7db;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  z-index: 2147483647;
+  overflow: hidden;
+}
+#crm-assinaturas-panel .crm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #128c7e;
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+}
+#crm-assinaturas-panel .crm-toggle {
+  background: transparent;
+  border: 0;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+}
+#crm-assinaturas-panel .crm-body {
+  padding: 12px;
+  font-size: 13px;
+  color: #111;
+}
+#crm-assinaturas-panel.crm-collapsed .crm-body { display: none; }
+#crm-assinaturas-panel .crm-status {
+  padding: 8px 10px;
+  background: #f0f2f5;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  min-height: 36px;
+}
+#crm-assinaturas-panel .crm-pair {
+  width: 100%;
+  padding: 8px 10px;
+  background: #128c7e;
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+#crm-assinaturas-panel .crm-pair:disabled { opacity: 0.6; cursor: wait; }
+#crm-assinaturas-panel .crm-hint {
+  margin: 10px 0 0;
+  font-size: 11px;
+  color: #667781;
+  line-height: 1.4;
+}
+#crm-assinaturas-panel .crm-hint a { color: #128c7e; }
