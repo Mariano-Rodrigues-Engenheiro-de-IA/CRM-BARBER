@@ -74,10 +74,29 @@ export const Route = createFileRoute("/api/public/signup")({
         }
         const { data: existingByEmail } = await supabaseAdmin
           .from("barbershops")
-          .select("id")
+          .select("id, owner_phone")
           .eq("owner_email", email)
           .maybeSingle();
         if (existingByEmail) {
+          if (existingByEmail.owner_phone !== phone) {
+            const { error: updateError } = await supabaseAdmin
+              .from("barbershops")
+              .update({
+                name,
+                owner_name: name,
+                owner_phone: phone,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", existingByEmail.id);
+
+            if (updateError) {
+              return new Response(
+                JSON.stringify({ ok: false, error: "Falha ao atualizar cadastro" }),
+                { status: 500, headers: { "Content-Type": "application/json", ...cors } },
+              );
+            }
+          }
+
           return new Response(JSON.stringify({ ok: true, barbershop_id: existingByEmail.id }), {
             status: 200,
             headers: { "Content-Type": "application/json", ...cors },
