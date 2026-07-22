@@ -2,9 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-// Placeholder URL — troque quando a extensão estiver publicada na Chrome Web Store.
-const CHROME_STORE_URL = "https://chromewebstore.google.com/";
-
 export const Route = createFileRoute("/instalar")({
   head: () => ({
     meta: [
@@ -12,7 +9,7 @@ export const Route = createFileRoute("/instalar")({
       {
         name: "description",
         content:
-          "Adicione a extensão ao seu Chrome e abra o WhatsApp Web para começar a usar o CRM.",
+          "Baixe a extensão e carregue no seu Chrome para começar a usar o CRM dentro do WhatsApp Web.",
       },
       { name: "robots", content: "noindex" },
     ],
@@ -20,28 +17,58 @@ export const Route = createFileRoute("/instalar")({
   component: Install,
 });
 
+// Fetch+blob evita a auth do preview em links diretos pra /public.
+function downloadZip() {
+  fetch("/crm-assinaturas-extension.zip")
+    .then((res) => {
+      if (!res.ok) throw new Error(`Falha ao baixar: ${res.status}`);
+      return res.blob();
+    })
+    .then((blob) => {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "crm-assinaturas-extension.zip";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    })
+    .catch((err) => alert(err.message));
+}
+
 function Install() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-10">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-lg">
         <CardHeader>
           <CardTitle>Cadastro concluído</CardTitle>
           <CardDescription>
-            Agora instale a extensão no seu Chrome. Ela vai reconhecer seu WhatsApp
-            automaticamente quando você abrir o WhatsApp Web.
+            Enquanto a extensão não está publicada na Chrome Web Store, instale
+            como <strong>extensão descompactada</strong> (leva 30 segundos).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button asChild size="lg" className="w-full">
-            <a href={CHROME_STORE_URL} target="_blank" rel="noopener noreferrer">
-              Adicionar ao Chrome
-            </a>
+          <Button size="lg" className="w-full" onClick={downloadZip}>
+            Baixar extensão (.zip)
           </Button>
           <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
-            <li>Clique em <strong>Adicionar ao Chrome</strong>.</li>
-            <li>Confirme a instalação na janela do Chrome.</li>
-            <li>Abra o <strong>WhatsApp Web</strong> — o CRM aparece dentro dele.</li>
+            <li>Descompacte o arquivo baixado em uma pasta.</li>
+            <li>
+              Abra <code className="rounded bg-muted px-1">chrome://extensions</code> no Chrome.
+            </li>
+            <li>
+              Ative o <strong>Modo do desenvolvedor</strong> (canto superior direito).
+            </li>
+            <li>
+              Clique em <strong>Carregar sem compactação</strong> e selecione a pasta.
+            </li>
+            <li>
+              Abra o <strong>WhatsApp Web</strong> — o painel do CRM aparece no
+              canto inferior direito. Clique em <em>Vincular esta conta</em>.
+            </li>
           </ol>
+          <p className="text-xs text-muted-foreground">
+            Quando publicarmos na Chrome Web Store, esta página vai virar um
+            botão único de <em>Adicionar ao Chrome</em>.
+          </p>
           <Button asChild variant="ghost" className="w-full">
             <Link to="/">Voltar para a página inicial</Link>
           </Button>
