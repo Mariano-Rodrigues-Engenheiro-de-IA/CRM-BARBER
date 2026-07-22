@@ -99,6 +99,22 @@ async function sendToTab(job) {
   return await chrome.tabs.sendMessage(tab.id, { type: "send_message", job });
 }
 
+async function showPanel() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id || !tab.url?.startsWith("https://web.whatsapp.com/")) {
+    return { ok: false, error: "Abra o WhatsApp Web e tente de novo." };
+  }
+  try {
+    await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ["content.css"] });
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] });
+    const response = await chrome.tabs.sendMessage(tab.id, { type: "show_panel" });
+    return response?.ok ? { ok: true } : { ok: false, error: "Content script não respondeu." };
+  } catch (e) {
+    console.error("[CRM bg] show panel error", e);
+    return { ok: false, error: String(e?.message || e) };
+  }
+}
+
 let pollTimer = null;
 async function pollLoop() {
   clearTimeout(pollTimer);
@@ -153,6 +169,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       sendResponse({ ok: true });
     } else if (msg?.type === "api") {
       sendResponse(await apiCall(msg.path, msg.opts || {}));
+    } else if (msg?.type === "show_panel") {
+      sendResponse(await showPanel());
     }
   })();
   return true;
