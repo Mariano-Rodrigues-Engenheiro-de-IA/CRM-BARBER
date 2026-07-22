@@ -7,7 +7,12 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { extensionCorsHeaders, handleExtensionOptions } from "@/lib/extension-cors";
+
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+} as const;
 
 const signupSchema = z.object({
   name: z.string().trim().min(1).max(120),
