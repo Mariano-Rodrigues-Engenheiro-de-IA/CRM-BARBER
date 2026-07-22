@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      activation_codes: {
+        Row: {
+          barbershop_id: string
+          code: string
+          created_at: string
+          expires_at: string
+          id: string
+          label: string | null
+          used_at: string | null
+          used_token_id: string | null
+        }
+        Insert: {
+          barbershop_id: string
+          code: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          label?: string | null
+          used_at?: string | null
+          used_token_id?: string | null
+        }
+        Update: {
+          barbershop_id?: string
+          code?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          label?: string | null
+          used_at?: string | null
+          used_token_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activation_codes_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activation_codes_used_token_id_fkey"
+            columns: ["used_token_id"]
+            isOneToOne: false
+            referencedRelation: "extension_tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       barbershop_members: {
         Row: {
           barbershop_id: string
