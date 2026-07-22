@@ -16,7 +16,7 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "Gestão de assinaturas + disparo pelo WhatsApp Web via extensão, sem servidor de disparo.",
+          "Organize seus clientes assinantes, crie campanhas de cobrança e fidelização e dispare mensagens diretamente pelo WhatsApp Web.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
