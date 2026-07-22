@@ -6,12 +6,15 @@
 // falhas via health_events.
 
 (function () {
-  const CRM_VERSION = "0.4.0";
+  const CRM_VERSION = "0.5.0";
+  const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
+  const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
   window.__crmAssinaturasInjectedVersion = CRM_VERSION;
   window.__crmAssinaturasInjected = false;
   document.getElementById("crm-assinaturas-panel")?.remove();
-  console.info(`[CRM ct v${CRM_VERSION}] content-v4 carregado`, location.href);
+  document.body?.classList.remove(BODY_DOCKED_CLASS, BODY_COLLAPSED_CLASS);
+  console.info(`[CRM ct v${CRM_VERSION}] content-v5 carregado`, location.href);
 
   let panelRef = null;
 
@@ -46,13 +49,13 @@
     panel.id = "crm-assinaturas-panel";
     panel.innerHTML = `
       <div class="crm-header">
-        <span class="crm-logo">CRM Assinaturas</span>
-        <button class="crm-toggle" title="Recolher">−</button>
+        <span class="crm-logo">Assinaturas</span>
+        <button class="crm-toggle" title="Recolher">‹</button>
       </div>
       <div class="crm-tabs">
-        <button class="crm-tab crm-tab-active" data-tab="link">Vincular</button>
+        <button class="crm-tab crm-tab-active" data-tab="link">Conta</button>
         <button class="crm-tab" data-tab="subs">Assinantes</button>
-        <button class="crm-tab" data-tab="camp">Campanhas</button>
+        <button class="crm-tab" data-tab="camp">Disparos</button>
       </div>
       <div class="crm-body">
         <section class="crm-view" data-view="link">
@@ -111,28 +114,33 @@
       </div>
     `;
     document.body.appendChild(panel);
+    document.body.classList.add(BODY_DOCKED_CLASS);
+    document.body.classList.remove(BODY_COLLAPSED_CLASS);
     panelRef = panel;
-    console.info(`[CRM ct v${CRM_VERSION}] painel montado com abas`);
+    console.info(`[CRM ct v${CRM_VERSION}] painel dockado no WhatsApp`);
 
     const $ = (s, r = panel) => r.querySelector(s);
     const $$ = (s, r = panel) => Array.from(r.querySelectorAll(s));
 
     $(".crm-toggle").addEventListener("click", () => {
       const c = panel.classList.toggle("crm-collapsed");
-      $(".crm-toggle").textContent = c ? "+" : "−";
+      document.body.classList.toggle(BODY_COLLAPSED_CLASS, c);
+      $(".crm-toggle").textContent = c ? "›" : "‹";
     });
+
+    function activateTab(which) {
+      $$(".crm-tab").forEach((x) => x.classList.toggle("crm-tab-active", x.dataset.tab === which));
+      $$(".crm-view").forEach((v) => {
+        v.classList.toggle("crm-hidden", v.dataset.view !== which);
+      });
+      if (which === "subs") loadCustomers();
+      if (which === "camp") loadCampaigns();
+    }
 
     // Tabs
     $$(".crm-tab").forEach((t) => {
       t.addEventListener("click", () => {
-        $$(".crm-tab").forEach((x) => x.classList.remove("crm-tab-active"));
-        t.classList.add("crm-tab-active");
-        const which = t.dataset.tab;
-        $$(".crm-view").forEach((v) => {
-          v.classList.toggle("crm-hidden", v.dataset.view !== which);
-        });
-        if (which === "subs") loadCustomers();
-        if (which === "camp") loadCampaigns();
+        activateTab(t.dataset.tab);
       });
     });
 
@@ -146,11 +154,38 @@
         statusEl.innerHTML = `<strong>Vinculado</strong><br><small>${r.barbershop?.name ?? ""}</small>`;
         pairBtn.textContent = "Desvincular";
         pairBtn.dataset.mode = "unpair";
+        activateTab("subs");
       } else {
+        const phone = readLoggedPhone();
+        if (phone) {
+          statusEl.textContent = "Vinculando automaticamente...";
+          pairBtn.disabled = true;
+          const paired = await pairCurrentWhatsApp(phone);
+          pairBtn.disabled = false;
+          if (paired) return;
+        }
         statusEl.textContent = "Não vinculado";
         pairBtn.textContent = "Vincular esta conta";
         pairBtn.dataset.mode = "pair";
       }
+    }
+
+    async function pairCurrentWhatsApp(phone) {
+      let r;
+      try {
+        r = await Promise.race([
+          chrome.runtime.sendMessage({ type: "pair", phone }),
+          new Promise((_, rej) => setTimeout(() => rej(new Error("Sem resposta em 20s")), 20000)),
+        ]);
+      } catch (e) {
+        r = { ok: false, error: String(e?.message || e) };
+      }
+      if (r?.ok) {
+        await refreshLink();
+        return true;
+      }
+      statusEl.textContent = r?.error || "Falha ao vincular";
+      return false;
     }
 
     pairBtn.addEventListener("click", async () => {
@@ -166,18 +201,9 @@
       }
       pairBtn.disabled = true;
       statusEl.textContent = "Vinculando...";
-      let r;
-      try {
-        r = await Promise.race([
-          chrome.runtime.sendMessage({ type: "pair", phone }),
-          new Promise((_, rej) => setTimeout(() => rej(new Error("Sem resposta em 20s")), 20000)),
-        ]);
-      } catch (e) {
-        r = { ok: false, error: String(e?.message || e) };
-      }
+      const ok = await pairCurrentWhatsApp(phone);
       pairBtn.disabled = false;
-      if (r?.ok) await refreshLink();
-      else statusEl.textContent = r?.error || "Falha ao vincular";
+      if (!ok && !statusEl.textContent) statusEl.textContent = "Falha ao vincular";
     });
 
     // ---- Assinantes
@@ -300,6 +326,7 @@
         msg.textContent = `Campanha criada — ${r.jobs_created} disparos na fila.`;
         $(".crm-camp-name").value = "";
         $(".crm-camp-msg").value = "";
+        chrome.runtime.sendMessage({ type: "poll_now" });
         loadCampaigns();
       } else {
         msg.textContent = r?.error || "Erro ao criar";
@@ -315,6 +342,8 @@
     try {
       const panel = panelRef || buildPanel();
       panel.classList.remove("crm-collapsed");
+      document.body.classList.add(BODY_DOCKED_CLASS);
+      document.body.classList.remove(BODY_COLLAPSED_CLASS);
       panel.style.display = "flex";
       panel.style.visibility = "visible";
       panel.style.opacity = "1";
@@ -382,21 +411,61 @@
     }
     return null;
   }
+
+  function clickLikeUser(el) {
+    if (!el) return false;
+    const target = el.closest?.('button,[role="button"]') || el;
+    target.scrollIntoView?.({ block: "center", inline: "center" });
+    for (const type of ["pointerdown", "mousedown", "pointerup", "mouseup", "click"]) {
+      target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
+    }
+    return true;
+  }
+
+  function findSendButton() {
+    const labelled = Array.from(document.querySelectorAll('button[aria-label], div[role="button"][aria-label]'));
+    const byLabel = labelled.find((el) => /^(enviar|send)$/i.test((el.getAttribute("aria-label") || "").trim()));
+    if (byLabel) return byLabel;
+    const icon = document.querySelector('span[data-icon="send"], span[data-testid="send"]');
+    return icon?.closest?.('button,[role="button"]') || icon || null;
+  }
+
+  function composerHasText(inputBox, body) {
+    const current = (inputBox.innerText || inputBox.textContent || "").trim();
+    return current.length > 0 || !body.trim();
+  }
+
+  function fillComposerIfNeeded(inputBox, body) {
+    if (composerHasText(inputBox, body)) return;
+    inputBox.focus();
+    document.execCommand("insertText", false, body);
+    inputBox.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: body }));
+  }
+
+  async function waitForSendButton(timeout = 15000) {
+    const t0 = Date.now();
+    while (Date.now() - t0 < timeout) {
+      const btn = findSendButton();
+      if (btn) return btn;
+      await sleep(250);
+    }
+    return null;
+  }
+
   async function sendMessage(job) {
     const phone = (job.customer?.phone || "").replace(/\D+/g, "");
     if (!phone) return { ok: false, error: "Sem telefone" };
     const body = job.body || "";
+    console.info(`[CRM ct v${CRM_VERSION}] disparando job`, { id: job.id, phone });
     window.location.href = `https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(body)}`;
-    const inputBox = await waitFor('div[contenteditable="true"][data-tab="10"], footer div[contenteditable="true"]', 20000);
+    const inputBox = await waitFor('footer div[contenteditable="true"][role="textbox"], div[contenteditable="true"][data-tab="10"], footer div[contenteditable="true"]', 25000);
     if (!inputBox) return { ok: false, error: "Caixa de mensagem não carregou" };
-    await sleep(1200);
-    const sendBtn = document.querySelector('button[aria-label="Enviar"], span[data-icon="send"], button[data-tab="11"]');
-    if (sendBtn) sendBtn.click();
-    else {
-      inputBox.focus();
-      inputBox.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true }));
-    }
-    await sleep(1500);
+    await sleep(900);
+    fillComposerIfNeeded(inputBox, body);
+    const sendBtn = await waitForSendButton(15000);
+    if (!sendBtn) return { ok: false, error: "Botão de enviar não apareceu" };
+    if (!clickLikeUser(sendBtn)) return { ok: false, error: "Não consegui clicar no botão de enviar" };
+    await sleep(2500);
     return { ok: true };
   }
 
