@@ -1,0 +1,1 @@
+ALTER TABLE public.campaigns ALTER COLUMN created_by DROP NOT NULL;
