@@ -278,7 +278,7 @@ export type Database = {
         Row: {
           barbershop_id: string
           created_at: string
-          created_by: string
+          created_by: string | null
           expires_at: string | null
           id: string
           label: string
@@ -289,7 +289,7 @@ export type Database = {
         Insert: {
           barbershop_id: string
           created_at?: string
-          created_by: string
+          created_by?: string | null
           expires_at?: string | null
           id?: string
           label: string
@@ -300,7 +300,7 @@ export type Database = {
         Update: {
           barbershop_id?: string
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           expires_at?: string | null
           id?: string
           label?: string
