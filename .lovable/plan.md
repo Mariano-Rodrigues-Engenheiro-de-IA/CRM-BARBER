@@ -1,71 +1,90 @@
+# Plano — CRM Assinaturas v0.10
 
-# Replano — modelo WaSeller
+Boa, disparo funcionando destrava a próxima fase. Antes de mexer, quero alinhar o escopo — é mudança grande e prefiro confirmar antes de sair codando.
 
-## O que muda em relação ao plano anterior
+## 1. Painel do CRM sai da sidebar do WhatsApp
 
-O plano aprovado tinha um **CRM web completo** (login do dono, telas de cliente/tag/campanha, dashboard). No modelo WaSeller isso não existe: o dono da barbearia **nunca abre uma página web pra usar o produto**. Ele instala a extensão, abre o WhatsApp Web, e todo o CRM (lista de clientes, tags, campanhas, disparo) aparece **injetado dentro da tela do WhatsApp Web**.
+Hoje o CRM mora num painel colado no WhatsApp Web. Vai virar:
 
-O backend continua existindo — mas com finalidade diferente.
+- **Botão "Assinaturas" na sidebar do WhatsApp** → abre nova aba do navegador (`window.open`) no painel completo.
+- **Painel completo** = nova rota web do próprio CRM (ex: `/painel`), hospedada no mesmo domínio Lovable, autenticada pelo token da extensão (passado via query string / storage).
+- A sidebar dentro do WhatsApp fica minimalista: só status de pareamento + botão "Abrir painel" + fila de disparo em andamento (com botão pausar).
 
-## Divisão nova de responsabilidades
+## 2. Kanban de assinantes
 
-**Backend (Supabase + endpoints públicos):**
-- Guarda dados por tenant (clientes, tags, templates, campanhas, jobs de disparo, tokens).
-- Valida licença (a mensalidade de R$97 continua existindo — sem isso não tem como cobrar).
-- Expõe API que a extensão consome (ler clientes, criar campanha, buscar próximo job da fila, marcar job como enviado).
-- Isolamento por tenant continua rigoroso (o token da extensão amarra tudo a uma barbearia só).
+Dentro do painel, tela principal = Kanban com colunas configuráveis. MVP:
 
-**Extensão de Chrome (onde o dono passa 100% do tempo):**
-- UI injetada no WhatsApp Web (painel lateral, modais, botões nos contatos).
-- Cadastro de cliente, tag, template, campanha — tudo dentro do WhatsApp Web.
-- Import de CSV pela própria extensão.
-- Executa disparo simulando ação humana na sessão logada do dono.
+- Colunas fixas iniciais: **Ativos**, **Inadimplentes**, **Reativar**, **Cancelados**.
+- Cada card = 1 contato (nome + telefone + tags).
+- **Drag-and-drop** entre colunas muda o `status` do customer.
+- **Lixeira no card** remove o contato (com confirm).
+- Botão **+ Adicionar** em cada coluna: abre modal com 2 abas
+  - "Escolher dos contatos do WhatsApp" (lista puxada via bridge, com busca e checkbox)
+  - "Digitar manualmente" (nome + telefone)
 
-**Superfície web mínima (fora da extensão):**
-- Página de vendas (`/`) — pra quem chegou pelo Google e ainda não é cliente.
-- Fluxo de compra + ativação de licença (checkout, confirmação de pagamento).
-- Página `/ativar` onde o dono cola um código de ativação **uma vez** pra parear a extensão com a licença dele. Depois disso ele nunca mais precisa abrir o site.
-- Painel admin (só pra você) pra ver clientes ativos, licenças, revogar acesso. Sem prioridade no MVP.
+## 3. Importação de planilha com substituição inteligente
 
-## O que apagar do que já foi construído
+- Botão **Importar planilha** no topo do Kanban.
+- Formato aceito: CSV simples `nome;telefone` (já implementado).
+- Comportamento **novo**: cada barbearia tem UMA "planilha ativa" por vez. Ao importar nova planilha:
+  - Contatos que **estavam** na planilha anterior e **não estão** na nova → removidos do CRM (marcados como `archived`, não deletados de fato, pra preservar histórico).
+  - Contatos **novos** → inseridos.
+  - Contatos que continuam → atualizados (nome, tags mescladas).
+- Contatos adicionados manualmente (fora de planilha) **não são afetados** pela substituição.
 
-- `src/routes/auth.tsx` — não tem login de dono de barbearia.
-- `src/routes/_authenticated/` inteiro (o `route.tsx` guard + `app.tsx` com criar/listar barbearia).
-- Botão Google OAuth, tudo relacionado a `supabase.auth` no fluxo do cliente final.
+Requer coluna nova `source` em `customers` (`spreadsheet` | `manual` | `whatsapp_contacts`) e coluna `spreadsheet_batch_id` para agrupar.
 
-**Manter:**
-- Todo o schema do banco (`barbershops`, `customers`, `campaigns`, `message_jobs`, `extension_tokens` etc.). Ele continua válido — só muda **quem** cria os registros (a extensão via API, não uma tela web).
-- RLS permanece, mas o acesso principal passa a ser via **token da extensão** (endpoint público que valida token → resolve `barbershop_id` → usa `supabaseAdmin` com filtro manual e isolamento testado).
-- Landing (`/`) — vira página de vendas de verdade depois.
+## 4. Campanhas com controle real
 
-## O que construir agora (ordem revisada)
+- **Pausar/Retomar** campanha em andamento (botão na tela de progresso). Backend: novo endpoint `PATCH /campaigns/:id` com `status: 'paused' | 'running'`; o worker (extensão) só puxa jobs de campanhas `running`.
+- **Ritmo configurável** com faixa (ex: entre 20 e 60 segundos, aleatório dentro da faixa) — reduz padrão de bot.
+- **Variação de mensagens**: usuário informa até 3 variações; ao enfileirar jobs, cada job recebe uma variação aleatória (round-robin ou random). Backend: `campaigns.message_variants text[]` em vez de `message` único.
 
-1. **Limpar** as telas de auth/app que não fazem sentido no modelo novo.
-2. **Fluxo de ativação minimalista** pro MVP de teste:
-   - Como ainda não tem checkout, criar uma página `/ativar` simples onde você (dono do produto) gera manualmente um código de ativação pra uma barbearia de teste.
-   - O dono cola o código na extensão → extensão troca por um `extension_token` → guarda no `chrome.storage` → daí em diante autentica sozinha.
-3. **API pública da extensão** (`/api/public/extension/*`), todos os endpoints com:
-   - Validação do token no header.
-   - Resolução tenant → `barbershop_id`.
-   - Teste automatizado obrigatório de isolamento (token da barbearia A não pode ver dado da B) — isso continua inegociável.
-   - Endpoints: listar/criar cliente, criar tag, template, campanha, buscar próximo job da fila, marcar job como enviado/falhou.
-4. **Regras já travadas** continuam valendo: TTL de 48h em job, revogação de token, abstração de envio (mesmo que hoje o único "sender" seja a extensão).
-5. **Extensão em si** — Manifest V3, injeta painel no WhatsApp Web, consome a API acima. Essa parte eu construo em paralelo (o sandbox empacota como .zip pra você instalar unpacked no Chrome).
+## 5. Layout — tema barbearia
 
-## Detalhes técnicos
+- Paleta preto + amarelo (dourado), tipografia com peso, cantos levemente arredondados.
+- Aplica no painel novo (rota `/painel`) e na sidebar reduzida da extensão.
 
-- Endpoints da extensão ficam em `src/routes/api/public/extension/*` (o prefixo `/api/public/*` bypassa auth de site publicado — a segurança é feita **manualmente** dentro do handler validando o token).
-- Handler carrega `supabaseAdmin` dinamicamente e faz o filtro por `barbershop_id` no código, já que RLS baseada em `auth.uid()` não se aplica quando quem chama é a extensão com token próprio.
-- CORS liberado só pra origem `https://web.whatsapp.com` nesses endpoints.
-- Token da extensão continua guardado como hash (SHA-256) no banco; o valor cru só existe no `chrome.storage` do dono.
-- `extension_tokens` ganha `last_used_at` e botão de revogar (você revoga pelo painel admin quando existir; enquanto isso, via SQL).
+---
 
-## O que fica pra depois do MVP
+## Escopo técnico resumido
 
-- Página de vendas de verdade + checkout + geração automática de código de ativação após pagamento.
-- Painel admin pra você gerenciar licenças/clientes ativos.
-- Health checks e alerta por e-mail quando a extensão quebra por mudança de seletor do WhatsApp Web.
+**Backend (Supabase + rotas API):**
+- Migração: `customers.source`, `customers.spreadsheet_batch_id`, `customers.archived_at`; `campaigns.message_variants text[]`, `campaigns.pace_seconds_min`, `campaigns.pace_seconds_max`.
+- Nova rota `PATCH /api/public/extension/campaigns/:id` (pausar/retomar).
+- Ajuste em `/customers/import` pra receber `mode: 'replace_spreadsheet'` e arquivar contatos ausentes.
+- Ajuste em `/jobs/next` pra filtrar campanhas pausadas.
+- Ajuste em `/campaigns` (POST) pra aceitar `message_variants` e faixa de pace.
 
-## Confirma?
+**Painel web novo (rota `/painel`):**
+- Autenticação via token da extensão (mesma tabela `extension_tokens`), passado via `?token=…` na primeira abertura, salvo em `localStorage` do domínio Lovable.
+- Kanban (dnd-kit), modal de adicionar contatos, importador de planilha, tela de campanha.
 
-Se aprovar, eu já começo apagando as rotas de auth/app que não servem mais e monto os endpoints públicos da extensão com o teste de isolamento por tenant.
+**Extensão v0.10:**
+- Sidebar simplificada: status + "Abrir painel de assinaturas" (abre nova aba) + campanhas em andamento com pausar.
+- Bridge continua responsável só pelo envio silencioso e leitura de contatos.
+
+---
+
+## O que **não** vai entrar nesta rodada
+
+- Envio de áudio/imagem (só texto por enquanto).
+- Colunas de kanban criadas pelo usuário (fica com as 4 fixas).
+- Templates salvos reutilizáveis (só variações dentro da campanha).
+- Health checks / alertas por e-mail (fase seguinte, como combinado).
+
+---
+
+## Esforço estimado
+
+Mudança grande — painel novo + kanban + refatoração de import/campanha. Estimativa: **1 a 2 dias** de trabalho meu de ponta a ponta, testando cada bloco.
+
+Ordem que vou seguir se aprovar:
+
+1. Migração de schema (customers + campaigns).
+2. Ajustes nas rotas de API (import replace, pausar campanha, variações, pace range).
+3. Painel web `/painel` com Kanban + import + adicionar contatos.
+4. Refatoração da extensão v0.10 (sidebar reduzida + botão abrir painel + pausar campanha).
+5. Skin preto/amarelo no painel e na sidebar.
+
+Confirma que faz sentido assim, ou quer que eu ajuste alguma parte antes de começar?
