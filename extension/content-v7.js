@@ -7,7 +7,7 @@
 // progresso da campanha em andamento.
 
 (function () {
-  const CRM_VERSION = "0.6.0";
+  const CRM_VERSION = "0.7.0";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
