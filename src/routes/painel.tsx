@@ -1,0 +1,711 @@
+// Painel web do CRM — aberto em nova aba pela extensão.
+//
+// Auth: token da extensão passado via `?token=<raw>` na primeira abertura,
+// persistido em localStorage. As chamadas à API pública `/api/public/extension/*`
+// vão com Authorization: Bearer <token>. Same-origin → sem preocupação com CORS.
+
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+export const Route = createFileRoute("/painel")({
+  head: () => ({
+    meta: [
+      { title: "Painel do CRM — Assinaturas" },
+      { name: "robots", content: "noindex" },
+      { name: "description", content: "Painel de gestão de assinantes da barbearia." },
+    ],
+  }),
+  component: Painel,
+});
+
+type Customer = {
+  id: string;
+  name: string;
+  phone: string;
+  status: string;
+  tags: string[] | null;
+  source: string;
+  archived_at: string | null;
+};
+
+type Campaign = {
+  id: string;
+  name: string;
+  status: string;
+  stats: { pending: number; sent: number; failed: number };
+};
+
+const COLUMNS: Array<{ key: string; label: string }> = [
+  { key: "active", label: "Ativos" },
+  { key: "overdue", label: "Inadimplentes" },
+  { key: "reactivate", label: "Reativar" },
+  { key: "canceled", label: "Cancelados" },
+];
+
+const TOKEN_KEY = "crm_ext_token_v1";
+
+function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  const url = new URL(window.location.href);
+  const q = url.searchParams.get("token");
+  if (q) {
+    localStorage.setItem(TOKEN_KEY, q);
+    url.searchParams.delete("token");
+    window.history.replaceState({}, "", url.toString());
+    return q;
+  }
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+async function api(token: string, path: string, opts: RequestInit = {}) {
+  const res = await fetch(path, {
+    ...opts,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      ...(opts.headers || {}),
+    },
+  });
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { ok: false, error: `HTTP ${res.status}` };
+  }
+}
+
+function Painel() {
+  const [token, setToken] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [tab, setTab] = useState<"kanban" | "disparo" | "campanhas">("kanban");
+
+  useEffect(() => {
+    setToken(getToken());
+    setReady(true);
+  }, []);
+
+  async function reload() {
+    if (!token) return;
+    setLoading(true);
+    const r = await api(token, "/api/public/extension/customers");
+    if (r?.ok) setCustomers(r.customers || []);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    if (token) reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
+  if (!ready) return null;
+
+  if (!token) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-neutral-950 text-yellow-50 p-6">
+        <div className="max-w-md rounded-lg border border-yellow-500/30 bg-neutral-900 p-8 text-center">
+          <h1 className="text-2xl font-bold text-yellow-400">Painel bloqueado</h1>
+          <p className="mt-3 text-sm text-neutral-300">
+            Abra este painel pela extensão do CRM no WhatsApp Web — o botão manda
+            você pra cá já autenticado.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-neutral-950 text-yellow-50">
+      <header className="sticky top-0 z-10 border-b border-yellow-500/20 bg-neutral-950/95 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-yellow-400 text-neutral-950 font-black">B</div>
+            <div>
+              <h1 className="text-lg font-bold text-yellow-400">CRM Assinaturas</h1>
+              <p className="text-xs text-neutral-400">Barbearia · painel de gestão</p>
+            </div>
+          </div>
+          <nav className="flex gap-1 rounded-md bg-neutral-900 p-1">
+            {(["kanban", "disparo", "campanhas"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={
+                  "rounded px-3 py-1.5 text-sm font-medium transition " +
+                  (tab === t ? "bg-yellow-400 text-neutral-950" : "text-neutral-300 hover:text-yellow-300")
+                }
+              >
+                {t === "kanban" ? "Assinantes" : t === "disparo" ? "Novo disparo" : "Campanhas"}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-7xl px-6 py-6">
+        {tab === "kanban" && (
+          <KanbanView customers={customers} loading={loading} token={token} reload={reload} />
+        )}
+        {tab === "disparo" && (
+          <DisparoView customers={customers} token={token} onDone={() => setTab("campanhas")} />
+        )}
+        {tab === "campanhas" && <CampaignsView token={token} />}
+      </main>
+    </div>
+  );
+}
+
+function KanbanView({
+  customers,
+  loading,
+  token,
+  reload,
+}: {
+  customers: Customer[];
+  loading: boolean;
+  token: string;
+  reload: () => void;
+}) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+
+  const byStatus = useMemo(() => {
+    const g: Record<string, Customer[]> = {};
+    for (const col of COLUMNS) g[col.key] = [];
+    for (const c of customers) {
+      if (g[c.status]) g[c.status].push(c);
+      else (g[c.status] = []).push(c);
+    }
+    return g;
+  }, [customers]);
+
+  async function moveTo(id: string, status: string) {
+    await api(token, `/api/public/extension/customers/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+    reload();
+  }
+
+  async function remove(id: string) {
+    if (!confirm("Remover este contato do CRM? (fica arquivado no histórico)")) return;
+    await api(token, `/api/public/extension/customers/${id}`, { method: "DELETE" });
+    reload();
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="text-sm text-neutral-400">
+          {loading ? "Carregando..." : `${customers.length} assinante(s) no total`}
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowImport(true)}
+            className="rounded-md border border-yellow-500/40 bg-neutral-900 px-4 py-2 text-sm font-medium text-yellow-300 hover:bg-neutral-800"
+          >
+            Importar planilha
+          </button>
+          <button
+            onClick={() => setShowAdd(true)}
+            className="rounded-md bg-yellow-400 px-4 py-2 text-sm font-bold text-neutral-950 hover:bg-yellow-300"
+          >
+            + Adicionar contato
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {COLUMNS.map((col) => (
+          <div key={col.key} className="rounded-lg border border-yellow-500/20 bg-neutral-900">
+            <div className="flex items-center justify-between border-b border-yellow-500/10 px-4 py-3">
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wide text-yellow-400">{col.label}</h3>
+                <p className="text-xs text-neutral-500">{byStatus[col.key]?.length ?? 0} contato(s)</p>
+              </div>
+            </div>
+            <div className="space-y-2 p-3 min-h-40">
+              {(byStatus[col.key] ?? []).map((c) => (
+                <div
+                  key={c.id}
+                  className="rounded-md border border-neutral-800 bg-neutral-950 p-3 text-sm hover:border-yellow-500/40"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="truncate font-semibold text-yellow-50">{c.name}</div>
+                      <div className="text-xs text-neutral-400">{c.phone}</div>
+                      {c.source === "spreadsheet" && (
+                        <span className="mt-1 inline-block rounded bg-yellow-500/10 px-1.5 py-0.5 text-[10px] uppercase text-yellow-400">
+                          planilha
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => remove(c.id)}
+                      className="rounded p-1 text-neutral-500 hover:bg-red-500/10 hover:text-red-400"
+                      title="Remover"
+                    >
+                      🗑
+                    </button>
+                  </div>
+                  <select
+                    value={c.status}
+                    onChange={(e) => moveTo(c.id, e.target.value)}
+                    className="mt-2 w-full rounded border border-neutral-800 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
+                  >
+                    {COLUMNS.map((cc) => (
+                      <option key={cc.key} value={cc.key}>Mover para: {cc.label}</option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+              {(byStatus[col.key]?.length ?? 0) === 0 && (
+                <p className="p-3 text-center text-xs text-neutral-600">Vazio</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {showAdd && <AddModal token={token} onClose={() => { setShowAdd(false); reload(); }} />}
+      {showImport && <ImportModal token={token} onClose={() => { setShowImport(false); reload(); }} />}
+    </div>
+  );
+}
+
+function AddModal({ token, onClose }: { token: string; onClose: () => void }) {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [status, setStatus] = useState("active");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim() || !phone.trim()) return;
+    setBusy(true);
+    setErr(null);
+    const r = await api(token, "/api/public/extension/customers", {
+      method: "POST",
+      body: JSON.stringify({ name: name.trim(), phone: phone.trim(), status, tags: [] }),
+    });
+    setBusy(false);
+    if (!r?.ok) { setErr(r?.error || "Erro"); return; }
+    onClose();
+  }
+
+  return (
+    <Modal onClose={onClose} title="Adicionar contato">
+      <form onSubmit={submit} className="space-y-3">
+        <Field label="Nome">
+          <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} required />
+        </Field>
+        <Field label="Telefone (com DDD)">
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls} required />
+        </Field>
+        <Field label="Coluna">
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
+            {COLUMNS.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+          </select>
+        </Field>
+        {err && <p className="text-sm text-red-400">{err}</p>}
+        <button
+          disabled={busy}
+          className="w-full rounded-md bg-yellow-400 px-4 py-2 font-bold text-neutral-950 hover:bg-yellow-300 disabled:opacity-50"
+        >
+          {busy ? "Salvando..." : "Adicionar"}
+        </button>
+      </form>
+    </Modal>
+  );
+}
+
+function ImportModal({ token, onClose }: { token: string; onClose: () => void }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [status, setStatus] = useState("active");
+  const [mode, setMode] = useState<"merge" | "replace_spreadsheet">("replace_spreadsheet");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!file) return;
+    setBusy(true);
+    setErr(null);
+    setResult(null);
+    try {
+      const text = await file.text();
+      const rows = parseCsv(text, status);
+      if (!rows.length) throw new Error("Nenhuma linha válida. Use CSV simples: nome;telefone");
+      const r = await api(token, "/api/public/extension/customers/import", {
+        method: "POST",
+        body: JSON.stringify({ customers: rows, mode }),
+      });
+      if (!r?.ok) throw new Error(r?.error || "Erro na importação");
+      setResult(
+        `Recebido: ${r.received} · Novos: ${r.inserted} · Atualizados: ${r.updated}` +
+        (r.archived ? ` · Arquivados (planilha antiga): ${r.archived}` : ""),
+      );
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal onClose={onClose} title="Importar planilha">
+      <form onSubmit={submit} className="space-y-4">
+        <div className="rounded-md border border-yellow-500/20 bg-neutral-950 p-3 text-xs text-neutral-300">
+          <strong className="text-yellow-400">Formato:</strong> CSV simples com colunas <code>nome;telefone</code>.
+          Também aceito só telefone (nome vira "Contato XXXX").
+          <pre className="mt-2 rounded bg-neutral-900 p-2 text-[11px]">nome;telefone{"\n"}João Silva;61999998888{"\n"}Maria Souza;5561988887777</pre>
+        </div>
+        <Field label="Arquivo (.csv)">
+          <input
+            type="file"
+            accept=".csv,.tsv,.txt,text/csv,text/plain"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            className="text-sm text-neutral-300"
+          />
+        </Field>
+        <Field label="Todos os contatos entram na coluna">
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
+            {COLUMNS.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+          </select>
+        </Field>
+        <Field label="Modo de importação">
+          <select value={mode} onChange={(e) => setMode(e.target.value as typeof mode)} className={inputCls}>
+            <option value="replace_spreadsheet">Substituir planilha (arquiva contatos ausentes)</option>
+            <option value="merge">Mesclar (só adiciona/atualiza)</option>
+          </select>
+          <p className="mt-1 text-xs text-neutral-500">
+            "Substituir" preserva contatos adicionados manualmente e só mexe nos da planilha.
+          </p>
+        </Field>
+        {err && <p className="text-sm text-red-400">{err}</p>}
+        {result && <p className="text-sm text-green-400">{result}</p>}
+        <button
+          disabled={busy || !file}
+          className="w-full rounded-md bg-yellow-400 px-4 py-2 font-bold text-neutral-950 hover:bg-yellow-300 disabled:opacity-50"
+        >
+          {busy ? "Importando..." : "Importar"}
+        </button>
+      </form>
+    </Modal>
+  );
+}
+
+function DisparoView({
+  customers,
+  token,
+  onDone,
+}: {
+  customers: Customer[];
+  token: string;
+  onDone: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [variants, setVariants] = useState<string[]>([""]);
+  const [segment, setSegment] = useState<string>("overdue");
+  const [paceMin, setPaceMin] = useState(20);
+  const [paceMax, setPaceMax] = useState(60);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const total = segment === "all"
+    ? customers.length
+    : customers.filter((c) => c.status === segment).length;
+
+  function updateVariant(i: number, v: string) {
+    setVariants((prev) => prev.map((x, idx) => (idx === i ? v : x)));
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const cleaned = variants.map((v) => v.trim()).filter(Boolean);
+    if (!name.trim() || cleaned.length === 0) {
+      setErr("Preencha nome e ao menos 1 mensagem.");
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    const r = await api(token, "/api/public/extension/campaigns", {
+      method: "POST",
+      body: JSON.stringify({
+        name: name.trim(),
+        message_variants: cleaned,
+        pace_seconds_min: Math.min(paceMin, paceMax),
+        pace_seconds_max: Math.max(paceMin, paceMax),
+        filter: segment === "all" ? {} : { status: segment },
+      }),
+    });
+    setBusy(false);
+    if (!r?.ok) { setErr(r?.error || "Erro"); return; }
+    onDone();
+  }
+
+  return (
+    <form onSubmit={submit} className="mx-auto max-w-2xl space-y-5 rounded-lg border border-yellow-500/20 bg-neutral-900 p-6">
+      <h2 className="text-xl font-bold text-yellow-400">Novo disparo</h2>
+
+      <Field label="Nome interno da campanha">
+        <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="ex: Cobrança julho" required />
+      </Field>
+
+      <Field label="Público-alvo">
+        <select value={segment} onChange={(e) => setSegment(e.target.value)} className={inputCls}>
+          {COLUMNS.map((c) => <option key={c.key} value={c.key}>{c.label} ({customers.filter((cu) => cu.status === c.key).length})</option>)}
+          <option value="all">Todos ({customers.length})</option>
+        </select>
+        <p className="mt-1 text-xs text-neutral-500">
+          Vai disparar para <strong className="text-yellow-400">{total}</strong> contato(s).
+        </p>
+      </Field>
+
+      <div>
+        <label className="mb-2 block text-sm font-medium text-neutral-300">
+          Variações de mensagem (rotacionadas por contato — reduz chance de bloqueio)
+        </label>
+        <div className="space-y-2">
+          {variants.map((v, i) => (
+            <div key={i} className="flex gap-2">
+              <textarea
+                value={v}
+                onChange={(e) => updateVariant(i, e.target.value)}
+                rows={3}
+                placeholder={`Variação ${i + 1}`}
+                className={inputCls}
+              />
+              {variants.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setVariants((p) => p.filter((_, idx) => idx !== i))}
+                  className="rounded px-2 text-red-400 hover:bg-red-500/10"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        {variants.length < 3 && (
+          <button
+            type="button"
+            onClick={() => setVariants((p) => [...p, ""])}
+            className="mt-2 text-xs text-yellow-400 hover:underline"
+          >
+            + Adicionar variação (máx 3)
+          </button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Ritmo mínimo (seg)">
+          <input type="number" min={5} max={600} value={paceMin} onChange={(e) => setPaceMin(Number(e.target.value))} className={inputCls} />
+        </Field>
+        <Field label="Ritmo máximo (seg)">
+          <input type="number" min={5} max={600} value={paceMax} onChange={(e) => setPaceMax(Number(e.target.value))} className={inputCls} />
+        </Field>
+      </div>
+      <p className="-mt-3 text-xs text-neutral-500">
+        Cada mensagem sai com espaçamento aleatório dentro dessa faixa.
+      </p>
+
+      {err && <p className="text-sm text-red-400">{err}</p>}
+      <button
+        disabled={busy}
+        className="w-full rounded-md bg-yellow-400 px-4 py-3 font-bold text-neutral-950 hover:bg-yellow-300 disabled:opacity-50"
+      >
+        {busy ? "Criando..." : "🚀 Iniciar campanha"}
+      </button>
+    </form>
+  );
+}
+
+function CampaignsView({ token }: { token: string }) {
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(true);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  async function reload() {
+    const r = await api(token, "/api/public/extension/campaigns");
+    if (r?.ok) setCampaigns(r.campaigns || []);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    reload();
+    timerRef.current = setInterval(reload, 4000);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function toggleStatus(c: Campaign) {
+    const next = c.status === "running" ? "paused" : "running";
+    await api(token, `/api/public/extension/campaigns/${c.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: next }),
+    });
+    reload();
+  }
+
+  async function cancelCamp(c: Campaign) {
+    if (!confirm(`Cancelar campanha "${c.name}"? Jobs pendentes não serão disparados.`)) return;
+    await api(token, `/api/public/extension/campaigns/${c.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: "canceled" }),
+    });
+    reload();
+  }
+
+  if (loading) return <p className="text-neutral-400">Carregando...</p>;
+  if (!campaigns.length) {
+    return <p className="text-neutral-400">Nenhuma campanha criada ainda.</p>;
+  }
+
+  return (
+    <div className="space-y-3">
+      {campaigns.map((c) => {
+        const total = c.stats.pending + c.stats.sent + c.stats.failed;
+        const done = c.stats.sent + c.stats.failed;
+        const pct = total ? Math.round((done / total) * 100) : 0;
+        const isRunning = c.status === "running";
+        const isPaused = c.status === "paused";
+        const isFinal = c.status === "canceled" || (total > 0 && c.stats.pending === 0);
+        return (
+          <div key={c.id} className="rounded-lg border border-yellow-500/20 bg-neutral-900 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-bold text-yellow-50">{c.name}</h3>
+                <p className="text-xs uppercase tracking-wide text-neutral-400">
+                  {c.status === "running" ? "Em andamento" : c.status === "paused" ? "Pausada" : c.status === "canceled" ? "Cancelada" : c.status}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                {!isFinal && (
+                  <button
+                    onClick={() => toggleStatus(c)}
+                    className={
+                      "rounded-md px-3 py-1.5 text-sm font-bold " +
+                      (isRunning
+                        ? "bg-neutral-800 text-yellow-400 hover:bg-neutral-700"
+                        : "bg-yellow-400 text-neutral-950 hover:bg-yellow-300")
+                    }
+                  >
+                    {isRunning ? "⏸ Pausar" : "▶ Retomar"}
+                  </button>
+                )}
+                {!isFinal && (
+                  <button
+                    onClick={() => cancelCamp(c)}
+                    className="rounded-md border border-red-500/40 px-3 py-1.5 text-sm text-red-400 hover:bg-red-500/10"
+                  >
+                    Cancelar
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="mt-4">
+              <div className="h-2 overflow-hidden rounded-full bg-neutral-800">
+                <div className="h-full bg-yellow-400 transition-all" style={{ width: `${pct}%` }} />
+              </div>
+              <div className="mt-2 flex justify-between text-xs text-neutral-400">
+                <span>{done} / {total} enviados · {c.stats.failed} falhas {isPaused ? "· ⏸" : ""}</span>
+                <span>{pct}%</span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// --- Utils ---
+
+const inputCls =
+  "w-full rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-yellow-50 placeholder:text-neutral-600 focus:border-yellow-400 focus:outline-none";
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-sm font-medium text-neutral-300">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function Modal({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+      <div className="w-full max-w-md rounded-lg border border-yellow-500/30 bg-neutral-900 p-6 shadow-2xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-yellow-400">{title}</h2>
+          <button onClick={onClose} className="rounded p-1 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200">✕</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// CSV parser: aceita ; , ou tab, com/sem cabeçalho, colunas nome/telefone.
+function parseCsv(text: string, defaultStatus: string): Array<{ name: string; phone: string; status: string; tags: string[] }> {
+  const firstLine = text.split(/\r?\n/).find((l) => l.trim()) || "";
+  const counts = { ";": (firstLine.match(/;/g) || []).length, ",": (firstLine.match(/,/g) || []).length, "\t": (firstLine.match(/\t/g) || []).length } as Record<string, number>;
+  const delim = (Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0]) || ",";
+
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  if (!lines.length) return [];
+
+  const split = (line: string) => line.split(delim).map((c) => c.trim().replace(/^"|"$/g, ""));
+  const firstCells = split(lines[0]);
+  const hasHeader = !firstCells.some((c) => /\d{8,}/.test(c.replace(/\D+/g, "")));
+
+  let iName = 0, iPhone = 1;
+  let start = 0;
+  if (hasHeader) {
+    start = 1;
+    const norm = firstCells.map((h) => h.toLowerCase());
+    const find = (...keys: string[]) => {
+      for (const k of keys) {
+        const idx = norm.findIndex((h) => h.includes(k));
+        if (idx >= 0) return idx;
+      }
+      return -1;
+    };
+    const n = find("nome", "name", "contato");
+    const p = find("telefone", "phone", "celular", "whatsapp", "numero");
+    if (n >= 0) iName = n;
+    if (p >= 0) iPhone = p;
+  }
+
+  const out: Array<{ name: string; phone: string; status: string; tags: string[] }> = [];
+  for (let i = start; i < lines.length; i++) {
+    const cells = split(lines[i]);
+    let phone = "";
+    let name = "";
+    if (cells.length === 1) {
+      phone = cells[0].replace(/\D+/g, "");
+      name = `Contato ${phone.slice(-4)}`;
+    } else {
+      name = (cells[iName] || "").trim();
+      phone = (cells[iPhone] || "").replace(/\D+/g, "");
+      if (!name) name = `Contato ${phone.slice(-4)}`;
+    }
+    if (phone.length < 8) continue;
+    out.push({ name, phone, status: defaultStatus, tags: [] });
+  }
+  return out;
+}
