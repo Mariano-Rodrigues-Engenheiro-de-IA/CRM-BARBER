@@ -94,9 +94,9 @@ async function reportJob(id, status, error) {
 }
 
 async function ensureScripts(tabId) {
-  await chrome.scripting.executeScript({ target: { tabId }, files: ["wa-js.js", "wa-bridge.js"], world: "MAIN" }).catch(() => null);
+  await chrome.scripting.executeScript({ target: { tabId }, files: ["wa-js.js", "wa-bridge-v9.js"], world: "MAIN" }).catch(() => null);
   await chrome.scripting.insertCSS({ target: { tabId }, files: ["content.css"] }).catch(() => null);
-  await chrome.scripting.executeScript({ target: { tabId }, files: ["content-v8.js"] }).catch(() => null);
+  await chrome.scripting.executeScript({ target: { tabId }, files: ["content-v9.js"] }).catch(() => null);
 }
 
 async function sendToTab(job) {
