@@ -174,8 +174,8 @@ function KanbanView({
     const g: Record<string, Customer[]> = {};
     for (const col of COLUMNS) g[col.key] = [];
     for (const c of customers) {
-      if (g[c.status]) g[c.status].push(c);
-      else (g[c.status] = []).push(c);
+      if (!g[c.status]) g[c.status] = [];
+      g[c.status].push(c);
     }
     return g;
   }, [customers]);

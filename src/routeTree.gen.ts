@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PainelRouteImport } from './routes/painel'
 import { Route as InstalarRouteImport } from './routes/instalar'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPublicSignupRouteImport } from './routes/api/public/signup'
@@ -22,6 +23,11 @@ import { Route as ApiPublicExtensionCustomersImportRouteImport } from './routes/
 import { Route as ApiPublicExtensionCustomersIdRouteImport } from './routes/api/public/extension/customers.$id'
 import { Route as ApiPublicExtensionCampaignsIdRouteImport } from './routes/api/public/extension/campaigns.$id'
 
+const PainelRoute = PainelRouteImport.update({
+  id: '/painel',
+  path: '/painel',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InstalarRoute = InstalarRouteImport.update({
   id: '/instalar',
   path: '/instalar',
@@ -93,6 +99,7 @@ const ApiPublicExtensionCampaignsIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/instalar': typeof InstalarRoute
+  '/painel': typeof PainelRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
@@ -107,6 +114,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/instalar': typeof InstalarRoute
+  '/painel': typeof PainelRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/instalar': typeof InstalarRoute
+  '/painel': typeof PainelRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
@@ -138,6 +147,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/instalar'
+    | '/painel'
     | '/api/public/signup'
     | '/api/public/extension/campaigns'
     | '/api/public/extension/customers'
@@ -152,6 +162,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/instalar'
+    | '/painel'
     | '/api/public/signup'
     | '/api/public/extension/campaigns'
     | '/api/public/extension/customers'
@@ -166,6 +177,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/instalar'
+    | '/painel'
     | '/api/public/signup'
     | '/api/public/extension/campaigns'
     | '/api/public/extension/customers'
@@ -181,6 +193,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   InstalarRoute: typeof InstalarRoute
+  PainelRoute: typeof PainelRoute
   ApiPublicSignupRoute: typeof ApiPublicSignupRoute
   ApiPublicExtensionCampaignsRoute: typeof ApiPublicExtensionCampaignsRouteWithChildren
   ApiPublicExtensionCustomersRoute: typeof ApiPublicExtensionCustomersRouteWithChildren
@@ -192,6 +205,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/painel': {
+      id: '/painel'
+      path: '/painel'
+      fullPath: '/painel'
+      preLoaderRoute: typeof PainelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/instalar': {
       id: '/instalar'
       path: '/instalar'
@@ -313,6 +333,7 @@ const ApiPublicExtensionCustomersRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   InstalarRoute: InstalarRoute,
+  PainelRoute: PainelRoute,
   ApiPublicSignupRoute: ApiPublicSignupRoute,
   ApiPublicExtensionCampaignsRoute:
     ApiPublicExtensionCampaignsRouteWithChildren,
