@@ -27,9 +27,8 @@ function normalizePhone(input: string): string {
 export const Route = createFileRoute("/api/public/signup")({
   server: {
     handlers: {
-      OPTIONS: handleExtensionOptions,
+      OPTIONS: async () => new Response(null, { status: 204, headers: cors }),
       POST: async ({ request }) => {
-        const cors = extensionCorsHeaders(request);
         let body: unknown;
         try {
           body = await request.json();
