@@ -1,100 +1,123 @@
+/* Painel dockado FLUSH ao rail do WhatsApp Web (sem espaço entre eles). */
+
 #crm-assinaturas-panel {
   position: fixed;
   left: 0;
   top: 0;
   bottom: 0;
-  width: 360px;
+  width: 320px;
   height: 100vh;
-  max-height: none;
   background: #ffffff;
   border-right: 1px solid #d1d7db;
-  border-radius: 0;
-  box-shadow: none;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  z-index: 999;
+  z-index: 2147483000;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-body.crm-assinaturas-docked #app,
-body.crm-assinaturas-docked .app-wrapper-web,
-body.crm-assinaturas-docked [data-testid="app-wrapper"],
-body.crm-assinaturas-docked div#app > div {
-  margin-left: 360px !important;
-  width: calc(100% - 360px) !important;
-  transition: margin-left 160ms ease, width 160ms ease;
+/* Empurra o WhatsApp para a direita e desliga o "centered max-width" interno,
+   para que o app encoste no painel sem vão. */
+body.crm-assinaturas-docked #app {
+  margin-left: 320px !important;
+  width: calc(100vw - 320px) !important;
+  min-width: 0 !important;
+  max-width: none !important;
 }
-
-body.crm-assinaturas-docked-collapsed #app,
-body.crm-assinaturas-docked-collapsed .app-wrapper-web,
-body.crm-assinaturas-docked-collapsed [data-testid="app-wrapper"],
-body.crm-assinaturas-docked-collapsed div#app > div {
-  margin-left: 48px !important;
-  width: calc(100% - 48px) !important;
+body.crm-assinaturas-docked #app > div,
+body.crm-assinaturas-docked #app .two,
+body.crm-assinaturas-docked #app .app-wrapper-web {
+  margin: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  justify-content: flex-start !important;
 }
-
-body.crm-assinaturas-docked-collapsed #crm-assinaturas-panel {
-  width: 48px;
+body.crm-assinaturas-docked-collapsed #app {
+  margin-left: 44px !important;
+  width: calc(100vw - 44px) !important;
 }
-
-#crm-assinaturas-panel .crm-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 12px; background: #128c7e; color: #fff;
-  font-weight: 600; font-size: 13px;
-}
-#crm-assinaturas-panel .crm-toggle {
-  background: transparent; border: 0; color: #fff;
-  font-size: 24px; cursor: pointer; line-height: 1;
-  width: 28px; height: 28px; padding: 0;
-}
-#crm-assinaturas-panel .crm-tabs {
-  display: flex; border-bottom: 1px solid #e5e7eb; background: #fafafa;
-}
-#crm-assinaturas-panel .crm-tab {
-  flex: 1; padding: 8px 4px; background: transparent; border: 0;
-  font-size: 12px; color: #667781; cursor: pointer; font-weight: 500;
-  border-bottom: 2px solid transparent;
-}
-#crm-assinaturas-panel .crm-tab-active {
-  color: #128c7e; border-bottom-color: #128c7e;
-}
-#crm-assinaturas-panel .crm-body {
-  padding: 12px; font-size: 13px; color: #111;
-  overflow-y: auto; flex: 1;
-}
-#crm-assinaturas-panel.crm-collapsed .crm-tabs,
-#crm-assinaturas-panel.crm-collapsed .crm-body { display: none; }
-#crm-assinaturas-panel.crm-collapsed .crm-header {
+body.crm-assinaturas-docked-collapsed #crm-assinaturas-panel { width: 44px; }
+body.crm-assinaturas-docked-collapsed #crm-assinaturas-panel .crm-header {
   writing-mode: vertical-rl;
   height: 100%;
   justify-content: flex-start;
-  gap: 12px;
-  padding: 12px 8px;
+  gap: 10px;
+  padding: 12px 6px;
 }
-#crm-assinaturas-panel.crm-collapsed .crm-logo { font-size: 12px; }
-#crm-assinaturas-panel .crm-hidden { display: none; }
+body.crm-assinaturas-docked-collapsed #crm-assinaturas-panel .crm-body,
+body.crm-assinaturas-docked-collapsed #crm-assinaturas-panel .crm-tabs { display: none; }
+
+#crm-assinaturas-panel .crm-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; background: #128c7e; color: #fff;
+  font-weight: 600; font-size: 14px;
+}
+#crm-assinaturas-panel .crm-back {
+  background: transparent; border: 0; color: #fff;
+  font-size: 20px; cursor: pointer; padding: 0 8px 0 0; line-height: 1;
+}
+#crm-assinaturas-panel .crm-toggle {
+  background: transparent; border: 0; color: #fff;
+  font-size: 22px; cursor: pointer; line-height: 1;
+  width: 26px; height: 26px; padding: 0;
+}
+
+#crm-assinaturas-panel .crm-body {
+  padding: 14px; font-size: 13px; color: #111;
+  overflow-y: auto; flex: 1;
+}
+#crm-assinaturas-panel .crm-hidden { display: none !important; }
+
+/* Home tiles */
+#crm-assinaturas-panel .crm-tile {
+  display: block; width: 100%; text-align: left;
+  padding: 16px; background: #f7f9fa; border: 1px solid #e5e7eb;
+  border-radius: 10px; cursor: pointer; margin-bottom: 10px;
+  color: #111;
+}
+#crm-assinaturas-panel .crm-tile:hover { background: #eef2f3; }
+#crm-assinaturas-panel .crm-tile strong { display: block; font-size: 14px; margin-bottom: 2px; }
+#crm-assinaturas-panel .crm-tile small { color: #667781; font-size: 11px; }
 
 #crm-assinaturas-panel .crm-status {
-  padding: 8px 10px; background: #f0f2f5;
-  border-radius: 8px; margin-bottom: 10px; min-height: 36px;
+  padding: 10px 12px; background: #f0f2f5; border-radius: 8px;
+  margin-bottom: 12px; font-size: 12px; color: #111;
 }
+#crm-assinaturas-panel .crm-status strong { color: #128c7e; }
+
+/* Sub-tabs (ativos/inadimplentes/todos) */
+#crm-assinaturas-panel .crm-subtabs {
+  display: flex; gap: 4px; background: #f0f2f5;
+  padding: 3px; border-radius: 8px; margin-bottom: 12px;
+}
+#crm-assinaturas-panel .crm-subtab {
+  flex: 1; padding: 7px 4px; background: transparent; border: 0;
+  font-size: 11px; color: #667781; cursor: pointer; font-weight: 600;
+  border-radius: 6px;
+}
+#crm-assinaturas-panel .crm-subtab-active { background: #fff; color: #128c7e; }
+
+/* Actions */
 #crm-assinaturas-panel .crm-actions {
-  display: flex; gap: 8px; margin-top: 8px;
+  display: flex; gap: 6px; margin: 10px 0;
 }
 #crm-assinaturas-panel .crm-actions > * { flex: 1; }
 #crm-assinaturas-panel button,
 #crm-assinaturas-panel .crm-csv-btn {
-  padding: 8px 10px; background: #128c7e; color: #fff;
+  padding: 9px 10px; background: #128c7e; color: #fff;
   border: 0; border-radius: 8px; font-weight: 600;
   cursor: pointer; font-size: 12px; text-align: center;
 }
+#crm-assinaturas-panel button.crm-ghost,
+#crm-assinaturas-panel .crm-csv-btn {
+  background: #eef2f3; color: #111;
+}
 #crm-assinaturas-panel button:disabled { opacity: 0.6; cursor: wait; }
+
 #crm-assinaturas-panel .crm-hint {
   margin: 8px 0 0; font-size: 11px; color: #667781; line-height: 1.4;
 }
-#crm-assinaturas-panel .crm-hint a,
-#crm-assinaturas-panel .crm-hint code { color: #128c7e; }
 #crm-assinaturas-panel .crm-hint code {
   background: #f0f2f5; padding: 1px 4px; border-radius: 3px; font-size: 10px;
 }
@@ -102,37 +125,32 @@ body.crm-assinaturas-docked-collapsed #crm-assinaturas-panel {
 #crm-assinaturas-panel input,
 #crm-assinaturas-panel select,
 #crm-assinaturas-panel textarea {
-  width: 100%; padding: 7px 9px; border: 1px solid #d1d7db;
-  border-radius: 6px; font-size: 12px; box-sizing: border-box;
-  font-family: inherit; background: #fff; color: #111;
+  width: 100%; padding: 8px 10px; border: 1px solid #d1d7db;
+  border-radius: 7px; font-size: 12px; box-sizing: border-box;
+  font-family: inherit; background: #fff; color: #111; margin-bottom: 8px;
 }
 #crm-assinaturas-panel textarea { resize: vertical; }
 #crm-assinaturas-panel .crm-subrow {
-  display: flex; gap: 6px; margin-bottom: 8px;
+  display: flex; gap: 6px;
 }
 #crm-assinaturas-panel .crm-subrow > * { flex: 1; min-width: 0; }
-#crm-assinaturas-panel .crm-camp-name,
-#crm-assinaturas-panel .crm-camp-msg { margin-bottom: 8px; }
 
 #crm-assinaturas-panel .crm-msg {
   margin-top: 8px; font-size: 11px; color: #128c7e; min-height: 14px;
 }
-#crm-assinaturas-panel .crm-list,
-#crm-assinaturas-panel .crm-camp-list {
+#crm-assinaturas-panel .crm-msg.crm-err { color: #b91c1c; }
+
+#crm-assinaturas-panel .crm-list {
   margin-top: 10px; display: flex; flex-direction: column; gap: 6px;
 }
 #crm-assinaturas-panel .crm-empty {
-  color: #667781; font-size: 12px; text-align: center; margin: 12px 0;
+  color: #667781; font-size: 12px; text-align: center; margin: 16px 0;
 }
 #crm-assinaturas-panel .crm-card {
   padding: 8px 10px; background: #f7f9fa; border-radius: 8px; font-size: 12px;
 }
 #crm-assinaturas-panel .crm-cardrow {
   margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
-}
-#crm-assinaturas-panel .crm-tag {
-  background: #e0e7eb; color: #374151; font-size: 10px;
-  padding: 2px 6px; border-radius: 10px;
 }
 #crm-assinaturas-panel .crm-pill {
   font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600;
@@ -143,5 +161,15 @@ body.crm-assinaturas-docked-collapsed #crm-assinaturas-panel {
 #crm-assinaturas-panel .crm-pill-canceled { background: #e5e7eb; color: #374151; }
 #crm-assinaturas-panel .crm-pill-lead { background: #dbeafe; color: #1e40af; }
 
-#crm-assinaturas-panel .crm-csv-btn { display: inline-block; }
-#crm-assinaturas-panel small { color: #667781; }
+/* Progresso da campanha */
+#crm-assinaturas-panel .crm-progress {
+  background: #f0f2f5; border-radius: 999px; height: 10px;
+  overflow: hidden; margin: 12px 0 6px;
+}
+#crm-assinaturas-panel .crm-progress-bar {
+  height: 100%; background: #128c7e; width: 0%;
+  transition: width 400ms ease;
+}
+#crm-assinaturas-panel .crm-progress-info {
+  display: flex; justify-content: space-between; font-size: 11px; color: #667781;
+}
