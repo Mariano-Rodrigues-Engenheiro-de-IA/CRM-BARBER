@@ -6,7 +6,9 @@
   "permissions": ["storage", "activeTab"],
   "host_permissions": [
     "https://web.whatsapp.com/*",
-    "https://buzz-boost-crm.lovable.app/*"
+    "https://buzz-boost-crm.lovable.app/*",
+    "https://*.lovable.app/*",
+    "https://*.lovableproject.com/*"
   ],
   "action": {
     "default_popup": "popup.html",
