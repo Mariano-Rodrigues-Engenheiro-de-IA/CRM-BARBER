@@ -106,7 +106,7 @@ async function showPanel() {
   }
   try {
     await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ["content.css"] });
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content-v4.js"] });
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content-v5.js"] });
     const response = await chrome.tabs.sendMessage(tab.id, { type: "show_panel" });
     return response?.ok ? { ok: true } : { ok: false, error: "Content script não respondeu." };
   } catch (e) {
@@ -128,6 +128,11 @@ async function pollLoop() {
     console.warn("[CRM] poll error", e);
   }
   pollTimer = setTimeout(pollLoop, randDelay());
+}
+
+async function pollNow() {
+  clearTimeout(pollTimer);
+  await pollLoop();
 }
 
 async function apiCall(path, opts = {}) {
@@ -171,9 +176,27 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       sendResponse(await apiCall(msg.path, msg.opts || {}));
     } else if (msg?.type === "show_panel") {
       sendResponse(await showPanel());
+    } else if (msg?.type === "poll_now") {
+      await pollNow();
+      sendResponse({ ok: true });
     }
   })();
   return true;
+});
+
+chrome.action.onClicked.addListener(async (tab) => {
+  if (tab?.id && tab.url?.startsWith("https://web.whatsapp.com/")) {
+    await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ["content.css"] });
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content-v5.js"] });
+    await chrome.tabs.sendMessage(tab.id, { type: "show_panel" }).catch(() => null);
+    return;
+  }
+  const [waTab] = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
+  if (waTab?.id) {
+    await chrome.tabs.update(waTab.id, { active: true });
+    return;
+  }
+  await chrome.tabs.create({ url: "https://web.whatsapp.com" });
 });
 
 // Kick off polling if already paired on startup.
