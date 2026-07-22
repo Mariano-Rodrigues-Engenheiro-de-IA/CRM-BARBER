@@ -24,6 +24,16 @@ function normalizePhone(input: string): string {
   return input.replace(/\D+/g, "");
 }
 
+function phoneLookupCandidates(phone: string): string[] {
+  const candidates = new Set([phone]);
+  if (phone.startsWith("55") && phone.length > 11) {
+    candidates.add(phone.slice(2));
+  } else if (phone.length >= 10) {
+    candidates.add(`55${phone}`);
+  }
+  return [...candidates];
+}
+
 export const Route = createFileRoute("/api/public/signup")({
   server: {
     handlers: {
@@ -64,7 +74,8 @@ export const Route = createFileRoute("/api/public/signup")({
         const { data: existingByPhone } = await supabaseAdmin
           .from("barbershops")
           .select("id")
-          .eq("owner_phone", phone)
+          .in("owner_phone", phoneLookupCandidates(phone))
+          .limit(1)
           .maybeSingle();
         if (existingByPhone) {
           return new Response(JSON.stringify({ ok: true, barbershop_id: existingByPhone.id }), {
@@ -74,10 +85,29 @@ export const Route = createFileRoute("/api/public/signup")({
         }
         const { data: existingByEmail } = await supabaseAdmin
           .from("barbershops")
-          .select("id")
+          .select("id, owner_phone")
           .eq("owner_email", email)
           .maybeSingle();
         if (existingByEmail) {
+          if (existingByEmail.owner_phone !== phone) {
+            const { error: updateError } = await supabaseAdmin
+              .from("barbershops")
+              .update({
+                name,
+                owner_name: name,
+                owner_phone: phone,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", existingByEmail.id);
+
+            if (updateError) {
+              return new Response(
+                JSON.stringify({ ok: false, error: "Falha ao atualizar cadastro" }),
+                { status: 500, headers: { "Content-Type": "application/json", ...cors } },
+              );
+            }
+          }
+
           return new Response(JSON.stringify({ ok: true, barbershop_id: existingByEmail.id }), {
             status: 200,
             headers: { "Content-Type": "application/json", ...cors },
