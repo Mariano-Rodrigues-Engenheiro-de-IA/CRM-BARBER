@@ -47,6 +47,9 @@ const COLUMNS: Array<{ key: string; label: string }> = [
 ];
 
 const TOKEN_KEY = "crm_ext_token_v1";
+const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
+const EXTENSION_API_REQUEST = "crm_api_request_v162";
+const EXTENSION_API_RESPONSE = "crm_api_response_v162";
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -61,7 +64,44 @@ function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
+function canUseExtensionBridge() {
+  return typeof window !== "undefined";
+}
+
+async function apiViaExtension(path: string, opts: RequestInit = {}) {
+  if (!canUseExtensionBridge()) return null;
+  const id = crypto.randomUUID();
+  return await new Promise<Record<string, unknown> | null>((resolve) => {
+    const timeout = setTimeout(() => {
+      window.removeEventListener("message", onMessage);
+      resolve(null);
+    }, 1200);
+    function onMessage(event: MessageEvent) {
+      if (event.source !== window) return;
+      const data = event.data;
+      if (!data || data.__crm !== EXTENSION_API_RESPONSE || data.id !== id) return;
+      clearTimeout(timeout);
+      window.removeEventListener("message", onMessage);
+      resolve(data.payload ?? { ok: false, error: data.error || "Erro na extensão" });
+    }
+    window.addEventListener("message", onMessage);
+    window.postMessage({
+      __crm: EXTENSION_API_REQUEST,
+      id,
+      path,
+      opts: {
+        method: opts.method || "GET",
+        headers: opts.headers || {},
+        body: typeof opts.body === "string" ? opts.body : undefined,
+      },
+    }, window.location.origin);
+  });
+}
+
 async function api(token: string, path: string, opts: RequestInit = {}) {
+  const bridged = await apiViaExtension(path, opts);
+  if (bridged) return bridged;
+  if (token === EXTENSION_BRIDGE_TOKEN) return { ok: false, error: "Extensão não respondeu. Atualize o WhatsApp Web e reabra o painel." };
   const res = await fetch(path, {
     ...opts,
     headers: {
@@ -154,8 +194,17 @@ function Painel() {
 
 
   useEffect(() => {
-    setToken(getToken());
-    setReady(true);
+    const storedToken = getToken();
+    if (storedToken) {
+      setToken(storedToken);
+      setReady(true);
+      return;
+    }
+    apiViaExtension("/api/public/extension/meta")
+      .then((r) => {
+        if (r?.ok) setToken(EXTENSION_BRIDGE_TOKEN);
+      })
+      .finally(() => setReady(true));
   }, []);
 
   async function reload(silent = false) {
