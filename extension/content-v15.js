@@ -148,7 +148,7 @@
   window.addEventListener("message", (ev) => {
     if (ev.source !== window) return;
     const d = ev.data;
-    if (!d || d.__crm !== "sent") return;
+    if (!d || d.__crm !== "sent_v153") return;
     const p = pending.get(d.id);
     if (!p) return;
     pending.delete(d.id);
@@ -166,7 +166,7 @@
         resolve({ ok: false, error: "Timeout no envio silencioso" });
       }, 25000);
       pending.set(id, { resolve, timeout });
-      window.postMessage({ __crm: "send", id, phone, text }, "*");
+      window.postMessage({ __crm: "send_v153", id, phone, text }, "*");
     });
   }
 })();
