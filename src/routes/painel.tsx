@@ -124,7 +124,10 @@ function Painel() {
     if (!token) return;
     reload();
     api(token, "/api/public/extension/meta").then((r) => {
-      if (r?.ok && r.barbershop) setShop(r.barbershop);
+      if (r?.ok && r.barbershop) {
+        setShop(r.barbershop);
+        setBrand(readBrand(r.barbershop.id));
+      }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
