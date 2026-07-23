@@ -111,11 +111,39 @@ function fmtBRL(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function isCurrentMonth(iso: string) {
-  const d = new Date(iso);
+type Period = "day" | "week" | "month" | "year" | "custom";
+
+function startOfPeriod(period: Period, custom?: { from: string; to: string }): { from: Date; to: Date; label: string } {
   const now = new Date();
-  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  const to = new Date(now);
+  to.setHours(23, 59, 59, 999);
+  const from = new Date(now);
+  from.setHours(0, 0, 0, 0);
+  if (period === "day") return { from, to, label: "Hoje" };
+  if (period === "week") {
+    const day = from.getDay();
+    const diff = day === 0 ? 6 : day - 1;
+    from.setDate(from.getDate() - diff);
+    return { from, to, label: "Esta semana" };
+  }
+  if (period === "month") {
+    from.setDate(1);
+    return { from, to, label: "Este mês" };
+  }
+  if (period === "year") {
+    from.setMonth(0, 1);
+    return { from, to, label: "Este ano" };
+  }
+  const cf = custom?.from ? new Date(custom.from + "T00:00:00") : from;
+  const ct = custom?.to ? new Date(custom.to + "T23:59:59") : to;
+  return { from: cf, to: ct, label: "Personalizado" };
 }
+
+function inRange(iso: string, from: Date, to: Date) {
+  const t = new Date(iso).getTime();
+  return t >= from.getTime() && t <= to.getTime();
+}
+
 
 function fireConfetti() {
   const duration = 2500;
