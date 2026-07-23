@@ -169,10 +169,11 @@ function Painel() {
   ];
 
   const navBtnCls = (active: boolean) =>
-    "w-full rounded-md px-3 py-2 text-left text-sm font-normal tracking-wide transition " +
+    "w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition " +
     (active
-      ? "bg-yellow-400/90 text-neutral-950"
-      : "text-neutral-300 hover:bg-yellow-500/10 hover:text-yellow-100");
+      ? "bg-neutral-900 text-yellow-400 shadow-sm"
+      : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900");
+
 
   return (
     <div className="flex min-h-screen bg-neutral-100 text-neutral-900">
