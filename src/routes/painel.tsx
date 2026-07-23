@@ -726,8 +726,9 @@ function CampaignsView({ token }: { token: string }) {
   async function reload() {
     const r = await api(token, "/api/public/extension/campaigns");
     if (r?.ok) {
-      campaignsCache = r.campaigns || [];
-      setCampaigns(campaignsCache);
+      const list: Campaign[] = r.campaigns || [];
+      campaignsCache = list;
+      setCampaigns(list);
     }
     setLoaded(true);
   }
