@@ -907,19 +907,18 @@ function SettingsView({
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-base font-normal tracking-wide text-yellow-50">Configurações</h1>
+      <h1 className="text-lg font-semibold text-neutral-900">Configurações</h1>
 
-
-      <div className="rounded-2xl border border-yellow-500/15 bg-neutral-900 p-6 space-y-6">
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-6">
         <div className="flex items-center gap-4">
-          <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-300 to-amber-500 text-2xl font-black text-neutral-950 shadow-md">
+          <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl bg-neutral-900 text-2xl font-semibold text-yellow-400 shadow-sm">
             {logo ? <img src={logo} alt="logo" className="h-full w-full object-cover" /> : initial}
           </div>
           <div className="flex flex-col gap-2">
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="rounded-lg bg-yellow-400 px-4 py-2 text-sm font-bold text-neutral-950 hover:bg-yellow-300"
+              className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
             >
               {logo ? "Trocar logo" : "Enviar logo"}
             </button>
@@ -927,7 +926,7 @@ function SettingsView({
               <button
                 type="button"
                 onClick={() => setLogo("")}
-                className="text-xs text-neutral-400 hover:text-red-400"
+                className="text-xs text-neutral-500 hover:text-red-600"
               >
                 remover logo
               </button>
@@ -947,23 +946,23 @@ function SettingsView({
         </div>
 
         <label className="block space-y-2">
-          <span className="text-[11px] uppercase tracking-widest text-yellow-500/70">Nome da barbearia</span>
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500">Nome da barbearia</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ex.: Barbearia do João"
-            className="w-full rounded-md border border-yellow-500/20 bg-neutral-950 px-4 py-2.5 text-sm font-light text-yellow-50 outline-none focus:border-yellow-400"
+            className={inputCls}
           />
         </label>
 
         <div className="flex items-center gap-3">
           <button
             onClick={save}
-            className="rounded-md bg-yellow-400 px-5 py-2 text-sm font-normal text-neutral-950 hover:bg-yellow-300"
+            className="rounded-lg bg-neutral-900 px-5 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
           >
             Salvar
           </button>
-          {saved && <span className="text-xs text-yellow-400">Salvo ✔</span>}
+          {saved && <span className="text-xs font-medium text-emerald-600">Salvo ✔</span>}
         </div>
       </div>
     </div>
