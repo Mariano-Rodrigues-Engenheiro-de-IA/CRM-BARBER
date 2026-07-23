@@ -287,6 +287,17 @@ function Painel() {
             <TeamView shopId={shop?.id ?? "default"} />
           </main>
         )}
+
+        {section === "configuracoes" && (
+          <main className="px-6 py-6 mt-14 md:mt-0">
+            <SettingsView
+              brand={brand}
+              fallbackName={shop?.name || ""}
+              onSave={saveBrand}
+            />
+          </main>
+        )}
+
       </div>
     </div>
   );
