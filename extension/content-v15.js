@@ -1,7 +1,7 @@
-// Content script v0.18.5 — ponte minimalista: CRM BARBER, Assinantes e Equipe.
+// Content script v0.18.6 — ponte minimalista: CRM BARBER, Assinantes e Equipe.
 
 (function () {
-  const CRM_VERSION = "0.18.5";
+  const CRM_VERSION = "0.18.6";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
@@ -10,6 +10,49 @@
   document.getElementById("crm-assinaturas-panel")?.remove();
   document.body?.classList.remove(BODY_DOCKED_CLASS, BODY_COLLAPSED_CLASS);
   console.info(`[CRM ct v${CRM_VERSION}] carregado`, location.href);
+
+  // Injetar wa-js + bridge no MAIN world, mas SÓ depois que o WhatsApp
+  // registrar seus módulos internos (workaround upstream issue #3419:
+  // negative-cache permanente quando injetado em document_start).
+  function injectMain(file) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = chrome.runtime.getURL(file);
+      s.onload = () => { s.remove(); resolve(); };
+      s.onerror = reject;
+      (document.head || document.documentElement).appendChild(s);
+    });
+  }
+  function waitForWaReady() {
+    return new Promise((resolve) => {
+      const start = Date.now();
+      const tick = () => {
+        // Sinais de que o app registrou os módulos: existe #app e alguma
+        // chave localStorage do WhatsApp foi populada (WAToken/WABrowserId
+        // ou last-wid). Timeout de 30s de segurança.
+        const hasApp = !!document.getElementById("app");
+        let hasStore = false;
+        try {
+          hasStore = !!(localStorage.getItem("WAToken1") ||
+                        localStorage.getItem("WABrowserId") ||
+                        localStorage.getItem("last-wid-md") ||
+                        localStorage.getItem("last-wid"));
+        } catch {}
+        if ((hasApp && hasStore) || Date.now() - start > 30000) return resolve();
+        setTimeout(tick, 500);
+      };
+      tick();
+    });
+  }
+  if (!window.__crmWaJsInjected) {
+    window.__crmWaJsInjected = true;
+    waitForWaReady()
+      .then(() => injectMain("wa-js.js"))
+      .then(() => injectMain("wa-bridge-v15.js"))
+      .then(() => console.info(`[CRM ct v${CRM_VERSION}] wa-js injetado (deferido)`))
+      .catch((e) => console.warn("[CRM ct] falha injetando wa-js", e));
+  }
+
 
   let panelRef = null;
   let pollHeartbeat = null;
