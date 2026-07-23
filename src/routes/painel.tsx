@@ -495,9 +495,9 @@ function ImportModal({ token, onClose }: { token: string; onClose: () => void })
   return (
     <Modal onClose={onClose} title="Importar planilha">
       <form onSubmit={submit} className="space-y-4">
-        <div className="rounded-md border border-yellow-500/20 bg-neutral-950 p-3 text-xs text-neutral-300">
-          <div><strong className="text-yellow-400">Formato:</strong> CSV com 2 colunas — <code>nome</code> e <code>telefone</code>.</div>
-          <pre className="mt-2 rounded bg-neutral-900 p-2 text-[11px]">nome;telefone{"\n"}João Silva;61999998888{"\n"}Maria Souza;5561988887777</pre>
+        <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-700">
+          <div><strong className="text-neutral-900">Formato:</strong> CSV com 2 colunas — <code>nome</code> e <code>telefone</code>.</div>
+          <pre className="mt-2 rounded bg-white border border-neutral-200 p-2 text-[11px] text-neutral-800">nome;telefone{"\n"}João Silva;61999998888{"\n"}Maria Souza;5561988887777</pre>
         </div>
 
         <Field label="Arquivo (.csv)">
@@ -512,11 +512,11 @@ function ImportModal({ token, onClose }: { token: string; onClose: () => void })
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="rounded-md border border-yellow-500/40 bg-neutral-950 px-4 py-2 text-sm font-medium text-yellow-300 hover:bg-neutral-800"
+              className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
             >
-              📎 Escolher arquivo
+              Escolher arquivo
             </button>
-            <span className="truncate text-xs text-neutral-400">
+            <span className="truncate text-xs text-neutral-500">
               {file ? file.name : "Nenhum arquivo selecionado"}
             </span>
           </div>
