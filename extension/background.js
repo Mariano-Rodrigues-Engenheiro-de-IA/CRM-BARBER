@@ -8,7 +8,7 @@
 //
 // Rate limit: espaçamento aleatório entre 8s e 20s entre jobs (ritmo humano).
 
-const EXTENSION_VERSION = "0.18.6";
+const EXTENSION_VERSION = "0.18.7";
 const DEFAULT_API_BASE = "https://buzz-boost-crm.lovable.app";
 const POLL_MIN_MS = 8000;
 const POLL_MAX_MS = 20000;
@@ -132,7 +132,6 @@ async function reportJob(id, status, error) {
 }
 
 async function ensureScripts(tabId) {
-  await chrome.scripting.executeScript({ target: { tabId }, files: ["wa-js.js", "wa-bridge-v15.js"], world: "MAIN" }).catch(() => null);
   await chrome.scripting.insertCSS({ target: { tabId }, files: ["content.css"] }).catch(() => null);
   await chrome.scripting.executeScript({ target: { tabId }, files: ["content-v15.js"] }).catch(() => null);
 }

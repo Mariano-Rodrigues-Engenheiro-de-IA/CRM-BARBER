@@ -1,7 +1,7 @@
-// Content script v0.18.6 — ponte minimalista: CRM BARBER, Assinantes e Equipe.
+// Content script v0.18.7 — ponte minimalista: CRM BARBER, Assinantes e Equipe.
 
 (function () {
-  const CRM_VERSION = "0.18.6";
+  const CRM_VERSION = "0.18.7";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
@@ -44,14 +44,23 @@
       tick();
     });
   }
-  if (!window.__crmWaJsInjected) {
+  let waScriptsPromise = null;
+  function ensureWaScriptsInjected() {
+    if (waScriptsPromise) return waScriptsPromise;
     window.__crmWaJsInjected = true;
-    waitForWaReady()
+    waScriptsPromise = waitForWaReady()
       .then(() => injectMain("wa-js.js"))
       .then(() => injectMain("wa-bridge-v15.js"))
       .then(() => console.info(`[CRM ct v${CRM_VERSION}] wa-js injetado (deferido)`))
-      .catch((e) => console.warn("[CRM ct] falha injetando wa-js", e));
+      .catch((e) => {
+        window.__crmWaJsInjected = false;
+        waScriptsPromise = null;
+        console.warn("[CRM ct] falha injetando wa-js", e);
+        throw e;
+      });
+    return waScriptsPromise;
   }
+  ensureWaScriptsInjected().catch(() => null);
 
 
   let panelRef = null;
@@ -215,6 +224,11 @@
     const phone = job?.customer?.phone;
     const text = job?.body;
     if (!phone || !text) return { ok: false, error: "Job inválido" };
+    try {
+      await ensureWaScriptsInjected();
+    } catch (e) {
+      return { ok: false, error: `Falha ao carregar wa-js/bridge: ${String(e?.message || e)}` };
+    }
     const id = crypto.randomUUID();
     const silent = await new Promise((resolve) => {
       const timeout = setTimeout(() => {
