@@ -70,21 +70,27 @@ function canUseExtensionBridge() {
 
 type ApiResult = { ok?: boolean; error?: string; [key: string]: unknown };
 
-async function apiViaExtension(path: string, opts: RequestInit = {}) {
-  if (!canUseExtensionBridge()) return null;
+async function apiViaExtension(path: string, opts: RequestInit = {}): Promise<ApiResult> {
+  if (!canUseExtensionBridge()) {
+    return { ok: false, error: "Bridge indisponível (ambiente sem window)." };
+  }
+  const method = opts.method || "GET";
   const id = crypto.randomUUID();
-  return await new Promise<ApiResult | null>((resolve) => {
+  console.info("[CRM painel] bridge →", method, path, id);
+  return await new Promise<ApiResult>((resolve) => {
     const timeout = setTimeout(() => {
       window.removeEventListener("message", onMessage);
-      resolve(null);
-    }, 45000);
+      console.warn("[CRM painel] bridge timeout", method, path, id);
+      resolve({ ok: false, error: `Extensão não respondeu em 20s (${method} ${path}). Recarregue o WhatsApp Web e tente de novo.` });
+    }, 20000);
     function onMessage(event: MessageEvent) {
       if (event.source !== window) return;
       const data = event.data;
       if (!data || data.__crm !== EXTENSION_API_RESPONSE || data.id !== id) return;
       clearTimeout(timeout);
       window.removeEventListener("message", onMessage);
-      resolve(data.payload ?? { ok: false, error: data.error || "Erro na extensão" });
+      console.info("[CRM painel] bridge ←", method, path, id, data.payload);
+      resolve(data.payload ?? { ok: false, error: data.error || "Erro na extensão (payload vazio)" });
     }
     window.addEventListener("message", onMessage);
     window.postMessage({
@@ -92,7 +98,7 @@ async function apiViaExtension(path: string, opts: RequestInit = {}) {
       id,
       path,
       opts: {
-        method: opts.method || "GET",
+        method,
         headers: opts.headers || {},
         body: typeof opts.body === "string" ? opts.body : undefined,
       },
@@ -102,8 +108,7 @@ async function apiViaExtension(path: string, opts: RequestInit = {}) {
 
 async function api(token: string, path: string, opts: RequestInit = {}) {
   if (token === EXTENSION_BRIDGE_TOKEN) {
-    const bridged = await apiViaExtension(path, opts);
-    return bridged ?? { ok: false, error: "Extensão não respondeu. Atualize o WhatsApp Web e reabra o painel." };
+    return await apiViaExtension(path, opts);
   }
   const res = await fetch(path, {
     ...opts,
