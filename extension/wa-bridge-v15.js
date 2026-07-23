@@ -90,15 +90,15 @@
     if (ev.source !== window) return;
     if (window.__crmWaBridgeVersion !== BRIDGE_VERSION) return;
     const d = ev.data;
-    if (!d || d.__crm !== "send") return;
+    if (!d || d.__crm !== "send_v153") return;
     try {
       const ready = await waitReady();
       if (!ready) throw new Error("WhatsApp Web ainda não carregou");
       const to = normalize(d.phone);
       await sendWithFallback(to, String(d.text || ""));
-      window.postMessage({ __crm: "sent", id: d.id, ok: true }, "*");
+      window.postMessage({ __crm: "sent_v153", id: d.id, ok: true }, "*");
     } catch (e) {
-      window.postMessage({ __crm: "sent", id: d.id, ok: false, error: (e && e.message) || "erro" }, "*");
+      window.postMessage({ __crm: "sent_v153", id: d.id, ok: false, error: (e && e.message) || "erro" }, "*");
     }
   });
 })();
