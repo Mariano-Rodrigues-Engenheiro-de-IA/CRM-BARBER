@@ -11,6 +11,7 @@
 const DEFAULT_API_BASE = "https://buzz-boost-crm.lovable.app";
 const POLL_MIN_MS = 8000;
 const POLL_MAX_MS = 20000;
+const POLL_ALARM_NAME = "crm-assinaturas-poll";
 
 function randDelay() {
   return POLL_MIN_MS + Math.floor(Math.random() * (POLL_MAX_MS - POLL_MIN_MS));
@@ -122,18 +123,41 @@ async function showPanel() {
 }
 
 let pollTimer = null;
+let polling = false;
+let lastPollStartedAt = 0;
+
+function scheduleAlarm() {
+  if (!chrome.alarms) return;
+  // MV3 service workers can sleep and lose setTimeout. The alarm is the
+  // reliable wake-up; the timeout keeps the 8s-20s human rhythm while alive.
+  chrome.alarms.create(POLL_ALARM_NAME, { periodInMinutes: 0.5 });
+}
+
+function clearAlarm() {
+  if (!chrome.alarms) return;
+  chrome.alarms.clear(POLL_ALARM_NAME).catch(() => {});
+}
+
 async function pollLoop() {
   clearTimeout(pollTimer);
+  if (polling) return;
+  polling = true;
+  lastPollStartedAt = Date.now();
   try {
     const job = await fetchNextJob();
     if (job) {
+      console.log("[CRM bg] job recebido", job.id, job.customer?.phone);
       const result = await sendToTab(job).catch((e) => ({ ok: false, error: String(e) }));
       await reportJob(job.id, result.ok ? "sent" : "failed", result.ok ? undefined : result.error);
+      console.log("[CRM bg] job finalizado", job.id, result);
     }
   } catch (e) {
     console.warn("[CRM] poll error", e);
+  } finally {
+    polling = false;
   }
   pollTimer = setTimeout(pollLoop, randDelay());
+  scheduleAlarm();
 }
 
 async function pollNow() {
@@ -169,7 +193,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   (async () => {
     if (msg?.type === "pair") {
       const r = await pair(msg.phone);
-      if (r.ok) pollLoop();
+      if (r.ok) {
+        scheduleAlarm();
+        pollLoop();
+      }
       sendResponse(r);
     } else if (msg?.type === "get_status") {
       const auth = await getAuth();
@@ -178,6 +205,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     } else if (msg?.type === "unpair") {
       await chrome.storage.local.remove(["token", "barbershop"]);
       clearTimeout(pollTimer);
+      clearAlarm();
       sendResponse({ ok: true });
     } else if (msg?.type === "api") {
       sendResponse(await apiCall(msg.path, msg.opts || {}));
@@ -205,8 +233,19 @@ chrome.action.onClicked.addListener(async (tab) => {
   await chrome.tabs.create({ url: "https://web.whatsapp.com" });
 });
 
+chrome.alarms?.onAlarm.addListener((alarm) => {
+  if (alarm.name !== POLL_ALARM_NAME) return;
+  // If the worker woke up from sleep, continue consuming the campaign queue.
+  // If a timeout poll started moments ago, avoid a duplicate claim attempt.
+  if (Date.now() - lastPollStartedAt < 5000) return;
+  pollLoop();
+});
+
 // Kick off polling if already paired on startup.
 (async () => {
   const { token } = await getAuth();
-  if (token) pollLoop();
+  if (token) {
+    scheduleAlarm();
+    pollLoop();
+  }
 })();

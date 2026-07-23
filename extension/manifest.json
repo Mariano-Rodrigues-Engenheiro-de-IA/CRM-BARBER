@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "CRM Assinaturas — Barbearias",
-  "version": "0.15.1",
+  "version": "0.15.2",
   "description": "CRM de assinaturas para barbearias, integrado ao WhatsApp Web.",
-  "permissions": ["storage", "activeTab", "tabs", "scripting"],
+  "permissions": ["storage", "activeTab", "tabs", "scripting", "alarms"],
   "host_permissions": [
     "https://web.whatsapp.com/*",
     "https://buzz-boost-crm.lovable.app/*",
