@@ -944,28 +944,24 @@ function SettingsView({
         </div>
 
         <label className="block space-y-2">
-          <span className="text-xs uppercase tracking-widest text-yellow-500/70">Nome da barbearia</span>
+          <span className="text-[11px] uppercase tracking-widest text-yellow-500/70">Nome da barbearia</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ex.: Barbearia do João"
-            className="w-full rounded-lg border border-yellow-500/20 bg-neutral-950 px-4 py-2.5 text-sm text-yellow-50 outline-none focus:border-yellow-400"
+            className="w-full rounded-md border border-yellow-500/20 bg-neutral-950 px-4 py-2.5 text-sm font-light text-yellow-50 outline-none focus:border-yellow-400"
           />
         </label>
 
         <div className="flex items-center gap-3">
           <button
             onClick={save}
-            className="rounded-lg bg-yellow-400 px-5 py-2.5 text-sm font-bold text-neutral-950 hover:bg-yellow-300"
+            className="rounded-md bg-yellow-400 px-5 py-2 text-sm font-normal text-neutral-950 hover:bg-yellow-300"
           >
             Salvar
           </button>
           {saved && <span className="text-xs text-yellow-400">Salvo ✔</span>}
         </div>
-
-        <p className="text-[11px] text-neutral-500">
-          As configurações ficam salvas neste navegador.
-        </p>
       </div>
     </div>
   );
