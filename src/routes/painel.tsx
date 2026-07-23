@@ -595,8 +595,8 @@ function DisparoView({
   }
 
   return (
-    <form onSubmit={submit} className="mx-auto max-w-2xl space-y-5 rounded-lg border border-yellow-500/20 bg-neutral-900 p-6">
-      <h2 className="text-xl font-bold text-yellow-400">Novo disparo</h2>
+    <form onSubmit={submit} className="mx-auto max-w-2xl space-y-5 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+      <h2 className="text-lg font-semibold text-neutral-900">Novo disparo</h2>
 
       <Field label="Nome interno da campanha">
         <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="ex: Cobrança julho" required />
@@ -608,12 +608,12 @@ function DisparoView({
           <option value="all">Todos ({customers.length})</option>
         </select>
         <p className="mt-1 text-xs text-neutral-500">
-          Vai disparar para <strong className="text-yellow-400">{total}</strong> contato(s).
+          Vai disparar para <strong className="text-neutral-900">{total}</strong> contato(s).
         </p>
       </Field>
 
       <div>
-        <label className="mb-2 block text-sm font-medium text-neutral-300">
+        <label className="mb-2 block text-sm font-medium text-neutral-700">
           Variações de mensagem (rotacionadas por contato — reduz chance de bloqueio)
         </label>
         <div className="space-y-2">
@@ -630,7 +630,7 @@ function DisparoView({
                 <button
                   type="button"
                   onClick={() => setVariants((p) => p.filter((_, idx) => idx !== i))}
-                  className="rounded px-2 text-red-400 hover:bg-red-500/10"
+                  className="rounded px-2 text-red-500 hover:bg-red-50"
                 >
                   ✕
                 </button>
@@ -642,7 +642,7 @@ function DisparoView({
           <button
             type="button"
             onClick={() => setVariants((p) => [...p, ""])}
-            className="mt-2 text-xs text-yellow-400 hover:underline"
+            className="mt-2 text-xs font-medium text-neutral-700 hover:underline"
           >
             + Adicionar variação (máx 3)
           </button>
@@ -661,12 +661,12 @@ function DisparoView({
         Cada mensagem sai com espaçamento aleatório dentro dessa faixa.
       </p>
 
-      {err && <p className="text-sm text-red-400">{err}</p>}
+      {err && <p className="text-sm text-red-500">{err}</p>}
       <button
         disabled={busy}
-        className="w-full rounded-md bg-yellow-400 px-4 py-3 font-bold text-neutral-950 hover:bg-yellow-300 disabled:opacity-50"
+        className="w-full rounded-lg bg-neutral-900 px-4 py-3 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
       >
-        {busy ? "Criando..." : segment === "overdue" ? "💰 Iniciar cobrança" : "🚀 Iniciar disparo"}
+        {busy ? "Criando..." : segment === "overdue" ? "Iniciar cobrança" : "Iniciar disparo"}
       </button>
     </form>
   );
