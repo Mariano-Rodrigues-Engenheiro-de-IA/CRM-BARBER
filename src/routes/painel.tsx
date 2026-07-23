@@ -75,8 +75,20 @@ async function api(token: string, path: string, opts: RequestInit = {}) {
   }
 }
 
-type Section = "assinantes" | "equipe";
+type Section = "assinantes" | "equipe" | "configuracoes";
 type AssinantesTab = "kanban" | "disparo" | "campanhas";
+
+type Brand = { name?: string; logo?: string };
+function brandKey(shopId: string) { return `crm_brand_${shopId || "default"}`; }
+function readBrand(shopId: string): Brand {
+  if (typeof window === "undefined") return {};
+  try { return JSON.parse(localStorage.getItem(brandKey(shopId)) || "{}") || {}; }
+  catch { return {}; }
+}
+function writeBrand(shopId: string, data: Brand) {
+  localStorage.setItem(brandKey(shopId), JSON.stringify(data));
+}
+
 
 function Painel() {
   const [token, setToken] = useState<string | null>(null);
