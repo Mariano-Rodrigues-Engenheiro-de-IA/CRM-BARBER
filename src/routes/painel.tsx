@@ -172,26 +172,26 @@ function Painel() {
     "group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition " +
     (active
       ? "bg-yellow-400 text-neutral-900"
-      : "text-neutral-200 hover:bg-white/[0.06] hover:text-white");
+      : "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950");
 
   return (
     <div className="flex min-h-screen bg-neutral-100 text-neutral-900">
       {/* Sidebar */}
-      <aside className="hidden md:flex w-64 shrink-0 flex-col bg-neutral-950 text-neutral-100">
+      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-neutral-200 bg-white text-neutral-900">
         {/* Brand card — emoldura o nome pra não parecer "solto na tela" */}
         <div className="px-3 pt-4 pb-3">
-          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3">
+          <div className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-3 shadow-sm">
             <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-yellow-400 text-base font-bold text-neutral-900 ring-1 ring-black/10">
               {shopLogo ? <img src={shopLogo} alt="logo" className="h-full w-full object-cover" /> : shopInitial}
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold tracking-[0.22em] text-yellow-400/90">CRM BARBER</p>
-              <p className="truncate text-sm font-semibold text-white">{shopName}</p>
+              <p className="text-[10px] font-semibold tracking-[0.22em] text-neutral-500">CRM BARBER</p>
+              <p className="truncate text-sm font-semibold text-neutral-950">{shopName}</p>
             </div>
           </div>
         </div>
 
-        <div className="mx-3 mb-2 h-px bg-white/5" />
+        <div className="mx-3 mb-2 h-px bg-neutral-200" />
 
         <nav className="flex-1 space-y-1 px-3">
           {NAV_TOP.map((n) => {
@@ -203,7 +203,7 @@ function Painel() {
                 <span
                   className={
                     "text-base leading-none transition " +
-                    (active ? "text-neutral-900" : "text-neutral-500 group-hover:text-white group-hover:translate-x-0.5")
+                    (active ? "text-neutral-900" : "text-neutral-400 group-hover:text-neutral-700 group-hover:translate-x-0.5")
                   }
                 >
                   ›
@@ -214,14 +214,14 @@ function Painel() {
         </nav>
 
         <div className="px-3 pb-4 pt-2">
-          <div className="mb-3 h-px bg-white/5" />
+          <div className="mb-3 h-px bg-neutral-200" />
           <button onClick={() => setSection("configuracoes")} className={navRowCls(section === "configuracoes")}>
             <span className="text-base leading-none">⚙️</span>
             <span className="flex-1 truncate">Configurações</span>
             <span
               className={
                 "text-base leading-none transition " +
-                (section === "configuracoes" ? "text-neutral-900" : "text-neutral-500 group-hover:text-white")
+                (section === "configuracoes" ? "text-neutral-900" : "text-neutral-400 group-hover:text-neutral-700")
               }
             >
               ›
@@ -231,16 +231,16 @@ function Painel() {
       </aside>
 
       {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-neutral-800 bg-neutral-950 text-neutral-100 px-4 py-3">
-        <span className="text-[11px] font-semibold tracking-[0.22em] text-yellow-400">CRM BARBER</span>
-        <div className="flex gap-1 rounded-lg bg-white/[0.06] p-1">
+      <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-neutral-200 bg-white text-neutral-900 px-4 py-3">
+        <span className="text-[11px] font-semibold tracking-[0.22em] text-neutral-700">CRM BARBER</span>
+        <div className="flex gap-1 rounded-lg bg-neutral-100 p-1">
           {[...NAV_TOP, { key: "configuracoes" as Section, label: "Config", icon: "⚙️" }].map((n) => (
             <button
               key={n.key}
               onClick={() => setSection(n.key)}
               className={
                 "rounded-md px-2.5 py-1 text-[11px] font-medium " +
-                (section === n.key ? "bg-yellow-400 text-neutral-900" : "text-neutral-300")
+                (section === n.key ? "bg-yellow-400 text-neutral-900" : "text-neutral-600")
               }
             >
               {n.label}
