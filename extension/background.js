@@ -8,7 +8,7 @@
 //
 // Rate limit: espaçamento aleatório entre 8s e 20s entre jobs (ritmo humano).
 
-const EXTENSION_VERSION = "0.18.2";
+const EXTENSION_VERSION = "0.18.3";
 const DEFAULT_API_BASE = "https://buzz-boost-crm.lovable.app";
 const POLL_MIN_MS = 8000;
 const POLL_MAX_MS = 20000;
@@ -137,8 +137,31 @@ async function ensureScripts(tabId) {
   await chrome.scripting.executeScript({ target: { tabId }, files: ["content-v15.js"] }).catch(() => null);
 }
 
-async function sendToTab(job) {
+function isWhatsappUrl(url) {
+  return String(url || "").startsWith("https://web.whatsapp.com/");
+}
+
+async function preventTabDiscard(tabId) {
+  if (!tabId) return false;
+  try {
+    // Não ativa a aba. Só informa ao Chrome que esta aba não deve ser
+    // descartada automaticamente enquanto a extensão monitora o WhatsApp Web.
+    await chrome.tabs.update(tabId, { autoDiscardable: false });
+    return true;
+  } catch (e) {
+    console.warn("[CRM bg] não foi possível desativar descarte automático", e);
+    return false;
+  }
+}
+
+async function getWhatsappTabs() {
   const tabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
+  await Promise.all(tabs.filter((tab) => tab.id).map((tab) => preventTabDiscard(tab.id)));
+  return tabs;
+}
+
+async function sendToTab(job) {
+  const tabs = await getWhatsappTabs();
   const candidates = tabs
     .filter((tab) => tab.id)
     .sort((a, b) => Number(!!b.active) - Number(!!a.active));
@@ -147,7 +170,10 @@ async function sendToTab(job) {
   let lastError = "WhatsApp Web não respondeu";
   for (const tab of candidates) {
     try {
-      await chrome.tabs.update(tab.id, { active: true }).catch(() => null);
+      if (tab.discarded) {
+        lastError = "Aba do WhatsApp Web estava suspensa/descartada pelo Chrome. A extensão marcou a aba para não ser descartada daqui pra frente; abra/atualize o WhatsApp Web uma vez e tente novamente.";
+        continue;
+      }
       await ensureScripts(tab.id);
       const result = await chrome.tabs.sendMessage(tab.id, { type: "send_message_v180", job });
       if (result?.ok) return result;
@@ -165,6 +191,7 @@ async function showPanel() {
     return { ok: false, error: "Abra o WhatsApp Web e tente de novo." };
   }
   try {
+    await preventTabDiscard(tab.id);
     await ensureScripts(tab.id);
     const response = await chrome.tabs.sendMessage(tab.id, { type: "show_panel" });
     return response?.ok ? { ok: true } : { ok: false, error: "Content script não respondeu." };
@@ -196,6 +223,7 @@ async function pollLoop() {
   polling = true;
   lastPollStartedAt = Date.now();
   try {
+    await getWhatsappTabs();
     const job = await fetchNextJob();
     if (job) {
       console.log("[CRM bg] job recebido", job.id, job.customer?.phone);
@@ -281,11 +309,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
 chrome.action.onClicked.addListener(async (tab) => {
   if (tab?.id && tab.url?.startsWith("https://web.whatsapp.com/")) {
+    await preventTabDiscard(tab.id);
     await ensureScripts(tab.id);
     await chrome.tabs.sendMessage(tab.id, { type: "show_panel" }).catch(() => null);
     return;
   }
-  const [waTab] = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
+  const [waTab] = await getWhatsappTabs();
   if (waTab?.id) {
     await chrome.tabs.update(waTab.id, { active: true });
     return;
@@ -301,10 +330,17 @@ chrome.alarms?.onAlarm.addListener((alarm) => {
   pollLoop();
 });
 
+chrome.tabs.onUpdated?.addListener((tabId, changeInfo, tab) => {
+  if (isWhatsappUrl(changeInfo.url) || isWhatsappUrl(tab?.url)) {
+    void preventTabDiscard(tabId);
+  }
+});
+
 // Kick off polling if already paired on startup.
 (async () => {
   const { token } = await getAuth();
   if (token) {
+    await getWhatsappTabs();
     scheduleAlarm();
     pollLoop();
   }

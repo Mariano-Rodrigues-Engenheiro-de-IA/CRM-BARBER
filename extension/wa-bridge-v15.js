@@ -1,7 +1,7 @@
 // wa-bridge — MAIN world. Recebe {__crm:"send", id, phone, text} e envia silenciosamente via WPP (wa-js).
 // WhatsApp Web atual exige resolver PN -> LID antes do envio para novos chats.
 (function () {
-  const BRIDGE_VERSION = "0.18.2";
+  const BRIDGE_VERSION = "0.18.3";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
