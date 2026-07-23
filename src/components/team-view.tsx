@@ -4,7 +4,42 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import confetti from "canvas-confetti";
 
-type Member = { id: string; name: string; emoji: string };
+type Member = { id: string; name: string; photo?: string; emoji?: string };
+
+function Avatar({ member, size = 40 }: { member: Member; size?: number }) {
+  const initial = (member.name || "?").trim().charAt(0).toUpperCase();
+  const cls =
+    "grid shrink-0 place-items-center overflow-hidden rounded-full bg-neutral-200 font-semibold text-neutral-700 ring-1 ring-black/5";
+  return (
+    <div className={cls} style={{ width: size, height: size, fontSize: Math.round(size * 0.42) }}>
+      {member.photo ? <img src={member.photo} alt={member.name} className="h-full w-full object-cover" /> : initial}
+    </div>
+  );
+}
+
+async function fileToDataUrl(file: File, max = 320): Promise<string> {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const c = document.createElement("canvas");
+      c.width = w;
+      c.height = h;
+      c.getContext("2d")!.drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL("image/jpeg", 0.85));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
 
 type CatalogItem = { id: string; name: string; priceCents: number };
 
@@ -46,7 +81,7 @@ const DEFAULT_STATE: TeamState = {
   },
 };
 
-const EMOJIS = ["✂️", "💈", "🪒", "🔥", "⚡", "🥇", "🦁", "🐺", "👑", "🚀"];
+
 
 function storageKey(shopId: string) { return `crm_team_v1_${shopId}`; }
 
@@ -217,7 +252,7 @@ export function TeamView({ shopId }: { shopId: string }) {
               >
                 <div className="flex flex-wrap items-center gap-4">
                   <div className="text-2xl font-semibold tabular-nums text-neutral-700 min-w-12">{medal}</div>
-                  <div className="text-4xl">{row.member.emoji}</div>
+                  <Avatar member={row.member} size={56} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <h3 className="truncate text-base font-semibold text-neutral-900">{row.member.name}</h3>
@@ -327,7 +362,7 @@ function AddEntryModal({
   }
 
   return (
-    <ModalShell title={`Lançar venda · ${member.emoji} ${member.name}`} onClose={onClose}>
+    <ModalShell title={`Lançar venda · ${member.name}`} onClose={onClose}>
       <div className="space-y-4">
         <div>
           <span className="mb-2 block text-sm font-medium text-neutral-700">Tipo</span>
@@ -501,41 +536,54 @@ function MembersTab({
   onRemove: (id: string) => void;
 }) {
   const [name, setName] = useState("");
-  const [emoji, setEmoji] = useState(EMOJIS[0]);
+  const [photo, setPhoto] = useState<string | undefined>(undefined);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+
+  async function onPickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setPhoto(await fileToDataUrl(f));
+    e.target.value = "";
+  }
 
   return (
     <div className="space-y-5">
       <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 space-y-3">
         <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Adicionar barbeiro</p>
+        <div className="flex items-center gap-3">
+          <Avatar member={{ id: "", name: name || "?", photo }} size={56} />
+          <div className="flex flex-col gap-2">
+            <input ref={fileRef} type="file" accept="image/*" onChange={onPickPhoto} className="hidden" />
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:border-neutral-400"
+            >
+              {photo ? "Trocar foto" : "Escolher foto"}
+            </button>
+            {photo && (
+              <button
+                type="button"
+                onClick={() => setPhoto(undefined)}
+                className="text-[11px] text-neutral-500 hover:text-red-600"
+              >
+                remover foto
+              </button>
+            )}
+          </div>
+        </div>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Nome (ex: Bruno)"
           className={inputCls}
         />
-        <div>
-          <span className="mb-1 block text-xs font-medium text-neutral-600">Avatar</span>
-          <div className="flex flex-wrap gap-2">
-            {EMOJIS.map((em) => (
-              <button
-                key={em}
-                type="button"
-                onClick={() => setEmoji(em)}
-                className={
-                  "h-10 w-10 rounded-lg border text-xl transition " +
-                  (emoji === em ? "border-neutral-900 bg-white" : "border-neutral-200 bg-white hover:border-neutral-400")
-                }
-              >
-                {em}
-              </button>
-            ))}
-          </div>
-        </div>
         <button
           disabled={!name.trim()}
           onClick={() => {
-            onAdd({ id: crypto.randomUUID(), name: name.trim(), emoji });
+            onAdd({ id: crypto.randomUUID(), name: name.trim(), photo });
             setName("");
+            setPhoto(undefined);
           }}
           className="w-full rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-40"
         >
@@ -555,7 +603,7 @@ function MembersTab({
           <ul className="space-y-2">
             {members.map((m) => (
               <li key={m.id} className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3">
-                <span className="text-2xl">{m.emoji}</span>
+                <Avatar member={m} size={36} />
                 <span className="flex-1 truncate text-sm font-medium text-neutral-900">{m.name}</span>
                 <button
                   onClick={() => {

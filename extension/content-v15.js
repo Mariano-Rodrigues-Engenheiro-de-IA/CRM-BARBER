@@ -73,17 +73,21 @@
     const painelUrl = (section) =>
       `${apiBase}/painel?token=${encodeURIComponent(token)}${section ? `&section=${section}` : ""}`;
 
+    const iconUsers = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
+    const iconTrophy = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v3a3 3 0 0 1-3 3"/><path d="M7 5H4v3a3 3 0 0 0 3 3"/></svg>`;
+    const chev = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>`;
+
     body().innerHTML = `
       <div class="crm-tiles">
         <button class="crm-tile" data-section="assinantes">
-          <span class="crm-tile-icon">👥</span>
+          <span class="crm-tile-icon">${iconUsers}</span>
           <span class="crm-tile-title">Assinantes</span>
-          <span class="crm-tile-arrow">›</span>
+          <span class="crm-tile-arrow">${chev}</span>
         </button>
         <button class="crm-tile" data-section="equipe">
-          <span class="crm-tile-icon">🏆</span>
+          <span class="crm-tile-icon">${iconTrophy}</span>
           <span class="crm-tile-title">Equipe</span>
-          <span class="crm-tile-arrow">›</span>
+          <span class="crm-tile-arrow">${chev}</span>
         </button>
       </div>
 
