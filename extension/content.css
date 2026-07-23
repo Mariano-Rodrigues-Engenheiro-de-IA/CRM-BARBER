@@ -1,4 +1,4 @@
-/* Painel da extensão dockado à esquerda do WhatsApp Web — mesmo visual do /painel. */
+/* Painel da extensão dockado à esquerda do WhatsApp Web — ponte clara e minimalista. */
 
 body.crm-assinaturas-docked #app,
 body.crm-assinaturas-docked ._aigs,
@@ -18,14 +18,15 @@ body.crm-assinaturas-docked-collapsed ._ai_g {
   left: 0;
   bottom: 0;
   width: 300px;
-  background: #0a0a0a;
-  color: #e5e5e5;
+  background: #ffffff;
+  color: #171717;
   z-index: 999999;
   display: flex;
   flex-direction: column;
   font-family: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
   font-size: 13px;
-  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.45);
+  box-shadow: 4px 0 22px rgba(15, 23, 42, 0.12);
+  border-right: 1px solid #e5e5e5;
   transition: width 0.2s ease;
 }
 #crm-assinaturas-panel.crm-collapsed { width: 44px; }
@@ -37,19 +38,19 @@ body.crm-assinaturas-docked-collapsed ._ai_g {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 14px 8px;
+  padding: 14px 14px 10px;
 }
 .crm-header-tag {
   font-weight: 700;
-  color: #facc15;
+  color: #262626;
   font-size: 10px;
   letter-spacing: 3.5px;
   text-transform: uppercase;
 }
 .crm-toggle {
-  background: transparent;
-  color: #a3a3a3;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #f5f5f5;
+  color: #525252;
+  border: 1px solid #e5e5e5;
   width: 24px;
   height: 24px;
   border-radius: 6px;
@@ -57,62 +58,20 @@ body.crm-assinaturas-docked-collapsed ._ai_g {
   font-weight: 600;
   line-height: 1;
 }
-.crm-toggle:hover { color: #facc15; border-color: rgba(250, 204, 21, 0.35); }
+.crm-toggle:hover { color: #171717; border-color: #d4d4d4; background: #eeeeee; }
 
 .crm-body {
   flex: 1;
   overflow-y: auto;
-  padding: 6px 12px 16px;
+  padding: 8px 12px 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-/* Brand card — emoldurando o nome, como no painel */
-.crm-brand-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 16px;
-}
-.crm-brand-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: #facc15;
-  color: #0a0a0a;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 16px;
-  flex-shrink: 0;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
-}
-.crm-brand-info { min-width: 0; flex: 1; }
-.crm-brand-tag {
-  font-size: 9px;
-  font-weight: 700;
-  color: rgba(250, 204, 21, 0.9);
-  letter-spacing: 2.5px;
-  text-transform: uppercase;
-}
-.crm-brand-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: #fafafa;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-top: 2px;
-}
-
 .crm-divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.06);
+  background: #e5e5e5;
   margin: 2px 4px;
 }
 
@@ -126,21 +85,21 @@ body.crm-assinaturas-docked-collapsed ._ai_g {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: transparent;
-  border: none;
+  background: #fafafa;
+  border: 1px solid #e5e5e5;
   border-radius: 12px;
   padding: 11px 12px;
   cursor: pointer;
   text-align: left;
-  color: #e5e5e5;
+  color: #262626;
   font-size: 13px;
   font-weight: 500;
   transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
   width: 100%;
 }
 .crm-tile:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #ffffff;
+  background: #f5f5f5;
+  color: #171717;
 }
 .crm-tile-icon {
   font-size: 16px;
@@ -149,12 +108,12 @@ body.crm-assinaturas-docked-collapsed ._ai_g {
 }
 .crm-tile-title { flex: 1; }
 .crm-tile-arrow {
-  color: #737373;
+  color: #a3a3a3;
   font-size: 16px;
   transition: color 0.15s ease, transform 0.15s ease;
 }
 .crm-tile:hover .crm-tile-arrow {
-  color: #ffffff;
+  color: #525252;
   transform: translateX(2px);
 }
 
@@ -180,18 +139,10 @@ body.crm-assinaturas-docked-collapsed ._ai_g {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.4; transform: scale(0.85); }
 }
-.crm-empty-title { font-size: 13px; font-weight: 600; color: #fafafa; margin: 0; }
+.crm-empty-title { font-size: 13px; font-weight: 600; color: #171717; margin: 0; }
 .crm-empty-sub { font-size: 11px; color: #737373; margin: 0; line-height: 1.5; }
 
 /* Footer */
-.crm-footer {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
 .crm-unpair {
   background: none;
   border: none;
@@ -200,7 +151,7 @@ body.crm-assinaturas-docked-collapsed ._ai_g {
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 1px;
-  padding: 6px 0 0;
+  padding: 10px 0 0;
   align-self: flex-start;
 }
 .crm-unpair:hover { color: #f87171; }
