@@ -135,7 +135,7 @@
   if (document.body) mo.observe(document.body, { childList: true });
 
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
-    if (msg?.type === "send_message") {
+    if (msg?.type === "send_message_v153") {
       handleSend(msg.job).then(sendResponse);
       return true;
     }

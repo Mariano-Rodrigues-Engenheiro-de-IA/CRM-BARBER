@@ -32,9 +32,13 @@
 
     // Primeiro tenta a API nova documentada: ela retorna o WID correto e alimenta o cache PN/LID.
     try {
-      const queryWidExists = window.WPP.contact?.queryWidExists || window.WPP.whatsapp?.functions?.queryWidExists;
-      if (queryWidExists) {
-        const info = await queryWidExists(phoneWid, "crm-barber");
+      if (window.WPP.contact?.queryWidExists) {
+        const info = await window.WPP.contact.queryWidExists(phoneWid, "crm-barber");
+        const wid = serializeWid(info?.wid);
+        if (wid) return wid;
+      }
+      if (window.WPP.whatsapp?.functions?.queryWidExists) {
+        const info = await window.WPP.whatsapp.functions.queryWidExists(phoneWid, "crm-barber");
         const wid = serializeWid(info?.wid);
         if (wid) return wid;
       }
