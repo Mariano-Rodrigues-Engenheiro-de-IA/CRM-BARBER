@@ -884,3 +884,109 @@ function parseCsv(text: string, defaultStatus: string): Array<{ name: string; ph
   }
   return out;
 }
+
+function SettingsView({
+  brand,
+  fallbackName,
+  onSave,
+}: {
+  brand: Brand;
+  fallbackName: string;
+  onSave: (b: Brand) => void;
+}) {
+  const [name, setName] = useState(brand.name || fallbackName || "");
+  const [logo, setLogo] = useState(brand.logo || "");
+  const [saved, setSaved] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+
+  async function pickLogo(file: File) {
+    if (file.size > 400_000) {
+      alert("Logo muito grande. Use uma imagem até 400KB.");
+      return;
+    }
+    const dataUrl: string = await new Promise((res) => {
+      const fr = new FileReader();
+      fr.onload = () => res(String(fr.result));
+      fr.readAsDataURL(file);
+    });
+    setLogo(dataUrl);
+  }
+
+  function save() {
+    onSave({ name: name.trim() || undefined, logo: logo || undefined });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1800);
+  }
+
+  const initial = (name || "B").trim().charAt(0).toUpperCase();
+
+  return (
+    <div className="mx-auto max-w-2xl space-y-6">
+      <div>
+        <h1 className="text-xl font-black tracking-tight text-yellow-50">Configurações</h1>
+        <p className="text-xs text-neutral-500">Personalize o nome e a logo que aparecem no painel.</p>
+      </div>
+
+      <div className="rounded-2xl border border-yellow-500/15 bg-neutral-900 p-6 space-y-6">
+        <div className="flex items-center gap-4">
+          <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-300 to-amber-500 text-2xl font-black text-neutral-950 shadow-md">
+            {logo ? <img src={logo} alt="logo" className="h-full w-full object-cover" /> : initial}
+          </div>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="rounded-lg bg-yellow-400 px-4 py-2 text-sm font-bold text-neutral-950 hover:bg-yellow-300"
+            >
+              {logo ? "Trocar logo" : "Enviar logo"}
+            </button>
+            {logo && (
+              <button
+                type="button"
+                onClick={() => setLogo("")}
+                className="text-xs text-neutral-400 hover:text-red-400"
+              >
+                remover logo
+              </button>
+            )}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) pickLogo(f);
+                e.target.value = "";
+              }}
+            />
+          </div>
+        </div>
+
+        <label className="block space-y-2">
+          <span className="text-xs uppercase tracking-widest text-yellow-500/70">Nome da barbearia</span>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Ex.: Barbearia do João"
+            className="w-full rounded-lg border border-yellow-500/20 bg-neutral-950 px-4 py-2.5 text-sm text-yellow-50 outline-none focus:border-yellow-400"
+          />
+        </label>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={save}
+            className="rounded-lg bg-yellow-400 px-5 py-2.5 text-sm font-bold text-neutral-950 hover:bg-yellow-300"
+          >
+            Salvar
+          </button>
+          {saved && <span className="text-xs text-yellow-400">Salvo ✔</span>}
+        </div>
+
+        <p className="text-[11px] text-neutral-500">
+          As configurações ficam salvas neste navegador.
+        </p>
+      </div>
+    </div>
+  );
+}
