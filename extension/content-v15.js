@@ -1,7 +1,7 @@
-// Content script v0.16.2 — ponte minimalista: CRM BARBER, Assinantes e Equipe.
+// Content script v0.17.0 — ponte minimalista: CRM BARBER, Assinantes e Equipe.
 
 (function () {
-  const CRM_VERSION = "0.16.2";
+  const CRM_VERSION = "0.17.0";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -137,7 +137,7 @@
   if (document.body) mo.observe(document.body, { childList: true });
 
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
-    if (msg?.type === "send_message_v161") {
+    if (msg?.type === "send_message_v170" || msg?.type === "send_message_v161") {
       handleSend(msg.job).then(sendResponse);
       return true;
     }
@@ -159,25 +159,80 @@
   window.addEventListener("message", (ev) => {
     if (ev.source !== window) return;
     const d = ev.data;
-    if (!d || d.__crm !== "sent_v161") return;
+    if (!d || d.__crm !== "sent_v170") return;
     const p = pending.get(d.id);
     if (!p) return;
     pending.delete(d.id);
     clearTimeout(p.timeout);
     p.resolve({ ok: !!d.ok, error: d.error });
   });
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function normalizePhone(phone) {
+    const only = String(phone || "").replace(/\D/g, "");
+    return only.startsWith("55") ? only : `55${only}`;
+  }
+
+  async function waitForSelector(selector, timeoutMs = 15000) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      const el = document.querySelector(selector);
+      if (el) return el;
+      await sleep(250);
+    }
+    return null;
+  }
+
+  function findMessageBox() {
+    const boxes = [...document.querySelectorAll('div[contenteditable="true"][role="textbox"], div[contenteditable="true"][data-tab]')];
+    return boxes.find((el) => {
+      const aria = (el.getAttribute("aria-label") || "").toLowerCase();
+      const text = (el.textContent || "").trim();
+      return aria.includes("mensagem") || aria.includes("message") || text.length >= 0;
+    }) || null;
+  }
+
+  async function sendViaVisibleChat(phone, text) {
+    const to = normalizePhone(phone);
+    const url = `https://web.whatsapp.com/send?phone=${encodeURIComponent(to)}&text=${encodeURIComponent(text)}`;
+    window.location.href = url;
+    const box = await waitForSelector('div[contenteditable="true"]', 30000);
+    if (!box) throw new Error("Campo de mensagem não apareceu no WhatsApp");
+    await sleep(1800);
+    const sendButton = await waitForSelector('button[aria-label="Enviar"], button[aria-label="Send"], span[data-icon="send"]', 15000);
+    if (!sendButton) {
+      const messageBox = findMessageBox() || box;
+      messageBox.focus();
+      document.execCommand("insertText", false, text);
+      await sleep(500);
+    }
+    const btn = document.querySelector('button[aria-label="Enviar"], button[aria-label="Send"]') || document.querySelector('span[data-icon="send"]')?.closest("button");
+    if (!btn) throw new Error("Botão enviar não apareceu no WhatsApp");
+    btn.click();
+    await sleep(1400);
+    return { ok: true };
+  }
+
   async function handleSend(job) {
     const phone = job?.customer?.phone;
     const text = job?.body;
     if (!phone || !text) return { ok: false, error: "Job inválido" };
     const id = crypto.randomUUID();
-    return await new Promise((resolve) => {
+    const silent = await new Promise((resolve) => {
       const timeout = setTimeout(() => {
         pending.delete(id);
         resolve({ ok: false, error: "Timeout no envio silencioso" });
-      }, 70000);
+      }, 25000);
       pending.set(id, { resolve, timeout });
-      window.postMessage({ __crm: "send_v161", id, phone, text }, "*");
+      window.postMessage({ __crm: "send_v170", id, phone, text }, "*");
     });
+    if (silent?.ok) return silent;
+    try {
+      return await sendViaVisibleChat(phone, text);
+    } catch (e) {
+      return { ok: false, error: `${silent?.error || "Envio silencioso falhou"}; fallback também falhou: ${String(e?.message || e)}` };
+    }
   }
 })();

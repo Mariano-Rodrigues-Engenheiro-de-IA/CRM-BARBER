@@ -8,7 +8,7 @@
 //
 // Rate limit: espaçamento aleatório entre 8s e 20s entre jobs (ritmo humano).
 
-const EXTENSION_VERSION = "0.16.2";
+const EXTENSION_VERSION = "0.17.0";
 const DEFAULT_API_BASE = "https://buzz-boost-crm.lovable.app";
 const POLL_MIN_MS = 8000;
 const POLL_MAX_MS = 20000;
@@ -149,7 +149,7 @@ async function sendToTab(job) {
     try {
       await chrome.tabs.update(tab.id, { active: true }).catch(() => null);
       await ensureScripts(tab.id);
-      const result = await chrome.tabs.sendMessage(tab.id, { type: "send_message_v161", job });
+      const result = await chrome.tabs.sendMessage(tab.id, { type: "send_message_v170", job });
       if (result?.ok) return result;
       lastError = result?.error || lastError;
     } catch (e) {
