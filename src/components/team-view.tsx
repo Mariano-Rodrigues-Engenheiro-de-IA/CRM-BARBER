@@ -455,10 +455,6 @@ function PerformanceModal({
   entries,
   periodLabel,
   onClose,
-}: {
-  member: Member;
-  entries: Entry[];
-  periodLabel: string;
   onDelete,
 }: {
   member: Member;
@@ -467,6 +463,7 @@ function PerformanceModal({
   onClose: () => void;
   onDelete: (id: string) => void;
 }) {
+
   const totalCents = entries.reduce((s, e) => s + e.amountCents, 0);
   const totalPoints = entries.reduce((s, e) => s + e.points, 0);
   const byKind = {
