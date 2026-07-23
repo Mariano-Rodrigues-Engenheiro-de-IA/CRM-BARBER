@@ -77,33 +77,20 @@
     body().innerHTML = `
       <div class="crm-tiles">
         <button class="crm-tile" data-section="assinantes">
-          <div class="crm-tile-icon">💈</div>
           <div class="crm-tile-body">
             <div class="crm-tile-title">Assinantes</div>
-            <div class="crm-tile-sub">CRM, planilhas & disparos</div>
           </div>
           <div class="crm-tile-arrow">→</div>
         </button>
         <button class="crm-tile" data-section="equipe">
-          <div class="crm-tile-icon">🏆</div>
           <div class="crm-tile-body">
             <div class="crm-tile-title">Equipe</div>
-            <div class="crm-tile-sub">Ranking, metas & gamificação</div>
-          </div>
-          <div class="crm-tile-arrow">→</div>
-        </button>
-        <button class="crm-tile" data-section="configuracoes">
-          <div class="crm-tile-icon">⚙️</div>
-          <div class="crm-tile-body">
-            <div class="crm-tile-title">Configurações</div>
-            <div class="crm-tile-sub">Nome & logo da barbearia</div>
           </div>
           <div class="crm-tile-arrow">→</div>
         </button>
       </div>
 
       <div class="crm-footer">
-        <span class="crm-version">v${CRM_VERSION}</span>
         <button class="crm-unpair">desvincular</button>
       </div>
     `;
