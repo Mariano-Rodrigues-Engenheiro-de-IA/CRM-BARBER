@@ -1,8 +1,8 @@
-// Content script v0.11.1 — sidebar ponte minimalista: só tiles.
+// Content script v0.12.0 — sidebar ponte minimalista: só tiles.
 // Nome/logo da barbearia agora são configurados dentro do painel web.
 
 (function () {
-  const CRM_VERSION = "0.11.1";
+  const CRM_VERSION = "0.12.0";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
