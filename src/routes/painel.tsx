@@ -97,7 +97,7 @@ function Painel() {
   useEffect(() => {
     if (token) reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, tab]);
 
   if (!ready) return null;
 
