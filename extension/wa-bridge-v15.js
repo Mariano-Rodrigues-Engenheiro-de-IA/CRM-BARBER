@@ -244,7 +244,7 @@
       }
     }
 
-    throw new Error(`LID não resolvido para ${number}. Tente abrir/atualizar o WhatsApp Web e disparar novamente; o envio silencioso foi bloqueado para evitar o erro "No LID for user".`);
+    throw new Error(`Número ${number} não confirmado no WhatsApp — envio bloqueado para evitar mensagem para contato inexistente.`);
   }
 
   function errorMessage(error) {
