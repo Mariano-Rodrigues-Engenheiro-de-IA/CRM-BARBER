@@ -21,11 +21,18 @@ export const Route = createFileRoute("/api/public/extension/meta")({
 
         // Also surface any tags the shop has already used, so the picker
         // suggests them alongside the defaults.
-        const { data } = await supabaseAdmin
-          .from("customers")
-          .select("tags")
-          .eq("barbershop_id", auth.token.barbershop_id)
-          .limit(1000);
+        const [{ data }, shopRes] = await Promise.all([
+          supabaseAdmin
+            .from("customers")
+            .select("tags")
+            .eq("barbershop_id", auth.token.barbershop_id)
+            .limit(1000),
+          supabaseAdmin
+            .from("barbershops")
+            .select("name")
+            .eq("id", auth.token.barbershop_id)
+            .maybeSingle(),
+        ]);
         const usedTags = new Set<string>();
         for (const row of data ?? []) {
           for (const t of row.tags ?? []) usedTags.add(t);
@@ -33,9 +40,11 @@ export const Route = createFileRoute("/api/public/extension/meta")({
 
         return jsonResponse(request, {
           ok: true,
+          barbershop: { id: auth.token.barbershop_id, name: shopRes.data?.name ?? "Barbearia" },
           statuses: CUSTOMER_STATUSES,
           suggested_tags: Array.from(new Set([...DEFAULT_CUSTOMER_TAGS, ...usedTags])).sort(),
         });
+
       },
     },
   },
