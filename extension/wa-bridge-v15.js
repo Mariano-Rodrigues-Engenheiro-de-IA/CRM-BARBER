@@ -45,12 +45,7 @@
 
   function pickBestWid(info) {
     const [first] = pickWids(info);
-    if (first) return first;
-    const direct = normalizeSerializedWid(info?.wid || info?.id);
-    if (lid && lid.endsWith("@lid")) return lid;
-    if (direct && direct.endsWith("@lid")) return direct;
-    if (pn && pn.endsWith("@lid")) return pn;
-    return direct || pn || null;
+    return first || null;
   }
 
   function sleep(ms) {
@@ -69,7 +64,7 @@
     try {
       if (window.WPP.contact?.queryWidExists) {
         const info = await window.WPP.contact.queryWidExists(phoneWid, suffix);
-        pushWid(found, pickBestWid(info), true);
+        pickWids(info).forEach((wid) => pushWid(found, wid, isLid(wid)));
       }
     } catch (e) {
       console.warn("[CRM wa-bridge] contact.queryWidExists falhou", e);
@@ -77,7 +72,7 @@
     try {
       if (window.WPP.whatsapp?.functions?.queryWidExists) {
         const info = await window.WPP.whatsapp.functions.queryWidExists(phoneWid, suffix);
-        pushWid(found, pickBestWid(info), true);
+        pickWids(info).forEach((wid) => pushWid(found, wid, isLid(wid)));
       }
     } catch (e) {
       console.warn("[CRM wa-bridge] whatsapp.queryWidExists falhou", e);
@@ -85,7 +80,7 @@
     return found;
   }
 
-  async function waitForLid(number, timeoutMs = 3500) {
+  async function waitForLid(number, timeoutMs = 12000) {
     const phoneWid = `${number}@c.us`;
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
@@ -122,7 +117,7 @@
 
   async function resolveWid(number) {
     const phoneWid = `${number}@c.us`;
-    const possible = [phoneWid];
+    const possible = [];
 
     // Primeiro tenta APIs que sincronizam PN -> LID.
     (await queryWid(number, "crm-barber")).forEach((wid) => pushWid(possible, wid, true));
@@ -133,8 +128,7 @@
     // Depois consulta o mapeamento local PN <-> LID. Se existir LID, ele é preferível.
     try {
       const entry = await window.WPP.contact?.getPnLidEntry?.(phoneWid);
-      const wid = pickBestWid(entry);
-      pushWid(possible, wid, true);
+      pickWids(entry).forEach((wid) => pushWid(possible, wid, isLid(wid)));
     } catch (e) {
       console.warn("[CRM wa-bridge] getPnLidEntry falhou", e);
     }
@@ -142,22 +136,39 @@
     // Compat legado: queryExists antigo também precisa receber @c.us, não só dígitos.
     try {
       const info = await window.WPP.contact?.queryExists?.(phoneWid);
-      const wid = pickBestWid(info);
-      pushWid(possible, wid);
+      pickWids(info).forEach((wid) => pushWid(possible, wid, isLid(wid)));
     } catch (e) {
       console.warn("[CRM wa-bridge] queryExists falhou", e);
     }
 
+    // chat.find usa o fluxo interno findOrCreateLatestChat da própria wa-js.
+    // Em alguns WhatsApp Web ele resolve o chat mesmo quando getPnLidEntry não retorna LID.
+    try {
+      const chat = await window.WPP.chat?.find?.(phoneWid);
+      pickWids(chat).forEach((wid) => pushWid(possible, wid, isLid(wid)));
+    } catch (e) {
+      console.warn("[CRM wa-bridge] chat.find por PN falhou", e);
+    }
+
+    // Fallback silencioso real: tentar @c.us por último, sem abrir conversa.
+    // Se a conta exigir @lid e a lib não conseguir resolver, esse envio também falha
+    // com erro explícito em vez de cair para modo visível.
+    pushWid(possible, phoneWid);
+
     return [...new Set(possible)].filter(Boolean);
   }
 
-  async function sendWithFallback(number, text) {
+  function errorMessage(error) {
+    return String(error?.message || error || "erro desconhecido");
+  }
+
+  async function sendSilently(number, text) {
     let wids = await resolveWid(number);
     let lastError = null;
 
     for (const wid of wids) {
       try {
-        const target = await resolveChatTarget(wid);
+        const target = isPhoneWid(wid) ? wid : await resolveChatTarget(wid);
         console.info("[CRM wa-bridge] enviando", target);
         return await window.WPP.chat.sendTextMessage(target, text, { waitForAck: true, createChat: true, delay: 250 });
       } catch (e) {
@@ -168,11 +179,13 @@
 
     // Retry sempre, sem depender do texto do erro. WA pode retornar erros sem a palavra LID.
     (await queryWid(number, "crm-barber-retry")).forEach((wid) => pushWid(wids, wid, true));
-    pushWid(wids, await waitForLid(number, 5000), true);
+    pushWid(wids, await waitForLid(number, 18000), true);
+    pushWid(wids, `${number}@c.us`);
+    wids = [...new Set(wids)].filter(Boolean);
 
     for (const wid of wids) {
       try {
-        const target = await resolveChatTarget(wid);
+        const target = isPhoneWid(wid) ? wid : await resolveChatTarget(wid);
         console.info("[CRM wa-bridge] retry", target);
         return await window.WPP.chat.sendTextMessage(target, text, { waitForAck: true, createChat: true, delay: 250 });
       } catch (e) {
@@ -181,7 +194,7 @@
       }
     }
 
-    throw lastError || new Error("Não foi possível resolver/enviar para este número");
+    throw new Error(`Envio silencioso falhou. A wa-js não conseguiu criar/enviar o chat por LID nem por @c.us. Último erro: ${errorMessage(lastError)}`);
   }
 
   window.addEventListener("message", async (ev) => {
@@ -193,7 +206,7 @@
       const ready = await waitReady();
       if (!ready) throw new Error("WhatsApp Web ainda não carregou");
       const to = normalize(d.phone);
-      await sendWithFallback(to, String(d.text || ""));
+      await sendSilently(to, String(d.text || ""));
       window.postMessage({ __crm: d.__crm === "send_v180" ? "sent_v180" : "sent_v170", id: d.id, ok: true }, "*");
     } catch (e) {
       window.postMessage({ __crm: d.__crm === "send_v180" ? "sent_v180" : "sent_v170", id: d.id, ok: false, error: (e && e.message) || "erro" }, "*");
