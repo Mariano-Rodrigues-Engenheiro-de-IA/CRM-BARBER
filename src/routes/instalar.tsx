@@ -27,7 +27,7 @@ export const Route = createFileRoute("/instalar")({
 
 // Fetch+blob evita a auth do preview em links diretos pra /public.
 function downloadZip() {
-  fetch(`/crm-assinaturas-extension-v11.zip?v=${Date.now()}`, { cache: "no-store" })
+  fetch(`/crm-assinaturas-extension-v11-1.zip?v=${Date.now()}`, { cache: "no-store" })
     .then((res) => {
       if (!res.ok) throw new Error(`Falha ao baixar: ${res.status}`);
       return res.blob();
@@ -35,7 +35,7 @@ function downloadZip() {
     .then((blob) => {
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = "crm-assinaturas-extension-v11.zip";
+      a.download = "crm-assinaturas-extension-v11-1.zip";
       a.click();
       URL.revokeObjectURL(a.href);
     })
