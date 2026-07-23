@@ -1,7 +1,7 @@
 // wa-bridge — MAIN world. Recebe {__crm:"send", id, phone, text} e envia silenciosamente via WPP (wa-js).
 // WhatsApp Web atual exige resolver PN -> LID antes do envio para novos chats.
 (function () {
-  const BRIDGE_VERSION = "0.15.3";
+  const BRIDGE_VERSION = "0.16.0";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -18,6 +18,22 @@
     return null;
   }
 
+  function normalizeSerializedWid(value) {
+    const serialized = serializeWid(value);
+    if (!serialized) return null;
+    return serialized.includes("@") ? serialized : `${serialized}@lid`;
+  }
+
+  function pickBestWid(info) {
+    const direct = normalizeSerializedWid(info?.wid);
+    const lid = normalizeSerializedWid(info?.lid || info?.lidWid || info?.contact?.lid);
+    const pn = normalizeSerializedWid(info?.phoneNumber || info?.pn || info?.contact?.id);
+    if (lid && lid.endsWith("@lid")) return lid;
+    if (direct && direct.endsWith("@lid")) return direct;
+    if (pn && pn.endsWith("@lid")) return pn;
+    return direct || pn || null;
+  }
+
   async function waitReady(timeoutMs = 60000) {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
@@ -30,18 +46,19 @@
 
   async function resolveWid(number) {
     const phoneWid = `${number}@c.us`;
+    const possible = [phoneWid];
 
     // Primeiro tenta a API nova documentada: ela retorna o WID correto e alimenta o cache PN/LID.
     try {
       if (window.WPP.contact?.queryWidExists) {
         const info = await window.WPP.contact.queryWidExists(phoneWid, "crm-barber");
-        const wid = serializeWid(info?.wid);
-        if (wid) return wid;
+        const wid = pickBestWid(info);
+        if (wid) possible.unshift(wid);
       }
       if (window.WPP.whatsapp?.functions?.queryWidExists) {
         const info = await window.WPP.whatsapp.functions.queryWidExists(phoneWid, "crm-barber");
-        const wid = serializeWid(info?.wid);
-        if (wid) return wid;
+        const wid = pickBestWid(info);
+        if (wid) possible.unshift(wid);
       }
     } catch (e) {
       console.warn("[CRM wa-bridge] queryWidExists falhou", e);
@@ -50,10 +67,8 @@
     // Depois consulta o mapeamento local PN <-> LID. Se existir LID, ele é preferível.
     try {
       const entry = await window.WPP.contact?.getPnLidEntry?.(phoneWid);
-      const lid = serializeWid(entry?.lid);
-      const pn = serializeWid(entry?.phoneNumber);
-      if (lid) return lid;
-      if (pn) return pn;
+      const wid = pickBestWid(entry);
+      if (wid) possible.unshift(wid);
     } catch (e) {
       console.warn("[CRM wa-bridge] getPnLidEntry falhou", e);
     }
@@ -61,49 +76,66 @@
     // Compat legado: queryExists antigo também precisa receber @c.us, não só dígitos.
     try {
       const info = await window.WPP.contact?.queryExists?.(phoneWid);
-      const wid = serializeWid(info?.wid);
-      if (wid) return wid;
+      const wid = pickBestWid(info);
+      if (wid) possible.push(wid);
     } catch (e) {
       console.warn("[CRM wa-bridge] queryExists falhou", e);
     }
 
-    return phoneWid;
+    return [...new Set(possible)].filter(Boolean);
   }
 
   async function sendWithFallback(number, text) {
-    let wid = await resolveWid(number);
+    let wids = await resolveWid(number);
     // Pequena pausa: dá tempo do WA popular o LID no store.
     await new Promise((r) => setTimeout(r, 400));
-    try {
-      return await window.WPP.chat.sendTextMessage(wid, text, { waitForAck: true, createChat: true });
-    } catch (e1) {
-      const msg = String(e1 && (e1.message || e1)) || "";
-      if (!/lid/i.test(msg)) throw e1;
-      // Retry: força re-sync do contato e tenta de novo, preferindo @lid quando existir.
-      console.warn("[CRM wa-bridge] retry após LID error", msg);
-      try { await window.WPP.contact?.queryWidExists?.(`${number}@c.us`, "crm-barber-retry"); } catch {}
+    let lastError = null;
+
+    for (const wid of wids) {
       try {
-        const entry = await window.WPP.contact?.getPnLidEntry?.(`${number}@c.us`);
-        wid = serializeWid(entry?.lid) || serializeWid(entry?.phoneNumber) || wid;
-      } catch {}
-      await new Promise((r) => setTimeout(r, 800));
-      return await window.WPP.chat.sendTextMessage(wid, text, { waitForAck: true, createChat: true });
+        console.info("[CRM wa-bridge] enviando", wid);
+        return await window.WPP.chat.sendTextMessage(wid, text, { waitForAck: true, createChat: true, delay: 250 });
+      } catch (e) {
+        lastError = e;
+        console.warn("[CRM wa-bridge] sendTextMessage falhou", wid, e);
+      }
     }
+
+    // Retry agressivo: força re-sync do contato e tenta somente LID primeiro.
+    try { await window.WPP.contact?.queryWidExists?.(`${number}@c.us`, "crm-barber-retry"); } catch {}
+    try {
+      const entry = await window.WPP.contact?.getPnLidEntry?.(`${number}@c.us`);
+      const retryWid = pickBestWid(entry);
+      if (retryWid && !wids.includes(retryWid)) wids = [retryWid, ...wids];
+    } catch {}
+    await new Promise((r) => setTimeout(r, 1000));
+
+    for (const wid of wids.filter((v) => String(v).endsWith("@lid"))) {
+      try {
+        console.info("[CRM wa-bridge] retry LID", wid);
+        return await window.WPP.chat.sendTextMessage(wid, text, { waitForAck: true, createChat: true, delay: 250 });
+      } catch (e) {
+        lastError = e;
+        console.warn("[CRM wa-bridge] retry LID falhou", wid, e);
+      }
+    }
+
+    throw lastError || new Error("Não foi possível resolver/enviar para este número");
   }
 
   window.addEventListener("message", async (ev) => {
     if (ev.source !== window) return;
     if (window.__crmWaBridgeVersion !== BRIDGE_VERSION) return;
     const d = ev.data;
-    if (!d || d.__crm !== "send_v153") return;
+    if (!d || d.__crm !== "send_v160") return;
     try {
       const ready = await waitReady();
       if (!ready) throw new Error("WhatsApp Web ainda não carregou");
       const to = normalize(d.phone);
       await sendWithFallback(to, String(d.text || ""));
-      window.postMessage({ __crm: "sent_v153", id: d.id, ok: true }, "*");
+      window.postMessage({ __crm: "sent_v160", id: d.id, ok: true }, "*");
     } catch (e) {
-      window.postMessage({ __crm: "sent_v153", id: d.id, ok: false, error: (e && e.message) || "erro" }, "*");
+      window.postMessage({ __crm: "sent_v160", id: d.id, ok: false, error: (e && e.message) || "erro" }, "*");
     }
   });
 })();
