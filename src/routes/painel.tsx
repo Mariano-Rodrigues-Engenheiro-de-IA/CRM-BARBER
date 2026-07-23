@@ -532,11 +532,11 @@ function ImportModal({ token, onClose }: { token: string; onClose: () => void })
           Ao importar, a planilha anterior é substituída. Contatos adicionados manualmente são preservados.
         </p>
 
-        {err && <p className="text-sm text-red-400">{err}</p>}
-        {result && <p className="text-sm text-green-400">{result}</p>}
+        {err && <p className="text-sm text-red-500">{err}</p>}
+        {result && <p className="text-sm text-emerald-600">{result}</p>}
         <button
           disabled={busy || !file}
-          className="w-full rounded-md bg-yellow-400 px-4 py-2 font-bold text-neutral-950 hover:bg-yellow-300 disabled:opacity-50"
+          className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
         >
           {busy ? "Importando..." : "Substituir planilha"}
         </button>
