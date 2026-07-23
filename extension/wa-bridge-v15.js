@@ -1,7 +1,7 @@
 // wa-bridge — MAIN world. Recebe {__crm:"send", id, phone, text} e envia silenciosamente via WPP (wa-js).
 // WhatsApp Web atual exige resolver PN -> LID antes do envio para novos chats.
 (function () {
-  const BRIDGE_VERSION = "0.17.0";
+  const BRIDGE_VERSION = "0.18.0";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -169,15 +169,15 @@
     if (ev.source !== window) return;
     if (window.__crmWaBridgeVersion !== BRIDGE_VERSION) return;
     const d = ev.data;
-    if (!d || d.__crm !== "send_v170") return;
+    if (!d || (d.__crm !== "send_v180" && d.__crm !== "send_v170")) return;
     try {
       const ready = await waitReady();
       if (!ready) throw new Error("WhatsApp Web ainda não carregou");
       const to = normalize(d.phone);
       await sendWithFallback(to, String(d.text || ""));
-      window.postMessage({ __crm: "sent_v170", id: d.id, ok: true }, "*");
+      window.postMessage({ __crm: d.__crm === "send_v180" ? "sent_v180" : "sent_v170", id: d.id, ok: true }, "*");
     } catch (e) {
-      window.postMessage({ __crm: "sent_v170", id: d.id, ok: false, error: (e && e.message) || "erro" }, "*");
+      window.postMessage({ __crm: d.__crm === "send_v180" ? "sent_v180" : "sent_v170", id: d.id, ok: false, error: (e && e.message) || "erro" }, "*");
     }
   });
 })();
