@@ -29,8 +29,8 @@ export const Route = createFileRoute("/instalar")({
 function downloadZip() {
   const version = Date.now();
   const urls = [
+    `/crm-assinaturas-extension-v189.zip?v=${version}`,
     `/crm-assinaturas-extension-v188.zip?v=${version}`,
-    `/crm-assinaturas-extension-v187.zip?v=${version}`,
     `/crm-assinaturas-extension-v186.zip?v=${version}`,
     `/crm-assinaturas-extension-v184.zip?v=${version}`,
     `/crm-assinaturas-extension-v183.zip?v=${version}`,
@@ -49,7 +49,7 @@ function downloadZip() {
     .then((blob) => {
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = "crm-assinaturas-extension-v188.zip";
+      a.download = "crm-assinaturas-extension-v189.zip";
       a.click();
       URL.revokeObjectURL(a.href);
     })
