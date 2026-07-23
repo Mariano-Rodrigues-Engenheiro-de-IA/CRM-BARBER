@@ -575,6 +575,12 @@ function CampaignsView({ token }: { token: string }) {
     reload();
   }
 
+  async function deleteCamp(c: Campaign) {
+    if (!confirm(`Apagar a campanha "${c.name}"? Isso remove a campanha e todos os jobs dela do histórico. Não dá pra desfazer.`)) return;
+    await api(token, `/api/public/extension/campaigns/${c.id}`, { method: "DELETE" });
+    reload();
+  }
+
   if (loading) return <p className="text-neutral-400">Carregando...</p>;
   if (!campaigns.length) {
     return <p className="text-neutral-400">Nenhuma campanha criada ainda.</p>;
