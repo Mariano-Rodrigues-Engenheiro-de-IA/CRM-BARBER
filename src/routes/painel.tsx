@@ -175,17 +175,20 @@ function Painel() {
       : "text-neutral-300 hover:bg-yellow-500/10 hover:text-yellow-100");
 
   return (
-    <div className="flex min-h-screen bg-neutral-950 text-yellow-50 font-light">
+    <div className="flex min-h-screen bg-neutral-100 text-neutral-900">
       {/* Sidebar */}
-      <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-yellow-500/10 bg-neutral-950">
-        <div className="flex items-center gap-3 px-5 py-5">
-          <div className="grid h-9 w-9 place-items-center overflow-hidden rounded-md bg-yellow-400 text-sm font-semibold text-neutral-950">
+      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-neutral-200 bg-white">
+        <div className="flex items-center gap-3 px-5 py-5 border-b border-neutral-200">
+          <div className="grid h-10 w-10 place-items-center overflow-hidden rounded-lg bg-neutral-900 text-sm font-semibold text-yellow-400">
             {shopLogo ? <img src={shopLogo} alt="logo" className="h-full w-full object-cover" /> : shopInitial}
           </div>
-          <p className="text-[13px] font-medium tracking-[0.18em] text-yellow-50">CRM BARBER</p>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold tracking-[0.18em] text-neutral-500">CRM BARBER</p>
+            <p className="truncate text-sm font-medium text-neutral-900">{shopName}</p>
+          </div>
         </div>
 
-        <nav className="flex-1 space-y-1 px-3 pt-2">
+        <nav className="flex-1 space-y-1 px-3 pt-4">
           {NAV_TOP.map((n) => (
             <button
               key={n.key}
@@ -206,6 +209,7 @@ function Painel() {
           </button>
         </div>
       </aside>
+
 
       {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-yellow-500/15 bg-neutral-950/95 px-4 py-3 backdrop-blur">
