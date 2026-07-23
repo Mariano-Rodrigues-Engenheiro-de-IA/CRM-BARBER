@@ -67,8 +67,7 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
           .select("id, customer_id, rendered_body, scheduled_for, attempts, expires_at, campaign_id")
           .eq("barbershop_id", auth.token.barbershop_id)
           .eq("status", "pending")
-          .lte("scheduled_for", nowIso)
-          .or(`expires_at.is.null,expires_at.gt.${nowIso}`);
+          .lte("scheduled_for", nowIso);
         if (blockedIds.length > 0) {
           pickQ = pickQ.not("campaign_id", "in", `(${blockedIds.join(",")})`);
         }

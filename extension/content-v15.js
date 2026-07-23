@@ -1,7 +1,8 @@
-// Content script v0.17.0 — ponte minimalista: CRM BARBER, Assinantes e Equipe.
+// Content script v0.18.0 — ponte minimalista: CRM BARBER, Assinantes e Equipe.
 
 (function () {
-  const CRM_VERSION = "0.17.0";
+  const CRM_VERSION = "0.18.0";
+  const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -72,10 +73,9 @@
 
     startPollHeartbeat();
 
-    const token = r.token || "";
     const apiBase = r.api_base || "";
     const painelUrl = (section) =>
-      `${apiBase}/painel?token=${encodeURIComponent(token)}${section ? `&section=${section}` : ""}`;
+      `${apiBase}/painel?token=${encodeURIComponent(EXTENSION_BRIDGE_TOKEN)}${section ? `&section=${section}` : ""}`;
 
     const iconUsers = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
     const iconTrophy = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v3a3 3 0 0 1-3 3"/><path d="M7 5H4v3a3 3 0 0 0 3 3"/></svg>`;
@@ -137,8 +137,12 @@
   if (document.body) mo.observe(document.body, { childList: true });
 
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
-    if (msg?.type === "send_message_v170" || msg?.type === "send_message_v161") {
+    if (msg?.type === "send_message_v180" || msg?.type === "send_message_v170" || msg?.type === "send_message_v161") {
       handleSend(msg.job).then(sendResponse);
+      return true;
+    }
+    if (msg?.type === "click_send_v180" || msg?.type === "click_send_v170") {
+      clickSendOnOpenChat(msg.job).then(sendResponse);
       return true;
     }
     if (msg?.type === "show_panel") { ensurePanel(); sendResponse({ ok: true }); return true; }
@@ -159,7 +163,7 @@
   window.addEventListener("message", (ev) => {
     if (ev.source !== window) return;
     const d = ev.data;
-    if (!d || d.__crm !== "sent_v170") return;
+    if (!d || (d.__crm !== "sent_v180" && d.__crm !== "sent_v170")) return;
     const p = pending.get(d.id);
     if (!p) return;
     pending.delete(d.id);
@@ -194,21 +198,26 @@
     }) || null;
   }
 
-  async function sendViaVisibleChat(phone, text) {
-    const to = normalizePhone(phone);
-    const url = `https://web.whatsapp.com/send?phone=${encodeURIComponent(to)}&text=${encodeURIComponent(text)}`;
-    window.location.href = url;
-    const box = await waitForSelector('div[contenteditable="true"]', 30000);
+  function findSendButton() {
+    return document.querySelector('button[aria-label="Enviar"], button[aria-label="Send"]')
+      || document.querySelector('span[data-icon="send"]')?.closest('button, [role="button"]')
+      || document.querySelector('[data-testid="send"]')?.closest('button, [role="button"]');
+  }
+
+  async function clickSendOnOpenChat(job) {
+    const text = job?.body;
+    if (!text) return { ok: false, error: "Job inválido" };
+    const box = await waitForSelector('div[contenteditable="true"]', 45000);
     if (!box) throw new Error("Campo de mensagem não apareceu no WhatsApp");
-    await sleep(1800);
-    const sendButton = await waitForSelector('button[aria-label="Enviar"], button[aria-label="Send"], span[data-icon="send"]', 15000);
+    await sleep(2200);
+    const sendButton = findSendButton();
     if (!sendButton) {
       const messageBox = findMessageBox() || box;
       messageBox.focus();
       document.execCommand("insertText", false, text);
       await sleep(500);
     }
-    const btn = document.querySelector('button[aria-label="Enviar"], button[aria-label="Send"]') || document.querySelector('span[data-icon="send"]')?.closest("button");
+    const btn = findSendButton();
     if (!btn) throw new Error("Botão enviar não apareceu no WhatsApp");
     btn.click();
     await sleep(1400);
@@ -226,13 +235,9 @@
         resolve({ ok: false, error: "Timeout no envio silencioso" });
       }, 25000);
       pending.set(id, { resolve, timeout });
-      window.postMessage({ __crm: "send_v170", id, phone, text }, "*");
+      window.postMessage({ __crm: "send_v180", id, phone, text }, "*");
     });
     if (silent?.ok) return silent;
-    try {
-      return await sendViaVisibleChat(phone, text);
-    } catch (e) {
-      return { ok: false, error: `${silent?.error || "Envio silencioso falhou"}; fallback também falhou: ${String(e?.message || e)}` };
-    }
+    return { ok: false, error: silent?.error || "Envio silencioso falhou" };
   }
 })();

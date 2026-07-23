@@ -48,8 +48,8 @@ const COLUMNS: Array<{ key: string; label: string }> = [
 
 const TOKEN_KEY = "crm_ext_token_v1";
 const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
-const EXTENSION_API_REQUEST = "crm_api_request_v162";
-const EXTENSION_API_RESPONSE = "crm_api_response_v162";
+const EXTENSION_API_REQUEST = "crm_api_request_v180";
+const EXTENSION_API_RESPONSE = "crm_api_response_v180";
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -123,7 +123,7 @@ async function api(token: string, path: string, opts: RequestInit = {}) {
 
 function nudgeExtensionPoll() {
   if (typeof window === "undefined") return;
-  window.postMessage({ __crm: "poll_now_v162" }, window.location.origin);
+  window.postMessage({ __crm: "poll_now_v180" }, window.location.origin);
 }
 
 type Section = "assinantes" | "equipe" | "configuracoes";

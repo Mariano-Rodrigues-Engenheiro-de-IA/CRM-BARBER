@@ -1,25 +1,26 @@
 // Roda no painel web e conecta a página ao service worker da extensão.
 (function () {
-  if (window.__crmPanelNudgeVersion === "0.17.0") return;
-  window.__crmPanelNudgeVersion = "0.17.0";
+  if (window.__crmPanelNudgeVersion === "0.18.0") return;
+  window.__crmPanelNudgeVersion = "0.18.0";
 
   window.addEventListener("message", (event) => {
     if (event.source !== window) return;
     const data = event.data;
     if (!data) return;
-    if (data.__crm === "poll_now_v162" || data.__crm === "poll_now_v161") {
+    if (data.__crm === "poll_now_v180" || data.__crm === "poll_now_v162" || data.__crm === "poll_now_v161") {
       chrome.runtime.sendMessage({ type: "poll_now" }).catch(() => null);
       return;
     }
-    if (data.__crm !== "crm_api_request_v162") return;
+    if (data.__crm !== "crm_api_request_v180" && data.__crm !== "crm_api_request_v162") return;
+    const responseType = data.__crm === "crm_api_request_v180" ? "crm_api_response_v180" : "crm_api_response_v162";
     chrome.runtime
       .sendMessage({ type: "api", path: data.path, opts: data.opts || {} })
       .then((payload) => {
-        window.postMessage({ __crm: "crm_api_response_v162", id: data.id, payload }, window.location.origin);
+        window.postMessage({ __crm: responseType, id: data.id, payload }, window.location.origin);
       })
       .catch((error) => {
         window.postMessage({
-          __crm: "crm_api_response_v162",
+          __crm: responseType,
           id: data.id,
           payload: { ok: false, error: String(error?.message || error) },
         }, window.location.origin);

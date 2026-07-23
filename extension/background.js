@@ -8,7 +8,7 @@
 //
 // Rate limit: espaçamento aleatório entre 8s e 20s entre jobs (ritmo humano).
 
-const EXTENSION_VERSION = "0.17.0";
+const EXTENSION_VERSION = "0.18.0";
 const DEFAULT_API_BASE = "https://buzz-boost-crm.lovable.app";
 const POLL_MIN_MS = 8000;
 const POLL_MAX_MS = 20000;
@@ -149,14 +149,49 @@ async function sendToTab(job) {
     try {
       await chrome.tabs.update(tab.id, { active: true }).catch(() => null);
       await ensureScripts(tab.id);
-      const result = await chrome.tabs.sendMessage(tab.id, { type: "send_message_v170", job });
+      const result = await chrome.tabs.sendMessage(tab.id, { type: "send_message_v180", job });
       if (result?.ok) return result;
       lastError = result?.error || lastError;
+      const visible = await sendViaOpenChat(tab.id, job).catch((e) => ({ ok: false, error: String(e?.message || e) }));
+      if (visible?.ok) return visible;
+      lastError = `${lastError}; fallback visível: ${visible?.error || "falhou"}`;
     } catch (e) {
       lastError = String(e?.message || e);
     }
   }
   return { ok: false, error: lastError };
+}
+
+function normalizePhone(phone) {
+  const only = String(phone || "").replace(/\D/g, "");
+  return only.startsWith("55") ? only : `55${only}`;
+}
+
+function waitForTabComplete(tabId, timeoutMs = 45000) {
+  return new Promise((resolve) => {
+    const timeout = setTimeout(done, timeoutMs);
+    function done() {
+      clearTimeout(timeout);
+      chrome.tabs.onUpdated.removeListener(onUpdated);
+      resolve();
+    }
+    function onUpdated(updatedTabId, info) {
+      if (updatedTabId === tabId && info.status === "complete") done();
+    }
+    chrome.tabs.onUpdated.addListener(onUpdated);
+  });
+}
+
+async function sendViaOpenChat(tabId, job) {
+  const phone = job?.customer?.phone || job?.phone;
+  const text = job?.body;
+  if (!phone || !text) return { ok: false, error: "Job inválido" };
+  const to = normalizePhone(phone);
+  const url = `https://web.whatsapp.com/send?phone=${encodeURIComponent(to)}&text=${encodeURIComponent(text)}`;
+  await chrome.tabs.update(tabId, { active: true, url });
+  await waitForTabComplete(tabId);
+  await ensureScripts(tabId);
+  return await chrome.tabs.sendMessage(tabId, { type: "click_send_v180", job });
 }
 
 async function showPanel() {
@@ -263,7 +298,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       clearAlarm();
       sendResponse({ ok: true });
     } else if (msg?.type === "api") {
-      sendResponse(await apiCall(msg.path, msg.opts || {}));
+      const result = await apiCall(msg.path, msg.opts || {});
+      sendResponse(result);
+      const method = String(msg.opts?.method || "GET").toUpperCase();
+      if (result?.ok && msg.path === "/api/public/extension/campaigns" && method === "POST") {
+        await pollNow();
+      }
     } else if (msg?.type === "show_panel") {
       sendResponse(await showPanel());
     } else if (msg?.type === "poll_now") {
