@@ -112,12 +112,12 @@ function Painel() {
     setReady(true);
   }, []);
 
-  async function reload() {
+  async function reload(silent = false) {
     if (!token) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     const r = await api(token, "/api/public/extension/customers");
     if (r?.ok) setCustomers(r.customers || []);
-    setLoading(false);
+    if (!silent) setLoading(false);
   }
 
   useEffect(() => {
@@ -132,10 +132,11 @@ function Painel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
+  // Refresh silencioso ao voltar pra seção assinantes — sem "Carregando..." piscando entre abas.
   useEffect(() => {
-    if (token && section === "assinantes") reload();
+    if (token && section === "assinantes") reload(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, section]);
+  }, [section]);
 
   if (!ready) return null;
 
