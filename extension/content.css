@@ -142,7 +142,13 @@ body.crm-assinaturas-docked-collapsed ._ai_g {
 .crm-empty-title { font-size: 13px; font-weight: 600; color: #171717; margin: 0; }
 .crm-empty-sub { font-size: 11px; color: #737373; margin: 0; line-height: 1.5; }
 
-/* Footer */
+/* Footer com desvincular centralizado no rodapé */
+.crm-footer {
+  margin-top: auto;
+  padding-top: 16px;
+  display: flex;
+  justify-content: center;
+}
 .crm-unpair {
   background: none;
   border: none;
@@ -151,7 +157,6 @@ body.crm-assinaturas-docked-collapsed ._ai_g {
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 1px;
-  padding: 10px 0 0;
-  align-self: flex-start;
+  padding: 8px 12px;
 }
 .crm-unpair:hover { color: #f87171; }
