@@ -1,14 +1,12 @@
 // Gamificação da equipe — 100% client-side (localStorage por barbearia).
-// Tema claro para combinar com o resto do painel.
+// Cadastro de barbeiros, serviços, produtos e metas mora dentro de Configurações.
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import confetti from "canvas-confetti";
 
-type Member = {
-  id: string;
-  name: string;
-  emoji: string;
-};
+type Member = { id: string; name: string; emoji: string };
+
+type CatalogItem = { id: string; name: string; priceCents: number };
 
 type Entry = {
   id: string;
@@ -17,7 +15,7 @@ type Entry = {
   label: string;
   amountCents: number;
   points: number;
-  createdAt: string; // ISO
+  createdAt: string;
 };
 
 type TeamConfig = {
@@ -31,11 +29,15 @@ type TeamState = {
   members: Member[];
   entries: Entry[];
   config: TeamConfig;
+  services: CatalogItem[];
+  products: CatalogItem[];
 };
 
 const DEFAULT_STATE: TeamState = {
   members: [],
   entries: [],
+  services: [],
+  products: [],
   config: {
     monthGoalCents: 5000000,
     perMemberGoalCents: 1500000,
@@ -46,9 +48,7 @@ const DEFAULT_STATE: TeamState = {
 
 const EMOJIS = ["✂️", "💈", "🪒", "🔥", "⚡", "🥇", "🦁", "🐺", "👑", "🚀"];
 
-function storageKey(shopId: string) {
-  return `crm_team_v1_${shopId}`;
-}
+function storageKey(shopId: string) { return `crm_team_v1_${shopId}`; }
 
 function loadState(shopId: string): TeamState {
   if (typeof window === "undefined") return DEFAULT_STATE;
@@ -56,7 +56,13 @@ function loadState(shopId: string): TeamState {
     const raw = localStorage.getItem(storageKey(shopId));
     if (!raw) return DEFAULT_STATE;
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_STATE, ...parsed, config: { ...DEFAULT_STATE.config, ...(parsed.config || {}) } };
+    return {
+      ...DEFAULT_STATE,
+      ...parsed,
+      services: parsed.services ?? [],
+      products: parsed.products ?? [],
+      config: { ...DEFAULT_STATE.config, ...(parsed.config || {}) },
+    };
   } catch {
     return DEFAULT_STATE;
   }
@@ -91,7 +97,6 @@ export function TeamView({ shopId }: { shopId: string }) {
   const [state, setState] = useState<TeamState>(DEFAULT_STATE);
   const [ready, setReady] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
-  const [showAddMember, setShowAddMember] = useState(false);
   const [showAddEntry, setShowAddEntry] = useState<null | string>(null);
   const celebratedRef = useRef<Set<string>>(new Set());
 
@@ -152,20 +157,12 @@ export function TeamView({ shopId }: { shopId: string }) {
             <h2 className="text-xl font-semibold text-neutral-900">Ranking da equipe</h2>
             <p className="text-sm text-neutral-500">Competição do mês · pontos, faturamento e metas</p>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowAddMember(true)}
-              className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
-            >
-              + Barbeiro
-            </button>
-            <button
-              onClick={() => setShowConfig(true)}
-              className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
-            >
-              Configurar
-            </button>
-          </div>
+          <button
+            onClick={() => setShowConfig(true)}
+            className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
+          >
+            ⚙️ Configurações
+          </button>
         </div>
 
         <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -180,10 +177,7 @@ export function TeamView({ shopId }: { shopId: string }) {
 
         <div className="mt-5">
           <div className="h-2.5 overflow-hidden rounded-full bg-neutral-100">
-            <div
-              className="h-full rounded-full bg-yellow-400 transition-all"
-              style={{ width: `${shopPct}%` }}
-            />
+            <div className="h-full rounded-full bg-yellow-400 transition-all" style={{ width: `${shopPct}%` }} />
           </div>
         </div>
       </div>
@@ -194,13 +188,13 @@ export function TeamView({ shopId }: { shopId: string }) {
           <p className="text-4xl">💈</p>
           <h3 className="mt-3 text-base font-semibold text-neutral-900">Cadastre sua equipe</h3>
           <p className="mt-1 text-sm text-neutral-500">
-            Adicione os barbeiros para começar o placar do mês.
+            Abra Configurações para cadastrar barbeiros, serviços, produtos e definir as metas do mês.
           </p>
           <button
-            onClick={() => setShowAddMember(true)}
+            onClick={() => setShowConfig(true)}
             className="mt-4 rounded-lg bg-neutral-900 px-5 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
           >
-            + Adicionar primeiro barbeiro
+            Abrir configurações
           </button>
         </div>
       )}
@@ -241,10 +235,7 @@ export function TeamView({ shopId }: { shopId: string }) {
                       <span>🎯 {row.extras} extras</span>
                     </div>
                     <div className="mt-2 h-2 overflow-hidden rounded-full bg-neutral-100">
-                      <div
-                        className="h-full rounded-full bg-yellow-400"
-                        style={{ width: `${row.goalPct}%` }}
-                      />
+                      <div className="h-full rounded-full bg-yellow-400" style={{ width: `${row.goalPct}%` }} />
                     </div>
                     <div className="mt-1 flex justify-between text-[11px] text-neutral-500">
                       <span>Meta individual: {fmtBRL(state.config.perMemberGoalCents)}</span>
@@ -258,15 +249,6 @@ export function TeamView({ shopId }: { shopId: string }) {
                     >
                       + Lançar venda
                     </button>
-                    <button
-                      onClick={() => {
-                        if (!confirm(`Remover ${row.member.name} da equipe? Os lançamentos ficam no histórico.`)) return;
-                        setState((s) => ({ ...s, members: s.members.filter((m) => m.id !== row.member.id) }));
-                      }}
-                      className="rounded-lg border border-neutral-200 px-3 py-1 text-[11px] text-neutral-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
-                    >
-                      remover
-                    </button>
                   </div>
                 </div>
               </div>
@@ -275,25 +257,21 @@ export function TeamView({ shopId }: { shopId: string }) {
         </div>
       )}
 
-      {showAddMember && (
-        <AddMemberModal
-          onClose={() => setShowAddMember(false)}
-          onAdd={(m) => setState((s) => ({ ...s, members: [...s.members, m] }))}
-        />
-      )}
       {showAddEntry && (
         <AddEntryModal
           member={state.members.find((m) => m.id === showAddEntry)!}
           config={state.config}
+          services={state.services}
+          products={state.products}
           onClose={() => setShowAddEntry(null)}
           onAdd={(entry) => setState((s) => ({ ...s, entries: [entry, ...s.entries] }))}
         />
       )}
       {showConfig && (
         <ConfigModal
-          config={state.config}
+          state={state}
           onClose={() => setShowConfig(false)}
-          onSave={(cfg) => setState((s) => ({ ...s, config: cfg }))}
+          onChange={(next) => setState(next)}
           onResetMonth={() => {
             if (!confirm("Zerar todos os lançamentos deste mês? Não dá pra desfazer.")) return;
             setState((s) => ({ ...s, entries: s.entries.filter((e) => !isCurrentMonth(e.createdAt)) }));
@@ -317,64 +295,18 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub?: string
 
 // --- Modals ---
 
-function AddMemberModal({ onClose, onAdd }: { onClose: () => void; onAdd: (m: Member) => void }) {
-  const [name, setName] = useState("");
-  const [emoji, setEmoji] = useState(EMOJIS[0]);
-  return (
-    <ModalShell title="Novo barbeiro" onClose={onClose}>
-      <div className="space-y-4">
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-neutral-700">Nome</span>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="ex: Bruno"
-            className={inputCls}
-          />
-        </label>
-        <div>
-          <span className="mb-2 block text-sm font-medium text-neutral-700">Avatar</span>
-          <div className="flex flex-wrap gap-2">
-            {EMOJIS.map((em) => (
-              <button
-                key={em}
-                type="button"
-                onClick={() => setEmoji(em)}
-                className={
-                  "h-11 w-11 rounded-lg border text-2xl transition " +
-                  (emoji === em
-                    ? "border-neutral-900 bg-neutral-100"
-                    : "border-neutral-200 bg-white hover:border-neutral-400")
-                }
-              >
-                {em}
-              </button>
-            ))}
-          </div>
-        </div>
-        <button
-          disabled={!name.trim()}
-          onClick={() => {
-            onAdd({ id: crypto.randomUUID(), name: name.trim(), emoji });
-            onClose();
-          }}
-          className="w-full rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-40"
-        >
-          Adicionar à equipe
-        </button>
-      </div>
-    </ModalShell>
-  );
-}
-
 function AddEntryModal({
   member,
   config,
+  services,
+  products,
   onClose,
   onAdd,
 }: {
   member: Member;
   config: TeamConfig;
+  services: CatalogItem[];
+  products: CatalogItem[];
   onClose: () => void;
   onAdd: (e: Entry) => void;
 }) {
@@ -384,6 +316,16 @@ function AddEntryModal({
   const cents = Math.round(Number(amount.replace(",", ".")) * 100) || 0;
   const basePoints = Math.round((cents / 100) * config.pointsPerReal);
   const points = kind === "extra" ? basePoints + config.bonusExtra : basePoints;
+
+  const catalog = kind === "service" ? services : kind === "product" ? products : [];
+
+  function pickCatalog(id: string) {
+    const item = catalog.find((c) => c.id === id);
+    if (!item) return;
+    setLabel(item.name);
+    setAmount((item.priceCents / 100).toString().replace(".", ","));
+  }
+
   return (
     <ModalShell title={`Lançar venda · ${member.emoji} ${member.name}`} onClose={onClose}>
       <div className="space-y-4">
@@ -400,7 +342,7 @@ function AddEntryModal({
               <button
                 key={o.k}
                 type="button"
-                onClick={() => setKind(o.k)}
+                onClick={() => { setKind(o.k); setLabel(""); setAmount(""); }}
                 className={
                   "rounded-lg border px-3 py-2 text-sm font-medium " +
                   (kind === o.k
@@ -418,8 +360,23 @@ function AddEntryModal({
             </p>
           )}
         </div>
+
+        {catalog.length > 0 && (
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-neutral-700">
+              {kind === "service" ? "Serviço do catálogo" : "Produto do catálogo"}
+            </span>
+            <select onChange={(e) => pickCatalog(e.target.value)} defaultValue="" className={inputCls}>
+              <option value="">— escolher para preencher automaticamente —</option>
+              {catalog.map((c) => (
+                <option key={c.id} value={c.id}>{c.name} · {fmtBRL(c.priceCents)}</option>
+              ))}
+            </select>
+          </label>
+        )}
+
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-neutral-700">Descrição (opcional)</span>
+          <span className="mb-1 block text-sm font-medium text-neutral-700">Descrição</span>
           <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="ex: Corte + Barba" className={inputCls} />
         </label>
         <label className="block">
@@ -458,14 +415,252 @@ function AddEntryModal({
   );
 }
 
+// --- Config modal com abas ---
+
+type ConfigTab = "barbeiros" | "servicos" | "produtos" | "metas";
+
 function ConfigModal({
-  config,
+  state,
   onClose,
+  onChange,
+  onResetMonth,
+}: {
+  state: TeamState;
+  onClose: () => void;
+  onChange: (s: TeamState) => void;
+  onResetMonth: () => void;
+}) {
+  const [tab, setTab] = useState<ConfigTab>("barbeiros");
+
+  const tabs: Array<{ k: ConfigTab; label: string }> = [
+    { k: "barbeiros", label: "Barbeiros" },
+    { k: "servicos", label: "Serviços" },
+    { k: "produtos", label: "Produtos" },
+    { k: "metas", label: "Metas & Pontos" },
+  ];
+
+  return (
+    <ModalShell title="Configurações da equipe" onClose={onClose} wide>
+      <div className="mb-4 flex flex-wrap gap-1 rounded-lg bg-neutral-100 p-1">
+        {tabs.map((t) => (
+          <button
+            key={t.k}
+            onClick={() => setTab(t.k)}
+            className={
+              "flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition " +
+              (tab === t.k ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
+            }
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "barbeiros" && (
+        <MembersTab
+          members={state.members}
+          onAdd={(m) => onChange({ ...state, members: [...state.members, m] })}
+          onRemove={(id) => onChange({ ...state, members: state.members.filter((m) => m.id !== id) })}
+        />
+      )}
+
+      {tab === "servicos" && (
+        <CatalogTab
+          kind="service"
+          items={state.services}
+          onChange={(items) => onChange({ ...state, services: items })}
+        />
+      )}
+
+      {tab === "produtos" && (
+        <CatalogTab
+          kind="product"
+          items={state.products}
+          onChange={(items) => onChange({ ...state, products: items })}
+        />
+      )}
+
+      {tab === "metas" && (
+        <MetasTab
+          config={state.config}
+          onSave={(cfg) => onChange({ ...state, config: cfg })}
+          onResetMonth={onResetMonth}
+        />
+      )}
+    </ModalShell>
+  );
+}
+
+function MembersTab({
+  members,
+  onAdd,
+  onRemove,
+}: {
+  members: Member[];
+  onAdd: (m: Member) => void;
+  onRemove: (id: string) => void;
+}) {
+  const [name, setName] = useState("");
+  const [emoji, setEmoji] = useState(EMOJIS[0]);
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Adicionar barbeiro</p>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Nome (ex: Bruno)"
+          className={inputCls}
+        />
+        <div>
+          <span className="mb-1 block text-xs font-medium text-neutral-600">Avatar</span>
+          <div className="flex flex-wrap gap-2">
+            {EMOJIS.map((em) => (
+              <button
+                key={em}
+                type="button"
+                onClick={() => setEmoji(em)}
+                className={
+                  "h-10 w-10 rounded-lg border text-xl transition " +
+                  (emoji === em ? "border-neutral-900 bg-white" : "border-neutral-200 bg-white hover:border-neutral-400")
+                }
+              >
+                {em}
+              </button>
+            ))}
+          </div>
+        </div>
+        <button
+          disabled={!name.trim()}
+          onClick={() => {
+            onAdd({ id: crypto.randomUUID(), name: name.trim(), emoji });
+            setName("");
+          }}
+          className="w-full rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-40"
+        >
+          Adicionar à equipe
+        </button>
+      </div>
+
+      <div>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+          Equipe atual ({members.length})
+        </p>
+        {members.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 text-center text-sm text-neutral-500">
+            Nenhum barbeiro cadastrado ainda.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {members.map((m) => (
+              <li key={m.id} className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3">
+                <span className="text-2xl">{m.emoji}</span>
+                <span className="flex-1 truncate text-sm font-medium text-neutral-900">{m.name}</span>
+                <button
+                  onClick={() => {
+                    if (!confirm(`Remover ${m.name}? Os lançamentos ficam no histórico.`)) return;
+                    onRemove(m.id);
+                  }}
+                  className="rounded-md border border-neutral-200 px-2.5 py-1 text-xs text-neutral-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                >
+                  remover
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CatalogTab({
+  kind,
+  items,
+  onChange,
+}: {
+  kind: "service" | "product";
+  items: CatalogItem[];
+  onChange: (items: CatalogItem[]) => void;
+}) {
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const label = kind === "service" ? "serviço" : "produto";
+
+  function add() {
+    if (!name.trim()) return;
+    const cents = Math.round(Number(price.replace(",", ".")) * 100) || 0;
+    onChange([...items, { id: crypto.randomUUID(), name: name.trim(), priceCents: cents }]);
+    setName("");
+    setPrice("");
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+          Adicionar {label}
+        </p>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={kind === "service" ? "ex: Corte + Barba" : "ex: Pomada Modeladora"}
+          className={inputCls}
+        />
+        <input
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          placeholder="Preço (R$) — opcional"
+          inputMode="decimal"
+          className={inputCls}
+        />
+        <button
+          disabled={!name.trim()}
+          onClick={add}
+          className="w-full rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-40"
+        >
+          Adicionar {label}
+        </button>
+      </div>
+
+      <div>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+          Catálogo ({items.length})
+        </p>
+        {items.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 text-center text-sm text-neutral-500">
+            Nenhum {label} cadastrado. Use o formulário acima.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {items.map((it) => (
+              <li key={it.id} className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-neutral-900">{it.name}</p>
+                  <p className="text-xs text-neutral-500">{fmtBRL(it.priceCents)}</p>
+                </div>
+                <button
+                  onClick={() => onChange(items.filter((x) => x.id !== it.id))}
+                  className="rounded-md border border-neutral-200 px-2.5 py-1 text-xs text-neutral-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                >
+                  remover
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MetasTab({
+  config,
   onSave,
   onResetMonth,
 }: {
   config: TeamConfig;
-  onClose: () => void;
   onSave: (c: TeamConfig) => void;
   onResetMonth: () => void;
 }) {
@@ -473,56 +668,64 @@ function ConfigModal({
   const [perMemberGoal, setPerMemberGoal] = useState(String(config.perMemberGoalCents / 100));
   const [ppr, setPpr] = useState(String(config.pointsPerReal));
   const [bonus, setBonus] = useState(String(config.bonusExtra));
+
   return (
-    <ModalShell title="Configurar gamificação" onClose={onClose}>
-      <div className="space-y-4">
+    <div className="space-y-4">
+      <label className="block">
+        <span className="mb-1 block text-sm font-medium text-neutral-700">Meta de faturamento do mês (R$)</span>
+        <input value={monthGoal} onChange={(e) => setMonthGoal(e.target.value)} className={inputCls} inputMode="decimal" />
+      </label>
+      <label className="block">
+        <span className="mb-1 block text-sm font-medium text-neutral-700">Meta individual por barbeiro (R$)</span>
+        <input value={perMemberGoal} onChange={(e) => setPerMemberGoal(e.target.value)} className={inputCls} inputMode="decimal" />
+      </label>
+      <div className="grid grid-cols-2 gap-3">
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-neutral-700">Meta de faturamento do mês (R$)</span>
-          <input value={monthGoal} onChange={(e) => setMonthGoal(e.target.value)} className={inputCls} inputMode="decimal" />
+          <span className="mb-1 block text-sm font-medium text-neutral-700">Pontos por R$1</span>
+          <input value={ppr} onChange={(e) => setPpr(e.target.value)} className={inputCls} inputMode="decimal" />
         </label>
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-neutral-700">Meta individual por barbeiro (R$)</span>
-          <input value={perMemberGoal} onChange={(e) => setPerMemberGoal(e.target.value)} className={inputCls} inputMode="decimal" />
+          <span className="mb-1 block text-sm font-medium text-neutral-700">Bônus por venda extra</span>
+          <input value={bonus} onChange={(e) => setBonus(e.target.value)} className={inputCls} inputMode="decimal" />
         </label>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-neutral-700">Pontos por R$1</span>
-            <input value={ppr} onChange={(e) => setPpr(e.target.value)} className={inputCls} inputMode="decimal" />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-neutral-700">Bônus por venda extra</span>
-            <input value={bonus} onChange={(e) => setBonus(e.target.value)} className={inputCls} inputMode="decimal" />
-          </label>
-        </div>
-        <button
-          onClick={() => {
-            onSave({
-              monthGoalCents: Math.round(Number(monthGoal.replace(",", ".")) * 100) || 0,
-              perMemberGoalCents: Math.round(Number(perMemberGoal.replace(",", ".")) * 100) || 0,
-              pointsPerReal: Number(ppr.replace(",", ".")) || 1,
-              bonusExtra: Number(bonus.replace(",", ".")) || 0,
-            });
-            onClose();
-          }}
-          className="w-full rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
-        >
-          Salvar
-        </button>
-        <button
-          onClick={onResetMonth}
-          className="w-full rounded-lg border border-red-300 bg-white px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-        >
-          Zerar lançamentos do mês
-        </button>
       </div>
-    </ModalShell>
+      <button
+        onClick={() => {
+          onSave({
+            monthGoalCents: Math.round(Number(monthGoal.replace(",", ".")) * 100) || 0,
+            perMemberGoalCents: Math.round(Number(perMemberGoal.replace(",", ".")) * 100) || 0,
+            pointsPerReal: Number(ppr.replace(",", ".")) || 1,
+            bonusExtra: Number(bonus.replace(",", ".")) || 0,
+          });
+        }}
+        className="w-full rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
+      >
+        Salvar metas
+      </button>
+      <button
+        onClick={onResetMonth}
+        className="w-full rounded-lg border border-red-300 bg-white px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+      >
+        Zerar lançamentos do mês
+      </button>
+    </div>
   );
 }
 
-function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+function ModalShell({
+  title,
+  onClose,
+  children,
+  wide,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+  wide?: boolean;
+}) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl">
+      <div className={"w-full rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto " + (wide ? "max-w-2xl" : "max-w-md")}>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-neutral-900">{title}</h2>
           <button onClick={onClose} className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900">✕</button>
