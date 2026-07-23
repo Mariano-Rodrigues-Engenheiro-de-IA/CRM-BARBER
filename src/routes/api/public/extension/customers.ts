@@ -75,8 +75,10 @@ export const Route = createFileRoute("/api/public/extension/customers")({
             notes: parsed.data.notes ?? null,
             tags: parsed.data.tags ?? [],
             status: parsed.data.status ?? "active",
+            source: "manual",
+            spreadsheet_batch_id: null,
           })
-          .select("id, name, phone, notes, tags, status, created_at")
+          .select("id, name, phone, notes, tags, status, source, created_at")
           .single();
         if (error) {
           return jsonResponse(
