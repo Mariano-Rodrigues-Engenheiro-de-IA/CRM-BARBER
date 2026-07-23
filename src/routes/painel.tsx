@@ -213,16 +213,16 @@ function Painel() {
 
 
       {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-yellow-500/15 bg-neutral-950/95 px-4 py-3 backdrop-blur">
-        <span className="text-xs font-medium tracking-[0.2em] text-yellow-50">CRM BARBER</span>
-        <div className="flex gap-1 rounded-md bg-neutral-900 p-1">
+      <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-neutral-200 bg-white/95 px-4 py-3 backdrop-blur">
+        <span className="text-xs font-semibold tracking-[0.2em] text-neutral-900">CRM BARBER</span>
+        <div className="flex gap-1 rounded-lg bg-neutral-100 p-1">
           {[...NAV_TOP, { key: "configuracoes" as Section, label: "Config" }].map((n) => (
             <button
               key={n.key}
               onClick={() => setSection(n.key)}
               className={
-                "rounded px-2.5 py-1 text-[11px] font-normal " +
-                (section === n.key ? "bg-yellow-400 text-neutral-950" : "text-neutral-300")
+                "rounded-md px-2.5 py-1 text-[11px] font-medium " +
+                (section === n.key ? "bg-neutral-900 text-yellow-400" : "text-neutral-600")
               }
             >
               {n.label}
@@ -230,6 +230,7 @@ function Painel() {
           ))}
         </div>
       </div>
+
 
 
 
