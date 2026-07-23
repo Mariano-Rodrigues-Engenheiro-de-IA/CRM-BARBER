@@ -77,6 +77,7 @@ async function pair(phone) {
       };
     }
     await chrome.storage.local.set({ token: data.token, barbershop: data.barbershop });
+    await clearLastError();
     return { ok: true, barbershop: data.barbershop };
   } catch (e) {
     console.error("[CRM bg] pair error", e);
@@ -256,6 +257,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       sendResponse({ paired: !!auth.token, barbershop: auth.barbershop || null, token: auth.token || null, api_base, version: EXTENSION_VERSION, last_error: err[LAST_ERROR_KEY] || null, last_error_at: err.last_error_at || null });
     } else if (msg?.type === "unpair") {
       await chrome.storage.local.remove(["token", "barbershop"]);
+      await clearLastError();
       clearTimeout(pollTimer);
       clearAlarm();
       sendResponse({ ok: true });
