@@ -162,9 +162,9 @@ export function TeamView({ shopId }: { shopId: string }) {
   const [showConfig, setShowConfig] = useState(false);
   const [showAddEntry, setShowAddEntry] = useState<null | string>(null);
   const [showPerf, setShowPerf] = useState<null | string>(null);
-  const [period, setPeriod] = useState<Period>("month");
+  const monthStart = (() => { const d = new Date(); d.setDate(1); return d.toISOString().slice(0, 10); })();
   const todayIso = new Date().toISOString().slice(0, 10);
-  const [customFrom, setCustomFrom] = useState(todayIso);
+  const [customFrom, setCustomFrom] = useState(monthStart);
   const [customTo, setCustomTo] = useState(todayIso);
   const celebratedRef = useRef<Set<string>>(new Set());
 
@@ -178,8 +178,8 @@ export function TeamView({ shopId }: { shopId: string }) {
   }, [state, shopId, ready]);
 
   const range = useMemo(
-    () => startOfPeriod(period, { from: customFrom, to: customTo }),
-    [period, customFrom, customTo],
+    () => startOfPeriod("custom", { from: customFrom, to: customTo }),
+    [customFrom, customTo],
   );
 
   const stats = useMemo(() => {
@@ -203,17 +203,17 @@ export function TeamView({ shopId }: { shopId: string }) {
   }, [state, range]);
 
   useEffect(() => {
-    if (!ready || period !== "month") return;
+    if (!ready) return;
     for (const row of stats.perMember) {
       if (row.cents >= state.config.perMemberGoalCents && state.config.perMemberGoalCents > 0) {
-        const key = `${row.member.id}-${new Date().getMonth()}-${new Date().getFullYear()}`;
+        const key = `${row.member.id}-${customFrom}-${customTo}`;
         if (!celebratedRef.current.has(key)) {
           celebratedRef.current.add(key);
           fireConfetti();
         }
       }
     }
-  }, [stats, state.config.perMemberGoalCents, ready, period]);
+  }, [stats, state.config.perMemberGoalCents, ready, customFrom, customTo]);
 
   const shopPct = state.config.monthGoalCents
     ? Math.min(100, Math.round((stats.totalCents / state.config.monthGoalCents) * 100))
@@ -221,13 +221,18 @@ export function TeamView({ shopId }: { shopId: string }) {
 
   if (!ready) return null;
 
-  const periods: Array<{ k: Period; label: string }> = [
-    { k: "day", label: "Dia" },
-    { k: "week", label: "Semana" },
-    { k: "month", label: "Mês" },
-    { k: "year", label: "Ano" },
-    { k: "custom", label: "Personalizado" },
-  ];
+  function deleteEntry(id: string) {
+    if (!confirm("Excluir esse lançamento?")) return;
+    setState((s) => ({ ...s, entries: s.entries.filter((e) => e.id !== id) }));
+  }
+
+  const medalFor = (idx: number, points: number) => {
+    if (points <= 0) return null;
+    if (idx === 0) return { emoji: "🥇", ring: "ring-yellow-400", bg: "bg-yellow-100", label: "1º lugar" };
+    if (idx === 1) return { emoji: "🥈", ring: "ring-neutral-400", bg: "bg-neutral-100", label: "2º lugar" };
+    if (idx === 2) return { emoji: "🥉", ring: "ring-amber-600/50", bg: "bg-amber-50", label: "3º lugar" };
+    return null;
+  };
 
   return (
     <div className="space-y-6">
@@ -236,7 +241,10 @@ export function TeamView({ shopId }: { shopId: string }) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold text-neutral-900">Ranking da equipe</h2>
-            <p className="text-sm text-neutral-500">{range.label} · pontos, faturamento e metas</p>
+            <p className="text-sm text-neutral-500">
+              {new Date(customFrom + "T00:00:00").toLocaleDateString("pt-BR")} até{" "}
+              {new Date(customTo + "T00:00:00").toLocaleDateString("pt-BR")}
+            </p>
           </div>
           <button
             onClick={() => setShowConfig(true)}
@@ -246,39 +254,22 @@ export function TeamView({ shopId }: { shopId: string }) {
           </button>
         </div>
 
-        {/* Period filter */}
+        {/* Custom date range */}
         <div className="mt-5 flex flex-wrap items-center gap-2">
-          <div className="flex flex-wrap gap-1 rounded-lg bg-neutral-100 p-1">
-            {periods.map((p) => (
-              <button
-                key={p.k}
-                onClick={() => setPeriod(p.k)}
-                className={
-                  "rounded-md px-3 py-1.5 text-xs font-medium transition " +
-                  (period === p.k ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
-                }
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-          {period === "custom" && (
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={customFrom}
-                onChange={(e) => setCustomFrom(e.target.value)}
-                className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-800"
-              />
-              <span className="text-xs text-neutral-500">até</span>
-              <input
-                type="date"
-                value={customTo}
-                onChange={(e) => setCustomTo(e.target.value)}
-                className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-800"
-              />
-            </div>
-          )}
+          <span className="text-xs font-medium uppercase tracking-wide text-neutral-500">Período</span>
+          <input
+            type="date"
+            value={customFrom}
+            onChange={(e) => setCustomFrom(e.target.value)}
+            className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-800"
+          />
+          <span className="text-xs text-neutral-500">até</span>
+          <input
+            type="date"
+            value={customTo}
+            onChange={(e) => setCustomTo(e.target.value)}
+            className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-800"
+          />
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -318,20 +309,29 @@ export function TeamView({ shopId }: { shopId: string }) {
       {state.members.length > 0 && (
         <div className="space-y-3">
           {stats.perMember.map((row, idx) => {
-            const rankLabel = `#${idx + 1}`;
-            const isLeader = idx === 0 && row.points > 0;
+            const medal = medalFor(idx, row.points);
             return (
               <div
                 key={row.member.id}
                 className={
                   "rounded-2xl border p-5 shadow-sm transition " +
-                  (isLeader
-                    ? "border-yellow-400 bg-white ring-2 ring-yellow-400/30"
+                  (medal
+                    ? `border-transparent bg-white ring-2 ${medal.ring}`
                     : "border-neutral-200 bg-white hover:border-neutral-300")
                 }
               >
                 <div className="flex flex-wrap items-center gap-4">
-                  <div className="text-2xl font-semibold tabular-nums text-neutral-700 min-w-12">{rankLabel}</div>
+                  <div
+                    className={
+                      "grid h-12 w-12 shrink-0 place-items-center rounded-full text-2xl " +
+                      (medal ? medal.bg : "bg-neutral-100")
+                    }
+                    title={medal?.label ?? `${idx + 1}º lugar`}
+                  >
+                    {medal ? medal.emoji : (
+                      <span className="text-sm font-semibold text-neutral-600">{idx + 1}º</span>
+                    )}
+                  </div>
                   <Avatar member={row.member} size={56} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -372,6 +372,37 @@ export function TeamView({ shopId }: { shopId: string }) {
                     </button>
                   </div>
                 </div>
+
+                {row.entries.length > 0 && (
+                  <details className="mt-4 rounded-lg bg-neutral-50 p-3">
+                    <summary className="cursor-pointer text-xs font-medium text-neutral-600">
+                      Lançamentos no período ({row.entries.length})
+                    </summary>
+                    <ul className="mt-2 divide-y divide-neutral-200">
+                      {[...row.entries]
+                        .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+                        .map((e) => (
+                          <li key={e.id} className="flex items-center justify-between gap-3 py-2 text-xs">
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-medium text-neutral-900">{e.label}</p>
+                              <p className="text-[10px] uppercase tracking-wide text-neutral-500">
+                                {e.kind === "service" ? "Serviço" : e.kind === "product" ? "Produto" : "Extra"} ·{" "}
+                                {new Date(e.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} ·{" "}
+                                {fmtBRL(e.amountCents)} · {e.points} pts
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => deleteEntry(e.id)}
+                              className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-[11px] text-red-600 hover:bg-red-50 hover:border-red-300"
+                              title="Excluir lançamento"
+                            >
+                              Excluir
+                            </button>
+                          </li>
+                        ))}
+                    </ul>
+                  </details>
+                )}
               </div>
             );
           })}
@@ -397,6 +428,7 @@ export function TeamView({ shopId }: { shopId: string }) {
             entries={row?.entries ?? []}
             periodLabel={range.label}
             onClose={() => setShowPerf(null)}
+            onDelete={deleteEntry}
           />
         );
       })()}
@@ -416,6 +448,7 @@ export function TeamView({ shopId }: { shopId: string }) {
     </div>
   );
 }
+
 
 function PerformanceModal({
   member,
