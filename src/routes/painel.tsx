@@ -239,8 +239,7 @@ function Painel() {
         {section === "assinantes" && (
           <>
             <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
-              <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4">
-                <h1 className="text-xl font-semibold text-neutral-900">Assinantes</h1>
+              <div className="flex flex-wrap items-center justify-end gap-4 px-6 py-4">
                 <nav className="flex gap-1 rounded-lg bg-neutral-100 p-1">
                   {(["kanban", "disparo", "campanhas"] as const).map((t) => (
                     <button
