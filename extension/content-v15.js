@@ -1,7 +1,7 @@
-// Content script v0.16.0 — ponte minimalista: CRM BARBER, Assinantes e Equipe.
+// Content script v0.16.1 — ponte minimalista: CRM BARBER, Assinantes e Equipe.
 
 (function () {
-  const CRM_VERSION = "0.16.0";
+  const CRM_VERSION = "0.16.1";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -137,7 +137,7 @@
   if (document.body) mo.observe(document.body, { childList: true });
 
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
-    if (msg?.type === "send_message_v160") {
+    if (msg?.type === "send_message_v161") {
       handleSend(msg.job).then(sendResponse);
       return true;
     }
@@ -159,7 +159,7 @@
   window.addEventListener("message", (ev) => {
     if (ev.source !== window) return;
     const d = ev.data;
-    if (!d || d.__crm !== "sent_v160") return;
+    if (!d || d.__crm !== "sent_v161") return;
     const p = pending.get(d.id);
     if (!p) return;
     pending.delete(d.id);
@@ -175,9 +175,9 @@
       const timeout = setTimeout(() => {
         pending.delete(id);
         resolve({ ok: false, error: "Timeout no envio silencioso" });
-      }, 25000);
+      }, 70000);
       pending.set(id, { resolve, timeout });
-      window.postMessage({ __crm: "send_v160", id, phone, text }, "*");
+      window.postMessage({ __crm: "send_v161", id, phone, text }, "*");
     });
   }
 })();

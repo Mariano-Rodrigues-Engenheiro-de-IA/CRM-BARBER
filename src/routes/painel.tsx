@@ -80,7 +80,7 @@ async function api(token: string, path: string, opts: RequestInit = {}) {
 
 function nudgeExtensionPoll() {
   if (typeof window === "undefined") return;
-  window.postMessage({ __crm: "poll_now_v160" }, window.location.origin);
+  window.postMessage({ __crm: "poll_now_v161" }, window.location.origin);
 }
 
 type Section = "assinantes" | "equipe" | "configuracoes";

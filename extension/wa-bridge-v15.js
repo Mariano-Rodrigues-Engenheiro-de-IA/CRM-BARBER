@@ -1,7 +1,7 @@
 // wa-bridge — MAIN world. Recebe {__crm:"send", id, phone, text} e envia silenciosamente via WPP (wa-js).
 // WhatsApp Web atual exige resolver PN -> LID antes do envio para novos chats.
 (function () {
-  const BRIDGE_VERSION = "0.16.0";
+  const BRIDGE_VERSION = "0.16.1";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -34,12 +34,69 @@
     return direct || pn || null;
   }
 
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function pushWid(list, wid, prefer = false) {
+    if (!wid || list.includes(wid)) return;
+    if (prefer) list.unshift(wid);
+    else list.push(wid);
+  }
+
+  async function queryWid(number, suffix) {
+    const phoneWid = `${number}@c.us`;
+    const found = [];
+    try {
+      if (window.WPP.contact?.queryWidExists) {
+        const info = await window.WPP.contact.queryWidExists(phoneWid, suffix);
+        pushWid(found, pickBestWid(info), true);
+      }
+    } catch (e) {
+      console.warn("[CRM wa-bridge] contact.queryWidExists falhou", e);
+    }
+    try {
+      if (window.WPP.whatsapp?.functions?.queryWidExists) {
+        const info = await window.WPP.whatsapp.functions.queryWidExists(phoneWid, suffix);
+        pushWid(found, pickBestWid(info), true);
+      }
+    } catch (e) {
+      console.warn("[CRM wa-bridge] whatsapp.queryWidExists falhou", e);
+    }
+    return found;
+  }
+
+  async function waitForLid(number, timeoutMs = 3500) {
+    const phoneWid = `${number}@c.us`;
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      try {
+        const entry = await window.WPP.contact?.getPnLidEntry?.(phoneWid);
+        const wid = pickBestWid(entry);
+        if (wid && wid.endsWith("@lid")) return wid;
+      } catch (e) {
+        console.warn("[CRM wa-bridge] aguardando LID falhou", e);
+      }
+      await sleep(250);
+    }
+    return null;
+  }
+
+  async function resolveChatTarget(wid) {
+    try {
+      const chat = await window.WPP.chat?.find?.(wid);
+      return serializeWid(chat?.id) || serializeWid(chat?.wid) || wid;
+    } catch {
+      return wid;
+    }
+  }
+
   async function waitReady(timeoutMs = 60000) {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
       const ready = typeof window.WPP?.isReady === "function" ? window.WPP.isReady() : window.WPP?.isReady;
       if (window.WPP && ready) return true;
-      await new Promise((r) => setTimeout(r, 500));
+      await sleep(500);
     }
     return false;
   }
@@ -48,27 +105,17 @@
     const phoneWid = `${number}@c.us`;
     const possible = [phoneWid];
 
-    // Primeiro tenta a API nova documentada: ela retorna o WID correto e alimenta o cache PN/LID.
-    try {
-      if (window.WPP.contact?.queryWidExists) {
-        const info = await window.WPP.contact.queryWidExists(phoneWid, "crm-barber");
-        const wid = pickBestWid(info);
-        if (wid) possible.unshift(wid);
-      }
-      if (window.WPP.whatsapp?.functions?.queryWidExists) {
-        const info = await window.WPP.whatsapp.functions.queryWidExists(phoneWid, "crm-barber");
-        const wid = pickBestWid(info);
-        if (wid) possible.unshift(wid);
-      }
-    } catch (e) {
-      console.warn("[CRM wa-bridge] queryWidExists falhou", e);
-    }
+    // Primeiro tenta APIs que sincronizam PN -> LID.
+    (await queryWid(number, "crm-barber")).forEach((wid) => pushWid(possible, wid, true));
+
+    // Não usa sleep fixo: espera o cache PN/LID aparecer de verdade.
+    pushWid(possible, await waitForLid(number), true);
 
     // Depois consulta o mapeamento local PN <-> LID. Se existir LID, ele é preferível.
     try {
       const entry = await window.WPP.contact?.getPnLidEntry?.(phoneWid);
       const wid = pickBestWid(entry);
-      if (wid) possible.unshift(wid);
+      pushWid(possible, wid, true);
     } catch (e) {
       console.warn("[CRM wa-bridge] getPnLidEntry falhou", e);
     }
@@ -77,7 +124,7 @@
     try {
       const info = await window.WPP.contact?.queryExists?.(phoneWid);
       const wid = pickBestWid(info);
-      if (wid) possible.push(wid);
+      pushWid(possible, wid);
     } catch (e) {
       console.warn("[CRM wa-bridge] queryExists falhou", e);
     }
@@ -87,36 +134,31 @@
 
   async function sendWithFallback(number, text) {
     let wids = await resolveWid(number);
-    // Pequena pausa: dá tempo do WA popular o LID no store.
-    await new Promise((r) => setTimeout(r, 400));
     let lastError = null;
 
     for (const wid of wids) {
       try {
-        console.info("[CRM wa-bridge] enviando", wid);
-        return await window.WPP.chat.sendTextMessage(wid, text, { waitForAck: true, createChat: true, delay: 250 });
+        const target = await resolveChatTarget(wid);
+        console.info("[CRM wa-bridge] enviando", target);
+        return await window.WPP.chat.sendTextMessage(target, text, { waitForAck: true, createChat: true, delay: 250 });
       } catch (e) {
         lastError = e;
         console.warn("[CRM wa-bridge] sendTextMessage falhou", wid, e);
       }
     }
 
-    // Retry agressivo: força re-sync do contato e tenta somente LID primeiro.
-    try { await window.WPP.contact?.queryWidExists?.(`${number}@c.us`, "crm-barber-retry"); } catch {}
-    try {
-      const entry = await window.WPP.contact?.getPnLidEntry?.(`${number}@c.us`);
-      const retryWid = pickBestWid(entry);
-      if (retryWid && !wids.includes(retryWid)) wids = [retryWid, ...wids];
-    } catch {}
-    await new Promise((r) => setTimeout(r, 1000));
+    // Retry sempre, sem depender do texto do erro. WA pode retornar erros sem a palavra LID.
+    (await queryWid(number, "crm-barber-retry")).forEach((wid) => pushWid(wids, wid, true));
+    pushWid(wids, await waitForLid(number, 5000), true);
 
-    for (const wid of wids.filter((v) => String(v).endsWith("@lid"))) {
+    for (const wid of wids) {
       try {
-        console.info("[CRM wa-bridge] retry LID", wid);
-        return await window.WPP.chat.sendTextMessage(wid, text, { waitForAck: true, createChat: true, delay: 250 });
+        const target = await resolveChatTarget(wid);
+        console.info("[CRM wa-bridge] retry", target);
+        return await window.WPP.chat.sendTextMessage(target, text, { waitForAck: true, createChat: true, delay: 250 });
       } catch (e) {
         lastError = e;
-        console.warn("[CRM wa-bridge] retry LID falhou", wid, e);
+        console.warn("[CRM wa-bridge] retry falhou", wid, e);
       }
     }
 
@@ -127,15 +169,15 @@
     if (ev.source !== window) return;
     if (window.__crmWaBridgeVersion !== BRIDGE_VERSION) return;
     const d = ev.data;
-    if (!d || d.__crm !== "send_v160") return;
+    if (!d || d.__crm !== "send_v161") return;
     try {
       const ready = await waitReady();
       if (!ready) throw new Error("WhatsApp Web ainda não carregou");
       const to = normalize(d.phone);
       await sendWithFallback(to, String(d.text || ""));
-      window.postMessage({ __crm: "sent_v160", id: d.id, ok: true }, "*");
+      window.postMessage({ __crm: "sent_v161", id: d.id, ok: true }, "*");
     } catch (e) {
-      window.postMessage({ __crm: "sent_v160", id: d.id, ok: false, error: (e && e.message) || "erro" }, "*");
+      window.postMessage({ __crm: "sent_v161", id: d.id, ok: false, error: (e && e.message) || "erro" }, "*");
     }
   });
 })();
