@@ -35,7 +35,7 @@ function downloadZip() {
     .then((blob) => {
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = "crm-assinaturas-extension-v10.zip";
+      a.download = "crm-assinaturas-extension-v11.zip";
       a.click();
       URL.revokeObjectURL(a.href);
     })
