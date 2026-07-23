@@ -459,7 +459,13 @@ function PerformanceModal({
   member: Member;
   entries: Entry[];
   periodLabel: string;
+  onDelete,
+}: {
+  member: Member;
+  entries: Entry[];
+  periodLabel: string;
   onClose: () => void;
+  onDelete: (id: string) => void;
 }) {
   const totalCents = entries.reduce((s, e) => s + e.amountCents, 0);
   const totalPoints = entries.reduce((s, e) => s + e.points, 0);
@@ -497,6 +503,12 @@ function PerformanceModal({
                 <p className="font-semibold text-neutral-900">{fmtBRL(e.amountCents)}</p>
                 <p className="text-[11px] text-neutral-500">{e.points} pts</p>
               </div>
+              <button
+                onClick={() => onDelete(e.id)}
+                className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-[11px] text-red-600 hover:bg-red-50 hover:border-red-300"
+              >
+                Excluir
+              </button>
             </li>
           ))}
         </ul>
@@ -504,6 +516,7 @@ function PerformanceModal({
     </ModalShell>
   );
 }
+
 
 
 function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
