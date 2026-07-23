@@ -1,7 +1,7 @@
-// Content script v0.15.3 — ponte minimalista: CRM BARBER, Assinantes e Equipe.
+// Content script v0.16.1 — ponte minimalista: CRM BARBER, Assinantes e Equipe.
 
 (function () {
-  const CRM_VERSION = "0.15.3";
+  const CRM_VERSION = "0.16.1";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -95,6 +95,8 @@
         </button>
       </div>
 
+      ${r.last_error ? `<div class="crm-status-error">${escapeHtml(r.last_error)}</div>` : ""}
+
       <div class="crm-footer">
         <button class="crm-unpair">desvincular</button>
       </div>
@@ -135,7 +137,7 @@
   if (document.body) mo.observe(document.body, { childList: true });
 
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
-    if (msg?.type === "send_message_v153") {
+    if (msg?.type === "send_message_v161") {
       handleSend(msg.job).then(sendResponse);
       return true;
     }
@@ -143,12 +145,21 @@
     return false;
   });
 
-  // Envio silencioso via wa-bridge (MAIN world) — inalterado.
+  function escapeHtml(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // Envio silencioso via wa-bridge (MAIN world).
   const pending = new Map();
   window.addEventListener("message", (ev) => {
     if (ev.source !== window) return;
     const d = ev.data;
-    if (!d || d.__crm !== "sent_v153") return;
+    if (!d || d.__crm !== "sent_v161") return;
     const p = pending.get(d.id);
     if (!p) return;
     pending.delete(d.id);
@@ -164,9 +175,9 @@
       const timeout = setTimeout(() => {
         pending.delete(id);
         resolve({ ok: false, error: "Timeout no envio silencioso" });
-      }, 25000);
+      }, 70000);
       pending.set(id, { resolve, timeout });
-      window.postMessage({ __crm: "send_v153", id, phone, text }, "*");
+      window.postMessage({ __crm: "send_v161", id, phone, text }, "*");
     });
   }
 })();

@@ -160,3 +160,14 @@ body.crm-assinaturas-docked-collapsed ._ai_g {
   padding: 8px 12px;
 }
 .crm-unpair:hover { color: #f87171; }
+
+.crm-status-error {
+  margin-top: auto;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 11px;
+  line-height: 1.4;
+}

@@ -78,6 +78,11 @@ async function api(token: string, path: string, opts: RequestInit = {}) {
   }
 }
 
+function nudgeExtensionPoll() {
+  if (typeof window === "undefined") return;
+  window.postMessage({ __crm: "poll_now_v161" }, window.location.origin);
+}
+
 type Section = "assinantes" | "equipe" | "configuracoes";
 
 function IconUsers() {
@@ -637,6 +642,7 @@ function DisparoView({
     });
     setBusy(false);
     if (!r?.ok) { setErr(r?.error || "Erro"); return; }
+    nudgeExtensionPoll();
     onDone();
   }
 
