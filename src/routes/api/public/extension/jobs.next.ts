@@ -25,6 +25,22 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
         }
 
         const nowIso = new Date().toISOString();
+        const staleClaimIso = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+
+        // MV3 service workers can be terminated between claiming and reporting.
+        // Without this, a job can remain `in_flight` forever and the campaign
+        // appears stopped. Requeue only old claims from this barbershop.
+        await supabaseAdmin
+          .from("message_jobs")
+          .update({
+            status: "pending",
+            claimed_at: null,
+            claimed_by_token: null,
+            last_error: "Reagendado automaticamente após travar no envio",
+          })
+          .eq("barbershop_id", auth.token.barbershop_id)
+          .eq("status", "in_flight")
+          .lt("claimed_at", staleClaimIso);
 
         // Expire old jobs first (batch, cheap). expires_at is nullable in the
         // schema — only expire jobs that actually carry a TTL.
@@ -73,6 +89,7 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
             attempts: candidate.attempts + 1,
             claimed_at: nowIso,
             claimed_by_token: auth.token.id,
+            last_error: null,
           })
           .eq("id", candidate.id)
           .eq("status", "pending")
