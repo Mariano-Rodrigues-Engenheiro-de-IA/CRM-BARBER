@@ -172,7 +172,7 @@ function Painel() {
     "w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition " +
     (active
       ? "bg-neutral-900 text-yellow-400 shadow-sm"
-      : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900");
+      : "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900");
 
 
   return (
@@ -239,8 +239,7 @@ function Painel() {
         {section === "assinantes" && (
           <>
             <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
-              <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4">
-                <h1 className="text-xl font-semibold text-neutral-900">Assinantes</h1>
+              <div className="flex flex-wrap items-center justify-end gap-4 px-6 py-4">
                 <nav className="flex gap-1 rounded-lg bg-neutral-100 p-1">
                   {(["kanban", "disparo", "campanhas"] as const).map((t) => (
                     <button
@@ -447,10 +446,10 @@ function AddModal({ token, onClose }: { token: string; onClose: () => void }) {
             {COLUMNS.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
           </select>
         </Field>
-        {err && <p className="text-sm text-red-400">{err}</p>}
+        {err && <p className="text-sm text-red-500">{err}</p>}
         <button
           disabled={busy}
-          className="w-full rounded-md bg-yellow-400 px-4 py-2 font-bold text-neutral-950 hover:bg-yellow-300 disabled:opacity-50"
+          className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
         >
           {busy ? "Salvando..." : "Adicionar"}
         </button>
@@ -496,9 +495,9 @@ function ImportModal({ token, onClose }: { token: string; onClose: () => void })
   return (
     <Modal onClose={onClose} title="Importar planilha">
       <form onSubmit={submit} className="space-y-4">
-        <div className="rounded-md border border-yellow-500/20 bg-neutral-950 p-3 text-xs text-neutral-300">
-          <div><strong className="text-yellow-400">Formato:</strong> CSV com 2 colunas — <code>nome</code> e <code>telefone</code>.</div>
-          <pre className="mt-2 rounded bg-neutral-900 p-2 text-[11px]">nome;telefone{"\n"}João Silva;61999998888{"\n"}Maria Souza;5561988887777</pre>
+        <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-700">
+          <div><strong className="text-neutral-900">Formato:</strong> CSV com 2 colunas — <code>nome</code> e <code>telefone</code>.</div>
+          <pre className="mt-2 rounded bg-white border border-neutral-200 p-2 text-[11px] text-neutral-800">nome;telefone{"\n"}João Silva;61999998888{"\n"}Maria Souza;5561988887777</pre>
         </div>
 
         <Field label="Arquivo (.csv)">
@@ -513,11 +512,11 @@ function ImportModal({ token, onClose }: { token: string; onClose: () => void })
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="rounded-md border border-yellow-500/40 bg-neutral-950 px-4 py-2 text-sm font-medium text-yellow-300 hover:bg-neutral-800"
+              className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
             >
-              📎 Escolher arquivo
+              Escolher arquivo
             </button>
-            <span className="truncate text-xs text-neutral-400">
+            <span className="truncate text-xs text-neutral-500">
               {file ? file.name : "Nenhum arquivo selecionado"}
             </span>
           </div>
@@ -533,11 +532,11 @@ function ImportModal({ token, onClose }: { token: string; onClose: () => void })
           Ao importar, a planilha anterior é substituída. Contatos adicionados manualmente são preservados.
         </p>
 
-        {err && <p className="text-sm text-red-400">{err}</p>}
-        {result && <p className="text-sm text-green-400">{result}</p>}
+        {err && <p className="text-sm text-red-500">{err}</p>}
+        {result && <p className="text-sm text-emerald-600">{result}</p>}
         <button
           disabled={busy || !file}
-          className="w-full rounded-md bg-yellow-400 px-4 py-2 font-bold text-neutral-950 hover:bg-yellow-300 disabled:opacity-50"
+          className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
         >
           {busy ? "Importando..." : "Substituir planilha"}
         </button>
@@ -596,8 +595,8 @@ function DisparoView({
   }
 
   return (
-    <form onSubmit={submit} className="mx-auto max-w-2xl space-y-5 rounded-lg border border-yellow-500/20 bg-neutral-900 p-6">
-      <h2 className="text-xl font-bold text-yellow-400">Novo disparo</h2>
+    <form onSubmit={submit} className="mx-auto max-w-2xl space-y-5 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+      <h2 className="text-lg font-semibold text-neutral-900">Novo disparo</h2>
 
       <Field label="Nome interno da campanha">
         <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="ex: Cobrança julho" required />
@@ -609,12 +608,12 @@ function DisparoView({
           <option value="all">Todos ({customers.length})</option>
         </select>
         <p className="mt-1 text-xs text-neutral-500">
-          Vai disparar para <strong className="text-yellow-400">{total}</strong> contato(s).
+          Vai disparar para <strong className="text-neutral-900">{total}</strong> contato(s).
         </p>
       </Field>
 
       <div>
-        <label className="mb-2 block text-sm font-medium text-neutral-300">
+        <label className="mb-2 block text-sm font-medium text-neutral-700">
           Variações de mensagem (rotacionadas por contato — reduz chance de bloqueio)
         </label>
         <div className="space-y-2">
@@ -631,7 +630,7 @@ function DisparoView({
                 <button
                   type="button"
                   onClick={() => setVariants((p) => p.filter((_, idx) => idx !== i))}
-                  className="rounded px-2 text-red-400 hover:bg-red-500/10"
+                  className="rounded px-2 text-red-500 hover:bg-red-50"
                 >
                   ✕
                 </button>
@@ -643,7 +642,7 @@ function DisparoView({
           <button
             type="button"
             onClick={() => setVariants((p) => [...p, ""])}
-            className="mt-2 text-xs text-yellow-400 hover:underline"
+            className="mt-2 text-xs font-medium text-neutral-700 hover:underline"
           >
             + Adicionar variação (máx 3)
           </button>
@@ -662,12 +661,12 @@ function DisparoView({
         Cada mensagem sai com espaçamento aleatório dentro dessa faixa.
       </p>
 
-      {err && <p className="text-sm text-red-400">{err}</p>}
+      {err && <p className="text-sm text-red-500">{err}</p>}
       <button
         disabled={busy}
-        className="w-full rounded-md bg-yellow-400 px-4 py-3 font-bold text-neutral-950 hover:bg-yellow-300 disabled:opacity-50"
+        className="w-full rounded-lg bg-neutral-900 px-4 py-3 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
       >
-        {busy ? "Criando..." : segment === "overdue" ? "💰 Iniciar cobrança" : "🚀 Iniciar disparo"}
+        {busy ? "Criando..." : segment === "overdue" ? "Iniciar cobrança" : "Iniciar disparo"}
       </button>
     </form>
   );
@@ -730,11 +729,11 @@ function CampaignsView({ token }: { token: string }) {
         const isPaused = c.status === "paused";
         const isFinal = c.status === "canceled" || (total > 0 && c.stats.pending === 0);
         return (
-          <div key={c.id} className="rounded-lg border border-yellow-500/20 bg-neutral-900 p-4">
+          <div key={c.id} className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h3 className="text-lg font-bold text-yellow-50">{c.name}</h3>
-                <p className="text-xs uppercase tracking-wide text-neutral-400">
+                <h3 className="text-base font-semibold text-neutral-900">{c.name}</h3>
+                <p className="text-xs uppercase tracking-wide text-neutral-500">
                   {c.status === "running" ? "Em andamento" : c.status === "paused" ? "Pausada" : c.status === "canceled" ? "Cancelada" : c.status}
                 </p>
               </div>
@@ -743,19 +742,19 @@ function CampaignsView({ token }: { token: string }) {
                   <button
                     onClick={() => toggleStatus(c)}
                     className={
-                      "rounded-md px-3 py-1.5 text-sm font-bold " +
+                      "rounded-lg px-3 py-1.5 text-sm font-semibold " +
                       (isRunning
-                        ? "bg-neutral-800 text-yellow-400 hover:bg-neutral-700"
-                        : "bg-yellow-400 text-neutral-950 hover:bg-yellow-300")
+                        ? "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                        : "bg-neutral-900 text-yellow-400 hover:bg-neutral-800")
                     }
                   >
-                    {isRunning ? "⏸ Pausar" : "▶ Retomar"}
+                    {isRunning ? "Pausar" : "Retomar"}
                   </button>
                 )}
                 {!isFinal && (
                   <button
                     onClick={() => cancelCamp(c)}
-                    className="rounded-md border border-red-500/40 px-3 py-1.5 text-sm text-red-400 hover:bg-red-500/10"
+                    className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-600 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
                   >
                     Cancelar
                   </button>
@@ -763,18 +762,18 @@ function CampaignsView({ token }: { token: string }) {
                 <button
                   onClick={() => deleteCamp(c)}
                   title="Apagar campanha"
-                  className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-400 hover:border-red-500/60 hover:bg-red-500/10 hover:text-red-400"
+                  className="rounded-lg border border-neutral-200 px-3 py-1.5 text-sm text-neutral-400 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
                 >
                   🗑
                 </button>
               </div>
             </div>
             <div className="mt-4">
-              <div className="h-2 overflow-hidden rounded-full bg-neutral-800">
+              <div className="h-2 overflow-hidden rounded-full bg-neutral-100">
                 <div className="h-full bg-yellow-400 transition-all" style={{ width: `${pct}%` }} />
               </div>
-              <div className="mt-2 flex justify-between text-xs text-neutral-400">
-                <span>{done} / {total} enviados · {c.stats.failed} falhas {isPaused ? "· ⏸" : ""}</span>
+              <div className="mt-2 flex justify-between text-xs text-neutral-500">
+                <span>{done} / {total} enviados · {c.stats.failed} falhas {isPaused ? "· pausada" : ""}</span>
                 <span>{pct}%</span>
               </div>
             </div>
@@ -788,12 +787,12 @@ function CampaignsView({ token }: { token: string }) {
 // --- Utils ---
 
 const inputCls =
-  "w-full rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-yellow-50 placeholder:text-neutral-600 focus:border-yellow-400 focus:outline-none";
+  "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-sm font-medium text-neutral-300">{label}</span>
+      <span className="mb-1 block text-sm font-medium text-neutral-700">{label}</span>
       {children}
     </label>
   );
@@ -809,11 +808,11 @@ function Modal({
   children: React.ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="w-full max-w-md rounded-lg border border-yellow-500/30 bg-neutral-900 p-6 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/50 backdrop-blur-sm p-4">
+      <div className="w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-yellow-400">{title}</h2>
-          <button onClick={onClose} className="rounded p-1 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200">✕</button>
+          <h2 className="text-base font-semibold text-neutral-900">{title}</h2>
+          <button onClick={onClose} className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900">✕</button>
         </div>
         {children}
       </div>
@@ -908,19 +907,18 @@ function SettingsView({
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-base font-normal tracking-wide text-yellow-50">Configurações</h1>
+      <h1 className="text-lg font-semibold text-neutral-900">Configurações</h1>
 
-
-      <div className="rounded-2xl border border-yellow-500/15 bg-neutral-900 p-6 space-y-6">
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-6">
         <div className="flex items-center gap-4">
-          <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-300 to-amber-500 text-2xl font-black text-neutral-950 shadow-md">
+          <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl bg-neutral-900 text-2xl font-semibold text-yellow-400 shadow-sm">
             {logo ? <img src={logo} alt="logo" className="h-full w-full object-cover" /> : initial}
           </div>
           <div className="flex flex-col gap-2">
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="rounded-lg bg-yellow-400 px-4 py-2 text-sm font-bold text-neutral-950 hover:bg-yellow-300"
+              className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
             >
               {logo ? "Trocar logo" : "Enviar logo"}
             </button>
@@ -928,7 +926,7 @@ function SettingsView({
               <button
                 type="button"
                 onClick={() => setLogo("")}
-                className="text-xs text-neutral-400 hover:text-red-400"
+                className="text-xs text-neutral-500 hover:text-red-600"
               >
                 remover logo
               </button>
@@ -948,23 +946,23 @@ function SettingsView({
         </div>
 
         <label className="block space-y-2">
-          <span className="text-[11px] uppercase tracking-widest text-yellow-500/70">Nome da barbearia</span>
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500">Nome da barbearia</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ex.: Barbearia do João"
-            className="w-full rounded-md border border-yellow-500/20 bg-neutral-950 px-4 py-2.5 text-sm font-light text-yellow-50 outline-none focus:border-yellow-400"
+            className={inputCls}
           />
         </label>
 
         <div className="flex items-center gap-3">
           <button
             onClick={save}
-            className="rounded-md bg-yellow-400 px-5 py-2 text-sm font-normal text-neutral-950 hover:bg-yellow-300"
+            className="rounded-lg bg-neutral-900 px-5 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
           >
             Salvar
           </button>
-          {saved && <span className="text-xs text-yellow-400">Salvo ✔</span>}
+          {saved && <span className="text-xs font-medium text-emerald-600">Salvo ✔</span>}
         </div>
       </div>
     </div>

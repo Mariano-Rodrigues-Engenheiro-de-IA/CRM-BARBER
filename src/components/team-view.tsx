@@ -1,6 +1,5 @@
 // Gamificação da equipe — 100% client-side (localStorage por barbearia).
-// O gestor configura membros, meta do mês e vai lançando vendas/serviços.
-// Ranking, barra de progresso e confete quando alguém bate a meta.
+// Tema claro para combinar com o resto do painel.
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import confetti from "canvas-confetti";
@@ -24,8 +23,8 @@ type Entry = {
 type TeamConfig = {
   monthGoalCents: number;
   perMemberGoalCents: number;
-  pointsPerReal: number; // multiplicador
-  bonusExtra: number; // pontos extra por venda "extra"
+  pointsPerReal: number;
+  bonusExtra: number;
 };
 
 type TeamState = {
@@ -38,8 +37,8 @@ const DEFAULT_STATE: TeamState = {
   members: [],
   entries: [],
   config: {
-    monthGoalCents: 5000000, // R$ 50.000
-    perMemberGoalCents: 1500000, // R$ 15.000
+    monthGoalCents: 5000000,
+    perMemberGoalCents: 1500000,
     pointsPerReal: 1,
     bonusExtra: 20,
   },
@@ -80,7 +79,7 @@ function isCurrentMonth(iso: string) {
 function fireConfetti() {
   const duration = 2500;
   const end = Date.now() + duration;
-  const colors = ["#facc15", "#fbbf24", "#f59e0b", "#fef3c7", "#ffffff"];
+  const colors = ["#facc15", "#fbbf24", "#f59e0b", "#171717", "#404040"];
   (function frame() {
     confetti({ particleCount: 6, angle: 60, spread: 70, origin: { x: 0 }, colors });
     confetti({ particleCount: 6, angle: 120, spread: 70, origin: { x: 1 }, colors });
@@ -125,7 +124,6 @@ export function TeamView({ shopId }: { shopId: string }) {
     return { totalCents, totalPoints, perMember };
   }, [state]);
 
-  // dispara confete quando alguém cruza a meta
   useEffect(() => {
     if (!ready) return;
     for (const row of stats.perMember) {
@@ -148,24 +146,24 @@ export function TeamView({ shopId }: { shopId: string }) {
   return (
     <div className="space-y-6">
       {/* Header + KPIs */}
-      <div className="rounded-2xl border border-yellow-500/20 bg-gradient-to-br from-neutral-900 via-neutral-900 to-yellow-500/5 p-6 shadow-lg">
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-black tracking-tight text-yellow-50">Ranking da equipe</h2>
-            <p className="text-sm text-neutral-400">Competição do mês · pontos, faturamento e metas</p>
+            <h2 className="text-xl font-semibold text-neutral-900">Ranking da equipe</h2>
+            <p className="text-sm text-neutral-500">Competição do mês · pontos, faturamento e metas</p>
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => setShowAddMember(true)}
-              className="rounded-lg bg-yellow-400 px-4 py-2 text-sm font-bold text-neutral-950 hover:bg-yellow-300"
+              className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
             >
               + Barbeiro
             </button>
             <button
               onClick={() => setShowConfig(true)}
-              className="rounded-lg border border-yellow-500/40 bg-neutral-950 px-4 py-2 text-sm font-medium text-yellow-300 hover:bg-neutral-800"
+              className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
             >
-              ⚙ Configurar
+              Configurar
             </button>
           </div>
         </div>
@@ -180,10 +178,10 @@ export function TeamView({ shopId }: { shopId: string }) {
           />
         </div>
 
-        <div className="mt-4">
-          <div className="h-3 overflow-hidden rounded-full bg-neutral-800">
+        <div className="mt-5">
+          <div className="h-2.5 overflow-hidden rounded-full bg-neutral-100">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-yellow-500 via-yellow-400 to-amber-300 transition-all"
+              className="h-full rounded-full bg-yellow-400 transition-all"
               style={{ width: `${shopPct}%` }}
             />
           </div>
@@ -192,15 +190,15 @@ export function TeamView({ shopId }: { shopId: string }) {
 
       {/* Empty state */}
       {state.members.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-yellow-500/30 bg-neutral-900 p-10 text-center">
+        <div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-10 text-center">
           <p className="text-4xl">💈</p>
-          <h3 className="mt-3 text-lg font-bold text-yellow-50">Cadastre sua equipe</h3>
-          <p className="mt-1 text-sm text-neutral-400">
+          <h3 className="mt-3 text-base font-semibold text-neutral-900">Cadastre sua equipe</h3>
+          <p className="mt-1 text-sm text-neutral-500">
             Adicione os barbeiros para começar o placar do mês.
           </p>
           <button
             onClick={() => setShowAddMember(true)}
-            className="mt-4 rounded-lg bg-yellow-400 px-5 py-2 text-sm font-bold text-neutral-950 hover:bg-yellow-300"
+            className="mt-4 rounded-lg bg-neutral-900 px-5 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
           >
             + Adicionar primeiro barbeiro
           </button>
@@ -217,34 +215,34 @@ export function TeamView({ shopId }: { shopId: string }) {
               <div
                 key={row.member.id}
                 className={
-                  "rounded-2xl border p-5 transition " +
+                  "rounded-2xl border p-5 shadow-sm transition " +
                   (isLeader
-                    ? "border-yellow-400/60 bg-gradient-to-r from-yellow-500/10 via-neutral-900 to-neutral-900 shadow-[0_0_30px_-10px_rgba(250,204,21,0.4)]"
-                    : "border-yellow-500/10 bg-neutral-900 hover:border-yellow-500/30")
+                    ? "border-yellow-400 bg-white ring-2 ring-yellow-400/30"
+                    : "border-neutral-200 bg-white hover:border-neutral-300")
                 }
               >
                 <div className="flex flex-wrap items-center gap-4">
-                  <div className="text-3xl font-black tabular-nums text-yellow-400 min-w-14">{medal}</div>
+                  <div className="text-2xl font-semibold tabular-nums text-neutral-700 min-w-12">{medal}</div>
                   <div className="text-4xl">{row.member.emoji}</div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <h3 className="truncate text-lg font-bold text-yellow-50">{row.member.name}</h3>
+                      <h3 className="truncate text-base font-semibold text-neutral-900">{row.member.name}</h3>
                       {row.goalPct >= 100 && (
-                        <span className="rounded-full bg-yellow-400 px-2 py-0.5 text-[10px] font-black uppercase text-neutral-950">
-                          🏆 Meta batida
+                        <span className="rounded-full bg-yellow-400 px-2 py-0.5 text-[10px] font-bold uppercase text-neutral-900">
+                          Meta batida
                         </span>
                       )}
                     </div>
-                    <div className="mt-1 flex flex-wrap gap-3 text-xs text-neutral-400">
+                    <div className="mt-1 flex flex-wrap gap-3 text-xs text-neutral-600">
                       <span>💰 {fmtBRL(row.cents)}</span>
                       <span>⭐ {row.points} pts</span>
                       <span>✂️ {row.services} serv.</span>
                       <span>🛒 {row.products} prod.</span>
                       <span>🎯 {row.extras} extras</span>
                     </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-neutral-800">
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-neutral-100">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-yellow-500 to-amber-300"
+                        className="h-full rounded-full bg-yellow-400"
                         style={{ width: `${row.goalPct}%` }}
                       />
                     </div>
@@ -256,7 +254,7 @@ export function TeamView({ shopId }: { shopId: string }) {
                   <div className="flex flex-col gap-1">
                     <button
                       onClick={() => setShowAddEntry(row.member.id)}
-                      className="rounded-lg bg-yellow-400 px-3 py-2 text-xs font-bold text-neutral-950 hover:bg-yellow-300"
+                      className="rounded-lg bg-neutral-900 px-3 py-2 text-xs font-semibold text-yellow-400 hover:bg-neutral-800"
                     >
                       + Lançar venda
                     </button>
@@ -265,7 +263,7 @@ export function TeamView({ shopId }: { shopId: string }) {
                         if (!confirm(`Remover ${row.member.name} da equipe? Os lançamentos ficam no histórico.`)) return;
                         setState((s) => ({ ...s, members: s.members.filter((m) => m.id !== row.member.id) }));
                       }}
-                      className="rounded-lg border border-neutral-800 px-3 py-1 text-[11px] text-neutral-500 hover:border-red-500/40 hover:text-red-400"
+                      className="rounded-lg border border-neutral-200 px-3 py-1 text-[11px] text-neutral-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
                     >
                       remover
                     </button>
@@ -309,10 +307,10 @@ export function TeamView({ shopId }: { shopId: string }) {
 
 function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-xl border border-yellow-500/10 bg-neutral-950/60 p-4">
-      <p className="text-[11px] font-medium uppercase tracking-wider text-neutral-500">{label}</p>
-      <p className="mt-1 text-2xl font-black text-yellow-50">{value}</p>
-      {sub && <p className="mt-0.5 text-xs text-neutral-400">{sub}</p>}
+    <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">{label}</p>
+      <p className="mt-1 text-2xl font-bold text-neutral-900">{value}</p>
+      {sub && <p className="mt-0.5 text-xs text-neutral-500">{sub}</p>}
     </div>
   );
 }
@@ -326,7 +324,7 @@ function AddMemberModal({ onClose, onAdd }: { onClose: () => void; onAdd: (m: Me
     <ModalShell title="Novo barbeiro" onClose={onClose}>
       <div className="space-y-4">
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-neutral-300">Nome</span>
+          <span className="mb-1 block text-sm font-medium text-neutral-700">Nome</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -335,7 +333,7 @@ function AddMemberModal({ onClose, onAdd }: { onClose: () => void; onAdd: (m: Me
           />
         </label>
         <div>
-          <span className="mb-2 block text-sm font-medium text-neutral-300">Avatar</span>
+          <span className="mb-2 block text-sm font-medium text-neutral-700">Avatar</span>
           <div className="flex flex-wrap gap-2">
             {EMOJIS.map((em) => (
               <button
@@ -345,8 +343,8 @@ function AddMemberModal({ onClose, onAdd }: { onClose: () => void; onAdd: (m: Me
                 className={
                   "h-11 w-11 rounded-lg border text-2xl transition " +
                   (emoji === em
-                    ? "border-yellow-400 bg-yellow-400/20"
-                    : "border-neutral-800 bg-neutral-950 hover:border-yellow-500/40")
+                    ? "border-neutral-900 bg-neutral-100"
+                    : "border-neutral-200 bg-white hover:border-neutral-400")
                 }
               >
                 {em}
@@ -360,7 +358,7 @@ function AddMemberModal({ onClose, onAdd }: { onClose: () => void; onAdd: (m: Me
             onAdd({ id: crypto.randomUUID(), name: name.trim(), emoji });
             onClose();
           }}
-          className="w-full rounded-lg bg-yellow-400 px-4 py-2 font-bold text-neutral-950 hover:bg-yellow-300 disabled:opacity-40"
+          className="w-full rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-40"
         >
           Adicionar à equipe
         </button>
@@ -390,7 +388,7 @@ function AddEntryModal({
     <ModalShell title={`Lançar venda · ${member.emoji} ${member.name}`} onClose={onClose}>
       <div className="space-y-4">
         <div>
-          <span className="mb-2 block text-sm font-medium text-neutral-300">Tipo</span>
+          <span className="mb-2 block text-sm font-medium text-neutral-700">Tipo</span>
           <div className="grid grid-cols-3 gap-2">
             {(
               [
@@ -406,8 +404,8 @@ function AddEntryModal({
                 className={
                   "rounded-lg border px-3 py-2 text-sm font-medium " +
                   (kind === o.k
-                    ? "border-yellow-400 bg-yellow-400/20 text-yellow-100"
-                    : "border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-yellow-500/30")
+                    ? "border-neutral-900 bg-neutral-900 text-yellow-400"
+                    : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400")
                 }
               >
                 {o.label}
@@ -415,17 +413,17 @@ function AddEntryModal({
             ))}
           </div>
           {kind === "extra" && (
-            <p className="mt-1 text-[11px] text-yellow-500">
+            <p className="mt-1 text-[11px] text-neutral-600">
               +{config.bonusExtra} pontos bônus por venda extra/upsell
             </p>
           )}
         </div>
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-neutral-300">Descrição (opcional)</span>
+          <span className="mb-1 block text-sm font-medium text-neutral-700">Descrição (opcional)</span>
           <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="ex: Corte + Barba" className={inputCls} />
         </label>
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-neutral-300">Valor (R$)</span>
+          <span className="mb-1 block text-sm font-medium text-neutral-700">Valor (R$)</span>
           <input
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
@@ -434,8 +432,8 @@ function AddEntryModal({
             className={inputCls}
           />
         </label>
-        <div className="rounded-lg border border-yellow-500/20 bg-neutral-950 p-3 text-sm text-neutral-300">
-          Vai valer <strong className="text-yellow-400">{points} pontos</strong> · {fmtBRL(cents)}
+        <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-sm text-neutral-700">
+          Vai valer <strong className="text-neutral-900">{points} pontos</strong> · {fmtBRL(cents)}
         </div>
         <button
           disabled={cents <= 0}
@@ -451,7 +449,7 @@ function AddEntryModal({
             });
             onClose();
           }}
-          className="w-full rounded-lg bg-yellow-400 px-4 py-2 font-bold text-neutral-950 hover:bg-yellow-300 disabled:opacity-40"
+          className="w-full rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-40"
         >
           Registrar
         </button>
@@ -479,20 +477,20 @@ function ConfigModal({
     <ModalShell title="Configurar gamificação" onClose={onClose}>
       <div className="space-y-4">
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-neutral-300">Meta de faturamento do mês (R$)</span>
+          <span className="mb-1 block text-sm font-medium text-neutral-700">Meta de faturamento do mês (R$)</span>
           <input value={monthGoal} onChange={(e) => setMonthGoal(e.target.value)} className={inputCls} inputMode="decimal" />
         </label>
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-neutral-300">Meta individual por barbeiro (R$)</span>
+          <span className="mb-1 block text-sm font-medium text-neutral-700">Meta individual por barbeiro (R$)</span>
           <input value={perMemberGoal} onChange={(e) => setPerMemberGoal(e.target.value)} className={inputCls} inputMode="decimal" />
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
-            <span className="mb-1 block text-sm font-medium text-neutral-300">Pontos por R$1</span>
+            <span className="mb-1 block text-sm font-medium text-neutral-700">Pontos por R$1</span>
             <input value={ppr} onChange={(e) => setPpr(e.target.value)} className={inputCls} inputMode="decimal" />
           </label>
           <label className="block">
-            <span className="mb-1 block text-sm font-medium text-neutral-300">Bônus por venda extra</span>
+            <span className="mb-1 block text-sm font-medium text-neutral-700">Bônus por venda extra</span>
             <input value={bonus} onChange={(e) => setBonus(e.target.value)} className={inputCls} inputMode="decimal" />
           </label>
         </div>
@@ -506,13 +504,13 @@ function ConfigModal({
             });
             onClose();
           }}
-          className="w-full rounded-lg bg-yellow-400 px-4 py-2 font-bold text-neutral-950 hover:bg-yellow-300"
+          className="w-full rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
         >
           Salvar
         </button>
         <button
           onClick={onResetMonth}
-          className="w-full rounded-lg border border-red-500/40 px-4 py-2 text-sm text-red-400 hover:bg-red-500/10"
+          className="w-full rounded-lg border border-red-300 bg-white px-4 py-2 text-sm text-red-600 hover:bg-red-50"
         >
           Zerar lançamentos do mês
         </button>
@@ -523,11 +521,11 @@ function ConfigModal({
 
 function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-yellow-500/30 bg-neutral-900 p-6 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/50 backdrop-blur-sm p-4">
+      <div className="w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-yellow-400">{title}</h2>
-          <button onClick={onClose} className="rounded p-1 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200">✕</button>
+          <h2 className="text-base font-semibold text-neutral-900">{title}</h2>
+          <button onClick={onClose} className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900">✕</button>
         </div>
         {children}
       </div>
@@ -536,4 +534,4 @@ function ModalShell({ title, onClose, children }: { title: string; onClose: () =
 }
 
 const inputCls =
-  "w-full rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-yellow-50 placeholder:text-neutral-600 focus:border-yellow-400 focus:outline-none";
+  "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10";
