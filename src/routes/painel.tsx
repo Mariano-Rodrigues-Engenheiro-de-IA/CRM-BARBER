@@ -169,23 +169,27 @@ function Painel() {
   ];
 
   const navBtnCls = (active: boolean) =>
-    "w-full rounded-md px-3 py-2 text-left text-sm font-normal tracking-wide transition " +
+    "w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition " +
     (active
-      ? "bg-yellow-400/90 text-neutral-950"
-      : "text-neutral-300 hover:bg-yellow-500/10 hover:text-yellow-100");
+      ? "bg-neutral-900 text-yellow-400 shadow-sm"
+      : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900");
+
 
   return (
-    <div className="flex min-h-screen bg-neutral-950 text-yellow-50 font-light">
+    <div className="flex min-h-screen bg-neutral-100 text-neutral-900">
       {/* Sidebar */}
-      <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-yellow-500/10 bg-neutral-950">
-        <div className="flex items-center gap-3 px-5 py-5">
-          <div className="grid h-9 w-9 place-items-center overflow-hidden rounded-md bg-yellow-400 text-sm font-semibold text-neutral-950">
+      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-neutral-200 bg-white">
+        <div className="flex items-center gap-3 px-5 py-5 border-b border-neutral-200">
+          <div className="grid h-10 w-10 place-items-center overflow-hidden rounded-lg bg-neutral-900 text-sm font-semibold text-yellow-400">
             {shopLogo ? <img src={shopLogo} alt="logo" className="h-full w-full object-cover" /> : shopInitial}
           </div>
-          <p className="text-[13px] font-medium tracking-[0.18em] text-yellow-50">CRM BARBER</p>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold tracking-[0.18em] text-neutral-500">CRM BARBER</p>
+            <p className="truncate text-sm font-medium text-neutral-900">{shopName}</p>
+          </div>
         </div>
 
-        <nav className="flex-1 space-y-1 px-3 pt-2">
+        <nav className="flex-1 space-y-1 px-3 pt-4">
           {NAV_TOP.map((n) => (
             <button
               key={n.key}
@@ -207,17 +211,18 @@ function Painel() {
         </div>
       </aside>
 
+
       {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-yellow-500/15 bg-neutral-950/95 px-4 py-3 backdrop-blur">
-        <span className="text-xs font-medium tracking-[0.2em] text-yellow-50">CRM BARBER</span>
-        <div className="flex gap-1 rounded-md bg-neutral-900 p-1">
+      <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-neutral-200 bg-white/95 px-4 py-3 backdrop-blur">
+        <span className="text-xs font-semibold tracking-[0.2em] text-neutral-900">CRM BARBER</span>
+        <div className="flex gap-1 rounded-lg bg-neutral-100 p-1">
           {[...NAV_TOP, { key: "configuracoes" as Section, label: "Config" }].map((n) => (
             <button
               key={n.key}
               onClick={() => setSection(n.key)}
               className={
-                "rounded px-2.5 py-1 text-[11px] font-normal " +
-                (section === n.key ? "bg-yellow-400 text-neutral-950" : "text-neutral-300")
+                "rounded-md px-2.5 py-1 text-[11px] font-medium " +
+                (section === n.key ? "bg-neutral-900 text-yellow-400" : "text-neutral-600")
               }
             >
               {n.label}
@@ -228,21 +233,22 @@ function Painel() {
 
 
 
+
       {/* Content */}
       <div className="flex-1 min-w-0">
         {section === "assinantes" && (
           <>
-            <header className="sticky top-0 z-10 border-b border-yellow-500/10 bg-neutral-950/90 backdrop-blur mt-14 md:mt-0">
+            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
               <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4">
-                <h1 className="text-base font-normal tracking-wide text-yellow-50">Assinantes</h1>
-                <nav className="flex gap-1 rounded-md bg-neutral-900 p-1">
+                <h1 className="text-xl font-semibold text-neutral-900">Assinantes</h1>
+                <nav className="flex gap-1 rounded-lg bg-neutral-100 p-1">
                   {(["kanban", "disparo", "campanhas"] as const).map((t) => (
                     <button
                       key={t}
                       onClick={() => setTab(t)}
                       className={
-                        "rounded px-3 py-1.5 text-xs font-normal transition " +
-                        (tab === t ? "bg-yellow-400 text-neutral-950" : "text-neutral-300 hover:text-yellow-300")
+                        "rounded-md px-3 py-1.5 text-xs font-medium transition " +
+                        (tab === t ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
                       }
                     >
                       {t === "kanban" ? "Kanban" : t === "disparo" ? "Novo disparo" : "Campanhas"}
@@ -251,6 +257,7 @@ function Painel() {
                 </nav>
               </div>
             </header>
+
 
             <main className="px-6 py-6">
               {tab === "kanban" && (
@@ -326,32 +333,29 @@ function KanbanView({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-sm text-neutral-400">
-          {loading ? "Carregando..." : `${customers.length} assinante(s) no total`}
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowImport(true)}
-            className="rounded-md border border-yellow-500/40 bg-neutral-900 px-4 py-2 text-sm font-medium text-yellow-300 hover:bg-neutral-800"
-          >
-            Importar planilha
-          </button>
-          <button
-            onClick={() => setShowAdd(true)}
-            className="rounded-md bg-yellow-400 px-4 py-2 text-sm font-bold text-neutral-950 hover:bg-yellow-300"
-          >
-            + Adicionar contato
-          </button>
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <button
+          onClick={() => setShowImport(true)}
+          className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
+        >
+          Importar planilha
+        </button>
+        <button
+          onClick={() => setShowAdd(true)}
+          className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
+        >
+          + Adicionar contato
+        </button>
       </div>
+
+      {loading && <p className="text-sm text-neutral-500">Carregando...</p>}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {COLUMNS.map((col) => (
-          <div key={col.key} className="rounded-lg border border-yellow-500/20 bg-neutral-900">
-            <div className="flex items-center justify-between border-b border-yellow-500/10 px-4 py-3">
+          <div key={col.key} className="rounded-xl border border-neutral-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-wide text-yellow-400">{col.label}</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-700">{col.label}</h3>
                 <p className="text-xs text-neutral-500">{byStatus[col.key]?.length ?? 0} contato(s)</p>
               </div>
             </div>
@@ -359,25 +363,25 @@ function KanbanView({
               {(byStatus[col.key] ?? []).map((c) => (
                 <div
                   key={c.id}
-                  className="rounded-md border border-neutral-800 bg-neutral-950 p-3 text-sm hover:border-yellow-500/40"
+                  className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-sm hover:border-neutral-900 hover:shadow-sm transition"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="truncate font-semibold text-yellow-50">{c.name}</div>
-                      <div className="text-xs text-neutral-400">{c.phone}</div>
+                      <div className="truncate font-semibold text-neutral-900">{c.name}</div>
+                      <div className="text-xs text-neutral-500">{c.phone}</div>
                       {c.source === "spreadsheet" ? (
-                        <span className="mt-1 inline-block rounded bg-yellow-500/10 px-1.5 py-0.5 text-[10px] uppercase text-yellow-400">
+                        <span className="mt-1 inline-block rounded bg-neutral-900 px-1.5 py-0.5 text-[10px] uppercase text-yellow-400">
                           planilha
                         </span>
                       ) : (
-                        <span className="mt-1 inline-block rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] uppercase text-emerald-400">
+                        <span className="mt-1 inline-block rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] uppercase text-emerald-700">
                           manual
                         </span>
                       )}
                     </div>
                     <button
                       onClick={() => remove(c.id)}
-                      className="rounded p-1 text-neutral-500 hover:bg-red-500/10 hover:text-red-400"
+                      className="rounded p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600"
                       title="Remover"
                     >
                       🗑
@@ -386,7 +390,7 @@ function KanbanView({
                   <select
                     value={c.status}
                     onChange={(e) => moveTo(c.id, e.target.value)}
-                    className="mt-2 w-full rounded border border-neutral-800 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
+                    className="mt-2 w-full rounded-md border border-neutral-200 bg-white px-2 py-1 text-xs text-neutral-700"
                   >
                     {COLUMNS.map((cc) => (
                       <option key={cc.key} value={cc.key}>Mover para: {cc.label}</option>
@@ -395,7 +399,7 @@ function KanbanView({
                 </div>
               ))}
               {(byStatus[col.key]?.length ?? 0) === 0 && (
-                <p className="p-3 text-center text-xs text-neutral-600">Vazio</p>
+                <p className="p-3 text-center text-xs text-neutral-400">Vazio</p>
               )}
             </div>
           </div>
