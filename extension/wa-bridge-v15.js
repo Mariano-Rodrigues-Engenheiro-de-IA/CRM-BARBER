@@ -28,13 +28,26 @@
     return null;
   }
 
+  function isValidWid(wid, server) {
+    if (!wid || !wid.endsWith(`@${server}`)) return false;
+    const user = wid.slice(0, -1 * (server.length + 1));
+    const digits = user.replace(/\D/g, "");
+    // LIDs reais têm muitos dígitos; "1@lid", "0@lid" etc. são placeholders inválidos.
+    if (server === "lid") return digits.length >= 10;
+    if (server === "c.us") return digits.length >= 8;
+    return digits.length >= 8;
+  }
+
   function normalizeWid(value, server) {
     const serialized = serializeWid(value);
     if (!serialized) return null;
-    if (serialized.includes("@")) return serialized;
+    if (serialized.includes("@")) {
+      return isValidWid(serialized, server) ? serialized : null;
+    }
     const digits = serialized.replace(/\D/g, "");
     if (!digits) return null;
-    return `${digits}@${server}`;
+    const candidate = `${digits}@${server}`;
+    return isValidWid(candidate, server) ? candidate : null;
   }
 
   function deepPickWid(value, server, seen = new WeakSet(), depth = 0) {
