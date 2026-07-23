@@ -232,19 +232,16 @@ function Painel() {
       <div className="flex-1 min-w-0">
         {section === "assinantes" && (
           <>
-            <header className="sticky top-0 z-10 border-b border-yellow-500/15 bg-neutral-950/90 backdrop-blur mt-14 md:mt-0">
+            <header className="sticky top-0 z-10 border-b border-yellow-500/10 bg-neutral-950/90 backdrop-blur mt-14 md:mt-0">
               <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4">
-                <div>
-                  <h1 className="text-xl font-black tracking-tight text-yellow-50">Assinantes</h1>
-                  <p className="text-xs text-neutral-500">Gestão de contatos, disparos e campanhas</p>
-                </div>
-                <nav className="flex gap-1 rounded-lg bg-neutral-900 p-1">
+                <h1 className="text-base font-normal tracking-wide text-yellow-50">Assinantes</h1>
+                <nav className="flex gap-1 rounded-md bg-neutral-900 p-1">
                   {(["kanban", "disparo", "campanhas"] as const).map((t) => (
                     <button
                       key={t}
                       onClick={() => setTab(t)}
                       className={
-                        "rounded-md px-3 py-1.5 text-sm font-medium transition " +
+                        "rounded px-3 py-1.5 text-xs font-normal transition " +
                         (tab === t ? "bg-yellow-400 text-neutral-950" : "text-neutral-300 hover:text-yellow-300")
                       }
                     >
