@@ -111,11 +111,39 @@ function fmtBRL(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function isCurrentMonth(iso: string) {
-  const d = new Date(iso);
+type Period = "day" | "week" | "month" | "year" | "custom";
+
+function startOfPeriod(period: Period, custom?: { from: string; to: string }): { from: Date; to: Date; label: string } {
   const now = new Date();
-  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  const to = new Date(now);
+  to.setHours(23, 59, 59, 999);
+  const from = new Date(now);
+  from.setHours(0, 0, 0, 0);
+  if (period === "day") return { from, to, label: "Hoje" };
+  if (period === "week") {
+    const day = from.getDay();
+    const diff = day === 0 ? 6 : day - 1;
+    from.setDate(from.getDate() - diff);
+    return { from, to, label: "Esta semana" };
+  }
+  if (period === "month") {
+    from.setDate(1);
+    return { from, to, label: "Este mês" };
+  }
+  if (period === "year") {
+    from.setMonth(0, 1);
+    return { from, to, label: "Este ano" };
+  }
+  const cf = custom?.from ? new Date(custom.from + "T00:00:00") : from;
+  const ct = custom?.to ? new Date(custom.to + "T23:59:59") : to;
+  return { from: cf, to: ct, label: "Personalizado" };
 }
+
+function inRange(iso: string, from: Date, to: Date) {
+  const t = new Date(iso).getTime();
+  return t >= from.getTime() && t <= to.getTime();
+}
+
 
 function fireConfetti() {
   const duration = 2500;
@@ -133,6 +161,11 @@ export function TeamView({ shopId }: { shopId: string }) {
   const [ready, setReady] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   const [showAddEntry, setShowAddEntry] = useState<null | string>(null);
+  const [showPerf, setShowPerf] = useState<null | string>(null);
+  const [period, setPeriod] = useState<Period>("month");
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const [customFrom, setCustomFrom] = useState(todayIso);
+  const [customTo, setCustomTo] = useState(todayIso);
   const celebratedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -144,12 +177,17 @@ export function TeamView({ shopId }: { shopId: string }) {
     if (ready) saveState(shopId, state);
   }, [state, shopId, ready]);
 
+  const range = useMemo(
+    () => startOfPeriod(period, { from: customFrom, to: customTo }),
+    [period, customFrom, customTo],
+  );
+
   const stats = useMemo(() => {
-    const monthly = state.entries.filter((e) => isCurrentMonth(e.createdAt));
-    const totalCents = monthly.reduce((s, e) => s + e.amountCents, 0);
-    const totalPoints = monthly.reduce((s, e) => s + e.points, 0);
+    const filtered = state.entries.filter((e) => inRange(e.createdAt, range.from, range.to));
+    const totalCents = filtered.reduce((s, e) => s + e.amountCents, 0);
+    const totalPoints = filtered.reduce((s, e) => s + e.points, 0);
     const perMember = state.members.map((m) => {
-      const es = monthly.filter((e) => e.memberId === m.id);
+      const es = filtered.filter((e) => e.memberId === m.id);
       const cents = es.reduce((s, e) => s + e.amountCents, 0);
       const points = es.reduce((s, e) => s + e.points, 0);
       const extras = es.filter((e) => e.kind === "extra").length;
@@ -158,14 +196,14 @@ export function TeamView({ shopId }: { shopId: string }) {
       const goalPct = state.config.perMemberGoalCents
         ? Math.min(100, Math.round((cents / state.config.perMemberGoalCents) * 100))
         : 0;
-      return { member: m, cents, points, extras, products, services, goalPct, count: es.length };
+      return { member: m, cents, points, extras, products, services, goalPct, count: es.length, entries: es };
     });
     perMember.sort((a, b) => b.points - a.points);
-    return { totalCents, totalPoints, perMember };
-  }, [state]);
+    return { totalCents, totalPoints, perMember, count: filtered.length };
+  }, [state, range]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || period !== "month") return;
     for (const row of stats.perMember) {
       if (row.cents >= state.config.perMemberGoalCents && state.config.perMemberGoalCents > 0) {
         const key = `${row.member.id}-${new Date().getMonth()}-${new Date().getFullYear()}`;
@@ -175,13 +213,21 @@ export function TeamView({ shopId }: { shopId: string }) {
         }
       }
     }
-  }, [stats, state.config.perMemberGoalCents, ready]);
+  }, [stats, state.config.perMemberGoalCents, ready, period]);
 
   const shopPct = state.config.monthGoalCents
     ? Math.min(100, Math.round((stats.totalCents / state.config.monthGoalCents) * 100))
     : 0;
 
   if (!ready) return null;
+
+  const periods: Array<{ k: Period; label: string }> = [
+    { k: "day", label: "Dia" },
+    { k: "week", label: "Semana" },
+    { k: "month", label: "Mês" },
+    { k: "year", label: "Ano" },
+    { k: "custom", label: "Personalizado" },
+  ];
 
   return (
     <div className="space-y-6">
@@ -190,23 +236,58 @@ export function TeamView({ shopId }: { shopId: string }) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold text-neutral-900">Ranking da equipe</h2>
-            <p className="text-sm text-neutral-500">Competição do mês · pontos, faturamento e metas</p>
+            <p className="text-sm text-neutral-500">{range.label} · pontos, faturamento e metas</p>
           </div>
           <button
             onClick={() => setShowConfig(true)}
-            className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
+            className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
           >
-            ⚙️ Configurações
+            Acessar
           </button>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <Kpi label="Faturamento do mês" value={fmtBRL(stats.totalCents)} sub={`Meta: ${fmtBRL(state.config.monthGoalCents)}`} />
-          <Kpi label="Pontos totais" value={String(stats.totalPoints)} sub={`${state.entries.filter((e) => isCurrentMonth(e.createdAt)).length} lançamentos`} />
+        {/* Period filter */}
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap gap-1 rounded-lg bg-neutral-100 p-1">
+            {periods.map((p) => (
+              <button
+                key={p.k}
+                onClick={() => setPeriod(p.k)}
+                className={
+                  "rounded-md px-3 py-1.5 text-xs font-medium transition " +
+                  (period === p.k ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
+                }
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          {period === "custom" && (
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={customFrom}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-800"
+              />
+              <span className="text-xs text-neutral-500">até</span>
+              <input
+                type="date"
+                value={customTo}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-800"
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <Kpi label="Faturamento" value={fmtBRL(stats.totalCents)} sub={`Meta mês: ${fmtBRL(state.config.monthGoalCents)}`} />
+          <Kpi label="Pontos totais" value={String(stats.totalPoints)} sub={`${stats.count} lançamentos`} />
           <Kpi
-            label="Progresso geral"
+            label="Progresso vs meta mês"
             value={`${shopPct}%`}
-            sub={shopPct >= 100 ? "🏆 meta batida!" : `faltam ${fmtBRL(Math.max(0, state.config.monthGoalCents - stats.totalCents))}`}
+            sub={shopPct >= 100 ? "meta batida" : `faltam ${fmtBRL(Math.max(0, state.config.monthGoalCents - stats.totalCents))}`}
           />
         </div>
 
@@ -220,16 +301,15 @@ export function TeamView({ shopId }: { shopId: string }) {
       {/* Empty state */}
       {state.members.length === 0 && (
         <div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-10 text-center">
-          <p className="text-4xl">💈</p>
-          <h3 className="mt-3 text-base font-semibold text-neutral-900">Cadastre sua equipe</h3>
+          <h3 className="text-base font-semibold text-neutral-900">Cadastre sua equipe</h3>
           <p className="mt-1 text-sm text-neutral-500">
-            Abra Configurações para cadastrar barbeiros, serviços, produtos e definir as metas do mês.
+            Abra Acessar para cadastrar barbeiros, serviços, produtos e definir as metas do mês.
           </p>
           <button
             onClick={() => setShowConfig(true)}
             className="mt-4 rounded-lg bg-neutral-900 px-5 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
           >
-            Abrir configurações
+            Acessar
           </button>
         </div>
       )}
@@ -238,7 +318,7 @@ export function TeamView({ shopId }: { shopId: string }) {
       {state.members.length > 0 && (
         <div className="space-y-3">
           {stats.perMember.map((row, idx) => {
-            const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
+            const rankLabel = `#${idx + 1}`;
             const isLeader = idx === 0 && row.points > 0;
             return (
               <div
@@ -251,7 +331,7 @@ export function TeamView({ shopId }: { shopId: string }) {
                 }
               >
                 <div className="flex flex-wrap items-center gap-4">
-                  <div className="text-2xl font-semibold tabular-nums text-neutral-700 min-w-12">{medal}</div>
+                  <div className="text-2xl font-semibold tabular-nums text-neutral-700 min-w-12">{rankLabel}</div>
                   <Avatar member={row.member} size={56} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -263,11 +343,11 @@ export function TeamView({ shopId }: { shopId: string }) {
                       )}
                     </div>
                     <div className="mt-1 flex flex-wrap gap-3 text-xs text-neutral-600">
-                      <span>💰 {fmtBRL(row.cents)}</span>
-                      <span>⭐ {row.points} pts</span>
-                      <span>✂️ {row.services} serv.</span>
-                      <span>🛒 {row.products} prod.</span>
-                      <span>🎯 {row.extras} extras</span>
+                      <span>{fmtBRL(row.cents)}</span>
+                      <span>{row.points} pts</span>
+                      <span>{row.services} serv.</span>
+                      <span>{row.products} prod.</span>
+                      <span>{row.extras} extras</span>
                     </div>
                     <div className="mt-2 h-2 overflow-hidden rounded-full bg-neutral-100">
                       <div className="h-full rounded-full bg-yellow-400" style={{ width: `${row.goalPct}%` }} />
@@ -277,12 +357,18 @@ export function TeamView({ shopId }: { shopId: string }) {
                       <span>{row.goalPct}%</span>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col gap-2">
                     <button
                       onClick={() => setShowAddEntry(row.member.id)}
                       className="rounded-lg bg-neutral-900 px-3 py-2 text-xs font-semibold text-yellow-400 hover:bg-neutral-800"
                     >
                       + Lançar venda
+                    </button>
+                    <button
+                      onClick={() => setShowPerf(row.member.id)}
+                      className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
+                    >
+                      Ver desempenho
                     </button>
                   </div>
                 </div>
@@ -302,6 +388,18 @@ export function TeamView({ shopId }: { shopId: string }) {
           onAdd={(entry) => setState((s) => ({ ...s, entries: [entry, ...s.entries] }))}
         />
       )}
+      {showPerf && (() => {
+        const m = state.members.find((mm) => mm.id === showPerf)!;
+        const row = stats.perMember.find((r) => r.member.id === showPerf);
+        return (
+          <PerformanceModal
+            member={m}
+            entries={row?.entries ?? []}
+            periodLabel={range.label}
+            onClose={() => setShowPerf(null)}
+          />
+        );
+      })()}
       {showConfig && (
         <ConfigModal
           state={state}
@@ -309,7 +407,8 @@ export function TeamView({ shopId }: { shopId: string }) {
           onChange={(next) => setState(next)}
           onResetMonth={() => {
             if (!confirm("Zerar todos os lançamentos deste mês? Não dá pra desfazer.")) return;
-            setState((s) => ({ ...s, entries: s.entries.filter((e) => !isCurrentMonth(e.createdAt)) }));
+            const r = startOfPeriod("month");
+            setState((s) => ({ ...s, entries: s.entries.filter((e) => !inRange(e.createdAt, r.from, r.to)) }));
             celebratedRef.current.clear();
           }}
         />
@@ -317,6 +416,62 @@ export function TeamView({ shopId }: { shopId: string }) {
     </div>
   );
 }
+
+function PerformanceModal({
+  member,
+  entries,
+  periodLabel,
+  onClose,
+}: {
+  member: Member;
+  entries: Entry[];
+  periodLabel: string;
+  onClose: () => void;
+}) {
+  const totalCents = entries.reduce((s, e) => s + e.amountCents, 0);
+  const totalPoints = entries.reduce((s, e) => s + e.points, 0);
+  const byKind = {
+    service: entries.filter((e) => e.kind === "service"),
+    product: entries.filter((e) => e.kind === "product"),
+    extra: entries.filter((e) => e.kind === "extra"),
+  };
+  const sorted = [...entries].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  return (
+    <ModalShell title={`Desempenho · ${member.name}`} onClose={onClose} wide>
+      <p className="mb-4 text-xs uppercase tracking-wider text-neutral-500">{periodLabel}</p>
+      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Kpi label="Faturamento" value={fmtBRL(totalCents)} />
+        <Kpi label="Pontos" value={String(totalPoints)} />
+        <Kpi label="Serviços" value={String(byKind.service.length)} sub={fmtBRL(byKind.service.reduce((s, e) => s + e.amountCents, 0))} />
+        <Kpi label="Produtos + extras" value={String(byKind.product.length + byKind.extra.length)} sub={fmtBRL(byKind.product.concat(byKind.extra).reduce((s, e) => s + e.amountCents, 0))} />
+      </div>
+      {sorted.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 text-center text-sm text-neutral-500">
+          Nenhum lançamento nesse período.
+        </p>
+      ) : (
+        <ul className="divide-y divide-neutral-100 rounded-lg border border-neutral-200">
+          {sorted.map((e) => (
+            <li key={e.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium text-neutral-900">{e.label}</p>
+                <p className="text-[11px] uppercase tracking-wide text-neutral-500">
+                  {e.kind === "service" ? "Serviço" : e.kind === "product" ? "Produto" : "Extra"} ·{" "}
+                  {new Date(e.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="font-semibold text-neutral-900">{fmtBRL(e.amountCents)}</p>
+                <p className="text-[11px] text-neutral-500">{e.points} pts</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </ModalShell>
+  );
+}
+
 
 function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (

@@ -199,18 +199,25 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
 
         const ids = (data ?? []).map((c) => c.id);
         const stats: Record<string, { pending: number; sent: number; failed: number }> = {};
+        const lastErrors: Record<string, string | null> = {};
         if (ids.length > 0) {
           const { data: js } = await supabaseAdmin
             .from("message_jobs")
-            .select("campaign_id, status")
+            .select("campaign_id, status, last_error, updated_at")
             .eq("barbershop_id", auth.token.barbershop_id)
-            .in("campaign_id", ids);
+            .in("campaign_id", ids)
+            .order("updated_at", { ascending: false });
+
           for (const j of js ?? []) {
             if (!j.campaign_id) continue;
             const s = (stats[j.campaign_id] ??= { pending: 0, sent: 0, failed: 0 });
             if (j.status === "pending" || j.status === "in_flight") s.pending += 1;
             else if (j.status === "sent") s.sent += 1;
             else if (j.status === "failed" || j.status === "expired") s.failed += 1;
+            if ((j.status === "failed" || j.status === "expired") && j.last_error && !lastErrors[j.campaign_id]) {
+              lastErrors[j.campaign_id] = j.last_error;
+            }
+
           }
         }
 
@@ -219,9 +226,11 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
           campaigns: (data ?? []).map((c) => ({
             ...c,
             stats: stats[c.id] ?? { pending: 0, sent: 0, failed: 0 },
+            last_error: lastErrors[c.id] ?? null,
           })),
         });
       },
     },
   },
 });
+
