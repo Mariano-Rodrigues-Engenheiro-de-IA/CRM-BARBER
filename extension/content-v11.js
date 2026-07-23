@@ -27,7 +27,7 @@
     panel.className = "crm-theme-barber";
     panel.innerHTML = `
       <div class="crm-header">
-        <span class="crm-logo-txt">Barber CRM</span>
+        <span class="crm-logo-txt">CRM BARBER</span>
         <button class="crm-toggle" title="Recolher">‹</button>
       </div>
       <div class="crm-body"></div>
