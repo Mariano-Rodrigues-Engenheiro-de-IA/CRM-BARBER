@@ -904,10 +904,8 @@ function SettingsView({
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-xl font-black tracking-tight text-yellow-50">Configurações</h1>
-        <p className="text-xs text-neutral-500">Personalize o nome e a logo que aparecem no painel.</p>
-      </div>
+      <h1 className="text-base font-normal tracking-wide text-yellow-50">Configurações</h1>
+
 
       <div className="rounded-2xl border border-yellow-500/15 bg-neutral-900 p-6 space-y-6">
         <div className="flex items-center gap-4">
