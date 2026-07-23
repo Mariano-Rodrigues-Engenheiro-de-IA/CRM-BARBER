@@ -75,21 +75,37 @@ async function api(token: string, path: string, opts: RequestInit = {}) {
   }
 }
 
-type Section = "assinantes" | "equipe";
+type Section = "assinantes" | "equipe" | "configuracoes";
 type AssinantesTab = "kanban" | "disparo" | "campanhas";
+
+type Brand = { name?: string; logo?: string };
+function brandKey(shopId: string) { return `crm_brand_${shopId || "default"}`; }
+function readBrand(shopId: string): Brand {
+  if (typeof window === "undefined") return {};
+  try { return JSON.parse(localStorage.getItem(brandKey(shopId)) || "{}") || {}; }
+  catch { return {}; }
+}
+function writeBrand(shopId: string, data: Brand) {
+  localStorage.setItem(brandKey(shopId), JSON.stringify(data));
+}
+
 
 function Painel() {
   const [token, setToken] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
-  const initialSection: Section =
-    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("section") === "equipe"
-      ? "equipe"
-      : "assinantes";
+  const initialSection: Section = (() => {
+    if (typeof window === "undefined") return "assinantes";
+    const s = new URLSearchParams(window.location.search).get("section");
+    if (s === "equipe" || s === "configuracoes") return s;
+    return "assinantes";
+  })();
   const [section, setSection] = useState<Section>(initialSection);
   const [tab, setTab] = useState<AssinantesTab>("kanban");
   const [shop, setShop] = useState<{ id: string; name: string } | null>(null);
+  const [brand, setBrand] = useState<Brand>({});
+
 
   useEffect(() => {
     setToken(getToken());
@@ -108,7 +124,10 @@ function Painel() {
     if (!token) return;
     reload();
     api(token, "/api/public/extension/meta").then((r) => {
-      if (r?.ok && r.barbershop) setShop(r.barbershop);
+      if (r?.ok && r.barbershop) {
+        setShop(r.barbershop);
+        setBrand(readBrand(r.barbershop.id));
+      }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
@@ -134,21 +153,30 @@ function Painel() {
     );
   }
 
-  const shopName = shop?.name || "Sua barbearia";
+  const shopName = brand.name || shop?.name || "Sua barbearia";
   const shopInitial = shopName.trim().charAt(0).toUpperCase() || "B";
+  const shopLogo = brand.logo || "";
+
+  function saveBrand(next: Brand) {
+    if (!shop?.id) return;
+    writeBrand(shop.id, next);
+    setBrand(next);
+  }
 
   const NAV: Array<{ key: Section; label: string; icon: string; hint: string }> = [
     { key: "assinantes", label: "Assinantes", icon: "💈", hint: "CRM & disparos" },
     { key: "equipe", label: "Equipe", icon: "🏆", hint: "Ranking & metas" },
+    { key: "configuracoes", label: "Configurações", icon: "⚙️", hint: "Nome & logo" },
   ];
+
 
   return (
     <div className="flex min-h-screen bg-neutral-950 text-yellow-50">
       {/* Sidebar */}
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-yellow-500/15 bg-gradient-to-b from-neutral-950 via-neutral-950 to-neutral-900">
         <div className="flex items-center gap-3 border-b border-yellow-500/15 px-5 py-5">
-          <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-yellow-300 to-amber-500 text-lg font-black text-neutral-950 shadow-md">
-            {shopInitial}
+          <div className="grid h-11 w-11 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-yellow-300 to-amber-500 text-lg font-black text-neutral-950 shadow-md">
+            {shopLogo ? <img src={shopLogo} alt="logo" className="h-full w-full object-cover" /> : shopInitial}
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-black tracking-tight text-yellow-50">{shopName}</p>
@@ -194,8 +222,8 @@ function Painel() {
       {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-yellow-500/20 bg-neutral-950/95 px-4 py-3 backdrop-blur">
         <div className="flex items-center gap-2">
-          <div className="grid h-8 w-8 place-items-center rounded-lg bg-yellow-400 text-sm font-black text-neutral-950">
-            {shopInitial}
+          <div className="grid h-8 w-8 place-items-center overflow-hidden rounded-lg bg-yellow-400 text-sm font-black text-neutral-950">
+            {shopLogo ? <img src={shopLogo} alt="logo" className="h-full w-full object-cover" /> : shopInitial}
           </div>
           <span className="truncate text-sm font-bold text-yellow-50">{shopName}</span>
         </div>
@@ -259,6 +287,17 @@ function Painel() {
             <TeamView shopId={shop?.id ?? "default"} />
           </main>
         )}
+
+        {section === "configuracoes" && (
+          <main className="px-6 py-6 mt-14 md:mt-0">
+            <SettingsView
+              brand={brand}
+              fallbackName={shop?.name || ""}
+              onSave={saveBrand}
+            />
+          </main>
+        )}
+
       </div>
     </div>
   );
@@ -844,4 +883,110 @@ function parseCsv(text: string, defaultStatus: string): Array<{ name: string; ph
     out.push({ name, phone, status: defaultStatus, tags: [] });
   }
   return out;
+}
+
+function SettingsView({
+  brand,
+  fallbackName,
+  onSave,
+}: {
+  brand: Brand;
+  fallbackName: string;
+  onSave: (b: Brand) => void;
+}) {
+  const [name, setName] = useState(brand.name || fallbackName || "");
+  const [logo, setLogo] = useState(brand.logo || "");
+  const [saved, setSaved] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+
+  async function pickLogo(file: File) {
+    if (file.size > 400_000) {
+      alert("Logo muito grande. Use uma imagem até 400KB.");
+      return;
+    }
+    const dataUrl: string = await new Promise((res) => {
+      const fr = new FileReader();
+      fr.onload = () => res(String(fr.result));
+      fr.readAsDataURL(file);
+    });
+    setLogo(dataUrl);
+  }
+
+  function save() {
+    onSave({ name: name.trim() || undefined, logo: logo || undefined });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1800);
+  }
+
+  const initial = (name || "B").trim().charAt(0).toUpperCase();
+
+  return (
+    <div className="mx-auto max-w-2xl space-y-6">
+      <div>
+        <h1 className="text-xl font-black tracking-tight text-yellow-50">Configurações</h1>
+        <p className="text-xs text-neutral-500">Personalize o nome e a logo que aparecem no painel.</p>
+      </div>
+
+      <div className="rounded-2xl border border-yellow-500/15 bg-neutral-900 p-6 space-y-6">
+        <div className="flex items-center gap-4">
+          <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-300 to-amber-500 text-2xl font-black text-neutral-950 shadow-md">
+            {logo ? <img src={logo} alt="logo" className="h-full w-full object-cover" /> : initial}
+          </div>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="rounded-lg bg-yellow-400 px-4 py-2 text-sm font-bold text-neutral-950 hover:bg-yellow-300"
+            >
+              {logo ? "Trocar logo" : "Enviar logo"}
+            </button>
+            {logo && (
+              <button
+                type="button"
+                onClick={() => setLogo("")}
+                className="text-xs text-neutral-400 hover:text-red-400"
+              >
+                remover logo
+              </button>
+            )}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) pickLogo(f);
+                e.target.value = "";
+              }}
+            />
+          </div>
+        </div>
+
+        <label className="block space-y-2">
+          <span className="text-xs uppercase tracking-widest text-yellow-500/70">Nome da barbearia</span>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Ex.: Barbearia do João"
+            className="w-full rounded-lg border border-yellow-500/20 bg-neutral-950 px-4 py-2.5 text-sm text-yellow-50 outline-none focus:border-yellow-400"
+          />
+        </label>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={save}
+            className="rounded-lg bg-yellow-400 px-5 py-2.5 text-sm font-bold text-neutral-950 hover:bg-yellow-300"
+          >
+            Salvar
+          </button>
+          {saved && <span className="text-xs text-yellow-400">Salvo ✔</span>}
+        </div>
+
+        <p className="text-[11px] text-neutral-500">
+          As configurações ficam salvas neste navegador.
+        </p>
+      </div>
+    </div>
+  );
 }

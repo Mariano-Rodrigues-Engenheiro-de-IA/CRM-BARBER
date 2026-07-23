@@ -1,9 +1,8 @@
-// Content script v0.11.0 — sidebar minimalista tipo "ponte" entre WhatsApp e o painel.
-// Duas ações: Assinantes e Equipe (abrem o painel web em nova aba).
-// Header com logo + nome da barbearia editáveis (armazenado local por barbearia).
+// Content script v0.11.1 — sidebar ponte minimalista: só tiles.
+// Nome/logo da barbearia agora são configurados dentro do painel web.
 
 (function () {
-  const CRM_VERSION = "0.11.0";
+  const CRM_VERSION = "0.11.1";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -13,9 +12,6 @@
   console.info(`[CRM ct v${CRM_VERSION}] carregado`, location.href);
 
   let panelRef = null;
-  let currentShopId = null;
-
-  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
 
   function readLoggedPhone() {
     try {
@@ -23,15 +19,6 @@
       const m = raw.match(/(\d{8,15})/);
       return m ? m[1] : null;
     } catch { return null; }
-  }
-
-  function brandKey(shopId) { return `crm_brand_${shopId || "default"}`; }
-  function readBrand(shopId) {
-    try { return JSON.parse(localStorage.getItem(brandKey(shopId)) || "{}") || {}; }
-    catch { return {}; }
-  }
-  function writeBrand(shopId, data) {
-    localStorage.setItem(brandKey(shopId), JSON.stringify(data));
   }
 
   function buildPanel() {
@@ -82,30 +69,12 @@
       return;
     }
 
-    const info = r.barbershop || {};
-    currentShopId = info.id || null;
     const token = r.token || "";
     const apiBase = r.api_base || "";
     const painelUrl = (section) =>
       `${apiBase}/painel?token=${encodeURIComponent(token)}${section ? `&section=${section}` : ""}`;
 
-    const brand = readBrand(currentShopId);
-    const displayName = brand.name || info.name || "Sua barbearia";
-    const logo = brand.logo || "";
-    const initial = displayName.trim().charAt(0).toUpperCase() || "B";
-
     body().innerHTML = `
-      <div class="crm-brand">
-        <button class="crm-avatar" title="Alterar logo">
-          ${logo ? `<img src="${esc(logo)}" alt="logo" />` : `<span>${esc(initial)}</span>`}
-        </button>
-        <div class="crm-brand-info">
-          <div class="crm-brand-name" title="${esc(displayName)}">${esc(displayName)}</div>
-          <button class="crm-brand-edit">editar nome</button>
-        </div>
-        <input type="file" accept="image/*" class="crm-logo-input" hidden />
-      </div>
-
       <div class="crm-tiles">
         <button class="crm-tile" data-section="assinantes">
           <div class="crm-tile-icon">💈</div>
@@ -123,6 +92,14 @@
           </div>
           <div class="crm-tile-arrow">→</div>
         </button>
+        <button class="crm-tile" data-section="configuracoes">
+          <div class="crm-tile-icon">⚙️</div>
+          <div class="crm-tile-body">
+            <div class="crm-tile-title">Configurações</div>
+            <div class="crm-tile-sub">Nome & logo da barbearia</div>
+          </div>
+          <div class="crm-tile-arrow">→</div>
+        </button>
       </div>
 
       <div class="crm-footer">
@@ -135,35 +112,6 @@
       el.addEventListener("click", () => {
         window.open(painelUrl(el.getAttribute("data-section")), "_blank", "noopener");
       });
-    });
-
-    const avatarBtn = body().querySelector(".crm-avatar");
-    const fileInput = body().querySelector(".crm-logo-input");
-    avatarBtn.addEventListener("click", () => fileInput.click());
-    fileInput.addEventListener("change", async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      if (file.size > 400_000) {
-        alert("Logo muito grande. Use uma imagem até 400KB.");
-        return;
-      }
-      const dataUrl = await new Promise((res) => {
-        const fr = new FileReader();
-        fr.onload = () => res(fr.result);
-        fr.readAsDataURL(file);
-      });
-      const b = readBrand(currentShopId);
-      writeBrand(currentShopId, { ...b, logo: dataUrl });
-      render();
-    });
-
-    body().querySelector(".crm-brand-edit").addEventListener("click", () => {
-      const b = readBrand(currentShopId);
-      const next = prompt("Nome da barbearia:", displayName);
-      if (next && next.trim()) {
-        writeBrand(currentShopId, { ...b, name: next.trim() });
-        render();
-      }
     });
 
     body().querySelector(".crm-unpair").addEventListener("click", async () => {
