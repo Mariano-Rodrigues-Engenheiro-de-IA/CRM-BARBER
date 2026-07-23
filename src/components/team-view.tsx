@@ -4,7 +4,42 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import confetti from "canvas-confetti";
 
-type Member = { id: string; name: string; emoji: string };
+type Member = { id: string; name: string; photo?: string; emoji?: string };
+
+function Avatar({ member, size = 40 }: { member: Member; size?: number }) {
+  const initial = (member.name || "?").trim().charAt(0).toUpperCase();
+  const cls =
+    "grid shrink-0 place-items-center overflow-hidden rounded-full bg-neutral-200 font-semibold text-neutral-700 ring-1 ring-black/5";
+  return (
+    <div className={cls} style={{ width: size, height: size, fontSize: Math.round(size * 0.42) }}>
+      {member.photo ? <img src={member.photo} alt={member.name} className="h-full w-full object-cover" /> : initial}
+    </div>
+  );
+}
+
+async function fileToDataUrl(file: File, max = 320): Promise<string> {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const c = document.createElement("canvas");
+      c.width = w;
+      c.height = h;
+      c.getContext("2d")!.drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL("image/jpeg", 0.85));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
 
 type CatalogItem = { id: string; name: string; priceCents: number };
 
