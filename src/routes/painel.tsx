@@ -897,11 +897,6 @@ function CampaignsView({ token }: { token: string }) {
                 <span>{done} / {total} enviados · {c.stats.failed} falhas {isPaused ? "· pausada" : ""}</span>
                 <span>{pct}%</span>
               </div>
-              {c.last_error && c.stats.failed > 0 && (
-                <p className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
-                  Último erro: {c.last_error}
-                </p>
-              )}
             </div>
           </div>
         );
