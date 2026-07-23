@@ -251,15 +251,33 @@
     return String(error?.message || error || "erro desconhecido");
   }
 
+  function isRetryableSendError(err) {
+    const msg = String(err?.message || err || "").toLowerCase();
+    return msg.includes("nack") || msg.includes("463") || msg.includes("timeout") || msg.includes("server-nack") || msg.includes("send-msg");
+  }
+
+  function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+  async function sendOnce(wid, text) {
+    return await window.WPP.chat.sendTextMessage(wid, text, { waitForAck: true, createChat: true, delay: 250 });
+  }
+
   async function sendSilently(number, text) {
     const wid = await resolveWid(number);
-    try {
-      console.info("[CRM wa-bridge] enviando silencioso via LID", wid);
-      return await window.WPP.chat.sendTextMessage(wid, text, { waitForAck: true, createChat: true, delay: 250 });
-    } catch (e) {
-      console.warn("[CRM wa-bridge] sendTextMessage falhou", wid, e);
-      throw new Error(`Envio silencioso falhou via ${wid}. Último erro: ${errorMessage(e)}`);
+    const delays = [0, 4000, 9000]; // initial + 2 retries with backoff to dodge server-side rate limiter (Nack 463)
+    let lastErr = null;
+    for (let i = 0; i < delays.length; i++) {
+      if (delays[i] > 0) await sleep(delays[i]);
+      try {
+        console.info(`[CRM wa-bridge] enviando silencioso via LID ${wid} (tentativa ${i + 1})`);
+        return await sendOnce(wid, text);
+      } catch (e) {
+        lastErr = e;
+        console.warn(`[CRM wa-bridge] sendTextMessage falhou (tentativa ${i + 1})`, wid, e);
+        if (!isRetryableSendError(e)) break;
+      }
     }
+    throw new Error(`Envio silencioso falhou via ${wid} após ${delays.length} tentativas. Último erro: ${errorMessage(lastErr)}`);
   }
 
   window.addEventListener("message", async (ev) => {
