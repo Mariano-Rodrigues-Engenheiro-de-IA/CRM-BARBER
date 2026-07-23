@@ -328,10 +328,10 @@ function AddModal({ token, onClose }: { token: string; onClose: () => void }) {
 function ImportModal({ token, onClose }: { token: string; onClose: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState("active");
-  const [mode, setMode] = useState<"merge" | "replace_spreadsheet">("replace_spreadsheet");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -342,15 +342,15 @@ function ImportModal({ token, onClose }: { token: string; onClose: () => void })
     try {
       const text = await file.text();
       const rows = parseCsv(text, status);
-      if (!rows.length) throw new Error("Nenhuma linha válida. Use CSV simples: nome;telefone");
+      if (!rows.length) throw new Error("Nenhuma linha válida. Use CSV com colunas: nome;telefone");
       const r = await api(token, "/api/public/extension/customers/import", {
         method: "POST",
-        body: JSON.stringify({ customers: rows, mode }),
+        body: JSON.stringify({ customers: rows, mode: "replace_spreadsheet" }),
       });
       if (!r?.ok) throw new Error(r?.error || "Erro na importação");
       setResult(
         `Recebido: ${r.received} · Novos: ${r.inserted} · Atualizados: ${r.updated}` +
-        (r.archived ? ` · Arquivados (planilha antiga): ${r.archived}` : ""),
+        (r.archived ? ` · Substituídos da planilha antiga: ${r.archived}` : ""),
       );
     } catch (e) {
       setErr((e as Error).message);
@@ -363,39 +363,49 @@ function ImportModal({ token, onClose }: { token: string; onClose: () => void })
     <Modal onClose={onClose} title="Importar planilha">
       <form onSubmit={submit} className="space-y-4">
         <div className="rounded-md border border-yellow-500/20 bg-neutral-950 p-3 text-xs text-neutral-300">
-          <strong className="text-yellow-400">Formato:</strong> CSV simples com colunas <code>nome;telefone</code>.
-          Também aceito só telefone (nome vira "Contato XXXX").
+          <div><strong className="text-yellow-400">Formato:</strong> CSV com 2 colunas — <code>nome</code> e <code>telefone</code>.</div>
           <pre className="mt-2 rounded bg-neutral-900 p-2 text-[11px]">nome;telefone{"\n"}João Silva;61999998888{"\n"}Maria Souza;5561988887777</pre>
         </div>
+
         <Field label="Arquivo (.csv)">
           <input
+            ref={fileRef}
             type="file"
             accept=".csv,.tsv,.txt,text/csv,text/plain"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="text-sm text-neutral-300"
+            className="hidden"
           />
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="rounded-md border border-yellow-500/40 bg-neutral-950 px-4 py-2 text-sm font-medium text-yellow-300 hover:bg-neutral-800"
+            >
+              📎 Escolher arquivo
+            </button>
+            <span className="truncate text-xs text-neutral-400">
+              {file ? file.name : "Nenhum arquivo selecionado"}
+            </span>
+          </div>
         </Field>
+
         <Field label="Todos os contatos entram na coluna">
           <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
             {COLUMNS.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
           </select>
         </Field>
-        <Field label="Modo de importação">
-          <select value={mode} onChange={(e) => setMode(e.target.value as typeof mode)} className={inputCls}>
-            <option value="replace_spreadsheet">Substituir planilha (arquiva contatos ausentes)</option>
-            <option value="merge">Mesclar (só adiciona/atualiza)</option>
-          </select>
-          <p className="mt-1 text-xs text-neutral-500">
-            "Substituir" preserva contatos adicionados manualmente e só mexe nos da planilha.
-          </p>
-        </Field>
+
+        <p className="text-xs text-neutral-500">
+          Ao importar, a planilha anterior é substituída. Contatos adicionados manualmente são preservados.
+        </p>
+
         {err && <p className="text-sm text-red-400">{err}</p>}
         {result && <p className="text-sm text-green-400">{result}</p>}
         <button
           disabled={busy || !file}
           className="w-full rounded-md bg-yellow-400 px-4 py-2 font-bold text-neutral-950 hover:bg-yellow-300 disabled:opacity-50"
         >
-          {busy ? "Importando..." : "Importar"}
+          {busy ? "Importando..." : "Substituir planilha"}
         </button>
       </form>
     </Modal>
