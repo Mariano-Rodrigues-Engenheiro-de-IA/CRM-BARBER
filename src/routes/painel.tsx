@@ -33,8 +33,11 @@ type Campaign = {
   id: string;
   name: string;
   status: string;
+  created_at?: string;
+  last_error?: string | null;
   stats: { pending: number; sent: number; failed: number };
 };
+
 
 const COLUMNS: Array<{ key: string; label: string }> = [
   { key: "active", label: "Ativos" },
