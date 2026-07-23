@@ -7,7 +7,7 @@
     if (event.source !== window) return;
     const data = event.data;
     if (!data) return;
-    if (data.__crm === "poll_now_v161") {
+    if (data.__crm === "poll_now_v162" || data.__crm === "poll_now_v161") {
       chrome.runtime.sendMessage({ type: "poll_now" }).catch(() => null);
       return;
     }

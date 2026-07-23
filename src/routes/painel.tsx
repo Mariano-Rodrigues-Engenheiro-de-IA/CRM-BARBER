@@ -68,14 +68,16 @@ function canUseExtensionBridge() {
   return typeof window !== "undefined";
 }
 
+type ApiResult = { ok?: boolean; error?: string; [key: string]: unknown };
+
 async function apiViaExtension(path: string, opts: RequestInit = {}) {
   if (!canUseExtensionBridge()) return null;
   const id = crypto.randomUUID();
-  return await new Promise<Record<string, unknown> | null>((resolve) => {
+  return await new Promise<ApiResult | null>((resolve) => {
     const timeout = setTimeout(() => {
       window.removeEventListener("message", onMessage);
       resolve(null);
-    }, 1200);
+    }, 45000);
     function onMessage(event: MessageEvent) {
       if (event.source !== window) return;
       const data = event.data;
@@ -99,9 +101,10 @@ async function apiViaExtension(path: string, opts: RequestInit = {}) {
 }
 
 async function api(token: string, path: string, opts: RequestInit = {}) {
-  const bridged = await apiViaExtension(path, opts);
-  if (bridged) return bridged;
-  if (token === EXTENSION_BRIDGE_TOKEN) return { ok: false, error: "Extensão não respondeu. Atualize o WhatsApp Web e reabra o painel." };
+  if (token === EXTENSION_BRIDGE_TOKEN) {
+    const bridged = await apiViaExtension(path, opts);
+    return bridged ?? { ok: false, error: "Extensão não respondeu. Atualize o WhatsApp Web e reabra o painel." };
+  }
   const res = await fetch(path, {
     ...opts,
     headers: {
@@ -120,7 +123,7 @@ async function api(token: string, path: string, opts: RequestInit = {}) {
 
 function nudgeExtensionPoll() {
   if (typeof window === "undefined") return;
-  window.postMessage({ __crm: "poll_now_v161" }, window.location.origin);
+  window.postMessage({ __crm: "poll_now_v162" }, window.location.origin);
 }
 
 type Section = "assinantes" | "equipe" | "configuracoes";
