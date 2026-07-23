@@ -1,7 +1,7 @@
 // wa-bridge — MAIN world. Recebe {__crm:"send", id, phone, text} e envia silenciosamente via WPP (wa-js).
 // WhatsApp Web atual exige LID em alguns perfis. Não usamos fallback visível.
 (function () {
-  const BRIDGE_VERSION = "0.18.9";
+  const BRIDGE_VERSION = "0.18.10";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -170,77 +170,62 @@
     return null;
   }
 
-  async function resolveFromPhoneWid(phoneWid) {
+  async function verifyExistsAndGetCheck(phoneWid) {
     const pnWid = createWid(phoneWid);
+    const resolvers = [
+      ["queryWidExists", window.WPP.contact?.queryWidExists],
+      ["queryExists", window.WPP.contact?.queryExists],
+    ];
+    for (const [name, resolver] of resolvers) {
+      if (typeof resolver !== "function") continue;
+      for (const candidate of [pnWid, phoneWid]) {
+        try {
+          const check = await resolver(candidate);
+          if (!check) continue;
+          const existsFlag = check.exists ?? check.isRegistered ?? check.registered;
+          const hasWid = !!pickPhoneWid(check) || !!pickLid(check);
+          if (existsFlag === false && !hasWid) continue;
+          if (hasWid || existsFlag === true) {
+            return { check, via: name };
+          }
+        } catch (e) {
+          console.warn(`[CRM wa-bridge] ${name} falhou`, phoneWid, e);
+        }
+      }
+    }
+    return null;
+  }
 
+  async function resolveFromPhoneWid(phoneWid) {
+    // Passo 1: confirmar que o número existe no WhatsApp. Sem isso, não enviamos.
+    const verified = await verifyExistsAndGetCheck(phoneWid);
+    if (!verified) return null;
+    const { check, via } = verified;
+
+    // LID direto do resultado do queryExists — caminho mais confiável.
+    const lidFromCheck = pickLid(check);
+    if (lidFromCheck) {
+      console.info("[CRM wa-bridge] LID resolvido via " + via, { phoneWid, wid: lidFromCheck });
+      return lidFromCheck;
+    }
+
+    // Cache do wa-js (populado após queryExists).
+    await sleep(200);
     const cached = getCachedLid(phoneWid);
     if (cached) {
       console.info("[CRM wa-bridge] LID resolvido via cache", { phoneWid, wid: cached });
       return cached;
     }
 
+    // Resolver interno do wa-js.
     const internal = await tryToUserLid(phoneWid);
     if (internal) return internal;
 
-    if (typeof window.WPP.contact?.getPnLidEntry === "function") {
-      for (const candidate of [pnWid, phoneWid]) {
-        try {
-          const entry = await window.WPP.contact.getPnLidEntry(candidate);
-          const wid = pickLid(entry);
-          if (wid) {
-            console.info("[CRM wa-bridge] LID resolvido via getPnLidEntry", { phoneWid, wid, entry });
-            return wid;
-          }
-        } catch (e) {
-          console.warn("[CRM wa-bridge] getPnLidEntry falhou", phoneWid, e);
-        }
-      }
-    }
-
-    const resolvers = [
-      ["queryWidExists", window.WPP.contact?.queryWidExists],
-      ["queryExists", window.WPP.contact?.queryExists],
-    ];
-
-    for (const [name, resolver] of resolvers) {
-      if (typeof resolver !== "function") continue;
-      for (const candidate of [pnWid, phoneWid]) {
-        try {
-          const check = await resolver(candidate);
-          const wid = pickLid(check);
-          if (wid) {
-            console.info("[CRM wa-bridge] LID resolvido", { via: name, candidate: phoneWid, wid, check });
-            return wid;
-          }
-
-          const checkedPhone = pickPhoneWid(check);
-          if (checkedPhone && checkedPhone !== phoneWid) {
-            await sleep(200);
-            const fromCheckedPhone = getCachedLid(checkedPhone);
-            if (fromCheckedPhone) {
-              console.info("[CRM wa-bridge] LID resolvido via PN corrigido", { via: name, phoneWid, checkedPhone, wid: fromCheckedPhone, check });
-              return fromCheckedPhone;
-            }
-            if (typeof window.WPP.contact?.getPnLidEntry === "function") {
-              const entry = await window.WPP.contact.getPnLidEntry(createWid(checkedPhone));
-              const entryWid = pickLid(entry);
-              if (entryWid) {
-                console.info("[CRM wa-bridge] LID resolvido via getPnLidEntry do PN corrigido", { via: name, phoneWid, checkedPhone, wid: entryWid, entry });
-                return entryWid;
-              }
-            }
-          }
-
-          await sleep(250);
-          const afterQuery = getCachedLid(phoneWid);
-          if (afterQuery) {
-            console.info("[CRM wa-bridge] LID resolvido após query", { via: name, phoneWid, wid: afterQuery, check });
-            return afterQuery;
-          }
-        } catch (e) {
-          console.warn(`[CRM wa-bridge] ${name} falhou`, phoneWid, e);
-        }
-      }
+    // Último recurso: WID do contato retornado pelo queryExists (@c.us confirmado existente).
+    const phoneWidFromCheck = pickPhoneWid(check);
+    if (phoneWidFromCheck) {
+      console.info("[CRM wa-bridge] usando @c.us confirmado por " + via, { phoneWid, wid: phoneWidFromCheck });
+      return phoneWidFromCheck;
     }
 
     return null;
@@ -259,7 +244,7 @@
       }
     }
 
-    throw new Error(`LID não resolvido para ${number}. Tente abrir/atualizar o WhatsApp Web e disparar novamente; o envio silencioso foi bloqueado para evitar o erro "No LID for user".`);
+    throw new Error(`Número ${number} não confirmado no WhatsApp — envio bloqueado para evitar mensagem para contato inexistente.`);
   }
 
   function errorMessage(error) {
