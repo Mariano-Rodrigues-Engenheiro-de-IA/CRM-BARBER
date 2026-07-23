@@ -715,15 +715,21 @@ function DisparoView({
   );
 }
 
+// Cache module-scoped: sobrevive à troca de aba, evita "Carregando..." piscando.
+let campaignsCache: Campaign[] | null = null;
+
 function CampaignsView({ token }: { token: string }) {
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [campaigns, setCampaigns] = useState<Campaign[]>(campaignsCache ?? []);
+  const [loaded, setLoaded] = useState<boolean>(campaignsCache !== null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function reload() {
     const r = await api(token, "/api/public/extension/campaigns");
-    if (r?.ok) setCampaigns(r.campaigns || []);
-    setLoading(false);
+    if (r?.ok) {
+      campaignsCache = r.campaigns || [];
+      setCampaigns(campaignsCache);
+    }
+    setLoaded(true);
   }
 
   useEffect(() => {
@@ -757,8 +763,8 @@ function CampaignsView({ token }: { token: string }) {
     reload();
   }
 
-  if (loading) return <p className="text-neutral-400">Carregando...</p>;
-  if (!campaigns.length) {
+  if (!loaded && campaigns.length === 0) return null;
+  if (loaded && !campaigns.length) {
     return <p className="text-neutral-400">Nenhuma campanha criada ainda.</p>;
   }
 
