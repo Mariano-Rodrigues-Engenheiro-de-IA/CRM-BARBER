@@ -104,7 +104,7 @@ async function sendToTab(job) {
   const [tab] = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
   if (!tab?.id) return { ok: false, error: "WhatsApp Web não está aberto" };
   await ensureScripts(tab.id);
-  return await chrome.tabs.sendMessage(tab.id, { type: "send_message", job });
+  return await chrome.tabs.sendMessage(tab.id, { type: "send_message_v153", job });
 }
 
 async function showPanel() {

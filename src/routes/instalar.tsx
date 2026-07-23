@@ -55,10 +55,10 @@ function Install() {
         </CardHeader>
         <CardContent className="space-y-4">
           <Button size="lg" className="w-full" onClick={downloadZip}>
-            Baixar extensão v0.15.2 (.zip)
+            Baixar extensão v0.15.3 (.zip)
           </Button>
           <p className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-            Importante: remova a versão anterior em <code className="rounded bg-muted px-1">chrome://extensions</code> antes de instalar. A versão precisa aparecer como <strong>0.15.2</strong>.
+            Importante: remova a versão anterior em <code className="rounded bg-muted px-1">chrome://extensions</code> antes de instalar. A versão precisa aparecer como <strong>0.15.3</strong>.
           </p>
           <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
             <li>Descompacte o arquivo baixado em uma pasta.</li>

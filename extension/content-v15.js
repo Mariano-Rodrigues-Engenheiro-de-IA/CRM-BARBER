@@ -1,7 +1,7 @@
-// Content script v0.14.0 — ponte minimalista: CRM BARBER, Assinantes e Equipe.
+// Content script v0.15.3 — ponte minimalista: CRM BARBER, Assinantes e Equipe.
 
 (function () {
-  const CRM_VERSION = "0.14.0";
+  const CRM_VERSION = "0.15.3";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -11,6 +11,7 @@
   console.info(`[CRM ct v${CRM_VERSION}] carregado`, location.href);
 
   let panelRef = null;
+  let pollHeartbeat = null;
 
   function readLoggedPhone() {
     try {
@@ -52,6 +53,7 @@
     const paired = !!r?.paired;
 
     if (!paired) {
+      stopPollHeartbeat();
       const phone = readLoggedPhone();
       if (phone) {
         chrome.runtime.sendMessage({ type: "pair", phone }).then((res) => {
@@ -67,6 +69,8 @@
       `;
       return;
     }
+
+    startPollHeartbeat();
 
     const token = r.token || "";
     const apiBase = r.api_base || "";
@@ -112,12 +116,26 @@
   function ensurePanel() {
     if (!document.getElementById("crm-assinaturas-panel")) buildPanel();
   }
+
+  function startPollHeartbeat() {
+    if (pollHeartbeat) return;
+    const tick = () => chrome.runtime.sendMessage({ type: "poll_now" }).catch(() => null);
+    tick();
+    pollHeartbeat = setInterval(tick, 10000);
+  }
+
+  function stopPollHeartbeat() {
+    if (!pollHeartbeat) return;
+    clearInterval(pollHeartbeat);
+    pollHeartbeat = null;
+  }
+
   ensurePanel();
   const mo = new MutationObserver(() => ensurePanel());
   if (document.body) mo.observe(document.body, { childList: true });
 
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
-    if (msg?.type === "send_message") {
+    if (msg?.type === "send_message_v153") {
       handleSend(msg.job).then(sendResponse);
       return true;
     }
@@ -130,7 +148,7 @@
   window.addEventListener("message", (ev) => {
     if (ev.source !== window) return;
     const d = ev.data;
-    if (!d || d.__crm !== "sent") return;
+    if (!d || d.__crm !== "sent_v153") return;
     const p = pending.get(d.id);
     if (!p) return;
     pending.delete(d.id);
@@ -148,7 +166,7 @@
         resolve({ ok: false, error: "Timeout no envio silencioso" });
       }, 25000);
       pending.set(id, { resolve, timeout });
-      window.postMessage({ __crm: "send", id, phone, text }, "*");
+      window.postMessage({ __crm: "send_v153", id, phone, text }, "*");
     });
   }
 })();
