@@ -163,103 +163,85 @@ function Painel() {
     setBrand(next);
   }
 
-  const NAV: Array<{ key: Section; label: string; icon: string; hint: string }> = [
-    { key: "assinantes", label: "Assinantes", icon: "💈", hint: "CRM & disparos" },
-    { key: "equipe", label: "Equipe", icon: "🏆", hint: "Ranking & metas" },
-    { key: "configuracoes", label: "Configurações", icon: "⚙️", hint: "Nome & logo" },
+  const NAV_TOP: Array<{ key: Section; label: string }> = [
+    { key: "assinantes", label: "Assinantes" },
+    { key: "equipe", label: "Equipe" },
   ];
 
+  const navBtnCls = (active: boolean) =>
+    "w-full rounded-md px-3 py-2 text-left text-sm font-normal tracking-wide transition " +
+    (active
+      ? "bg-yellow-400/90 text-neutral-950"
+      : "text-neutral-300 hover:bg-yellow-500/10 hover:text-yellow-100");
 
   return (
-    <div className="flex min-h-screen bg-neutral-950 text-yellow-50">
+    <div className="flex min-h-screen bg-neutral-950 text-yellow-50 font-light">
       {/* Sidebar */}
-      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-yellow-500/15 bg-gradient-to-b from-neutral-950 via-neutral-950 to-neutral-900">
-        <div className="flex items-center gap-3 border-b border-yellow-500/15 px-5 py-5">
-          <div className="grid h-11 w-11 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-yellow-300 to-amber-500 text-lg font-black text-neutral-950 shadow-md">
+      <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-yellow-500/10 bg-neutral-950">
+        <div className="flex items-center gap-3 px-5 py-5">
+          <div className="grid h-9 w-9 place-items-center overflow-hidden rounded-md bg-yellow-400 text-sm font-semibold text-neutral-950">
             {shopLogo ? <img src={shopLogo} alt="logo" className="h-full w-full object-cover" /> : shopInitial}
           </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-black tracking-tight text-yellow-50">{shopName}</p>
-            <p className="text-[11px] uppercase tracking-widest text-yellow-500/70">CRM Barber</p>
-          </div>
+          <p className="text-[13px] font-medium tracking-[0.18em] text-yellow-50">CRM BARBER</p>
         </div>
 
-        <nav className="flex-1 space-y-1 p-3">
-          {NAV.map((n) => {
-            const active = section === n.key;
-            return (
-              <button
-                key={n.key}
-                onClick={() => setSection(n.key)}
-                className={
-                  "group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition " +
-                  (active
-                    ? "bg-yellow-400 text-neutral-950 shadow-[0_8px_20px_-10px_rgba(250,204,21,0.6)]"
-                    : "text-neutral-300 hover:bg-yellow-500/10 hover:text-yellow-100")
-                }
-              >
-                <span className="text-xl">{n.icon}</span>
-                <span className="flex-1">
-                  <span className="block text-sm font-bold">{n.label}</span>
-                  <span
-                    className={
-                      "block text-[11px] " + (active ? "text-neutral-800" : "text-neutral-500 group-hover:text-yellow-300/70")
-                    }
-                  >
-                    {n.hint}
-                  </span>
-                </span>
-              </button>
-            );
-          })}
+        <nav className="flex-1 space-y-1 px-3 pt-2">
+          {NAV_TOP.map((n) => (
+            <button
+              key={n.key}
+              onClick={() => setSection(n.key)}
+              className={navBtnCls(section === n.key)}
+            >
+              {n.label}
+            </button>
+          ))}
         </nav>
 
-        <div className="border-t border-yellow-500/15 p-4 text-[11px] text-neutral-500">
-          v0.11 · painel barber
+        <div className="px-3 pb-4">
+          <button
+            onClick={() => setSection("configuracoes")}
+            className={navBtnCls(section === "configuracoes")}
+          >
+            Configurações
+          </button>
         </div>
       </aside>
 
       {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-yellow-500/20 bg-neutral-950/95 px-4 py-3 backdrop-blur">
-        <div className="flex items-center gap-2">
-          <div className="grid h-8 w-8 place-items-center overflow-hidden rounded-lg bg-yellow-400 text-sm font-black text-neutral-950">
-            {shopLogo ? <img src={shopLogo} alt="logo" className="h-full w-full object-cover" /> : shopInitial}
-          </div>
-          <span className="truncate text-sm font-bold text-yellow-50">{shopName}</span>
-        </div>
+      <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-yellow-500/15 bg-neutral-950/95 px-4 py-3 backdrop-blur">
+        <span className="text-xs font-medium tracking-[0.2em] text-yellow-50">CRM BARBER</span>
         <div className="flex gap-1 rounded-md bg-neutral-900 p-1">
-          {NAV.map((n) => (
+          {[...NAV_TOP, { key: "configuracoes" as Section, label: "Config" }].map((n) => (
             <button
               key={n.key}
               onClick={() => setSection(n.key)}
               className={
-                "rounded px-3 py-1 text-xs font-bold " +
+                "rounded px-2.5 py-1 text-[11px] font-normal " +
                 (section === n.key ? "bg-yellow-400 text-neutral-950" : "text-neutral-300")
               }
             >
-              {n.icon}
+              {n.label}
             </button>
           ))}
         </div>
       </div>
 
+
+
       {/* Content */}
       <div className="flex-1 min-w-0">
         {section === "assinantes" && (
           <>
-            <header className="sticky top-0 z-10 border-b border-yellow-500/15 bg-neutral-950/90 backdrop-blur mt-14 md:mt-0">
+            <header className="sticky top-0 z-10 border-b border-yellow-500/10 bg-neutral-950/90 backdrop-blur mt-14 md:mt-0">
               <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4">
-                <div>
-                  <h1 className="text-xl font-black tracking-tight text-yellow-50">Assinantes</h1>
-                  <p className="text-xs text-neutral-500">Gestão de contatos, disparos e campanhas</p>
-                </div>
-                <nav className="flex gap-1 rounded-lg bg-neutral-900 p-1">
+                <h1 className="text-base font-normal tracking-wide text-yellow-50">Assinantes</h1>
+                <nav className="flex gap-1 rounded-md bg-neutral-900 p-1">
                   {(["kanban", "disparo", "campanhas"] as const).map((t) => (
                     <button
                       key={t}
                       onClick={() => setTab(t)}
                       className={
-                        "rounded-md px-3 py-1.5 text-sm font-medium transition " +
+                        "rounded px-3 py-1.5 text-xs font-normal transition " +
                         (tab === t ? "bg-yellow-400 text-neutral-950" : "text-neutral-300 hover:text-yellow-300")
                       }
                     >
@@ -922,10 +904,8 @@ function SettingsView({
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-xl font-black tracking-tight text-yellow-50">Configurações</h1>
-        <p className="text-xs text-neutral-500">Personalize o nome e a logo que aparecem no painel.</p>
-      </div>
+      <h1 className="text-base font-normal tracking-wide text-yellow-50">Configurações</h1>
+
 
       <div className="rounded-2xl border border-yellow-500/15 bg-neutral-900 p-6 space-y-6">
         <div className="flex items-center gap-4">
@@ -964,28 +944,24 @@ function SettingsView({
         </div>
 
         <label className="block space-y-2">
-          <span className="text-xs uppercase tracking-widest text-yellow-500/70">Nome da barbearia</span>
+          <span className="text-[11px] uppercase tracking-widest text-yellow-500/70">Nome da barbearia</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ex.: Barbearia do João"
-            className="w-full rounded-lg border border-yellow-500/20 bg-neutral-950 px-4 py-2.5 text-sm text-yellow-50 outline-none focus:border-yellow-400"
+            className="w-full rounded-md border border-yellow-500/20 bg-neutral-950 px-4 py-2.5 text-sm font-light text-yellow-50 outline-none focus:border-yellow-400"
           />
         </label>
 
         <div className="flex items-center gap-3">
           <button
             onClick={save}
-            className="rounded-lg bg-yellow-400 px-5 py-2.5 text-sm font-bold text-neutral-950 hover:bg-yellow-300"
+            className="rounded-md bg-yellow-400 px-5 py-2 text-sm font-normal text-neutral-950 hover:bg-yellow-300"
           >
             Salvar
           </button>
           {saved && <span className="text-xs text-yellow-400">Salvo ✔</span>}
         </div>
-
-        <p className="text-[11px] text-neutral-500">
-          As configurações ficam salvas neste navegador.
-        </p>
       </div>
     </div>
   );

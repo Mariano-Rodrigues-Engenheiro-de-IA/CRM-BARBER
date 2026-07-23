@@ -1,8 +1,8 @@
-// Content script v0.11.1 — sidebar ponte minimalista: só tiles.
+// Content script v0.12.0 — sidebar ponte minimalista: só tiles.
 // Nome/logo da barbearia agora são configurados dentro do painel web.
 
 (function () {
-  const CRM_VERSION = "0.11.1";
+  const CRM_VERSION = "0.12.0";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -27,7 +27,7 @@
     panel.className = "crm-theme-barber";
     panel.innerHTML = `
       <div class="crm-header">
-        <span class="crm-logo-txt">Barber CRM</span>
+        <span class="crm-logo-txt">CRM BARBER</span>
         <button class="crm-toggle" title="Recolher">‹</button>
       </div>
       <div class="crm-body"></div>
@@ -77,33 +77,20 @@
     body().innerHTML = `
       <div class="crm-tiles">
         <button class="crm-tile" data-section="assinantes">
-          <div class="crm-tile-icon">💈</div>
           <div class="crm-tile-body">
             <div class="crm-tile-title">Assinantes</div>
-            <div class="crm-tile-sub">CRM, planilhas & disparos</div>
           </div>
           <div class="crm-tile-arrow">→</div>
         </button>
         <button class="crm-tile" data-section="equipe">
-          <div class="crm-tile-icon">🏆</div>
           <div class="crm-tile-body">
             <div class="crm-tile-title">Equipe</div>
-            <div class="crm-tile-sub">Ranking, metas & gamificação</div>
-          </div>
-          <div class="crm-tile-arrow">→</div>
-        </button>
-        <button class="crm-tile" data-section="configuracoes">
-          <div class="crm-tile-icon">⚙️</div>
-          <div class="crm-tile-body">
-            <div class="crm-tile-title">Configurações</div>
-            <div class="crm-tile-sub">Nome & logo da barbearia</div>
           </div>
           <div class="crm-tile-arrow">→</div>
         </button>
       </div>
 
       <div class="crm-footer">
-        <span class="crm-version">v${CRM_VERSION}</span>
         <button class="crm-unpair">desvincular</button>
       </div>
     `;
