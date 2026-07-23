@@ -91,7 +91,9 @@
         </button>
       </div>
 
-      <button class="crm-unpair">desvincular</button>
+      <div class="crm-footer">
+        <button class="crm-unpair">desvincular</button>
+      </div>
     `;
 
     body().querySelectorAll(".crm-tile").forEach((el) => {
