@@ -95,13 +95,17 @@ function Painel() {
   const [ready, setReady] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
-  const initialSection: Section =
-    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("section") === "equipe"
-      ? "equipe"
-      : "assinantes";
+  const initialSection: Section = (() => {
+    if (typeof window === "undefined") return "assinantes";
+    const s = new URLSearchParams(window.location.search).get("section");
+    if (s === "equipe" || s === "configuracoes") return s;
+    return "assinantes";
+  })();
   const [section, setSection] = useState<Section>(initialSection);
   const [tab, setTab] = useState<AssinantesTab>("kanban");
   const [shop, setShop] = useState<{ id: string; name: string } | null>(null);
+  const [brand, setBrand] = useState<Brand>({});
+
 
   useEffect(() => {
     setToken(getToken());
