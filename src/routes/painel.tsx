@@ -729,11 +729,11 @@ function CampaignsView({ token }: { token: string }) {
         const isPaused = c.status === "paused";
         const isFinal = c.status === "canceled" || (total > 0 && c.stats.pending === 0);
         return (
-          <div key={c.id} className="rounded-lg border border-yellow-500/20 bg-neutral-900 p-4">
+          <div key={c.id} className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h3 className="text-lg font-bold text-yellow-50">{c.name}</h3>
-                <p className="text-xs uppercase tracking-wide text-neutral-400">
+                <h3 className="text-base font-semibold text-neutral-900">{c.name}</h3>
+                <p className="text-xs uppercase tracking-wide text-neutral-500">
                   {c.status === "running" ? "Em andamento" : c.status === "paused" ? "Pausada" : c.status === "canceled" ? "Cancelada" : c.status}
                 </p>
               </div>
@@ -742,19 +742,19 @@ function CampaignsView({ token }: { token: string }) {
                   <button
                     onClick={() => toggleStatus(c)}
                     className={
-                      "rounded-md px-3 py-1.5 text-sm font-bold " +
+                      "rounded-lg px-3 py-1.5 text-sm font-semibold " +
                       (isRunning
-                        ? "bg-neutral-800 text-yellow-400 hover:bg-neutral-700"
-                        : "bg-yellow-400 text-neutral-950 hover:bg-yellow-300")
+                        ? "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                        : "bg-neutral-900 text-yellow-400 hover:bg-neutral-800")
                     }
                   >
-                    {isRunning ? "⏸ Pausar" : "▶ Retomar"}
+                    {isRunning ? "Pausar" : "Retomar"}
                   </button>
                 )}
                 {!isFinal && (
                   <button
                     onClick={() => cancelCamp(c)}
-                    className="rounded-md border border-red-500/40 px-3 py-1.5 text-sm text-red-400 hover:bg-red-500/10"
+                    className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-600 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
                   >
                     Cancelar
                   </button>
@@ -762,18 +762,18 @@ function CampaignsView({ token }: { token: string }) {
                 <button
                   onClick={() => deleteCamp(c)}
                   title="Apagar campanha"
-                  className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-400 hover:border-red-500/60 hover:bg-red-500/10 hover:text-red-400"
+                  className="rounded-lg border border-neutral-200 px-3 py-1.5 text-sm text-neutral-400 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
                 >
                   🗑
                 </button>
               </div>
             </div>
             <div className="mt-4">
-              <div className="h-2 overflow-hidden rounded-full bg-neutral-800">
+              <div className="h-2 overflow-hidden rounded-full bg-neutral-100">
                 <div className="h-full bg-yellow-400 transition-all" style={{ width: `${pct}%` }} />
               </div>
-              <div className="mt-2 flex justify-between text-xs text-neutral-400">
-                <span>{done} / {total} enviados · {c.stats.failed} falhas {isPaused ? "· ⏸" : ""}</span>
+              <div className="mt-2 flex justify-between text-xs text-neutral-500">
+                <span>{done} / {total} enviados · {c.stats.failed} falhas {isPaused ? "· pausada" : ""}</span>
                 <span>{pct}%</span>
               </div>
             </div>
