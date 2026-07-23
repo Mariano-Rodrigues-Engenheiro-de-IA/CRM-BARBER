@@ -626,6 +626,13 @@ function CampaignsView({ token }: { token: string }) {
                     Cancelar
                   </button>
                 )}
+                <button
+                  onClick={() => deleteCamp(c)}
+                  title="Apagar campanha"
+                  className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-400 hover:border-red-500/60 hover:bg-red-500/10 hover:text-red-400"
+                >
+                  🗑
+                </button>
               </div>
             </div>
             <div className="mt-4">
