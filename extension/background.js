@@ -8,10 +8,12 @@
 //
 // Rate limit: espaçamento aleatório entre 8s e 20s entre jobs (ritmo humano).
 
+const EXTENSION_VERSION = "0.16.0";
 const DEFAULT_API_BASE = "https://buzz-boost-crm.lovable.app";
 const POLL_MIN_MS = 8000;
 const POLL_MAX_MS = 20000;
 const POLL_ALARM_NAME = "crm-assinaturas-poll";
+const LAST_ERROR_KEY = "last_error";
 
 function randDelay() {
   return POLL_MIN_MS + Math.floor(Math.random() * (POLL_MAX_MS - POLL_MIN_MS));
@@ -19,7 +21,21 @@ function randDelay() {
 
 async function getApiBase() {
   const { api_base } = await chrome.storage.local.get("api_base");
-  return api_base || DEFAULT_API_BASE;
+  if (!api_base || api_base !== DEFAULT_API_BASE) {
+    await chrome.storage.local.set({ api_base: DEFAULT_API_BASE });
+    return DEFAULT_API_BASE;
+  }
+  return api_base;
+}
+
+async function setLastError(error) {
+  const message = String(error || "Erro desconhecido").slice(0, 500);
+  console.warn("[CRM bg]", message);
+  await chrome.storage.local.set({ [LAST_ERROR_KEY]: message, last_error_at: new Date().toISOString() }).catch(() => {});
+}
+
+async function clearLastError() {
+  await chrome.storage.local.remove([LAST_ERROR_KEY, "last_error_at"]).catch(() => {});
 }
 
 async function getInstallId() {
@@ -76,10 +92,29 @@ async function fetchNextJob() {
   if (!token) return null;
   const apiBase = await getApiBase();
   const res = await fetch(`${apiBase}/api/public/extension/jobs/next`, {
-    headers: { Authorization: `Bearer ${token}` },
-  }).catch(() => null);
-  if (!res || !res.ok) return null;
+    headers: { Authorization: `Bearer ${token}`, "X-CRM-Extension-Version": EXTENSION_VERSION },
+    cache: "no-store",
+  }).catch((e) => {
+    void setLastError(`Falha de rede ao buscar fila: ${String(e?.message || e)}`);
+    return null;
+  });
+  if (!res) return null;
+  if (res.status === 401) {
+    await chrome.storage.local.remove(["token", "barbershop"]);
+    await setLastError("Token da extensão expirou/revogou. Atualize o WhatsApp Web para vincular novamente.");
+    return null;
+  }
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    await setLastError(`API da fila retornou HTTP ${res.status}: ${text.slice(0, 160)}`);
+    return null;
+  }
   const data = await res.json().catch(() => ({}));
+  if (!data.ok) {
+    await setLastError(data.error || "API da fila retornou erro");
+    return null;
+  }
+  if (data.job) await clearLastError();
   return data.job || null;
 }
 
@@ -87,11 +122,12 @@ async function reportJob(id, status, error) {
   const { token } = await getAuth();
   if (!token) return;
   const apiBase = await getApiBase();
-  await fetch(`${apiBase}/api/public/extension/jobs/${id}`, {
+  const res = await fetch(`${apiBase}/api/public/extension/jobs/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, "X-CRM-Extension-Version": EXTENSION_VERSION },
     body: JSON.stringify({ status, error }),
   }).catch(() => {});
+  if (!res?.ok) await setLastError(`Falha ao reportar job ${id}: HTTP ${res?.status || "rede"}`);
 }
 
 async function ensureScripts(tabId) {
@@ -101,10 +137,25 @@ async function ensureScripts(tabId) {
 }
 
 async function sendToTab(job) {
-  const [tab] = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
-  if (!tab?.id) return { ok: false, error: "WhatsApp Web não está aberto" };
-  await ensureScripts(tab.id);
-  return await chrome.tabs.sendMessage(tab.id, { type: "send_message_v153", job });
+  const tabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
+  const candidates = tabs
+    .filter((tab) => tab.id)
+    .sort((a, b) => Number(!!b.active) - Number(!!a.active));
+  if (candidates.length === 0) return { ok: false, error: "WhatsApp Web não está aberto" };
+
+  let lastError = "WhatsApp Web não respondeu";
+  for (const tab of candidates) {
+    try {
+      await chrome.tabs.update(tab.id, { active: true }).catch(() => null);
+      await ensureScripts(tab.id);
+      const result = await chrome.tabs.sendMessage(tab.id, { type: "send_message_v160", job });
+      if (result?.ok) return result;
+      lastError = result?.error || lastError;
+    } catch (e) {
+      lastError = String(e?.message || e);
+    }
+  }
+  return { ok: false, error: lastError };
 }
 
 async function showPanel() {
@@ -201,7 +252,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     } else if (msg?.type === "get_status") {
       const auth = await getAuth();
       const api_base = await getApiBase();
-      sendResponse({ paired: !!auth.token, barbershop: auth.barbershop || null, token: auth.token || null, api_base });
+      const err = await chrome.storage.local.get([LAST_ERROR_KEY, "last_error_at"]);
+      sendResponse({ paired: !!auth.token, barbershop: auth.barbershop || null, token: auth.token || null, api_base, version: EXTENSION_VERSION, last_error: err[LAST_ERROR_KEY] || null, last_error_at: err.last_error_at || null });
     } else if (msg?.type === "unpair") {
       await chrome.storage.local.remove(["token", "barbershop"]);
       clearTimeout(pollTimer);
