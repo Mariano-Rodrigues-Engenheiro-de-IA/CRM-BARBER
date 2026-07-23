@@ -1,7 +1,7 @@
 // wa-bridge — MAIN world. Recebe {__crm:"send", id, phone, text} e envia silenciosamente via WPP (wa-js).
-// WhatsApp Web atual exige resolver PN -> LID antes do envio para novos chats.
+// WhatsApp Web atual pode exigir LID para novos chats. Não usamos fallback visível.
 (function () {
-  const BRIDGE_VERSION = "0.18.4";
+  const BRIDGE_VERSION = "0.18.5";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -18,34 +18,24 @@
     return null;
   }
 
-  function normalizeSerializedWid(value) {
+  function normalizeWid(value, server) {
     const serialized = serializeWid(value);
     if (!serialized) return null;
-    return serialized.includes("@") ? serialized : `${serialized}@lid`;
-  }
-
-  function isLid(wid) {
-    return String(wid || "").endsWith("@lid");
-  }
-
-  function isPhoneWid(wid) {
-    return String(wid || "").endsWith("@c.us");
+    if (serialized.includes("@")) return serialized;
+    const digits = serialized.replace(/\D/g, "");
+    if (!digits) return null;
+    return `${digits}@${server}`;
   }
 
   function pickWids(info) {
-    const direct = normalizeSerializedWid(info?.wid || info?.id);
-    const lid = normalizeSerializedWid(info?.lid || info?.lidWid || info?.contact?.lid);
-    const pn = normalizeSerializedWid(info?.phoneNumber || info?.pn || info?.contact?.id);
+    const direct = normalizeWid(info?.wid || info?.id, "c.us");
+    const lid = normalizeWid(info?.lid || info?.lidWid || info?.contact?.lid || info?.contact?.lidWid, "lid");
+    const pn = normalizeWid(info?.phoneNumber || info?.pn || info?.contact?.phoneNumber || info?.contact?.pn, "c.us");
     const out = [];
     pushWid(out, lid, true);
-    pushWid(out, direct, !lid && isLid(direct));
+    pushWid(out, direct, !lid && String(direct || "").endsWith("@lid"));
     pushWid(out, pn);
     return out;
-  }
-
-  function pickBestWid(info) {
-    const [first] = pickWids(info);
-    return first || null;
   }
 
   function sleep(ms) {
@@ -70,19 +60,26 @@
 
   async function resolveWid(number) {
     const phoneWid = `${number}@c.us`;
-    const candidates = [number, phoneWid];
+    const candidates = [phoneWid, number];
+    const resolvers = [
+      ["queryWidExists", window.WPP.contact?.queryWidExists],
+      ["queryExists", window.WPP.contact?.queryExists],
+    ];
 
     for (const candidate of candidates) {
-      try {
-        const check = await window.WPP.contact?.queryExists?.(candidate);
-        if (!check) continue;
-
-        const serialized = serializeWid(check.wid || check.id || check);
-        if (serialized && serialized.endsWith("@c.us")) return [serialized];
-
-        return [phoneWid];
-      } catch (e) {
-        console.warn("[CRM wa-bridge] queryExists falhou", candidate, e);
+      for (const [name, resolver] of resolvers) {
+        if (typeof resolver !== "function") continue;
+        try {
+          const check = await resolver(candidate);
+          if (!check) continue;
+          const wids = pickWids(check);
+          if (wids.length) {
+            console.info("[CRM wa-bridge] contato resolvido", { via: name, candidate, wids });
+            return wids;
+          }
+        } catch (e) {
+          console.warn(`[CRM wa-bridge] ${name} falhou`, candidate, e);
+        }
       }
     }
 
@@ -94,7 +91,7 @@
   }
 
   async function sendSilently(number, text) {
-    let wids = await resolveWid(number);
+    const wids = await resolveWid(number);
     let lastError = null;
 
     for (const wid of wids) {
@@ -107,7 +104,7 @@
       }
     }
 
-    throw new Error(`Envio silencioso falhou usando queryExists/@c.us. Último erro: ${errorMessage(lastError)}`);
+    throw new Error(`Envio silencioso falhou usando queryWidExists/queryExists. Último erro: ${errorMessage(lastError)}`);
   }
 
   window.addEventListener("message", async (ev) => {
