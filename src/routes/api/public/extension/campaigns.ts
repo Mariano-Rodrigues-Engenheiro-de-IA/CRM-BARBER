@@ -203,10 +203,11 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
         if (ids.length > 0) {
           const { data: js } = await supabaseAdmin
             .from("message_jobs")
-            .select("campaign_id, status, error, updated_at")
+            .select("campaign_id, status, last_error, updated_at")
             .eq("barbershop_id", auth.token.barbershop_id)
             .in("campaign_id", ids)
             .order("updated_at", { ascending: false });
+
           for (const j of js ?? []) {
             if (!j.campaign_id) continue;
             const s = (stats[j.campaign_id] ??= { pending: 0, sent: 0, failed: 0 });
