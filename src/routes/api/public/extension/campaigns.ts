@@ -214,9 +214,10 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
             if (j.status === "pending" || j.status === "in_flight") s.pending += 1;
             else if (j.status === "sent") s.sent += 1;
             else if (j.status === "failed" || j.status === "expired") s.failed += 1;
-            if ((j.status === "failed" || j.status === "expired") && j.error && !lastErrors[j.campaign_id]) {
-              lastErrors[j.campaign_id] = j.error;
+            if ((j.status === "failed" || j.status === "expired") && j.last_error && !lastErrors[j.campaign_id]) {
+              lastErrors[j.campaign_id] = j.last_error;
             }
+
           }
         }
 
