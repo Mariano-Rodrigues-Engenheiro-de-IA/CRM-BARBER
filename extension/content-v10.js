@@ -1,10 +1,9 @@
-// Content script v0.10.0 — sidebar reduzida no WhatsApp Web.
-// A gestão de assinantes agora vive no painel web em nova aba (/painel).
-// Aqui ficam: status de pareamento, botão "Abrir painel", campanhas em
-// andamento com pausar/retomar/cancelar.
+// Content script v0.11.0 — sidebar minimalista tipo "ponte" entre WhatsApp e o painel.
+// Duas ações: Assinantes e Equipe (abrem o painel web em nova aba).
+// Header com logo + nome da barbearia editáveis (armazenado local por barbearia).
 
 (function () {
-  const CRM_VERSION = "0.10.0";
+  const CRM_VERSION = "0.11.0";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -14,7 +13,7 @@
   console.info(`[CRM ct v${CRM_VERSION}] carregado`, location.href);
 
   let panelRef = null;
-  let pollTimer = null;
+  let currentShopId = null;
 
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
 
@@ -25,8 +24,14 @@
       return m ? m[1] : null;
     } catch { return null; }
   }
-  async function api(path, opts = {}) {
-    return await chrome.runtime.sendMessage({ type: "api", path, opts });
+
+  function brandKey(shopId) { return `crm_brand_${shopId || "default"}`; }
+  function readBrand(shopId) {
+    try { return JSON.parse(localStorage.getItem(brandKey(shopId)) || "{}") || {}; }
+    catch { return {}; }
+  }
+  function writeBrand(shopId, data) {
+    localStorage.setItem(brandKey(shopId), JSON.stringify(data));
   }
 
   function buildPanel() {
@@ -35,7 +40,7 @@
     panel.className = "crm-theme-barber";
     panel.innerHTML = `
       <div class="crm-header">
-        <span class="crm-logo">✂ Assinaturas</span>
+        <span class="crm-logo-txt">Barber CRM</span>
         <button class="crm-toggle" title="Recolher">‹</button>
       </div>
       <div class="crm-body"></div>
@@ -68,109 +73,106 @@
         });
       }
       body().innerHTML = `
-        <div class="crm-status">Vinculando ao seu WhatsApp…</div>
-        <p class="crm-hint">Se o pareamento demorar, atualize esta aba.</p>
+        <div class="crm-empty-state">
+          <div class="crm-empty-dot"></div>
+          <p class="crm-empty-title">Conectando…</p>
+          <p class="crm-empty-sub">Vinculando ao seu WhatsApp. Se demorar, atualize a página.</p>
+        </div>
       `;
       return;
     }
 
     const info = r.barbershop || {};
+    currentShopId = info.id || null;
     const token = r.token || "";
-    const painelUrl = `${r.api_base || ""}/painel?token=${encodeURIComponent(token)}`;
+    const apiBase = r.api_base || "";
+    const painelUrl = (section) =>
+      `${apiBase}/painel?token=${encodeURIComponent(token)}${section ? `&section=${section}` : ""}`;
+
+    const brand = readBrand(currentShopId);
+    const displayName = brand.name || info.name || "Sua barbearia";
+    const logo = brand.logo || "";
+    const initial = displayName.trim().charAt(0).toUpperCase() || "B";
 
     body().innerHTML = `
-      <div class="crm-status">
-        <strong>${esc(info.name || "Barbearia")}</strong>
-        <small>${esc(info.owner_phone || "")}</small>
+      <div class="crm-brand">
+        <button class="crm-avatar" title="Alterar logo">
+          ${logo ? `<img src="${esc(logo)}" alt="logo" />` : `<span>${esc(initial)}</span>`}
+        </button>
+        <div class="crm-brand-info">
+          <div class="crm-brand-name" title="${esc(displayName)}">${esc(displayName)}</div>
+          <button class="crm-brand-edit">editar nome</button>
+        </div>
+        <input type="file" accept="image/*" class="crm-logo-input" hidden />
       </div>
 
-      <button class="crm-primary crm-open-painel">
-        🚀 Abrir painel de assinaturas
-      </button>
-      <p class="crm-hint">O painel completo (kanban, importação, disparos) roda em nova aba com seu WhatsApp aberto aqui.</p>
+      <div class="crm-tiles">
+        <button class="crm-tile" data-section="assinantes">
+          <div class="crm-tile-icon">💈</div>
+          <div class="crm-tile-body">
+            <div class="crm-tile-title">Assinantes</div>
+            <div class="crm-tile-sub">CRM, planilhas & disparos</div>
+          </div>
+          <div class="crm-tile-arrow">→</div>
+        </button>
+        <button class="crm-tile" data-section="equipe">
+          <div class="crm-tile-icon">🏆</div>
+          <div class="crm-tile-body">
+            <div class="crm-tile-title">Equipe</div>
+            <div class="crm-tile-sub">Ranking, metas & gamificação</div>
+          </div>
+          <div class="crm-tile-arrow">→</div>
+        </button>
+      </div>
 
-      <div class="crm-section-title">Campanhas ativas</div>
-      <div class="crm-camps">Carregando…</div>
-
-      <button class="crm-ghost crm-unpair">Desvincular esta conta</button>
+      <div class="crm-footer">
+        <span class="crm-version">v${CRM_VERSION}</span>
+        <button class="crm-unpair">desvincular</button>
+      </div>
     `;
 
-    body().querySelector(".crm-open-painel").addEventListener("click", () => {
-      window.open(painelUrl, "_blank", "noopener");
+    body().querySelectorAll(".crm-tile").forEach((el) => {
+      el.addEventListener("click", () => {
+        window.open(painelUrl(el.getAttribute("data-section")), "_blank", "noopener");
+      });
     });
-    body().querySelector(".crm-unpair").addEventListener("click", async () => {
-      if (!confirm("Desvincular esta conta? A extensão pedirá pareamento novamente.")) return;
-      await chrome.runtime.sendMessage({ type: "unpair" });
+
+    const avatarBtn = body().querySelector(".crm-avatar");
+    const fileInput = body().querySelector(".crm-logo-input");
+    avatarBtn.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (file.size > 400_000) {
+        alert("Logo muito grande. Use uma imagem até 400KB.");
+        return;
+      }
+      const dataUrl = await new Promise((res) => {
+        const fr = new FileReader();
+        fr.onload = () => res(fr.result);
+        fr.readAsDataURL(file);
+      });
+      const b = readBrand(currentShopId);
+      writeBrand(currentShopId, { ...b, logo: dataUrl });
       render();
     });
 
-    loadCampaigns();
-    if (pollTimer) clearInterval(pollTimer);
-    pollTimer = setInterval(loadCampaigns, 5000);
-  }
+    body().querySelector(".crm-brand-edit").addEventListener("click", () => {
+      const b = readBrand(currentShopId);
+      const next = prompt("Nome da barbearia:", displayName);
+      if (next && next.trim()) {
+        writeBrand(currentShopId, { ...b, name: next.trim() });
+        render();
+      }
+    });
 
-  async function loadCampaigns() {
-    const box = panelRef?.querySelector(".crm-camps");
-    if (!box) return;
-    const r = await api("/api/public/extension/campaigns");
-    if (!r?.ok) { box.textContent = r?.error || "Erro"; return; }
-    const camps = (r.campaigns || []).filter((c) => {
-      const s = c.stats || { pending: 0, sent: 0, failed: 0 };
-      const total = s.pending + s.sent + s.failed;
-      return c.status !== "canceled" && (s.pending > 0 || c.status === "paused" || total === 0);
-    }).slice(0, 5);
-
-    if (!camps.length) {
-      box.innerHTML = `<p class="crm-empty">Nenhuma campanha em andamento.</p>`;
-      return;
-    }
-
-    box.innerHTML = camps.map((c) => {
-      const s = c.stats || { pending: 0, sent: 0, failed: 0 };
-      const total = s.pending + s.sent + s.failed;
-      const done = s.sent + s.failed;
-      const pct = total ? Math.round((done / total) * 100) : 0;
-      const running = c.status === "running";
-      return `
-        <div class="crm-camp-card" data-id="${esc(c.id)}">
-          <div class="crm-camp-name">${esc(c.name)}</div>
-          <div class="crm-progress"><div class="crm-progress-bar" style="width:${pct}%"></div></div>
-          <div class="crm-progress-info">
-            <span>${done}/${total} · ${s.failed} falhas ${running ? "" : "· ⏸"}</span>
-            <span>${pct}%</span>
-          </div>
-          <div class="crm-camp-actions">
-            <button class="crm-btn-toggle" data-next="${running ? "paused" : "running"}">
-              ${running ? "⏸ Pausar" : "▶ Retomar"}
-            </button>
-            <button class="crm-btn-cancel">✕ Cancelar</button>
-          </div>
-        </div>
-      `;
-    }).join("");
-
-    box.querySelectorAll(".crm-camp-card").forEach((card) => {
-      const id = card.getAttribute("data-id");
-      card.querySelector(".crm-btn-toggle").addEventListener("click", async (e) => {
-        const next = e.currentTarget.getAttribute("data-next");
-        await api(`/api/public/extension/campaigns/${id}`, {
-          method: "PATCH",
-          body: JSON.stringify({ status: next }),
-        });
-        loadCampaigns();
-      });
-      card.querySelector(".crm-btn-cancel").addEventListener("click", async () => {
-        if (!confirm("Cancelar esta campanha?")) return;
-        await api(`/api/public/extension/campaigns/${id}`, {
-          method: "PATCH",
-          body: JSON.stringify({ status: "canceled" }),
-        });
-        loadCampaigns();
-      });
+    body().querySelector(".crm-unpair").addEventListener("click", async () => {
+      if (!confirm("Desvincular esta conta?")) return;
+      await chrome.runtime.sendMessage({ type: "unpair" });
+      render();
     });
   }
 
-  // Injeta ao carregar; retenta se WhatsApp reidratar.
   function ensurePanel() {
     if (!document.getElementById("crm-assinaturas-panel")) buildPanel();
   }
@@ -180,7 +182,6 @@
 
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
     if (msg?.type === "send_message") {
-      // Ainda roteia envios via bridge para o service worker.
       handleSend(msg.job).then(sendResponse);
       return true;
     }
@@ -188,7 +189,7 @@
     return false;
   });
 
-  // Envio silencioso via wa-bridge (MAIN world) — inalterado desde v0.9.
+  // Envio silencioso via wa-bridge (MAIN world) — inalterado.
   const pending = new Map();
   window.addEventListener("message", (ev) => {
     if (ev.source !== window) return;
