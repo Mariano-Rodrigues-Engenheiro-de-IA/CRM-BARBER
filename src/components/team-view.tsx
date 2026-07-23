@@ -603,7 +603,7 @@ function MembersTab({
           <ul className="space-y-2">
             {members.map((m) => (
               <li key={m.id} className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3">
-                <span className="text-2xl">{m.emoji}</span>
+                <Avatar member={m} size={36} />
                 <span className="flex-1 truncate text-sm font-medium text-neutral-900">{m.name}</span>
                 <button
                   onClick={() => {
