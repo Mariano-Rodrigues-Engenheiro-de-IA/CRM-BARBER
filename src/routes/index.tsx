@@ -20,7 +20,7 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "Extensão de Chrome que transforma seu WhatsApp Web em um CRM completo pra gerenciar clientes assinantes e campanhas.",
+          "Extensão de Chrome que transforma seu WhatsApp Web em um CRM completo pra gerenciar clientes assinantes, campanhas e disparos — sem trocar de ferramenta.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

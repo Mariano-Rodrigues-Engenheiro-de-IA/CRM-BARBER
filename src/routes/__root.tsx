@@ -82,12 +82,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "Organize seus clientes assinantes, crie campanhas de cobrança e fidelização e dispare mensagens diretamente pelo WhatsApp Web.",
+          "Extensão de Chrome que transforma seu WhatsApp Web em um CRM completo pra gerenciar clientes assinantes, campanhas e disparos — sem trocar de ferramenta.",
       },
       { property: "og:title", content: "CRM de Assinaturas para Barbearias" },
       { name: "twitter:title", content: "CRM de Assinaturas para Barbearias" },
-      { property: "og:description", content: "Organize seus clientes assinantes, crie campanhas de cobrança e fidelização e dispare mensagens diretamente pelo WhatsApp Web." },
-      { name: "twitter:description", content: "Organize seus clientes assinantes, crie campanhas de cobrança e fidelização e dispare mensagens diretamente pelo WhatsApp Web." },
+      { property: "og:description", content: "Extensão de Chrome que transforma seu WhatsApp Web em um CRM completo pra gerenciar clientes assinantes, campanhas e disparos — sem trocar de ferramenta." },
+      { name: "twitter:description", content: "Extensão de Chrome que transforma seu WhatsApp Web em um CRM completo pra gerenciar clientes assinantes, campanhas e disparos — sem trocar de ferramenta." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2865b1f1-d0fc-4253-ae81-ec65dd0e051d/id-preview-9e7bc48a--652f97f5-da54-4335-aff1-092273b48f7a.lovable.app-1784750247337.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2865b1f1-d0fc-4253-ae81-ec65dd0e051d/id-preview-9e7bc48a--652f97f5-da54-4335-aff1-092273b48f7a.lovable.app-1784750247337.png" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -98,7 +98,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
   }),
   shellComponent: RootShell,
