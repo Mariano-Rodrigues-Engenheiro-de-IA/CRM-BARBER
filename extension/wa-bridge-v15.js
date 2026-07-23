@@ -1,7 +1,7 @@
 // wa-bridge — MAIN world. Recebe {__crm:"send", id, phone, text} e envia silenciosamente via WPP (wa-js).
 // WhatsApp Web atual exige resolver PN -> LID antes do envio para novos chats.
 (function () {
-  const BRIDGE_VERSION = "0.18.0";
+  const BRIDGE_VERSION = "0.18.2";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -24,10 +24,29 @@
     return serialized.includes("@") ? serialized : `${serialized}@lid`;
   }
 
-  function pickBestWid(info) {
-    const direct = normalizeSerializedWid(info?.wid);
+  function isLid(wid) {
+    return String(wid || "").endsWith("@lid");
+  }
+
+  function isPhoneWid(wid) {
+    return String(wid || "").endsWith("@c.us");
+  }
+
+  function pickWids(info) {
+    const direct = normalizeSerializedWid(info?.wid || info?.id);
     const lid = normalizeSerializedWid(info?.lid || info?.lidWid || info?.contact?.lid);
     const pn = normalizeSerializedWid(info?.phoneNumber || info?.pn || info?.contact?.id);
+    const out = [];
+    pushWid(out, lid, true);
+    pushWid(out, direct, !lid && isLid(direct));
+    pushWid(out, pn);
+    return out;
+  }
+
+  function pickBestWid(info) {
+    const [first] = pickWids(info);
+    if (first) return first;
+    const direct = normalizeSerializedWid(info?.wid || info?.id);
     if (lid && lid.endsWith("@lid")) return lid;
     if (direct && direct.endsWith("@lid")) return direct;
     if (pn && pn.endsWith("@lid")) return pn;
