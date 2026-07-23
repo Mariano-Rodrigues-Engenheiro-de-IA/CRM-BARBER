@@ -533,7 +533,7 @@ function DisparoView({
         disabled={busy}
         className="w-full rounded-md bg-yellow-400 px-4 py-3 font-bold text-neutral-950 hover:bg-yellow-300 disabled:opacity-50"
       >
-        {busy ? "Criando..." : "🚀 Iniciar campanha"}
+        {busy ? "Criando..." : segment === "overdue" ? "💰 Iniciar cobrança" : "🚀 Iniciar disparo"}
       </button>
     </form>
   );
