@@ -1,5 +1,5 @@
-// PATCH /api/public/extension/campaigns/:id
-// Alterna o status da campanha: 'running' | 'paused' | 'canceled'.
+// PATCH  /api/public/extension/campaigns/:id -> status: running|paused|canceled
+// DELETE /api/public/extension/campaigns/:id -> apaga campanha + jobs + targets
 // Enquanto 'paused', /jobs/next não devolve jobs desta campanha.
 
 import { createFileRoute } from "@tanstack/react-router";
