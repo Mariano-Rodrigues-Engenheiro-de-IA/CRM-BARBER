@@ -2,6 +2,7 @@
 // WhatsApp Web atual exige resolver PN -> LID antes do envio para novos chats.
 (function () {
   const BRIDGE_VERSION = "0.15.3";
+  if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
   function normalize(phone) {
