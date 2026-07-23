@@ -175,8 +175,8 @@ function Painel() {
       {/* Sidebar */}
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-yellow-500/15 bg-gradient-to-b from-neutral-950 via-neutral-950 to-neutral-900">
         <div className="flex items-center gap-3 border-b border-yellow-500/15 px-5 py-5">
-          <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-yellow-300 to-amber-500 text-lg font-black text-neutral-950 shadow-md">
-            {shopInitial}
+          <div className="grid h-11 w-11 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-yellow-300 to-amber-500 text-lg font-black text-neutral-950 shadow-md">
+            {shopLogo ? <img src={shopLogo} alt="logo" className="h-full w-full object-cover" /> : shopInitial}
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-black tracking-tight text-yellow-50">{shopName}</p>
