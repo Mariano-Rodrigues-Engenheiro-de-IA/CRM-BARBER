@@ -1,7 +1,7 @@
 // Roda no painel web e conecta a página ao service worker da extensão.
 (function () {
-  if (window.__crmPanelNudgeVersion === "0.16.2") return;
-  window.__crmPanelNudgeVersion = "0.16.2";
+  if (window.__crmPanelNudgeVersion === "0.17.0") return;
+  window.__crmPanelNudgeVersion = "0.17.0";
 
   window.addEventListener("message", (event) => {
     if (event.source !== window) return;
