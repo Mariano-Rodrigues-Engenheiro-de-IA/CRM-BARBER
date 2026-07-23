@@ -55,7 +55,7 @@ function Install() {
         </CardHeader>
         <CardContent className="space-y-4">
           <Button size="lg" className="w-full" onClick={downloadZip}>
-            Baixar extensão v0.11.1 (.zip)
+            Baixar extensão v0.12.0 (.zip)
           </Button>
           <p className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
             Importante: remova a versão anterior em <code className="rounded bg-muted px-1">chrome://extensions</code> antes de instalar. A versão precisa aparecer como <strong>0.11.1</strong>.
