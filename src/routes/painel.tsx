@@ -47,6 +47,9 @@ const COLUMNS: Array<{ key: string; label: string }> = [
 ];
 
 const TOKEN_KEY = "crm_ext_token_v1";
+const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
+const EXTENSION_API_REQUEST = "crm_api_request_v162";
+const EXTENSION_API_RESPONSE = "crm_api_response_v162";
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -61,7 +64,47 @@ function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
+function canUseExtensionBridge() {
+  return typeof window !== "undefined";
+}
+
+type ApiResult = { ok?: boolean; error?: string; [key: string]: unknown };
+
+async function apiViaExtension(path: string, opts: RequestInit = {}) {
+  if (!canUseExtensionBridge()) return null;
+  const id = crypto.randomUUID();
+  return await new Promise<ApiResult | null>((resolve) => {
+    const timeout = setTimeout(() => {
+      window.removeEventListener("message", onMessage);
+      resolve(null);
+    }, 45000);
+    function onMessage(event: MessageEvent) {
+      if (event.source !== window) return;
+      const data = event.data;
+      if (!data || data.__crm !== EXTENSION_API_RESPONSE || data.id !== id) return;
+      clearTimeout(timeout);
+      window.removeEventListener("message", onMessage);
+      resolve(data.payload ?? { ok: false, error: data.error || "Erro na extensão" });
+    }
+    window.addEventListener("message", onMessage);
+    window.postMessage({
+      __crm: EXTENSION_API_REQUEST,
+      id,
+      path,
+      opts: {
+        method: opts.method || "GET",
+        headers: opts.headers || {},
+        body: typeof opts.body === "string" ? opts.body : undefined,
+      },
+    }, window.location.origin);
+  });
+}
+
 async function api(token: string, path: string, opts: RequestInit = {}) {
+  if (token === EXTENSION_BRIDGE_TOKEN) {
+    const bridged = await apiViaExtension(path, opts);
+    return bridged ?? { ok: false, error: "Extensão não respondeu. Atualize o WhatsApp Web e reabra o painel." };
+  }
   const res = await fetch(path, {
     ...opts,
     headers: {
@@ -80,7 +123,7 @@ async function api(token: string, path: string, opts: RequestInit = {}) {
 
 function nudgeExtensionPoll() {
   if (typeof window === "undefined") return;
-  window.postMessage({ __crm: "poll_now_v161" }, window.location.origin);
+  window.postMessage({ __crm: "poll_now_v162" }, window.location.origin);
 }
 
 type Section = "assinantes" | "equipe" | "configuracoes";
@@ -154,8 +197,17 @@ function Painel() {
 
 
   useEffect(() => {
-    setToken(getToken());
-    setReady(true);
+    const storedToken = getToken();
+    if (storedToken) {
+      setToken(storedToken);
+      setReady(true);
+      return;
+    }
+    apiViaExtension("/api/public/extension/meta")
+      .then((r) => {
+        if (r?.ok) setToken(EXTENSION_BRIDGE_TOKEN);
+      })
+      .finally(() => setReady(true));
   }, []);
 
   async function reload(silent = false) {
