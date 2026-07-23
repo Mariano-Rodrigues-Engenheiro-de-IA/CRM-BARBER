@@ -153,13 +153,22 @@ function Painel() {
     );
   }
 
-  const shopName = shop?.name || "Sua barbearia";
+  const shopName = brand.name || shop?.name || "Sua barbearia";
   const shopInitial = shopName.trim().charAt(0).toUpperCase() || "B";
+  const shopLogo = brand.logo || "";
+
+  function saveBrand(next: Brand) {
+    if (!shop?.id) return;
+    writeBrand(shop.id, next);
+    setBrand(next);
+  }
 
   const NAV: Array<{ key: Section; label: string; icon: string; hint: string }> = [
     { key: "assinantes", label: "Assinantes", icon: "💈", hint: "CRM & disparos" },
     { key: "equipe", label: "Equipe", icon: "🏆", hint: "Ranking & metas" },
+    { key: "configuracoes", label: "Configurações", icon: "⚙️", hint: "Nome & logo" },
   ];
+
 
   return (
     <div className="flex min-h-screen bg-neutral-950 text-yellow-50">
