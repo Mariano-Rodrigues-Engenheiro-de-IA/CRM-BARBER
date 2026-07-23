@@ -235,9 +235,13 @@ function KanbanView({
                     <div className="min-w-0">
                       <div className="truncate font-semibold text-yellow-50">{c.name}</div>
                       <div className="text-xs text-neutral-400">{c.phone}</div>
-                      {c.source === "spreadsheet" && (
+                      {c.source === "spreadsheet" ? (
                         <span className="mt-1 inline-block rounded bg-yellow-500/10 px-1.5 py-0.5 text-[10px] uppercase text-yellow-400">
                           planilha
+                        </span>
+                      ) : (
+                        <span className="mt-1 inline-block rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] uppercase text-emerald-400">
+                          manual
                         </span>
                       )}
                     </div>
