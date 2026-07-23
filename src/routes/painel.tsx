@@ -226,31 +226,7 @@ function Painel() {
         </div>
       </div>
 
-      </aside>
 
-      {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-yellow-500/20 bg-neutral-950/95 px-4 py-3 backdrop-blur">
-        <div className="flex items-center gap-2">
-          <div className="grid h-8 w-8 place-items-center overflow-hidden rounded-lg bg-yellow-400 text-sm font-black text-neutral-950">
-            {shopLogo ? <img src={shopLogo} alt="logo" className="h-full w-full object-cover" /> : shopInitial}
-          </div>
-          <span className="truncate text-sm font-bold text-yellow-50">{shopName}</span>
-        </div>
-        <div className="flex gap-1 rounded-md bg-neutral-900 p-1">
-          {NAV.map((n) => (
-            <button
-              key={n.key}
-              onClick={() => setSection(n.key)}
-              className={
-                "rounded px-3 py-1 text-xs font-bold " +
-                (section === n.key ? "bg-yellow-400 text-neutral-950" : "text-neutral-300")
-              }
-            >
-              {n.icon}
-            </button>
-          ))}
-        </div>
-      </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
