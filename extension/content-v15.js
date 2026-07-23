@@ -138,11 +138,15 @@
 
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
     if (msg?.type === "send_message_v180" || msg?.type === "send_message_v170" || msg?.type === "send_message_v161") {
-      handleSend(msg.job).then(sendResponse);
+      handleSend(msg.job)
+        .then(sendResponse)
+        .catch((e) => sendResponse({ ok: false, error: String(e?.message || e) }));
       return true;
     }
     if (msg?.type === "click_send_v180" || msg?.type === "click_send_v170") {
-      clickSendOnOpenChat(msg.job).then(sendResponse);
+      clickSendOnOpenChat(msg.job)
+        .then(sendResponse)
+        .catch((e) => sendResponse({ ok: false, error: String(e?.message || e) }));
       return true;
     }
     if (msg?.type === "show_panel") { ensurePanel(); sendResponse({ ok: true }); return true; }
@@ -205,23 +209,27 @@
   }
 
   async function clickSendOnOpenChat(job) {
-    const text = job?.body;
-    if (!text) return { ok: false, error: "Job inválido" };
-    const box = await waitForSelector('div[contenteditable="true"]', 45000);
-    if (!box) throw new Error("Campo de mensagem não apareceu no WhatsApp");
-    await sleep(2200);
-    const sendButton = findSendButton();
-    if (!sendButton) {
-      const messageBox = findMessageBox() || box;
-      messageBox.focus();
-      document.execCommand("insertText", false, text);
-      await sleep(500);
+    try {
+      const text = job?.body;
+      if (!text) return { ok: false, error: "Job inválido" };
+      const box = await waitForSelector('div[contenteditable="true"]', 45000);
+      if (!box) return { ok: false, error: "Campo de mensagem não apareceu no WhatsApp" };
+      await sleep(2200);
+      const sendButton = findSendButton();
+      if (!sendButton) {
+        const messageBox = findMessageBox() || box;
+        messageBox.focus();
+        document.execCommand("insertText", false, text);
+        await sleep(500);
+      }
+      const btn = findSendButton();
+      if (!btn) return { ok: false, error: "Botão enviar não apareceu no WhatsApp" };
+      btn.click();
+      await sleep(1400);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: String(e?.message || e) };
     }
-    const btn = findSendButton();
-    if (!btn) throw new Error("Botão enviar não apareceu no WhatsApp");
-    btn.click();
-    await sleep(1400);
-    return { ok: true };
   }
 
   async function handleSend(job) {
