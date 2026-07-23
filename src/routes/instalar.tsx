@@ -27,11 +27,20 @@ export const Route = createFileRoute("/instalar")({
 
 // Fetch+blob evita a auth do preview em links diretos pra /public.
 function downloadZip() {
-  fetch(`/crm-assinaturas-extension-v180.zip?v=${Date.now()}`, { cache: "no-store" })
-    .then((res) => {
-      if (!res.ok) throw new Error(`Falha ao baixar: ${res.status}`);
-      return res.blob();
-    })
+  const version = Date.now();
+  const urls = [
+    `/crm-assinaturas-extension-v180.zip?v=${version}`,
+    `/crm-assinaturas-extension-v170.zip?v=${version}`,
+  ];
+  urls
+    .reduce<Promise<Response>>(
+      (prev, url) => prev.catch(() => fetch(url, { cache: "no-store" }).then((res) => {
+        if (!res.ok) throw new Error(`Falha ao baixar: ${res.status}`);
+        return res;
+      })),
+      Promise.reject(new Error("Iniciando download")),
+    )
+    .then((res) => res.blob())
     .then((blob) => {
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
