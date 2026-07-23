@@ -1,7 +1,7 @@
-// Content script v0.18.0 — ponte minimalista: CRM BARBER, Assinantes e Equipe.
+// Content script v0.18.2 — ponte minimalista: CRM BARBER, Assinantes e Equipe.
 
 (function () {
-  const CRM_VERSION = "0.18.0";
+  const CRM_VERSION = "0.18.2";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
@@ -143,12 +143,6 @@
         .catch((e) => sendResponse({ ok: false, error: String(e?.message || e) }));
       return true;
     }
-    if (msg?.type === "click_send_v180" || msg?.type === "click_send_v170") {
-      clickSendOnOpenChat(msg.job)
-        .then(sendResponse)
-        .catch((e) => sendResponse({ ok: false, error: String(e?.message || e) }));
-      return true;
-    }
     if (msg?.type === "show_panel") { ensurePanel(); sendResponse({ ok: true }); return true; }
     return false;
   });
@@ -174,64 +168,6 @@
     clearTimeout(p.timeout);
     p.resolve({ ok: !!d.ok, error: d.error });
   });
-  function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  function normalizePhone(phone) {
-    const only = String(phone || "").replace(/\D/g, "");
-    return only.startsWith("55") ? only : `55${only}`;
-  }
-
-  async function waitForSelector(selector, timeoutMs = 15000) {
-    const start = Date.now();
-    while (Date.now() - start < timeoutMs) {
-      const el = document.querySelector(selector);
-      if (el) return el;
-      await sleep(250);
-    }
-    return null;
-  }
-
-  function findMessageBox() {
-    const boxes = [...document.querySelectorAll('div[contenteditable="true"][role="textbox"], div[contenteditable="true"][data-tab]')];
-    return boxes.find((el) => {
-      const aria = (el.getAttribute("aria-label") || "").toLowerCase();
-      const text = (el.textContent || "").trim();
-      return aria.includes("mensagem") || aria.includes("message") || text.length >= 0;
-    }) || null;
-  }
-
-  function findSendButton() {
-    return document.querySelector('button[aria-label="Enviar"], button[aria-label="Send"]')
-      || document.querySelector('span[data-icon="send"]')?.closest('button, [role="button"]')
-      || document.querySelector('[data-testid="send"]')?.closest('button, [role="button"]');
-  }
-
-  async function clickSendOnOpenChat(job) {
-    try {
-      const text = job?.body;
-      if (!text) return { ok: false, error: "Job inválido" };
-      const box = await waitForSelector('div[contenteditable="true"]', 45000);
-      if (!box) return { ok: false, error: "Campo de mensagem não apareceu no WhatsApp" };
-      await sleep(2200);
-      const sendButton = findSendButton();
-      if (!sendButton) {
-        const messageBox = findMessageBox() || box;
-        messageBox.focus();
-        document.execCommand("insertText", false, text);
-        await sleep(500);
-      }
-      const btn = findSendButton();
-      if (!btn) return { ok: false, error: "Botão enviar não apareceu no WhatsApp" };
-      btn.click();
-      await sleep(1400);
-      return { ok: true };
-    } catch (e) {
-      return { ok: false, error: String(e?.message || e) };
-    }
-  }
-
   async function handleSend(job) {
     const phone = job?.customer?.phone;
     const text = job?.body;
@@ -241,7 +177,7 @@
       const timeout = setTimeout(() => {
         pending.delete(id);
         resolve({ ok: false, error: "Timeout no envio silencioso" });
-      }, 25000);
+      }, 90000);
       pending.set(id, { resolve, timeout });
       window.postMessage({ __crm: "send_v180", id, phone, text }, "*");
     });

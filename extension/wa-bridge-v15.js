@@ -120,7 +120,7 @@
     const possible = [];
 
     // Primeiro tenta APIs que sincronizam PN -> LID.
-    (await queryWid(number, "crm-barber")).forEach((wid) => pushWid(possible, wid, true));
+    (await queryWid(number, "crm-barber")).forEach((wid) => pushWid(possible, wid, isLid(wid)));
 
     // Não usa sleep fixo: espera o cache PN/LID aparecer de verdade.
     pushWid(possible, await waitForLid(number), true);
@@ -178,7 +178,7 @@
     }
 
     // Retry sempre, sem depender do texto do erro. WA pode retornar erros sem a palavra LID.
-    (await queryWid(number, "crm-barber-retry")).forEach((wid) => pushWid(wids, wid, true));
+    (await queryWid(number, "crm-barber-retry")).forEach((wid) => pushWid(wids, wid, isLid(wid)));
     pushWid(wids, await waitForLid(number, 18000), true);
     pushWid(wids, `${number}@c.us`);
     wids = [...new Set(wids)].filter(Boolean);
