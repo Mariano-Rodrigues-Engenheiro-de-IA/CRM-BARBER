@@ -164,9 +164,9 @@ function Painel() {
     setBrand(next);
   }
 
-  const NAV_TOP: Array<{ key: Section; label: string; icon: string }> = [
-    { key: "assinantes", label: "Assinantes", icon: "👥" },
-    { key: "equipe", label: "Equipe", icon: "🏆" },
+  const NAV_TOP: Array<{ key: Section; label: string; icon: React.ReactNode }> = [
+    { key: "assinantes", label: "Assinantes", icon: <IconUsers /> },
+    { key: "equipe", label: "Equipe", icon: <IconTrophy /> },
   ];
 
   const navRowCls = (active: boolean) =>
@@ -199,16 +199,9 @@ function Painel() {
             const active = section === n.key;
             return (
               <button key={n.key} onClick={() => setSection(n.key)} className={navRowCls(active)}>
-                <span className="text-base leading-none">{n.icon}</span>
+                <span className="flex h-5 w-5 items-center justify-center">{n.icon}</span>
                 <span className="flex-1 truncate">{n.label}</span>
-                <span
-                  className={
-                    "text-base leading-none transition " +
-                    (active ? "text-neutral-900" : "text-neutral-400 group-hover:text-neutral-700 group-hover:translate-x-0.5")
-                  }
-                >
-                  ›
-                </span>
+                <IconChevron className={active ? "text-neutral-900" : "text-neutral-400 group-hover:text-neutral-700"} />
               </button>
             );
           })}
@@ -217,16 +210,9 @@ function Painel() {
         <div className="px-3 pb-4 pt-2">
           <div className="mb-3 h-px bg-neutral-200" />
           <button onClick={() => setSection("configuracoes")} className={navRowCls(section === "configuracoes")}>
-            <span className="text-base leading-none">⚙️</span>
+            <span className="flex h-5 w-5 items-center justify-center"><IconGear /></span>
             <span className="flex-1 truncate">Configurações</span>
-            <span
-              className={
-                "text-base leading-none transition " +
-                (section === "configuracoes" ? "text-neutral-900" : "text-neutral-400 group-hover:text-neutral-700")
-              }
-            >
-              ›
-            </span>
+            <IconChevron className={section === "configuracoes" ? "text-neutral-900" : "text-neutral-400 group-hover:text-neutral-700"} />
           </button>
         </div>
       </aside>
@@ -235,7 +221,7 @@ function Painel() {
       <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-neutral-200 bg-white text-neutral-900 px-4 py-3">
         <span className="text-[11px] font-semibold tracking-[0.22em] text-neutral-700">CRM BARBER</span>
         <div className="flex gap-1 rounded-lg bg-neutral-100 p-1">
-          {[...NAV_TOP, { key: "configuracoes" as Section, label: "Config", icon: "⚙️" }].map((n) => (
+          {[...NAV_TOP, { key: "configuracoes" as Section, label: "Config", icon: null }].map((n) => (
             <button
               key={n.key}
               onClick={() => setSection(n.key)}
