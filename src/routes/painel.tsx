@@ -83,7 +83,11 @@ function Painel() {
   const [ready, setReady] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
-  const [section, setSection] = useState<Section>("assinantes");
+  const initialSection: Section =
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("section") === "equipe"
+      ? "equipe"
+      : "assinantes";
+  const [section, setSection] = useState<Section>(initialSection);
   const [tab, setTab] = useState<AssinantesTab>("kanban");
   const [shop, setShop] = useState<{ id: string; name: string } | null>(null);
 
