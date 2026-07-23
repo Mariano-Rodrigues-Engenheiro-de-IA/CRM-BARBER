@@ -108,8 +108,7 @@ async function apiViaExtension(path: string, opts: RequestInit = {}): Promise<Ap
 
 async function api(token: string, path: string, opts: RequestInit = {}) {
   if (token === EXTENSION_BRIDGE_TOKEN) {
-    const bridged = await apiViaExtension(path, opts);
-    return bridged ?? { ok: false, error: "Extensão não respondeu. Atualize o WhatsApp Web e reabra o painel." };
+    return await apiViaExtension(path, opts);
   }
   const res = await fetch(path, {
     ...opts,
