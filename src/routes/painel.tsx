@@ -789,6 +789,11 @@ function CampaignsView({ token }: { token: string }) {
                 <p className="text-xs uppercase tracking-wide text-neutral-500">
                   {c.status === "running" ? "Em andamento" : c.status === "paused" ? "Pausada" : c.status === "canceled" ? "Cancelada" : c.status}
                 </p>
+                {c.created_at && (
+                  <p className="mt-0.5 text-[11px] text-neutral-400">
+                    Criada em {new Date(c.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                )}
               </div>
               <div className="flex gap-2">
                 {!isFinal && (
@@ -829,10 +834,16 @@ function CampaignsView({ token }: { token: string }) {
                 <span>{done} / {total} enviados · {c.stats.failed} falhas {isPaused ? "· pausada" : ""}</span>
                 <span>{pct}%</span>
               </div>
+              {c.last_error && c.stats.failed > 0 && (
+                <p className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
+                  Último erro: {c.last_error}
+                </p>
+              )}
             </div>
           </div>
         );
       })}
+
     </div>
   );
 }
