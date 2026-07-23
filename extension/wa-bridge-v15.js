@@ -1,7 +1,7 @@
 // wa-bridge — MAIN world. Recebe {__crm:"send", id, phone, text} e envia silenciosamente via WPP (wa-js).
 // WhatsApp Web atual exige LID em alguns perfis. Não usamos fallback visível.
 (function () {
-  const BRIDGE_VERSION = "0.18.8";
+  const BRIDGE_VERSION = "0.18.9";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
