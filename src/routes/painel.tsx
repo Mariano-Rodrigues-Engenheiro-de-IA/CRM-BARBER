@@ -163,66 +163,84 @@ function Painel() {
     setBrand(next);
   }
 
-  const NAV_TOP: Array<{ key: Section; label: string }> = [
-    { key: "assinantes", label: "Assinantes" },
-    { key: "equipe", label: "Equipe" },
+  const NAV_TOP: Array<{ key: Section; label: string; icon: string }> = [
+    { key: "assinantes", label: "Assinantes", icon: "👥" },
+    { key: "equipe", label: "Equipe", icon: "🏆" },
   ];
 
-  const navBtnCls = (active: boolean) =>
-    "w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition " +
+  const navRowCls = (active: boolean) =>
+    "group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition " +
     (active
-      ? "bg-neutral-900 text-yellow-400 shadow-sm"
-      : "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900");
-
+      ? "bg-yellow-400 text-neutral-900"
+      : "text-neutral-200 hover:bg-white/[0.06] hover:text-white");
 
   return (
     <div className="flex min-h-screen bg-neutral-100 text-neutral-900">
       {/* Sidebar */}
-      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-neutral-200 bg-white">
-        <div className="flex items-center gap-3 px-5 py-5 border-b border-neutral-200">
-          <div className="grid h-10 w-10 place-items-center overflow-hidden rounded-lg bg-neutral-900 text-sm font-semibold text-yellow-400">
-            {shopLogo ? <img src={shopLogo} alt="logo" className="h-full w-full object-cover" /> : shopInitial}
-          </div>
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold tracking-[0.18em] text-neutral-500">CRM BARBER</p>
-            <p className="truncate text-sm font-medium text-neutral-900">{shopName}</p>
+      <aside className="hidden md:flex w-64 shrink-0 flex-col bg-neutral-950 text-neutral-100">
+        {/* Brand card — emoldura o nome pra não parecer "solto na tela" */}
+        <div className="px-3 pt-4 pb-3">
+          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3">
+            <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-yellow-400 text-base font-bold text-neutral-900 ring-1 ring-black/10">
+              {shopLogo ? <img src={shopLogo} alt="logo" className="h-full w-full object-cover" /> : shopInitial}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold tracking-[0.22em] text-yellow-400/90">CRM BARBER</p>
+              <p className="truncate text-sm font-semibold text-white">{shopName}</p>
+            </div>
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1 px-3 pt-4">
-          {NAV_TOP.map((n) => (
-            <button
-              key={n.key}
-              onClick={() => setSection(n.key)}
-              className={navBtnCls(section === n.key)}
-            >
-              {n.label}
-            </button>
-          ))}
+        <div className="mx-3 mb-2 h-px bg-white/5" />
+
+        <nav className="flex-1 space-y-1 px-3">
+          {NAV_TOP.map((n) => {
+            const active = section === n.key;
+            return (
+              <button key={n.key} onClick={() => setSection(n.key)} className={navRowCls(active)}>
+                <span className="text-base leading-none">{n.icon}</span>
+                <span className="flex-1 truncate">{n.label}</span>
+                <span
+                  className={
+                    "text-base leading-none transition " +
+                    (active ? "text-neutral-900" : "text-neutral-500 group-hover:text-white group-hover:translate-x-0.5")
+                  }
+                >
+                  ›
+                </span>
+              </button>
+            );
+          })}
         </nav>
 
-        <div className="px-3 pb-4">
-          <button
-            onClick={() => setSection("configuracoes")}
-            className={navBtnCls(section === "configuracoes")}
-          >
-            Configurações
+        <div className="px-3 pb-4 pt-2">
+          <div className="mb-3 h-px bg-white/5" />
+          <button onClick={() => setSection("configuracoes")} className={navRowCls(section === "configuracoes")}>
+            <span className="text-base leading-none">⚙️</span>
+            <span className="flex-1 truncate">Configurações</span>
+            <span
+              className={
+                "text-base leading-none transition " +
+                (section === "configuracoes" ? "text-neutral-900" : "text-neutral-500 group-hover:text-white")
+              }
+            >
+              ›
+            </span>
           </button>
         </div>
       </aside>
 
-
       {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-neutral-200 bg-white/95 px-4 py-3 backdrop-blur">
-        <span className="text-xs font-semibold tracking-[0.2em] text-neutral-900">CRM BARBER</span>
-        <div className="flex gap-1 rounded-lg bg-neutral-100 p-1">
-          {[...NAV_TOP, { key: "configuracoes" as Section, label: "Config" }].map((n) => (
+      <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-neutral-800 bg-neutral-950 text-neutral-100 px-4 py-3">
+        <span className="text-[11px] font-semibold tracking-[0.22em] text-yellow-400">CRM BARBER</span>
+        <div className="flex gap-1 rounded-lg bg-white/[0.06] p-1">
+          {[...NAV_TOP, { key: "configuracoes" as Section, label: "Config", icon: "⚙️" }].map((n) => (
             <button
               key={n.key}
               onClick={() => setSection(n.key)}
               className={
                 "rounded-md px-2.5 py-1 text-[11px] font-medium " +
-                (section === n.key ? "bg-neutral-900 text-yellow-400" : "text-neutral-600")
+                (section === n.key ? "bg-yellow-400 text-neutral-900" : "text-neutral-300")
               }
             >
               {n.label}

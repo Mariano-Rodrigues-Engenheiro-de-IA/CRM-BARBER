@@ -1,8 +1,8 @@
-// Content script v0.12.0 — sidebar ponte minimalista: só tiles.
-// Nome/logo da barbearia agora são configurados dentro do painel web.
+// Content script v0.13.0 — sidebar bridge com o mesmo layout do painel:
+// header emoldurado + linhas com chevron. Nome da barbearia vem do /meta.
 
 (function () {
-  const CRM_VERSION = "0.12.0";
+  const CRM_VERSION = "0.13.0";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -12,6 +12,7 @@
   console.info(`[CRM ct v${CRM_VERSION}] carregado`, location.href);
 
   let panelRef = null;
+  let shopCache = null; // { name }
 
   function readLoggedPhone() {
     try {
@@ -27,7 +28,7 @@
     panel.className = "crm-theme-barber";
     panel.innerHTML = `
       <div class="crm-header">
-        <span class="crm-logo-txt">CRM BARBER</span>
+        <span class="crm-header-tag">CRM BARBER</span>
         <button class="crm-toggle" title="Recolher">‹</button>
       </div>
       <div class="crm-body"></div>
@@ -47,6 +48,20 @@
   }
 
   function body() { return panelRef.querySelector(".crm-body"); }
+
+  async function fetchShop(apiBase, token) {
+    if (shopCache) return shopCache;
+    try {
+      const res = await fetch(`${apiBase}/api/public/extension/meta`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data?.ok && data.barbershop) {
+        shopCache = { name: data.barbershop.name || "Sua barbearia" };
+      }
+    } catch { /* ignore */ }
+    return shopCache || { name: "Sua barbearia" };
+  }
 
   async function render() {
     const r = await chrome.runtime.sendMessage({ type: "get_status" });
@@ -74,23 +89,39 @@
     const painelUrl = (section) =>
       `${apiBase}/painel?token=${encodeURIComponent(token)}${section ? `&section=${section}` : ""}`;
 
+    const shop = await fetchShop(apiBase, token);
+    const initial = (shop.name || "B").trim().charAt(0).toUpperCase();
+
     body().innerHTML = `
+      <div class="crm-brand-card">
+        <div class="crm-brand-avatar">${initial}</div>
+        <div class="crm-brand-info">
+          <div class="crm-brand-tag">CRM BARBER</div>
+          <div class="crm-brand-name">${escapeHtml(shop.name)}</div>
+        </div>
+      </div>
+
+      <div class="crm-divider"></div>
+
       <div class="crm-tiles">
         <button class="crm-tile" data-section="assinantes">
-          <div class="crm-tile-body">
-            <div class="crm-tile-title">Assinantes</div>
-          </div>
-          <div class="crm-tile-arrow">→</div>
+          <span class="crm-tile-icon">👥</span>
+          <span class="crm-tile-title">Assinantes</span>
+          <span class="crm-tile-arrow">›</span>
         </button>
         <button class="crm-tile" data-section="equipe">
-          <div class="crm-tile-body">
-            <div class="crm-tile-title">Equipe</div>
-          </div>
-          <div class="crm-tile-arrow">→</div>
+          <span class="crm-tile-icon">🏆</span>
+          <span class="crm-tile-title">Equipe</span>
+          <span class="crm-tile-arrow">›</span>
         </button>
       </div>
 
       <div class="crm-footer">
+        <button class="crm-tile crm-tile-ghost" data-section="configuracoes">
+          <span class="crm-tile-icon">⚙️</span>
+          <span class="crm-tile-title">Configurações</span>
+          <span class="crm-tile-arrow">›</span>
+        </button>
         <button class="crm-unpair">desvincular</button>
       </div>
     `;
@@ -103,9 +134,16 @@
 
     body().querySelector(".crm-unpair").addEventListener("click", async () => {
       if (!confirm("Desvincular esta conta?")) return;
+      shopCache = null;
       await chrome.runtime.sendMessage({ type: "unpair" });
       render();
     });
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (c) => (
+      { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+    ));
   }
 
   function ensurePanel() {
