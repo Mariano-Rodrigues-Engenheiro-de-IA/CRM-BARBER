@@ -131,7 +131,7 @@ function nudgeExtensionPoll() {
   window.postMessage({ __crm: "poll_now_v180" }, window.location.origin);
 }
 
-type Section = "assinantes" | "equipe" | "configuracoes";
+type Section = "assinantes" | "equipe" | "conexao" | "configuracoes";
 
 function IconUsers() {
   return (
@@ -270,6 +270,7 @@ function Painel() {
   const NAV_TOP: Array<{ key: Section; label: string; icon: React.ReactNode }> = [
     { key: "assinantes", label: "Assinantes", icon: <IconUsers /> },
     { key: "equipe", label: "Equipe", icon: <IconTrophy /> },
+    { key: "conexao", label: "Conexão", icon: <IconUsers /> },
   ];
 
   const navRowCls = (active: boolean) =>
@@ -381,6 +382,12 @@ function Painel() {
         {section === "equipe" && (
           <main className="px-6 py-6 mt-14 md:mt-0">
             <TeamView shopId={shop?.id ?? "default"} />
+          </main>
+        )}
+
+        {section === "conexao" && token && (
+          <main className="px-6 py-6 mt-14 md:mt-0 max-w-3xl">
+            <ConnectionView api={(path, opts) => api(token, path, opts)} />
           </main>
         )}
 
