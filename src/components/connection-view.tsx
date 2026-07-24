@@ -169,7 +169,7 @@ export function ConnectionView({ api }: { api: Api }) {
             )}
             <div className="mt-4 flex gap-3">
               <button
-                onClick={refresh}
+                onClick={() => void refresh(true)}
                 className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs text-neutral-700 hover:bg-neutral-50"
               >
                 Atualizar agora
