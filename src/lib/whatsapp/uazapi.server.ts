@@ -273,25 +273,9 @@ export const uazapiProvider: WhatsAppProvider = {
     if (!res.ok && res.status !== 404) {
       throw new Error(`UAZAPI status ${res.status}: ${res.data.error ?? res.raw.slice(0, 200)}`);
     }
-    let qrcode = extractQr(res.data);
-    let status = extractStatus(res.data, qrcode);
-    if (!qrcode && status !== "connected") {
-      const connect = await uaz("/instance/connect", {
-        method: "POST",
-        token: instance_token,
-        body: {},
-      });
-      if (connect.ok) {
-        qrcode = extractQr(connect.data) ?? qrcode;
-        status = extractStatus(connect.data, qrcode);
-      }
-      if (!qrcode && status !== "connected") {
-        console.warn("[uazapi/status] QR ausente", {
-          status: summarizeUaz("/instance/status", res),
-          connect: summarizeUaz("/instance/connect", connect),
-        });
-      }
-    }
+    const qrcode = extractQr(res.data);
+    const status = extractStatus(res.data, qrcode);
+
     const result: StatusResult = {
       status,
       qrcode,
