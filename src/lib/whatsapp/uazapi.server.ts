@@ -113,6 +113,12 @@ function extractQr(data: UazResponse): string | null {
       const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, "");
       const isQrKey = normalizedKey === "qr" || normalizedKey.includes("qrcode") || normalizedKey.includes("qrimage");
       if (isQrKey && typeof raw === "string" && raw.trim().length > 0) return raw.trim();
+      if (isQrKey && isRecord(raw)) {
+        for (const candidateKey of ["base64", "image", "url", "code", "value"]) {
+          const candidate = raw[candidateKey];
+          if (typeof candidate === "string" && candidate.trim().length > 0) return candidate.trim();
+        }
+      }
     }
     for (const raw of Object.values(value)) {
       const nested = findQr(raw, depth + 1);
