@@ -1,73 +1,98 @@
 (function () {
-  const BRIDGE_VERSION = "0.18.22"; // Versão nova para furar o cache
+  const BRIDGE_VERSION = "0.18.23";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
-  const serialize = (w) => (typeof w === "string" ? w : (w?._serialized || w?.id?._serialized || w?.id || null));
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  // RESOLVEDOR "BRUTO" DE LID
-  async function resolveLid(phone) {
-    const digits = String(phone).replace(/\D/g, "");
-    const wid = digits.includes("@") ? digits : (digits.startsWith("55") ? `${digits}@c.us` : `55${digits}@c.us`);
-
-    console.log(`[CRM] Tentando resolver LID para ${wid}...`);
-
-    try {
-      // Técnica 1: Força o WhatsApp a baixar o contato para o cache local
-      await window.WPP.contact.getContact(wid).catch(() => {});
-
-      // Técnica 2: Usa o conversor oficial (toUserLid)
-      const toUserLid = window.WPP?.whatsapp?.toUserLid || window.WPP?.whatsapp?.Functions?.toUserLid;
-      if (typeof toUserLid === "function") {
-        const lid = await toUserLid(wid).catch(() => null);
-        if (lid) {
-          const s = serialize(lid);
-          console.log(`[CRM] LID encontrado via toUserLid: ${s}`);
-          return s;
+  async function waitReady(timeoutMs = 30000) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      try {
+        const wpp = window.WPP;
+        if (wpp) {
+          const ready =
+            (typeof wpp.isReady === "function" ? wpp.isReady() : wpp.isReady) ||
+            (wpp.conn && (typeof wpp.conn.isAuthenticated === "function"
+              ? wpp.conn.isAuthenticated()
+              : wpp.conn.isAuthenticated));
+          if (ready) return true;
         }
-      }
-
-      // Técnica 3: Busca no Store interno
-      const contact = window.WPP?.whatsapp?.ContactStore?.get(wid);
-      if (contact?.lid) {
-        const s = serialize(contact.lid);
-        console.log(`[CRM] LID encontrado no Store: ${s}`);
-        return s;
-      }
-
-      // Técnica 4: Consulta de rede (último recurso)
-      const check = await window.WPP.contact.queryWidExists(wid).catch(() => null);
-      const cLid = check?.lid || check?.id?.lid || (check?.id?.server === "lid" ? check.id._serialized : null);
-      if (cLid) return cLid;
-    } catch (e) {
-      console.warn("[CRM] Erro na busca de LID:", e.message);
+      } catch {}
+      await sleep(300);
     }
+    return !!window.WPP;
+  }
 
-    return wid; // Se nada funcionar, retorna o original
+  function digitsOnly(phone) {
+    return String(phone || "").replace(/\D/g, "");
+  }
+
+  // Gera candidatos BR (com/sem nono dígito). Também aceita não-BR.
+  function buildCandidates(phone) {
+    const d = digitsOnly(phone);
+    if (!d) return [];
+    const set = new Set();
+    set.add(d);
+    // BR: 55 + DDD(2) + numero(8 ou 9)
+    if (d.startsWith("55") && (d.length === 12 || d.length === 13)) {
+      const ddd = d.slice(2, 4);
+      const rest = d.slice(4);
+      if (rest.length === 9 && rest.startsWith("9")) {
+        set.add(`55${ddd}${rest.slice(1)}`); // sem o 9
+      } else if (rest.length === 8) {
+        set.add(`55${ddd}9${rest}`); // com o 9
+      }
+    }
+    return Array.from(set).map((n) => `${n}@c.us`);
+  }
+
+  // Passo 1: garante o chat / sincroniza LID
+  async function ensureChat(wid) {
+    try {
+      if (window.WPP?.chat?.ensureChat) {
+        await window.WPP.chat.ensureChat(wid);
+        return true;
+      }
+    } catch (e) {
+      console.warn("[CRM] ensureChat falhou:", e?.message || e);
+    }
+    // fallback: força carregamento de contato
+    try {
+      await window.WPP?.contact?.getContact?.(wid);
+    } catch {}
+    return false;
+  }
+
+  // Passo 2: injeção assíncrona (não bloqueia por ack)
+  async function sendOnce(wid, text) {
+    await ensureChat(wid);
+    const res = await window.WPP.chat.sendTextMessage(wid, text, {
+      waitForAck: false,
+      createChat: true,
+    });
+    // Se conseguimos um id (ou o WPP não lançou), assumimos sucesso.
+    return !!res;
   }
 
   async function robustSend(phone, text) {
-    const target = await resolveLid(phone);
-    console.info(`[CRM] Alvo final: ${target}`);
+    const candidates = buildCandidates(phone);
+    if (!candidates.length) throw new Error("Telefone inválido");
 
-    // TRUQUE DE MESTRE: No Mac, se o WPP.chat.sendTextMessage falhar por LID,
-    // nós usamos o método interno de baixo nível que pula essa verificação.
-    try {
-      console.log("[CRM] Enviando...");
-      await window.WPP.chat.sendTextMessage(target, text, {
-        waitForAck: false,
-        createChat: true,
-      });
-      return true;
-    } catch (e) {
-      if (String(e?.message || "").includes("LID")) {
-        console.warn("[CRM] Fallback de emergência ativado...");
-        // Tenta enviar usando o formatador de chat bruto
-        const chat = await window.WPP.chat.get(target);
-        return await chat.sendMessage(text).then(() => true).catch(() => false);
+    let lastErr = null;
+    for (const wid of candidates) {
+      try {
+        console.info(`[CRM] envio async → ${wid}`);
+        const ok = await sendOnce(wid, text);
+        if (ok) return true;
+      } catch (e) {
+        lastErr = e;
+        const msg = String(e?.message || e);
+        console.warn(`[CRM] falha em ${wid}: ${msg}`);
+        // segue para próximo candidato (double-check BR)
       }
-      throw e;
     }
+    throw lastErr || new Error("Envio falhou em todos os candidatos");
   }
 
   window.addEventListener("message", async (ev) => {
@@ -76,12 +101,16 @@
     if (!["send_v180", "send_v170"].includes(d.__crm)) return;
 
     try {
+      await waitReady();
       await robustSend(d.phone, d.text);
       window.postMessage({ __crm: d.__crm.replace("send", "sent"), id: d.id, ok: true }, "*");
     } catch (e) {
-      window.postMessage({ __crm: d.__crm.replace("send", "sent"), id: d.id, ok: false, error: e.message }, "*");
+      window.postMessage(
+        { __crm: d.__crm.replace("send", "sent"), id: d.id, ok: false, error: e?.message || String(e) },
+        "*"
+      );
     }
   });
 
-  console.info(`[CRM] Bridge ${BRIDGE_VERSION} (ULTRA FIX) carregado.`);
+  console.info(`[CRM] Bridge ${BRIDGE_VERSION} (Ensure & Async Send) carregado.`);
 })();
