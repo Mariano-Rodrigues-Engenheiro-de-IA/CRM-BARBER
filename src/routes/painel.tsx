@@ -7,6 +7,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TeamView } from "@/components/team-view";
+import { ConnectionView } from "@/components/connection-view";
 
 export const Route = createFileRoute("/painel")({
   head: () => ({
@@ -387,7 +388,7 @@ function Painel() {
 
         {section === "conexao" && token && (
           <main className="px-6 py-6 mt-14 md:mt-0 max-w-3xl">
-            <ConnectionView api={(path, opts) => api(token, path, opts)} />
+            <ConnectionView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
           </main>
         )}
 
