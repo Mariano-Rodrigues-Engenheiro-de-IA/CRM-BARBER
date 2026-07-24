@@ -719,7 +719,15 @@ function DisparoView({
 
     setBusy(true);
     setErr(null);
+    const st = await api(token, "/api/public/extension/whatsapp/status?sync=1");
+    if (!st?.ok || st?.connection?.status !== "connected") {
+      setBusy(false);
+      setErr("WhatsApp não está conectado. Redirecionando pra aba Conexão…");
+      setTimeout(() => onNeedConnection(), 800);
+      return;
+    }
     const r = await api(token, "/api/public/extension/campaigns", {
+
       method: "POST",
       body: JSON.stringify({
         name: name.trim(),
