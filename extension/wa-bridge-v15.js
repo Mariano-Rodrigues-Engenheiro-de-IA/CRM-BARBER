@@ -1,7 +1,7 @@
 // wa-bridge — MAIN world. Recebe {__crm:"send", id, phone, text} e envia silenciosamente via WPP (wa-js).
 // WhatsApp Web atual exige LID em alguns perfis. Não usamos fallback visível.
 (function () {
-  const BRIDGE_VERSION = "0.18.13";
+  const BRIDGE_VERSION = "0.18.14";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -330,10 +330,29 @@
     return false;
   }
 
-  async function waitForServerAck(sendResult, wid, timeoutMs = 75000) {
+  async function nudgeOutgoingQueue(wid, reason) {
+    try {
+      if (typeof window.WPP?.chat?.markIsRead !== "function") return;
+      await window.WPP.chat.markIsRead(wid);
+      console.info("[CRM wa-bridge] markIsRead executado para sincronizar fila", { wid, reason });
+    } catch (e) {
+      console.warn("[CRM wa-bridge] markIsRead falhou", wid, e);
+    }
+  }
+
+  async function readMessageById(messageId) {
+    try {
+      return await window.WPP?.chat?.getMessageById?.(messageId);
+    } catch (e) {
+      console.warn("[CRM wa-bridge] getMessageById falhou", messageId, e);
+      return null;
+    }
+  }
+
+  async function waitForServerAck(sendResult, wid, timeoutMs = 12000) {
     const messageId = readMessageId(sendResult);
     let ack = readAckValue(sendResult);
-    console.info("[CRM wa-bridge] resultado inicial do envio", { wid, messageId, ack });
+    console.info("[CRM wa-bridge] resultado inicial do envio não-bloqueante", { wid, messageId, ack });
 
     if (ack !== null && ack >= 1) return sendResult;
     if (ack !== null && ack < 0) {
@@ -344,33 +363,47 @@
     }
 
     const start = Date.now();
+    let markReadSent = false;
+    let lastAck = ack;
+
     while (Date.now() - start < timeoutMs) {
       await sleep(1500);
-      ack = await getMessageAck(messageId);
-      console.info("[CRM wa-bridge] aguardando confirmação do servidor", { wid, messageId, ack });
+      const message = await readMessageById(messageId);
+      ack = readAckValue(message);
+      if (ack === null) ack = readAckValue(sendResult);
+      if (ack !== null) lastAck = ack;
+
+      const elapsedMs = Date.now() - start;
+      console.info("[CRM wa-bridge] monitoramento passivo da mensagem", { wid, messageId, ack, elapsedMs });
+
       if (ack !== null && ack >= 1) return sendResult;
       if (ack !== null && ack < 0) {
         throw new Error(`WhatsApp recusou o envio para ${wid} (ack ${ack})`);
       }
-      // Fallback Mac/CORS: após 15s, checa o próprio chat.lastMsg
-      if (Date.now() - start > 15000) {
-        const confirmed = await verifyViaChatGet(wid, messageId);
-        if (confirmed) {
-          console.info("[CRM wa-bridge] ack confirmado via chat.get", { wid, messageId });
-          return sendResult;
-        }
+
+      if (!markReadSent && elapsedMs >= 10000 && lastAck === 0) {
+        markReadSent = true;
+        await nudgeOutgoingQueue(wid, "ack_0_after_10s");
+        console.warn(
+          `[CRM wa-bridge] ACK preso em 0 por ${Math.round(elapsedMs / 1000)}s para ${wid} (msg ${messageId}); assumindo sucesso para bypass de telemetria no Mac.`,
+        );
+        return sendResult;
       }
     }
 
-    // Timeout: se temos messageId, assumimos sucesso para evitar duplicidade no Mac.
+    if (!markReadSent) await nudgeOutgoingQueue(wid, "passive_monitor_timeout");
     console.warn(
-      `[CRM wa-bridge] Timeout de ACK (${Math.round(timeoutMs / 1000)}s) para ${wid} (msg ${messageId}). Mensagem foi criada no dispositivo; assumindo sucesso para evitar duplicidade.`,
+      `[CRM wa-bridge] Monitoramento passivo encerrou sem ACK final para ${wid} (msg ${messageId}, último ack ${lastAck}); assumindo sucesso para evitar duplicidade.`,
     );
     return sendResult;
   }
 
   async function sendOnce(wid, text) {
-    const result = await window.WPP.chat.sendTextMessage(wid, text, { waitForAck: false, createChat: true, delay: 250 });
+    const result = await window.WPP.chat.sendTextMessage(wid, text, {
+      waitForAck: false,
+      createChat: true,
+      delay: 250,
+    });
     return await waitForServerAck(result, wid);
   }
 
