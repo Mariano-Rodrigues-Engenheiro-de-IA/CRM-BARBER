@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.18.17";
+  const BRIDGE_VERSION = "0.18.18";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -13,24 +13,31 @@
 
   async function resolveWid(number) {
     const digits = String(number).replace(/\D/g, "");
-    const phone = digits.startsWith("55") ? digits : "55" + digits;
-    const phoneWid = `${phone}@c.us`;
+    let cleanNumber = digits.startsWith("55") ? digits : "55" + digits;
 
-    try {
-      const check = await window.WPP.contact.queryWidExists(phoneWid);
-      if (check) {
-        const lid = check.lid || (typeof check.id === "object" && check.id?.server === "lid" ? check.id._serialized : null);
-        if (lid) return lid;
-        return serializeWid(check.id || check);
-      }
-    } catch (e) {
-      console.warn("[CRM] Falha na consulta de LID, tentando fallback...", e);
+    const candidates = [cleanNumber];
+    if (cleanNumber.length === 13 && cleanNumber.startsWith("55") && cleanNumber[4] === "9") {
+      candidates.push(cleanNumber.slice(0, 4) + cleanNumber.slice(5));
     }
-    return phoneWid;
-  }
 
-  function getAck(result) {
-    return result?.ack ?? result?.msg?.ack ?? result?.message?.ack ?? null;
+    for (const num of candidates) {
+      const target = `${num}@c.us`;
+      try {
+        console.log(`[CRM] Consultando existência de: ${target}`);
+        const check = await window.WPP.contact.queryWidExists(target);
+        if (check && (check.wid || check.id)) {
+          const found = serializeWid(check.wid || check.id);
+          if (found) {
+            console.log(`[CRM] ID resolvido: ${found}`);
+            return found;
+          }
+        }
+      } catch (e) {
+        console.warn(`[CRM] Falha ao consultar ${target}:`, e.message);
+      }
+    }
+
+    return `${cleanNumber}@c.us`;
   }
 
   async function waitReady(timeout = 60000) {
@@ -47,7 +54,7 @@
 
   async function robustSend(phone, text) {
     const wid = await resolveWid(phone);
-    console.info(`[CRM] Enviando para ${wid}...`);
+    console.info(`[CRM] Iniciando envio para ${wid}...`);
 
     try {
       const result = await window.WPP.chat.sendTextMessage(wid, text, {
@@ -58,27 +65,27 @@
       const msgId = serializeWid(result.id || result);
 
       const start = Date.now();
-      while (Date.now() - start < 35000) {
+      while (Date.now() - start < 30000) {
         await sleep(2000);
         const msg = await window.WPP.chat.getMessageById(msgId).catch(() => null);
-        const currentAck = getAck(msg);
+        const ack = msg?.ack ?? null;
 
-        if (currentAck !== null && currentAck >= 1) {
-          console.info("[CRM] Sucesso: Mensagem confirmada.");
+        if (ack !== null && ack >= 1) {
+          console.info("[CRM] Sucesso: Mensagem confirmada pelo servidor.");
           return true;
         }
 
-        if (Date.now() - start > 12000 && currentAck === 0) {
+        if (Date.now() - start > 10000 && ack === 0) {
           await window.WPP.chat.markIsRead(wid).catch(() => {});
-          if (Date.now() - start > 20000) {
-            console.warn("[CRM] Timeout de confirmação no Mac, assumindo sucesso.");
+          if (Date.now() - start > 18000) {
+            console.warn("[CRM] Timeout de ACK no Mac, assumindo sucesso.");
             return true;
           }
         }
       }
       return true;
     } catch (e) {
-      console.error("[CRM] Erro no disparo:", e);
+      console.error("[CRM] Erro no envio:", e.message);
       throw e;
     }
   }
@@ -90,7 +97,7 @@
 
     try {
       const isReady = await waitReady();
-      if (!isReady) throw new Error("WhatsApp não está pronto.");
+      if (!isReady) throw new Error("WhatsApp não pronto.");
 
       await robustSend(d.phone, d.text);
 
@@ -109,5 +116,5 @@
     }
   });
 
-  console.info(`[CRM] Bridge ${BRIDGE_VERSION} (LID + Mac Fix) carregado.`);
+  console.info(`[CRM] Bridge ${BRIDGE_VERSION} (Manual Contacts + Mac Fix) pronto.`);
 })();
