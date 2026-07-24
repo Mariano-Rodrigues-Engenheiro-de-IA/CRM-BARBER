@@ -168,41 +168,59 @@ function summarizeUaz(path: string, response: { status: number; data: UazRespons
   };
 }
 
+async function initInstance(barbershop_id: string, fallbackInstanceId: string | null) {
+  const init = await uaz("/instance/init", {
+    method: "POST",
+    admin: true,
+    body: { name: `barbearia-${barbershop_id.slice(0, 8)}` },
+  });
+  if (!init.ok) {
+    throw new Error(
+      `UAZAPI init falhou (${init.status}): ${init.data.error ?? init.data.message ?? init.raw.slice(0, 200)}`,
+    );
+  }
+  const instance_token =
+    (typeof init.data.token === "string" && init.data.token) ||
+    (typeof init.data.instance?.token === "string" && init.data.instance.token) ||
+    null;
+  const instance_id =
+    (typeof init.data.id === "string" && init.data.id) ||
+    (typeof init.data.instance?.id === "string" && init.data.instance.id) ||
+    fallbackInstanceId;
+  if (!instance_token) {
+    throw new Error("UAZAPI init: token da instância não retornado");
+  }
+  return { instance_id, instance_token };
+}
+
 export const uazapiProvider: WhatsAppProvider = {
   async connect({ barbershop_id, existing_instance_id, existing_instance_token }) {
     let instance_id = existing_instance_id ?? null;
     let instance_token = existing_instance_token ?? null;
 
     if (!instance_id || !instance_token) {
-      const init = await uaz("/instance/init", {
-        method: "POST",
-        admin: true,
-        body: { name: `barbearia-${barbershop_id.slice(0, 8)}` },
-      });
-      if (!init.ok) {
-        throw new Error(
-          `UAZAPI init falhou (${init.status}): ${init.data.error ?? init.data.message ?? init.raw.slice(0, 200)}`,
-        );
-      }
-      instance_token =
-        (typeof init.data.token === "string" && init.data.token) ||
-        init.data.instance?.token ||
-        null;
-      instance_id =
-        (typeof init.data.id === "string" && init.data.id) ||
-        init.data.instance?.id ||
-        instance_id;
-      if (!instance_token) {
-        throw new Error("UAZAPI init: token da instância não retornado");
-      }
+      const fresh = await initInstance(barbershop_id, instance_id);
+      instance_id = fresh.instance_id;
+      instance_token = fresh.instance_token;
     }
 
     // Pede QR / abre conexão.
-    const connect = await uaz("/instance/connect", {
+    let connect = await uaz("/instance/connect", {
       method: "POST",
       token: instance_token,
       body: {},
     });
+    if (!connect.ok && connect.status === 401) {
+      console.warn("[uazapi/connect] token antigo inválido; criando nova instância", summarizeUaz("/instance/connect", connect));
+      const fresh = await initInstance(barbershop_id, null);
+      instance_id = fresh.instance_id;
+      instance_token = fresh.instance_token;
+      connect = await uaz("/instance/connect", {
+        method: "POST",
+        token: instance_token,
+        body: {},
+      });
+    }
     if (!connect.ok) {
       throw new Error(
         `UAZAPI connect falhou (${connect.status}): ${connect.data.error ?? connect.data.message ?? connect.raw.slice(0, 200)}`,
