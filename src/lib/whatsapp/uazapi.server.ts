@@ -82,12 +82,19 @@ function normalizeStatus(input: unknown): InstanceStatus {
 }
 
 function extractQr(data: UazResponse): string | null {
-  return (
-    (typeof data.qrcode === "string" && data.qrcode) ||
-    (typeof data.qr === "string" && data.qr) ||
-    (typeof data.qrCode === "string" && data.qrCode) ||
-    null
-  );
+  const inst = (data.instance ?? {}) as Record<string, unknown>;
+  const candidates = [
+    data.qrcode,
+    data.qr,
+    data.qrCode,
+    inst.qrcode,
+    inst.qr,
+    inst.qrCode,
+  ];
+  for (const c of candidates) {
+    if (typeof c === "string" && c.length > 0) return c;
+  }
+  return null;
 }
 
 function extractStatus(data: UazResponse): InstanceStatus {
