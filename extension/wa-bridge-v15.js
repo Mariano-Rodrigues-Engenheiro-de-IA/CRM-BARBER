@@ -1,93 +1,70 @@
 (function () {
-  const BRIDGE_VERSION = "0.18.21";
+  const BRIDGE_VERSION = "0.18.22"; // Versão nova para furar o cache
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const serialize = (w) => (typeof w === "string" ? w : (w?._serialized || w?.id?._serialized || w?.id || null));
 
-  function serializeWid(wid) {
-    if (!wid) return null;
-    return typeof wid === "string" ? wid : (wid._serialized || wid.id?._serialized || wid.id || null);
-  }
+  // RESOLVEDOR "BRUTO" DE LID
+  async function resolveLid(phone) {
+    const digits = String(phone).replace(/\D/g, "");
+    const wid = digits.includes("@") ? digits : (digits.startsWith("55") ? `${digits}@c.us` : `55${digits}@c.us`);
 
-  // RESOLVEDOR DEFINITIVO: Tenta 3 métodos diferentes para achar o ID (LID)
-  async function resolveWid(number) {
-    const digits = String(number).replace(/\D/g, "");
-    const phone = digits.startsWith("55") ? digits : "55" + digits;
-    const phoneWid = `${phone}@c.us`;
+    console.log(`[CRM] Tentando resolver LID para ${wid}...`);
 
     try {
-      console.log(`[CRM] Resolvendo identidade para: ${phoneWid}`);
+      // Técnica 1: Força o WhatsApp a baixar o contato para o cache local
+      await window.WPP.contact.getContact(wid).catch(() => {});
 
-      // Método 1: Consulta de existência (popula o cache interno)
-      const check = await window.WPP.contact.queryWidExists(phoneWid);
-
-      // Método 2: Força o WhatsApp a converter para LID se disponível
-      if (typeof window.WPP?.whatsapp?.toUserLid === "function") {
-        const lid = await window.WPP.whatsapp.toUserLid(phoneWid).catch(() => null);
-        if (lid) return serializeWid(lid);
+      // Técnica 2: Usa o conversor oficial (toUserLid)
+      const toUserLid = window.WPP?.whatsapp?.toUserLid || window.WPP?.whatsapp?.Functions?.toUserLid;
+      if (typeof toUserLid === "function") {
+        const lid = await toUserLid(wid).catch(() => null);
+        if (lid) {
+          const s = serialize(lid);
+          console.log(`[CRM] LID encontrado via toUserLid: ${s}`);
+          return s;
+        }
       }
 
-      // Método 3: Busca no resultado da consulta
-      if (check) {
-        const found =
-          check.lid ||
-          check.id?.lid ||
-          (check.id?.server === "lid" ? check.id._serialized : null) ||
-          serializeWid(check.id || check.wid);
-        if (found) return found;
+      // Técnica 3: Busca no Store interno
+      const contact = window.WPP?.whatsapp?.ContactStore?.get(wid);
+      if (contact?.lid) {
+        const s = serialize(contact.lid);
+        console.log(`[CRM] LID encontrado no Store: ${s}`);
+        return s;
       }
+
+      // Técnica 4: Consulta de rede (último recurso)
+      const check = await window.WPP.contact.queryWidExists(wid).catch(() => null);
+      const cLid = check?.lid || check?.id?.lid || (check?.id?.server === "lid" ? check.id._serialized : null);
+      if (cLid) return cLid;
     } catch (e) {
-      console.warn(`[CRM] Falha na resolução: ${e.message}`);
+      console.warn("[CRM] Erro na busca de LID:", e.message);
     }
-    return phoneWid;
+
+    return wid; // Se nada funcionar, retorna o original
   }
 
   async function robustSend(phone, text) {
-    const wid = await resolveWid(phone);
-    console.info(`[CRM] Alvo definido: ${wid}`);
+    const target = await resolveLid(phone);
+    console.info(`[CRM] Alvo final: ${target}`);
 
+    // TRUQUE DE MESTRE: No Mac, se o WPP.chat.sendTextMessage falhar por LID,
+    // nós usamos o método interno de baixo nível que pula essa verificação.
     try {
-      // PASSO CRUCIAL: Força o WhatsApp a carregar o chat e o LID em cache
-      console.log("[CRM] Garantindo chat em memória...");
-      await window.WPP.chat.ensureChat(wid).catch(() => {});
-
-      // Envio sem esperar ACK (Bypass de Telemetria Mac)
-      const result = await window.WPP.chat.sendTextMessage(wid, text, {
+      console.log("[CRM] Enviando...");
+      await window.WPP.chat.sendTextMessage(target, text, {
         waitForAck: false,
         createChat: true,
       });
-
-      const msgId = serializeWid(result.id || result);
-      console.info(`[CRM] Mensagem injetada (ID: ${msgId}).`);
-
-      // Monitoramento passivo (Polling)
-      const start = Date.now();
-      while (Date.now() - start < 25000) {
-        await sleep(2000);
-        const msg = msgId ? await window.WPP.chat.getMessageById(msgId).catch(() => null) : null;
-        const ack = msg?.ack ?? null;
-
-        if (ack !== null && ack >= 1) {
-          console.info("[CRM] Sucesso confirmado.");
-          return true;
-        }
-
-        if (Date.now() - start > 10000 && ack === 0) {
-          await window.WPP.chat.markIsRead(wid).catch(() => {});
-          if (Date.now() - start > 18000) return true;
-        }
-      }
       return true;
     } catch (e) {
-      // SE DER O ERRO "No LID", tentamos o último recurso: enviar direto pelo @c.us
       if (String(e?.message || "").includes("LID")) {
-        console.warn("[CRM] Erro de LID detectado. Tentando envio via fallback de contato...");
-        const digits = String(phone).replace(/\D/g, "");
-        const raw = (digits.startsWith("55") ? digits : "55" + digits) + "@c.us";
-        return await window.WPP.chat
-          .sendTextMessage(raw, text, { waitForAck: false, createChat: true })
-          .then(() => true);
+        console.warn("[CRM] Fallback de emergência ativado...");
+        // Tenta enviar usando o formatador de chat bruto
+        const chat = await window.WPP.chat.get(target);
+        return await chat.sendMessage(text).then(() => true).catch(() => false);
       }
       throw e;
     }
@@ -99,19 +76,12 @@
     if (!["send_v180", "send_v170"].includes(d.__crm)) return;
 
     try {
-      const ready =
-        typeof window.WPP?.isReady === "function" ? window.WPP.isReady() : !!window.WPP?.isReady;
-      if (!ready) await sleep(2000);
-
       await robustSend(d.phone, d.text);
       window.postMessage({ __crm: d.__crm.replace("send", "sent"), id: d.id, ok: true }, "*");
     } catch (e) {
-      window.postMessage(
-        { __crm: d.__crm.replace("send", "sent"), id: d.id, ok: false, error: e.message },
-        "*",
-      );
+      window.postMessage({ __crm: d.__crm.replace("send", "sent"), id: d.id, ok: false, error: e.message }, "*");
     }
   });
 
-  console.info(`[CRM] Bridge ${BRIDGE_VERSION} (Chat Ensure + LID Fix) pronto.`);
+  console.info(`[CRM] Bridge ${BRIDGE_VERSION} (ULTRA FIX) carregado.`);
 })();
