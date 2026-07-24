@@ -386,8 +386,9 @@ function Painel() {
                 <KanbanView customers={customers} loading={loading} token={token} reload={reload} />
               )}
               {tab === "disparo" && (
-                <DisparoView customers={customers} token={token} onDone={() => setTab("campanhas")} />
+                <DisparoView customers={customers} token={token} onDone={() => setTab("campanhas")} onNeedConnection={() => setSection("conexao")} />
               )}
+
               {tab === "campanhas" && <CampaignsView token={token} />}
             </main>
           </>
