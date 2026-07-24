@@ -94,14 +94,25 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
               .maybeSingle();
             if (!claimed) continue;
 
-            const { data: customer } = await supabaseAdmin
-              .from("customers")
+            // Prefer the phone snapshotted on the job; fall back to customer.
+            let phone: string | null = null;
+            const { data: jobRow } = await supabaseAdmin
+              .from("message_jobs")
               .select("phone")
-              .eq("id", job.customer_id)
-              .eq("barbershop_id", inst.barbershop_id)
+              .eq("id", job.id)
               .maybeSingle();
+            phone = jobRow?.phone ?? null;
+            if (!phone) {
+              const { data: customer } = await supabaseAdmin
+                .from("customers")
+                .select("phone")
+                .eq("id", job.customer_id)
+                .eq("barbershop_id", inst.barbershop_id)
+                .maybeSingle();
+              phone = customer?.phone ?? null;
+            }
 
-            if (!customer?.phone) {
+            if (!phone) {
               await supabaseAdmin
                 .from("message_jobs")
                 .update({ status: "failed", last_error: "Cliente sem telefone" })
@@ -112,7 +123,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
 
             const result = await provider.sendText({
               instance_token: inst.instance_token,
-              to: customer.phone,
+              to: phone,
               text: job.rendered_body,
             });
 
@@ -122,11 +133,19 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
                 .update({
                   status: "sent",
                   sent_at: new Date().toISOString(),
-                  provider_message_id: result.provider_message_id ?? null,
+                  last_error: result.provider_message_id
+                    ? `provider_id:${result.provider_message_id}`
+                    : null,
                 })
                 .eq("id", job.id);
               totalSent++;
               sentThisShop++;
+              await supabaseAdmin.from("health_events").insert({
+                barbershop_id: inst.barbershop_id,
+                kind: "dispatch_sent",
+                severity: "info",
+                details: { job_id: job.id, provider_id: result.provider_message_id ?? null },
+              });
             } else {
               await supabaseAdmin
                 .from("message_jobs")
@@ -135,10 +154,16 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
                   last_error: result.error,
                   scheduled_for: result.retryable
                     ? new Date(Date.now() + 60_000).toISOString()
-                    : undefined,
+                    : new Date().toISOString(),
                 })
                 .eq("id", job.id);
               totalFailed++;
+              await supabaseAdmin.from("health_events").insert({
+                barbershop_id: inst.barbershop_id,
+                kind: result.retryable ? "dispatch_retry" : "dispatch_failed",
+                severity: result.retryable ? "warning" : "error",
+                details: { job_id: job.id, error: result.error },
+              });
             }
 
             // Pace humano entre envios da mesma barbearia.
@@ -147,12 +172,6 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
             }
           }
         }
-
-        // Log de saúde.
-        await supabaseAdmin.from("health_events").insert({
-          event_type: "dispatcher_run",
-          payload: { sent: totalSent, failed: totalFailed, at: new Date().toISOString() },
-        });
 
         return jsonOk({ processed: totalSent + totalFailed, sent: totalSent, failed: totalFailed });
       },
