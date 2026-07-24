@@ -1,7 +1,7 @@
 // wa-bridge — MAIN world. Recebe {__crm:"send", id, phone, text} e envia silenciosamente via WPP (wa-js).
 // WhatsApp Web atual exige LID em alguns perfis. Não usamos fallback visível.
 (function () {
-  const BRIDGE_VERSION = "0.18.11";
+  const BRIDGE_VERSION = "0.18.12";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -251,15 +251,103 @@
     return String(error?.message || error || "erro desconhecido");
   }
 
+  function makeNonRetryableError(message) {
+    const error = new Error(message);
+    error.crmNonRetryable = true;
+    return error;
+  }
+
   function isRetryableSendError(err) {
+    if (err?.crmNonRetryable) return false;
     const msg = String(err?.message || err || "").toLowerCase();
     return msg.includes("nack") || msg.includes("463") || msg.includes("timeout") || msg.includes("server-nack") || msg.includes("send-msg");
   }
 
   function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
+  function readAckValue(value) {
+    const candidates = [
+      value?.ack,
+      value?.message?.ack,
+      value?.msg?.ack,
+      value?.sendMsgResult?.ack,
+      value?.sendMsgResult?.message?.ack,
+      value?.sendMsgResult?.msg?.ack,
+    ];
+    for (const candidate of candidates) {
+      if (typeof candidate === "number" && Number.isFinite(candidate)) return candidate;
+      if (typeof candidate === "string" && candidate.trim() !== "" && Number.isFinite(Number(candidate))) return Number(candidate);
+    }
+    return null;
+  }
+
+  function readMessageId(value) {
+    const candidates = [
+      value?.id,
+      value?.message?.id,
+      value?.msg?.id,
+      value?.sendMsgResult?.id,
+      value?.sendMsgResult?.message?.id,
+      value?.sendMsgResult?.msg?.id,
+    ];
+    for (const candidate of candidates) {
+      const serialized = serializeWid(candidate);
+      if (serialized) return serialized;
+    }
+    return null;
+  }
+
+  async function getMessageAck(messageId) {
+    if (!messageId) return null;
+    try {
+      const info = await window.WPP?.chat?.getMessageACK?.(messageId);
+      const ack = readAckValue(info);
+      if (ack !== null) return ack;
+    } catch (e) {
+      console.warn("[CRM wa-bridge] getMessageACK falhou", messageId, e);
+    }
+    try {
+      const message = await window.WPP?.chat?.getMessageById?.(messageId);
+      const ack = readAckValue(message);
+      if (ack !== null) return ack;
+    } catch (e) {
+      console.warn("[CRM wa-bridge] getMessageById falhou", messageId, e);
+    }
+    return null;
+  }
+
+  async function waitForServerAck(sendResult, wid, timeoutMs = 75000) {
+    const messageId = readMessageId(sendResult);
+    let ack = readAckValue(sendResult);
+    console.info("[CRM wa-bridge] resultado inicial do envio", { wid, messageId, ack });
+
+    if (ack !== null && ack >= 1) return sendResult;
+    if (ack !== null && ack < 0) {
+      throw new Error(`WhatsApp recusou o envio para ${wid} (ack ${ack})`);
+    }
+    if (!messageId) {
+      throw makeNonRetryableError(`WhatsApp não retornou id da mensagem para ${wid}; envio não confirmado.`);
+    }
+
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      await sleep(1500);
+      ack = await getMessageAck(messageId);
+      console.info("[CRM wa-bridge] aguardando confirmação do servidor", { wid, messageId, ack });
+      if (ack !== null && ack >= 1) return sendResult;
+      if (ack !== null && ack < 0) {
+        throw new Error(`WhatsApp recusou o envio para ${wid} (ack ${ack})`);
+      }
+    }
+
+    throw makeNonRetryableError(
+      `Mensagem criada para ${wid}, mas ficou no relógio e não foi confirmada pelo servidor do WhatsApp em ${Math.round(timeoutMs / 1000)}s. Não marquei como enviada para evitar falso positivo.`,
+    );
+  }
+
   async function sendOnce(wid, text) {
-    return await window.WPP.chat.sendTextMessage(wid, text, { waitForAck: true, createChat: true, delay: 250 });
+    const result = await window.WPP.chat.sendTextMessage(wid, text, { waitForAck: true, createChat: true, delay: 250 });
+    return await waitForServerAck(result, wid);
   }
 
   async function sendSilently(number, text) {

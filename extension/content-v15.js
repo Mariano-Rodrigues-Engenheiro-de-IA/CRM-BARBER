@@ -1,7 +1,7 @@
-// Content script v0.18.11 — ponte minimalista: CRM BARBER, Assinantes e Equipe.
+// Content script v0.18.12 — ponte minimalista: CRM BARBER, Assinantes e Equipe.
 
 (function () {
-  const CRM_VERSION = "0.18.11";
+  const CRM_VERSION = "0.18.12";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
@@ -234,7 +234,7 @@
       const timeout = setTimeout(() => {
         pending.delete(id);
         resolve({ ok: false, error: "Timeout no envio silencioso" });
-      }, 90000);
+      }, 180000);
       pending.set(id, { resolve, timeout });
       window.postMessage({ __crm: "send_v180", id, phone, text }, "*");
     });
