@@ -13,10 +13,14 @@ import { Route as PainelRouteImport } from './routes/painel'
 import { Route as InstalarRouteImport } from './routes/instalar'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPublicSignupRouteImport } from './routes/api/public/signup'
+import { Route as ApiPublicHooksDispatchJobsRouteImport } from './routes/api/public/hooks/dispatch-jobs'
 import { Route as ApiPublicExtensionPairRouteImport } from './routes/api/public/extension/pair'
 import { Route as ApiPublicExtensionMetaRouteImport } from './routes/api/public/extension/meta'
 import { Route as ApiPublicExtensionCustomersRouteImport } from './routes/api/public/extension/customers'
 import { Route as ApiPublicExtensionCampaignsRouteImport } from './routes/api/public/extension/campaigns'
+import { Route as ApiPublicExtensionWhatsappStatusRouteImport } from './routes/api/public/extension/whatsapp.status'
+import { Route as ApiPublicExtensionWhatsappDisconnectRouteImport } from './routes/api/public/extension/whatsapp.disconnect'
+import { Route as ApiPublicExtensionWhatsappConnectRouteImport } from './routes/api/public/extension/whatsapp.connect'
 import { Route as ApiPublicExtensionJobsNextRouteImport } from './routes/api/public/extension/jobs.next'
 import { Route as ApiPublicExtensionJobsIdRouteImport } from './routes/api/public/extension/jobs.$id'
 import { Route as ApiPublicExtensionCustomersImportRouteImport } from './routes/api/public/extension/customers.import'
@@ -43,6 +47,12 @@ const ApiPublicSignupRoute = ApiPublicSignupRouteImport.update({
   path: '/api/public/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksDispatchJobsRoute =
+  ApiPublicHooksDispatchJobsRouteImport.update({
+    id: '/api/public/hooks/dispatch-jobs',
+    path: '/api/public/hooks/dispatch-jobs',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicExtensionPairRoute = ApiPublicExtensionPairRouteImport.update({
   id: '/api/public/extension/pair',
   path: '/api/public/extension/pair',
@@ -63,6 +73,24 @@ const ApiPublicExtensionCampaignsRoute =
   ApiPublicExtensionCampaignsRouteImport.update({
     id: '/api/public/extension/campaigns',
     path: '/api/public/extension/campaigns',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionWhatsappStatusRoute =
+  ApiPublicExtensionWhatsappStatusRouteImport.update({
+    id: '/api/public/extension/whatsapp/status',
+    path: '/api/public/extension/whatsapp/status',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionWhatsappDisconnectRoute =
+  ApiPublicExtensionWhatsappDisconnectRouteImport.update({
+    id: '/api/public/extension/whatsapp/disconnect',
+    path: '/api/public/extension/whatsapp/disconnect',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionWhatsappConnectRoute =
+  ApiPublicExtensionWhatsappConnectRouteImport.update({
+    id: '/api/public/extension/whatsapp/connect',
+    path: '/api/public/extension/whatsapp/connect',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicExtensionJobsNextRoute =
@@ -105,11 +133,15 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
+  '/api/public/hooks/dispatch-jobs': typeof ApiPublicHooksDispatchJobsRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
+  '/api/public/extension/whatsapp/connect': typeof ApiPublicExtensionWhatsappConnectRoute
+  '/api/public/extension/whatsapp/disconnect': typeof ApiPublicExtensionWhatsappDisconnectRoute
+  '/api/public/extension/whatsapp/status': typeof ApiPublicExtensionWhatsappStatusRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -120,11 +152,15 @@ export interface FileRoutesByTo {
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
+  '/api/public/hooks/dispatch-jobs': typeof ApiPublicHooksDispatchJobsRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
+  '/api/public/extension/whatsapp/connect': typeof ApiPublicExtensionWhatsappConnectRoute
+  '/api/public/extension/whatsapp/disconnect': typeof ApiPublicExtensionWhatsappDisconnectRoute
+  '/api/public/extension/whatsapp/status': typeof ApiPublicExtensionWhatsappStatusRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -136,11 +172,15 @@ export interface FileRoutesById {
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
+  '/api/public/hooks/dispatch-jobs': typeof ApiPublicHooksDispatchJobsRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
+  '/api/public/extension/whatsapp/connect': typeof ApiPublicExtensionWhatsappConnectRoute
+  '/api/public/extension/whatsapp/disconnect': typeof ApiPublicExtensionWhatsappDisconnectRoute
+  '/api/public/extension/whatsapp/status': typeof ApiPublicExtensionWhatsappStatusRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -153,11 +193,15 @@ export interface FileRouteTypes {
     | '/api/public/extension/customers'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
+    | '/api/public/hooks/dispatch-jobs'
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
+    | '/api/public/extension/whatsapp/connect'
+    | '/api/public/extension/whatsapp/disconnect'
+    | '/api/public/extension/whatsapp/status'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -168,11 +212,15 @@ export interface FileRouteTypes {
     | '/api/public/extension/customers'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
+    | '/api/public/hooks/dispatch-jobs'
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
+    | '/api/public/extension/whatsapp/connect'
+    | '/api/public/extension/whatsapp/disconnect'
+    | '/api/public/extension/whatsapp/status'
   id:
     | '__root__'
     | '/'
@@ -183,11 +231,15 @@ export interface FileRouteTypes {
     | '/api/public/extension/customers'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
+    | '/api/public/hooks/dispatch-jobs'
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
+    | '/api/public/extension/whatsapp/connect'
+    | '/api/public/extension/whatsapp/disconnect'
+    | '/api/public/extension/whatsapp/status'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -199,8 +251,12 @@ export interface RootRouteChildren {
   ApiPublicExtensionCustomersRoute: typeof ApiPublicExtensionCustomersRouteWithChildren
   ApiPublicExtensionMetaRoute: typeof ApiPublicExtensionMetaRoute
   ApiPublicExtensionPairRoute: typeof ApiPublicExtensionPairRoute
+  ApiPublicHooksDispatchJobsRoute: typeof ApiPublicHooksDispatchJobsRoute
   ApiPublicExtensionJobsIdRoute: typeof ApiPublicExtensionJobsIdRoute
   ApiPublicExtensionJobsNextRoute: typeof ApiPublicExtensionJobsNextRoute
+  ApiPublicExtensionWhatsappConnectRoute: typeof ApiPublicExtensionWhatsappConnectRoute
+  ApiPublicExtensionWhatsappDisconnectRoute: typeof ApiPublicExtensionWhatsappDisconnectRoute
+  ApiPublicExtensionWhatsappStatusRoute: typeof ApiPublicExtensionWhatsappStatusRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -233,6 +289,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/dispatch-jobs': {
+      id: '/api/public/hooks/dispatch-jobs'
+      path: '/api/public/hooks/dispatch-jobs'
+      fullPath: '/api/public/hooks/dispatch-jobs'
+      preLoaderRoute: typeof ApiPublicHooksDispatchJobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/extension/pair': {
       id: '/api/public/extension/pair'
       path: '/api/public/extension/pair'
@@ -259,6 +322,27 @@ declare module '@tanstack/react-router' {
       path: '/api/public/extension/campaigns'
       fullPath: '/api/public/extension/campaigns'
       preLoaderRoute: typeof ApiPublicExtensionCampaignsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/whatsapp/status': {
+      id: '/api/public/extension/whatsapp/status'
+      path: '/api/public/extension/whatsapp/status'
+      fullPath: '/api/public/extension/whatsapp/status'
+      preLoaderRoute: typeof ApiPublicExtensionWhatsappStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/whatsapp/disconnect': {
+      id: '/api/public/extension/whatsapp/disconnect'
+      path: '/api/public/extension/whatsapp/disconnect'
+      fullPath: '/api/public/extension/whatsapp/disconnect'
+      preLoaderRoute: typeof ApiPublicExtensionWhatsappDisconnectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/whatsapp/connect': {
+      id: '/api/public/extension/whatsapp/connect'
+      path: '/api/public/extension/whatsapp/connect'
+      fullPath: '/api/public/extension/whatsapp/connect'
+      preLoaderRoute: typeof ApiPublicExtensionWhatsappConnectRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/extension/jobs/next': {
@@ -341,8 +425,14 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicExtensionCustomersRouteWithChildren,
   ApiPublicExtensionMetaRoute: ApiPublicExtensionMetaRoute,
   ApiPublicExtensionPairRoute: ApiPublicExtensionPairRoute,
+  ApiPublicHooksDispatchJobsRoute: ApiPublicHooksDispatchJobsRoute,
   ApiPublicExtensionJobsIdRoute: ApiPublicExtensionJobsIdRoute,
   ApiPublicExtensionJobsNextRoute: ApiPublicExtensionJobsNextRoute,
+  ApiPublicExtensionWhatsappConnectRoute:
+    ApiPublicExtensionWhatsappConnectRoute,
+  ApiPublicExtensionWhatsappDisconnectRoute:
+    ApiPublicExtensionWhatsappDisconnectRoute,
+  ApiPublicExtensionWhatsappStatusRoute: ApiPublicExtensionWhatsappStatusRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
