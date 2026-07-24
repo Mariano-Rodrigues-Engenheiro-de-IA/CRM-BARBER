@@ -1,7 +1,7 @@
-// Content script v0.18.33 — ponte minimalista: CRM BARBER, Assinantes e Equipe.
+// Content script v0.18.36 — ponte minimalista: CRM BARBER, Assinantes e Equipe.
 
 (function () {
-  const CRM_VERSION = "0.18.33";
+  const CRM_VERSION = "0.18.36";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
