@@ -386,8 +386,9 @@ function Painel() {
                 <KanbanView customers={customers} loading={loading} token={token} reload={reload} />
               )}
               {tab === "disparo" && (
-                <DisparoView customers={customers} token={token} onDone={() => setTab("campanhas")} />
+                <DisparoView customers={customers} token={token} onDone={() => setTab("campanhas")} onNeedConnection={() => setSection("conexao")} />
               )}
+
               {tab === "campanhas" && <CampaignsView token={token} />}
             </main>
           </>
@@ -678,11 +679,14 @@ function DisparoView({
   customers,
   token,
   onDone,
+  onNeedConnection,
 }: {
   customers: Customer[];
   token: string;
   onDone: () => void;
+  onNeedConnection: () => void;
 }) {
+
   const [name, setName] = useState("");
   const [variants, setVariants] = useState<string[]>([""]);
   const [segment, setSegment] = useState<string>("overdue");
@@ -715,7 +719,15 @@ function DisparoView({
 
     setBusy(true);
     setErr(null);
+    const st = await api(token, "/api/public/extension/whatsapp/status?sync=1");
+    if (!st?.ok || st?.connection?.status !== "connected") {
+      setBusy(false);
+      setErr("WhatsApp não está conectado. Redirecionando pra aba Conexão…");
+      setTimeout(() => onNeedConnection(), 800);
+      return;
+    }
     const r = await api(token, "/api/public/extension/campaigns", {
+
       method: "POST",
       body: JSON.stringify({
         name: name.trim(),
