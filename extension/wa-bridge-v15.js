@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.18.16";
+  const BRIDGE_VERSION = "0.18.17";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -11,18 +11,34 @@
     return wid._serialized || wid.id?._serialized || wid.id || null;
   }
 
+  async function resolveWid(number) {
+    const digits = String(number).replace(/\D/g, "");
+    const phone = digits.startsWith("55") ? digits : "55" + digits;
+    const phoneWid = `${phone}@c.us`;
+
+    try {
+      const check = await window.WPP.contact.queryWidExists(phoneWid);
+      if (check) {
+        const lid = check.lid || (typeof check.id === "object" && check.id?.server === "lid" ? check.id._serialized : null);
+        if (lid) return lid;
+        return serializeWid(check.id || check);
+      }
+    } catch (e) {
+      console.warn("[CRM] Falha na consulta de LID, tentando fallback...", e);
+    }
+    return phoneWid;
+  }
+
   function getAck(result) {
     return result?.ack ?? result?.msg?.ack ?? result?.message?.ack ?? null;
   }
 
-  // Versão robusta que aceita isReady como função ou booleano
   async function waitReady(timeout = 60000) {
     const start = Date.now();
     while (Date.now() - start < timeout) {
       const wpp = window.WPP;
-      if (wpp) {
-        const ready = typeof wpp.isReady === "function" ? wpp.isReady() : wpp.isReady;
-        if (ready && wpp.chat) return true;
+      if (wpp && (typeof wpp.isReady === "function" ? wpp.isReady() : wpp.isReady)) {
+        if (wpp.chat && wpp.contact) return true;
       }
       await sleep(1000);
     }
@@ -30,12 +46,8 @@
   }
 
   async function robustSend(phone, text) {
-    console.info(`[CRM] Preparando envio para: ${phone}`);
-
-    const digits = String(phone).replace(/\D/g, "");
-    const wid = digits.includes("@")
-      ? digits
-      : (digits.length >= 12 ? `${digits}@c.us` : `55${digits}@c.us`);
+    const wid = await resolveWid(phone);
+    console.info(`[CRM] Enviando para ${wid}...`);
 
     try {
       const result = await window.WPP.chat.sendTextMessage(wid, text, {
@@ -44,7 +56,6 @@
       });
 
       const msgId = serializeWid(result.id || result);
-      console.info(`[CRM] Mensagem injetada. ID: ${msgId}. Aguardando ACK...`);
 
       const start = Date.now();
       while (Date.now() - start < 35000) {
@@ -53,18 +64,21 @@
         const currentAck = getAck(msg);
 
         if (currentAck !== null && currentAck >= 1) {
-          console.info("[CRM] Sucesso: ACK confirmado.");
+          console.info("[CRM] Sucesso: Mensagem confirmada.");
           return true;
         }
 
         if (Date.now() - start > 12000 && currentAck === 0) {
           await window.WPP.chat.markIsRead(wid).catch(() => {});
-          if (Date.now() - start > 20000) return true;
+          if (Date.now() - start > 20000) {
+            console.warn("[CRM] Timeout de confirmação no Mac, assumindo sucesso.");
+            return true;
+          }
         }
       }
       return true;
     } catch (e) {
-      console.error("[CRM] Erro no sendTextMessage:", e);
+      console.error("[CRM] Erro no disparo:", e);
       throw e;
     }
   }
@@ -76,7 +90,7 @@
 
     try {
       const isReady = await waitReady();
-      if (!isReady) throw new Error("WPP não inicializado.");
+      if (!isReady) throw new Error("WhatsApp não está pronto.");
 
       await robustSend(d.phone, d.text);
 
@@ -95,5 +109,5 @@
     }
   });
 
-  console.info(`[CRM] Bridge ${BRIDGE_VERSION} (Mac Fix) carregado.`);
+  console.info(`[CRM] Bridge ${BRIDGE_VERSION} (LID + Mac Fix) carregado.`);
 })();
