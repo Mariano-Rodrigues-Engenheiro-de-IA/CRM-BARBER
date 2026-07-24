@@ -185,7 +185,7 @@ export function ConnectionView({ api }: { api: Api }) {
             <Button
               type="button"
               variant="outline"
-              onClick={disconnect}
+              onClick={() => setConfirmAction("disconnect")}
               disabled={busy}
               className="border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
             >
