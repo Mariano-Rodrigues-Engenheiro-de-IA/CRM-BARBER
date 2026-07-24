@@ -43,7 +43,10 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/status")({
         // Força sync quando o cliente pede (`?sync=1`) ou quando o cache local não é `connected`.
         const staleMs = inst.status === "connected" ? 15000 : 0;
         const lastSync = inst.last_synced_at ? new Date(inst.last_synced_at).getTime() : 0;
-        const shouldSync = forceSync || Date.now() - lastSync > staleMs;
+        const ageMs = Date.now() - lastSync;
+        const disconnectCooldownMs = 30000;
+        const shouldRespectLocalDisconnect = inst.status === "disconnected" && ageMs < disconnectCooldownMs;
+        const shouldSync = !shouldRespectLocalDisconnect && (forceSync || ageMs > staleMs);
 
         let status = inst.status;
         let phone = inst.phone;

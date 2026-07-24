@@ -11,6 +11,17 @@
 // como fallback visual (chamada só do lado do usuário, imagem estática).
 
 import { useEffect, useRef, useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 
 type Api = (path: string, opts?: RequestInit) => Promise<{ ok?: boolean; error?: string; [k: string]: unknown }>;
 
@@ -26,14 +37,32 @@ export function ConnectionView({ api }: { api: Api }) {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<"connect" | "disconnect" | null>(null);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshSeqRef = useRef(0);
+  const operationSeqRef = useRef(0);
+  const actionRef = useRef<"connect" | "disconnect" | null>(null);
+
+  function clearPoll() {
+    if (pollRef.current) {
+      clearTimeout(pollRef.current);
+      pollRef.current = null;
+    }
+  }
 
   async function refresh(force = false) {
+    if (actionRef.current) return;
+    const refreshSeq = ++refreshSeqRef.current;
+    const operationSeq = operationSeqRef.current;
     setErr(null);
     const path = force
       ? "/api/public/extension/whatsapp/status?sync=1"
       : "/api/public/extension/whatsapp/status";
     const res = await api(path);
+    if (refreshSeq !== refreshSeqRef.current || operationSeq !== operationSeqRef.current || actionRef.current) {
+      setLoading(false);
+      return;
+    }
     if (res.ok && res.connection) {
       setConn(res.connection as Connection);
     } else if (res.error) {
@@ -45,22 +74,26 @@ export function ConnectionView({ api }: { api: Api }) {
   useEffect(() => {
     void refresh();
     return () => {
-      if (pollRef.current) clearTimeout(pollRef.current);
+      clearPoll();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Polling automático: 2.5s enquanto conectando, 10s quando conectado/desconectado.
   useEffect(() => {
-    if (pollRef.current) clearTimeout(pollRef.current);
+    clearPoll();
+    if (busy) return;
     const interval = conn?.status === "connecting" ? 2500 : 10000;
     pollRef.current = setTimeout(() => void refresh(true), interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conn?.status, conn?.qrcode]);
+  }, [conn?.status, conn?.qrcode, busy]);
 
   // Re-sincroniza quando a aba volta ao foco (usuário voltou da UAZAPI etc.).
   useEffect(() => {
-    function onFocus() { void refresh(true); }
+    function onFocus() {
+      if (document.visibilityState === "hidden" || actionRef.current) return;
+      void refresh(true);
+    }
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
     return () => {
@@ -71,25 +104,48 @@ export function ConnectionView({ api }: { api: Api }) {
   }, []);
 
   async function connect() {
+    actionRef.current = "connect";
+    operationSeqRef.current += 1;
+    refreshSeqRef.current += 1;
+    clearPoll();
     setBusy(true);
     setErr(null);
+    setConn((prev) => ({
+      status: "connecting",
+      phone: prev?.phone ?? null,
+      qrcode: null,
+      provider: prev?.provider ?? "uazapi",
+    }));
     const res = await api("/api/public/extension/whatsapp/connect", { method: "POST" });
-    setBusy(false);
     if (res.ok && res.connection) {
       setConn(res.connection as Connection);
     } else {
       setErr(res.error || "Falha ao iniciar conexão");
     }
+    actionRef.current = null;
+    operationSeqRef.current += 1;
+    setBusy(false);
   }
 
   async function disconnect() {
-    if (!confirm("Desconectar o WhatsApp da barbearia? Os disparos vão parar até você reconectar.")) return;
+    actionRef.current = "disconnect";
+    operationSeqRef.current += 1;
+    refreshSeqRef.current += 1;
+    clearPoll();
     setBusy(true);
-    await api("/api/public/extension/whatsapp/disconnect", { method: "POST" });
-    // Optimistic: reflete imediatamente na UI.
+    setErr(null);
     setConn((prev) => (prev ? { ...prev, status: "disconnected", phone: null, qrcode: null } : prev));
+    await api("/api/public/extension/whatsapp/disconnect", { method: "POST" });
+    actionRef.current = null;
+    operationSeqRef.current += 1;
     setBusy(false);
-    void refresh(true);
+  }
+
+  async function runConfirmedAction() {
+    const action = confirmAction;
+    setConfirmAction(null);
+    if (action === "connect") await connect();
+    if (action === "disconnect") await disconnect();
   }
 
 
@@ -126,13 +182,15 @@ export function ConnectionView({ api }: { api: Api }) {
 
         {status === "connected" && (
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <button
+            <Button
+              type="button"
+              variant="outline"
               onClick={disconnect}
               disabled={busy}
-              className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+              className="border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
             >
               Desconectar
-            </button>
+            </Button>
             <p className="text-xs text-neutral-500 sm:self-center">
               WhatsApp conectado — pronto para disparar campanhas.
             </p>
@@ -142,13 +200,14 @@ export function ConnectionView({ api }: { api: Api }) {
 
         {(status === "disconnected" || status === "hibernated") && (
           <div className="mt-6">
-            <button
-              onClick={connect}
+            <Button
+              type="button"
+              onClick={() => setConfirmAction("connect")}
               disabled={busy}
-              className="rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
+              className="bg-neutral-900 text-white hover:bg-neutral-800"
             >
               {busy ? "Preparando…" : "Conectar WhatsApp"}
-            </button>
+            </Button>
             <p className="mt-3 text-xs text-neutral-500">
               Vai gerar um QR code pra você escanear com o WhatsApp da barbearia.
             </p>
@@ -168,23 +227,80 @@ export function ConnectionView({ api }: { api: Api }) {
               <p className="text-sm text-neutral-500">Gerando QR code…</p>
             )}
             <div className="mt-4 flex gap-3">
-              <button
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
                 onClick={() => void refresh(true)}
-                className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs text-neutral-700 hover:bg-neutral-50"
+                className="border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
               >
                 Atualizar agora
-              </button>
-              <button
-                onClick={disconnect}
-                className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs text-neutral-700 hover:bg-neutral-50"
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setConfirmAction("disconnect")}
+                className="border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
               >
                 Cancelar
-              </button>
+              </Button>
             </div>
           </div>
         )}
       </div>
+      <ConnectionConfirmDialog
+        action={confirmAction}
+        busy={busy}
+        onCancel={() => setConfirmAction(null)}
+        onConfirm={() => void runConfirmedAction()}
+      />
     </div>
+  );
+}
+
+function ConnectionConfirmDialog({
+  action,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  action: "connect" | "disconnect" | null;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const isConnect = action === "connect";
+  return (
+    <AlertDialog open={action !== null} onOpenChange={(open) => { if (!open && !busy) onCancel(); }}>
+      <AlertDialogContent className="max-w-md rounded-2xl border-neutral-200 bg-white p-0 shadow-2xl">
+        <AlertDialogHeader className="space-y-3 px-6 pt-6 text-left">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-100 text-amber-900">
+            <span className="text-lg font-bold">!</span>
+          </div>
+          <AlertDialogTitle className="text-xl font-semibold text-neutral-950">
+            {isConnect ? "Conectar WhatsApp?" : "Desconectar WhatsApp?"}
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-sm leading-6 text-neutral-600">
+            {isConnect
+              ? "Vamos gerar um QR code para parear o WhatsApp da barbearia."
+              : "Os disparos vão parar até você conectar o WhatsApp novamente."}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="gap-2 border-t border-neutral-100 bg-neutral-50 px-6 py-4 sm:space-x-0">
+          <AlertDialogCancel disabled={busy} className="mt-0 border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100">
+            Cancelar
+          </AlertDialogCancel>
+          <AlertDialogAction
+            disabled={busy}
+            onClick={onConfirm}
+            className="bg-neutral-950 text-white hover:bg-neutral-800"
+          >
+            {isConnect ? "Conectar" : "Desconectar"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
