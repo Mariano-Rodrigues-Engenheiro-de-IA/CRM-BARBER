@@ -25,11 +25,13 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
         }
 
         const nowIso = new Date().toISOString();
-        const staleClaimIso = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+        const staleClaimIso = new Date(Date.now() - 6 * 60 * 1000).toISOString();
 
         // MV3 service workers can be terminated between claiming and reporting.
         // Without this, a job can remain `in_flight` forever and the campaign
-        // appears stopped. Requeue only old claims from this barbershop.
+        // appears stopped. Keep the window above the silent-send ack timeout,
+        // otherwise a slow WhatsApp ack could be requeued while still sending.
+        // Requeue only old claims from this barbershop.
         await supabaseAdmin
           .from("message_jobs")
           .update({
