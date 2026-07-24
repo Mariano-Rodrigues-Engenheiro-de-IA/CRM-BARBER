@@ -30,7 +30,7 @@ function downloadZip() {
   const version = Date.now();
   const urls = [
     `/crm-assinaturas-extension-v1831.zip?v=${version}`,
-    `/crm-assinaturas-extension-v1826.zip?v=${version}`,
+    `/crm-assinaturas-extension-v1830.zip?v=${version}`,
   ];
   urls
     .reduce<Promise<Response>>(
