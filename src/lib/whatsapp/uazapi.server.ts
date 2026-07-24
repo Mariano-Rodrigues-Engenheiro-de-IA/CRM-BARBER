@@ -50,6 +50,12 @@ type UazResponse = Record<string, unknown> & {
   message?: string;
 };
 
+type UazStatusPayload = {
+  connected?: boolean;
+  loggedIn?: boolean;
+  jid?: string;
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -79,6 +85,11 @@ async function uaz(
 }
 
 function normalizeStatus(input: unknown): InstanceStatus {
+  if (isRecord(input)) {
+    const statusPayload = input as UazStatusPayload;
+    if (statusPayload.connected === true || statusPayload.loggedIn === true) return "connected";
+    if (statusPayload.connected === false || statusPayload.loggedIn === false) return "disconnected";
+  }
   const s = String(input ?? "").toLowerCase();
   if (s.includes("connected") || s === "open" || s === "authenticated") return "connected";
   if (
@@ -137,7 +148,7 @@ function extractQr(data: UazResponse): string | null {
 
 function extractStatus(data: UazResponse, qrcode: string | null = extractQr(data)): InstanceStatus {
   const status = normalizeStatus(
-    data.status ?? data.state ?? data.connectionStatus ?? data.connection ?? data.instance?.status,
+    data.instance?.status ?? data.status ?? data.state ?? data.connectionStatus ?? data.connection,
   );
   if (status === "connected") return "connected";
   if (qrcode) return "connecting";
@@ -145,9 +156,12 @@ function extractStatus(data: UazResponse, qrcode: string | null = extractQr(data
 }
 
 function extractPhone(data: UazResponse): string | null {
+  const statusPayload = isRecord(data.status) ? (data.status as UazStatusPayload) : null;
   const raw =
     (typeof data.phone === "string" && data.phone) ||
     (typeof data.wid === "string" && data.wid) ||
+    (typeof statusPayload?.jid === "string" && statusPayload.jid) ||
+    (typeof data.instance?.owner === "string" && data.instance.owner) ||
     (typeof data.instance?.phone === "string" && data.instance.phone) ||
     null;
   if (!raw) return null;
