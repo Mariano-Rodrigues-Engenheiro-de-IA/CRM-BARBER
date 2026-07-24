@@ -34,10 +34,12 @@ function adminToken(): string {
 }
 
 type UazResponse = Record<string, unknown> & {
-  status?: string;
+  status?: unknown;
   state?: string;
   connectionStatus?: string;
   connection?: string;
+  connected?: boolean;
+  loggedIn?: boolean;
   qrcode?: string;
   qr?: string;
   qrCode?: string;
@@ -147,12 +149,13 @@ function extractQr(data: UazResponse): string | null {
 }
 
 function extractStatus(data: UazResponse, qrcode: string | null = extractQr(data)): InstanceStatus {
-  const status = normalizeStatus(
-    data.instance?.status ?? data.status ?? data.state ?? data.connectionStatus ?? data.connection,
-  );
-  if (status === "connected") return "connected";
+  const candidates = [data.status, data, data.instance?.status, data.state, data.connectionStatus, data.connection];
+  const normalized = candidates.map((candidate) => normalizeStatus(candidate));
+  if (normalized.includes("connected")) return "connected";
   if (qrcode) return "connecting";
-  return status;
+  if (normalized.includes("connecting")) return "connecting";
+  if (normalized.includes("hibernated")) return "hibernated";
+  return "disconnected";
 }
 
 function extractPhone(data: UazResponse): string | null {
@@ -160,12 +163,12 @@ function extractPhone(data: UazResponse): string | null {
   const raw =
     (typeof data.phone === "string" && data.phone) ||
     (typeof data.wid === "string" && data.wid) ||
-    (typeof statusPayload?.jid === "string" && statusPayload.jid) ||
     (typeof data.instance?.owner === "string" && data.instance.owner) ||
     (typeof data.instance?.phone === "string" && data.instance.phone) ||
+    (typeof statusPayload?.jid === "string" && statusPayload.jid) ||
     null;
   if (!raw) return null;
-  return raw.replace(/@.*/, "").replace(/\D+/g, "") || null;
+  return raw.split("@")[0]?.split(":")[0]?.replace(/\D+/g, "") || null;
 }
 
 function summarizeUaz(path: string, response: { status: number; data: UazResponse; raw: string }) {

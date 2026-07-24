@@ -37,8 +37,9 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/status")({
           });
         }
 
-        // Se está conectando, ou o cache está velho (>10s), sincroniza com o provider.
-        const staleMs = inst.status === "connecting" ? 3000 : 15000;
+        // Estados não-conectados precisam sincronizar sempre: se o QR foi lido
+        // fora do painel, o cache local pode ficar preso em "connecting"/"disconnected".
+        const staleMs = inst.status === "connected" ? 15000 : 0;
         const lastSync = inst.last_synced_at ? new Date(inst.last_synced_at).getTime() : 0;
         const shouldSync = Date.now() - lastSync > staleMs;
 
