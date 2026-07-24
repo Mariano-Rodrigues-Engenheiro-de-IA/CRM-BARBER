@@ -148,6 +148,20 @@ function extractPhone(data: UazResponse): string | null {
   return raw.replace(/@.*/, "").replace(/\D+/g, "") || null;
 }
 
+function summarizeUaz(path: string, response: { status: number; data: UazResponse; raw: string }) {
+  const keys = Object.keys(response.data).slice(0, 20);
+  const instanceKeys = isRecord(response.data.instance) ? Object.keys(response.data.instance).slice(0, 20) : [];
+  return {
+    path,
+    statusCode: response.status,
+    status: response.data.status ?? response.data.state ?? response.data.connectionStatus ?? response.data.connection,
+    message: response.data.error ?? response.data.message,
+    keys,
+    instanceKeys,
+    rawSize: response.raw.length,
+  };
+}
+
 export const uazapiProvider: WhatsAppProvider = {
   async connect({ barbershop_id, existing_instance_id, existing_instance_token }) {
     let instance_id = existing_instance_id ?? null;
@@ -197,6 +211,12 @@ export const uazapiProvider: WhatsAppProvider = {
         qrcode = extractQr(synced.data) ?? qrcode;
         status = extractStatus(synced.data, qrcode);
       }
+      if (!qrcode && status !== "connected") {
+        console.warn("[uazapi/connect] QR ausente", {
+          connect: summarizeUaz("/instance/connect", connect),
+          status: synced.ok ? summarizeUaz("/instance/status", synced) : summarizeUaz("/instance/status", synced),
+        });
+      }
     }
 
     return {
@@ -212,9 +232,27 @@ export const uazapiProvider: WhatsAppProvider = {
     if (!res.ok && res.status !== 404) {
       throw new Error(`UAZAPI status ${res.status}: ${res.data.error ?? res.raw.slice(0, 200)}`);
     }
-    const qrcode = extractQr(res.data);
+    let qrcode = extractQr(res.data);
+    let status = extractStatus(res.data, qrcode);
+    if (!qrcode && status !== "connected") {
+      const connect = await uaz("/instance/connect", {
+        method: "POST",
+        token: instance_token,
+        body: {},
+      });
+      if (connect.ok) {
+        qrcode = extractQr(connect.data) ?? qrcode;
+        status = extractStatus(connect.data, qrcode);
+      }
+      if (!qrcode && status !== "connected") {
+        console.warn("[uazapi/status] QR ausente", {
+          status: summarizeUaz("/instance/status", res),
+          connect: summarizeUaz("/instance/connect", connect),
+        });
+      }
+    }
     const result: StatusResult = {
-      status: extractStatus(res.data, qrcode),
+      status,
       qrcode,
       phone: extractPhone(res.data),
     };
