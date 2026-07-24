@@ -117,8 +117,9 @@ export function ConnectionView({ api }: { api: Api }) {
               Desconectar
             </button>
             <p className="text-xs text-neutral-500 sm:self-center">
-              Suas campanhas rodam no servidor 24/7 enquanto o WhatsApp estiver conectado.
+              WhatsApp conectado — pronto para disparar campanhas.
             </p>
+
           </div>
         )}
 
