@@ -172,7 +172,7 @@ async function initInstance(barbershop_id: string, fallbackInstanceId: string | 
   const init = await uaz("/instance/init", {
     method: "POST",
     admin: true,
-    body: { name: `barbearia-${barbershop_id.slice(0, 8)}` },
+    body: { name: `barbearia-${barbershop_id.slice(0, 8)}-${Date.now().toString(36)}` },
   });
   if (!init.ok) {
     throw new Error(
