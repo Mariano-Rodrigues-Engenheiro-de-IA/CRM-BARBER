@@ -15,6 +15,10 @@ export const Route = createFileRoute("/painel")({
       { title: "Painel do CRM — Assinaturas" },
       { name: "robots", content: "noindex" },
       { name: "description", content: "Painel de gestão de assinantes da barbearia." },
+      { property: "og:title", content: "Painel do CRM — Assinaturas" },
+      { property: "og:description", content: "Painel de gestão de assinantes da barbearia." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Painel,
@@ -193,7 +197,7 @@ function Painel() {
   const initialSection: Section = (() => {
     if (typeof window === "undefined") return "assinantes";
     const s = new URLSearchParams(window.location.search).get("section");
-    if (s === "equipe" || s === "configuracoes") return s;
+    if (s === "equipe" || s === "conexao" || s === "configuracoes") return s;
     return "assinantes";
   })();
   const [section, setSection] = useState<Section>(initialSection);

@@ -1,7 +1,7 @@
-// Content script v0.18.37 — ponte minimalista: CRM BARBER, Assinantes e Equipe.
+// Content script v0.18.38 — ponte minimalista: CRM BARBER, Assinantes, Equipe e Conexão.
 
 (function () {
-  const CRM_VERSION = "0.18.37";
+  const CRM_VERSION = "0.18.38";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
@@ -131,6 +131,7 @@
 
     const iconUsers = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
     const iconTrophy = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v3a3 3 0 0 1-3 3"/><path d="M7 5H4v3a3 3 0 0 0 3 3"/></svg>`;
+    const iconPhone = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.33 1.77.62 2.61a2 2 0 0 1-.45 2.11L8.09 9.63a16 16 0 0 0 6.28 6.28l1.19-1.19a2 2 0 0 1 2.11-.45c.84.29 1.71.5 2.61.62A2 2 0 0 1 22 16.92z"/></svg>`;
     const chev = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>`;
 
     body().innerHTML = `
@@ -143,6 +144,11 @@
         <button class="crm-tile" data-section="equipe">
           <span class="crm-tile-icon">${iconTrophy}</span>
           <span class="crm-tile-title">Equipe</span>
+          <span class="crm-tile-arrow">${chev}</span>
+        </button>
+        <button class="crm-tile" data-section="conexao">
+          <span class="crm-tile-icon">${iconPhone}</span>
+          <span class="crm-tile-title">Conexão</span>
           <span class="crm-tile-arrow">${chev}</span>
         </button>
       </div>
