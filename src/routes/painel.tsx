@@ -679,11 +679,14 @@ function DisparoView({
   customers,
   token,
   onDone,
+  onNeedConnection,
 }: {
   customers: Customer[];
   token: string;
   onDone: () => void;
+  onNeedConnection: () => void;
 }) {
+
   const [name, setName] = useState("");
   const [variants, setVariants] = useState<string[]>([""]);
   const [segment, setSegment] = useState<string>("overdue");
