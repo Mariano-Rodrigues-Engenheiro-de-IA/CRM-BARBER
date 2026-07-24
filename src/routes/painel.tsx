@@ -677,6 +677,8 @@ function DisparoView({
   const [paceMax, setPaceMax] = useState(60);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+
 
   const total = segment === "all"
     ? customers.length
