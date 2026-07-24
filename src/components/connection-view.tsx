@@ -28,9 +28,12 @@ export function ConnectionView({ api }: { api: Api }) {
   const [busy, setBusy] = useState(false);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  async function refresh() {
+  async function refresh(force = false) {
     setErr(null);
-    const res = await api("/api/public/extension/whatsapp/status");
+    const path = force
+      ? "/api/public/extension/whatsapp/status?sync=1"
+      : "/api/public/extension/whatsapp/status";
+    const res = await api(path);
     if (res.ok && res.connection) {
       setConn(res.connection as Connection);
     } else if (res.error) {
@@ -47,14 +50,25 @@ export function ConnectionView({ api }: { api: Api }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Polling enquanto está conectando.
+  // Polling automático: 2.5s enquanto conectando, 10s quando conectado/desconectado.
   useEffect(() => {
     if (pollRef.current) clearTimeout(pollRef.current);
-    if (conn?.status === "connecting") {
-      pollRef.current = setTimeout(() => void refresh(), 2500);
-    }
+    const interval = conn?.status === "connecting" ? 2500 : 10000;
+    pollRef.current = setTimeout(() => void refresh(true), interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conn?.status, conn?.qrcode]);
+
+  // Re-sincroniza quando a aba volta ao foco (usuário voltou da UAZAPI etc.).
+  useEffect(() => {
+    function onFocus() { void refresh(true); }
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function connect() {
     setBusy(true);
@@ -72,9 +86,12 @@ export function ConnectionView({ api }: { api: Api }) {
     if (!confirm("Desconectar o WhatsApp da barbearia? Os disparos vão parar até você reconectar.")) return;
     setBusy(true);
     await api("/api/public/extension/whatsapp/disconnect", { method: "POST" });
+    // Optimistic: reflete imediatamente na UI.
+    setConn((prev) => (prev ? { ...prev, status: "disconnected", phone: null, qrcode: null } : prev));
     setBusy(false);
-    void refresh();
+    void refresh(true);
   }
+
 
   if (loading) {
     return <div className="rounded-2xl bg-white p-6 text-sm text-neutral-500">Carregando conexão…</div>;
@@ -152,7 +169,7 @@ export function ConnectionView({ api }: { api: Api }) {
             )}
             <div className="mt-4 flex gap-3">
               <button
-                onClick={refresh}
+                onClick={() => void refresh(true)}
                 className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs text-neutral-700 hover:bg-neutral-50"
               >
                 Atualizar agora
