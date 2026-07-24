@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.18.20";
+  const BRIDGE_VERSION = "0.18.21";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -7,107 +7,88 @@
 
   function serializeWid(wid) {
     if (!wid) return null;
-    if (typeof wid === "string") return wid;
-    return wid._serialized || wid.id?._serialized || wid.id || null;
+    return typeof wid === "string" ? wid : (wid._serialized || wid.id?._serialized || wid.id || null);
   }
 
-  function getPhoneCandidates(phone) {
-    const digits = String(phone || "").replace(/\D/g, "");
-    if (!digits) return [];
-    const normalized = digits.startsWith("55") ? digits : `55${digits}`;
-    const candidates = [normalized];
+  // RESOLVEDOR DEFINITIVO: Tenta 3 métodos diferentes para achar o ID (LID)
+  async function resolveWid(number) {
+    const digits = String(number).replace(/\D/g, "");
+    const phone = digits.startsWith("55") ? digits : "55" + digits;
+    const phoneWid = `${phone}@c.us`;
 
-    // Brasil: tenta com e sem o nono dígito para contatos manuais.
-    if (normalized.length === 13 && normalized.startsWith("55") && normalized[4] === "9") {
-      candidates.push(normalized.slice(0, 4) + normalized.slice(5));
-    } else if (normalized.length === 12 && normalized.startsWith("55")) {
-      candidates.push(normalized.slice(0, 4) + "9" + normalized.slice(4));
-    }
+    try {
+      console.log(`[CRM] Resolvendo identidade para: ${phoneWid}`);
 
-    return [...new Set(candidates)];
-  }
+      // Método 1: Consulta de existência (popula o cache interno)
+      const check = await window.WPP.contact.queryWidExists(phoneWid);
 
-  async function resolveWid(phone) {
-    const candidates = getPhoneCandidates(phone);
-    if (candidates.length === 0) throw new Error("Número inválido");
-
-    let fallback = `${candidates[0]}@c.us`;
-    for (const candidate of candidates) {
-      const target = `${candidate}@c.us`;
-      try {
-        console.info(`[CRM] Buscando ID oficial para: ${target}`);
-        const check = await window.WPP.contact.queryWidExists(target);
-        const resolved = serializeWid(check?.wid || check?.id || check);
-        if (resolved) {
-          console.info(`[CRM] ID resolvido via queryWidExists: ${resolved}`);
-          return resolved;
-        }
-      } catch (e) {
-        console.warn(`[CRM] queryWidExists falhou para ${target}:`, e?.message || e);
+      // Método 2: Força o WhatsApp a converter para LID se disponível
+      if (typeof window.WPP?.whatsapp?.toUserLid === "function") {
+        const lid = await window.WPP.whatsapp.toUserLid(phoneWid).catch(() => null);
+        if (lid) return serializeWid(lid);
       }
 
-      try {
-        const check = await window.WPP.contact.queryExists(target);
-        const resolved = serializeWid(check?.wid || check?.id || check);
-        if (resolved) {
-          console.info(`[CRM] ID resolvido via queryExists: ${resolved}`);
-          return resolved;
-        }
-      } catch (e) {
-        console.warn(`[CRM] queryExists falhou para ${target}:`, e?.message || e);
+      // Método 3: Busca no resultado da consulta
+      if (check) {
+        const found =
+          check.lid ||
+          check.id?.lid ||
+          (check.id?.server === "lid" ? check.id._serialized : null) ||
+          serializeWid(check.id || check.wid);
+        if (found) return found;
       }
+    } catch (e) {
+      console.warn(`[CRM] Falha na resolução: ${e.message}`);
     }
-
-    console.warn(`[CRM] LID não retornado pelo WhatsApp; tentando fallback ${fallback}`);
-    return fallback;
-  }
-
-  async function waitReady(timeout = 60000) {
-    const start = Date.now();
-    while (Date.now() - start < timeout) {
-      const wpp = window.WPP;
-      if (wpp && (typeof wpp.isReady === "function" ? wpp.isReady() : wpp.isReady)) {
-        if (wpp.chat) return true;
-      }
-      await sleep(1000);
-    }
-    return false;
+    return phoneWid;
   }
 
   async function robustSend(phone, text) {
     const wid = await resolveWid(phone);
-
-    console.info(`[CRM] Iniciando disparo para: ${wid}`);
+    console.info(`[CRM] Alvo definido: ${wid}`);
 
     try {
+      // PASSO CRUCIAL: Força o WhatsApp a carregar o chat e o LID em cache
+      console.log("[CRM] Garantindo chat em memória...");
+      await window.WPP.chat.ensureChat(wid).catch(() => {});
+
+      // Envio sem esperar ACK (Bypass de Telemetria Mac)
       const result = await window.WPP.chat.sendTextMessage(wid, text, {
         waitForAck: false,
         createChat: true,
       });
 
-      const msgId = serializeWid(result?.id || result);
+      const msgId = serializeWid(result.id || result);
+      console.info(`[CRM] Mensagem injetada (ID: ${msgId}).`);
 
-      console.info(`[CRM] Mensagem injetada${msgId ? ` (ID: ${msgId})` : ""}. Monitorando...`);
-
+      // Monitoramento passivo (Polling)
       const start = Date.now();
-      while (Date.now() - start < 30000) {
+      while (Date.now() - start < 25000) {
         await sleep(2000);
         const msg = msgId ? await window.WPP.chat.getMessageById(msgId).catch(() => null) : null;
         const ack = msg?.ack ?? null;
 
         if (ack !== null && ack >= 1) {
-          console.info("[CRM] Confirmado pelo servidor.");
+          console.info("[CRM] Sucesso confirmado.");
           return true;
         }
 
         if (Date.now() - start > 10000 && ack === 0) {
           await window.WPP.chat.markIsRead(wid).catch(() => {});
-          if (Date.now() - start > 20000) return true;
+          if (Date.now() - start > 18000) return true;
         }
       }
       return true;
     } catch (e) {
-      console.error("[CRM] Erro no disparo:", e?.message || e);
+      // SE DER O ERRO "No LID", tentamos o último recurso: enviar direto pelo @c.us
+      if (String(e?.message || "").includes("LID")) {
+        console.warn("[CRM] Erro de LID detectado. Tentando envio via fallback de contato...");
+        const digits = String(phone).replace(/\D/g, "");
+        const raw = (digits.startsWith("55") ? digits : "55" + digits) + "@c.us";
+        return await window.WPP.chat
+          .sendTextMessage(raw, text, { waitForAck: false, createChat: true })
+          .then(() => true);
+      }
       throw e;
     }
   }
@@ -118,15 +99,12 @@
     if (!["send_v180", "send_v170"].includes(d.__crm)) return;
 
     try {
-      const isReady = await waitReady();
-      if (!isReady) throw new Error("WhatsApp não pronto.");
+      const ready =
+        typeof window.WPP?.isReady === "function" ? window.WPP.isReady() : !!window.WPP?.isReady;
+      if (!ready) await sleep(2000);
 
       await robustSend(d.phone, d.text);
-
-      window.postMessage(
-        { __crm: d.__crm.replace("send", "sent"), id: d.id, ok: true },
-        "*",
-      );
+      window.postMessage({ __crm: d.__crm.replace("send", "sent"), id: d.id, ok: true }, "*");
     } catch (e) {
       window.postMessage(
         { __crm: d.__crm.replace("send", "sent"), id: d.id, ok: false, error: e.message },
@@ -135,5 +113,5 @@
     }
   });
 
-  console.info(`[CRM] Bridge ${BRIDGE_VERSION} (LID Resolution) pronto.`);
+  console.info(`[CRM] Bridge ${BRIDGE_VERSION} (Chat Ensure + LID Fix) pronto.`);
 })();
