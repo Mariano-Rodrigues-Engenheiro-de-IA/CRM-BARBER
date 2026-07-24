@@ -37,17 +37,22 @@ type UazResponse = Record<string, unknown> & {
   status?: string;
   state?: string;
   connectionStatus?: string;
+  connection?: string;
   qrcode?: string;
   qr?: string;
   qrCode?: string;
   token?: string;
   id?: string;
-  instance?: { id?: string; token?: string; status?: string; phone?: string };
+  instance?: Record<string, unknown> & { id?: string; token?: string; status?: string; phone?: string };
   phone?: string;
   wid?: string;
   error?: string;
   message?: string;
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
 async function uaz(
   path: string,
@@ -76,31 +81,61 @@ async function uaz(
 function normalizeStatus(input: unknown): InstanceStatus {
   const s = String(input ?? "").toLowerCase();
   if (s.includes("connected") || s === "open" || s === "authenticated") return "connected";
-  if (s.includes("connecting") || s === "qrcode" || s.includes("qr")) return "connecting";
+  if (
+    s.includes("connecting") ||
+    s === "qrcode" ||
+    s.includes("qr") ||
+    s === "pending" ||
+    s.includes("pair") ||
+    s.includes("scan") ||
+    s.includes("login")
+  ) return "connecting";
   if (s.includes("hibernat") || s === "paused") return "hibernated";
   return "disconnected";
 }
 
 function extractQr(data: UazResponse): string | null {
-  const inst = (data.instance ?? {}) as Record<string, unknown>;
-  const candidates = [
-    data.qrcode,
-    data.qr,
-    data.qrCode,
-    inst.qrcode,
-    inst.qr,
-    inst.qrCode,
-  ];
-  for (const c of candidates) {
-    if (typeof c === "string" && c.length > 0) return c;
+  const seen = new Set<unknown>();
+  const findQr = (value: unknown, depth = 0): string | null => {
+    if (depth > 5 || value === null || value === undefined || seen.has(value)) return null;
+    if (typeof value === "string") return null;
+    if (Array.isArray(value)) {
+      seen.add(value);
+      for (const item of value) {
+        const nested = findQr(item, depth + 1);
+        if (nested) return nested;
+      }
+      return null;
+    }
+    if (!isRecord(value)) return null;
+    seen.add(value);
+    for (const [key, raw] of Object.entries(value)) {
+      const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const isQrKey = normalizedKey === "qr" || normalizedKey.includes("qrcode") || normalizedKey.includes("qrimage");
+      if (isQrKey && typeof raw === "string" && raw.trim().length > 0) return raw.trim();
+    }
+    for (const raw of Object.values(value)) {
+      const nested = findQr(raw, depth + 1);
+      if (nested) return nested;
+    }
+    return null;
+  };
+  const direct = findQr(data);
+  if (direct) {
+    if (direct.startsWith("data:image")) return direct;
+    const base64Prefix = direct.match(/^data:image\/[^;]+;base64,(.+)$/i)?.[1];
+    return base64Prefix ?? direct;
   }
   return null;
 }
 
-function extractStatus(data: UazResponse): InstanceStatus {
-  return normalizeStatus(
-    data.status ?? data.state ?? data.connectionStatus ?? data.instance?.status,
+function extractStatus(data: UazResponse, qrcode: string | null = extractQr(data)): InstanceStatus {
+  const status = normalizeStatus(
+    data.status ?? data.state ?? data.connectionStatus ?? data.connection ?? data.instance?.status,
   );
+  if (status === "connected") return "connected";
+  if (qrcode) return "connecting";
+  return status;
 }
 
 function extractPhone(data: UazResponse): string | null {
@@ -148,12 +183,27 @@ export const uazapiProvider: WhatsAppProvider = {
       token: instance_token,
       body: {},
     });
+    if (!connect.ok) {
+      throw new Error(
+        `UAZAPI connect falhou (${connect.status}): ${connect.data.error ?? connect.data.message ?? connect.raw.slice(0, 200)}`,
+      );
+    }
+
+    let qrcode = extractQr(connect.data);
+    let status = extractStatus(connect.data, qrcode);
+    if (!qrcode && status !== "connected") {
+      const synced = await uaz("/instance/status", { method: "GET", token: instance_token });
+      if (synced.ok) {
+        qrcode = extractQr(synced.data) ?? qrcode;
+        status = extractStatus(synced.data, qrcode);
+      }
+    }
 
     return {
       instance_id: instance_id ?? instance_token,
       instance_token,
-      status: extractStatus(connect.data),
-      qrcode: extractQr(connect.data),
+      status,
+      qrcode,
     };
   },
 
@@ -162,9 +212,10 @@ export const uazapiProvider: WhatsAppProvider = {
     if (!res.ok && res.status !== 404) {
       throw new Error(`UAZAPI status ${res.status}: ${res.data.error ?? res.raw.slice(0, 200)}`);
     }
+    const qrcode = extractQr(res.data);
     const result: StatusResult = {
-      status: extractStatus(res.data),
-      qrcode: extractQr(res.data),
+      status: extractStatus(res.data, qrcode),
+      qrcode,
       phone: extractPhone(res.data),
     };
     return result;
