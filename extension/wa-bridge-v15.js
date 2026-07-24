@@ -1,43 +1,14 @@
 (function () {
-  const BRIDGE_VERSION = "0.18.18";
+  const BRIDGE_VERSION = "0.18.19";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  function serializeWid(wid) {
-    if (!wid) return null;
-    if (typeof wid === "string") return wid;
-    return wid._serialized || wid.id?._serialized || wid.id || null;
-  }
-
-  async function resolveWid(number) {
-    const digits = String(number).replace(/\D/g, "");
-    let cleanNumber = digits.startsWith("55") ? digits : "55" + digits;
-
-    const candidates = [cleanNumber];
-    if (cleanNumber.length === 13 && cleanNumber.startsWith("55") && cleanNumber[4] === "9") {
-      candidates.push(cleanNumber.slice(0, 4) + cleanNumber.slice(5));
-    }
-
-    for (const num of candidates) {
-      const target = `${num}@c.us`;
-      try {
-        console.log(`[CRM] Consultando existência de: ${target}`);
-        const check = await window.WPP.contact.queryWidExists(target);
-        if (check && (check.wid || check.id)) {
-          const found = serializeWid(check.wid || check.id);
-          if (found) {
-            console.log(`[CRM] ID resolvido: ${found}`);
-            return found;
-          }
-        }
-      } catch (e) {
-        console.warn(`[CRM] Falha ao consultar ${target}:`, e.message);
-      }
-    }
-
-    return `${cleanNumber}@c.us`;
+  function getWid(phone) {
+    const digits = String(phone).replace(/\D/g, "");
+    if (!digits) return null;
+    return digits.length >= 12 ? `${digits}@c.us` : `55${digits}@c.us`;
   }
 
   async function waitReady(timeout = 60000) {
@@ -45,7 +16,7 @@
     while (Date.now() - start < timeout) {
       const wpp = window.WPP;
       if (wpp && (typeof wpp.isReady === "function" ? wpp.isReady() : wpp.isReady)) {
-        if (wpp.chat && wpp.contact) return true;
+        if (wpp.chat) return true;
       }
       await sleep(1000);
     }
@@ -53,34 +24,47 @@
   }
 
   async function robustSend(phone, text) {
-    const wid = await resolveWid(phone);
-    console.info(`[CRM] Iniciando envio para ${wid}...`);
+    let wid = getWid(phone);
+    if (!wid) throw new Error("Número inválido");
+
+    console.info(`[CRM] Disparando para: ${wid}`);
 
     try {
+      try {
+        const check = await Promise.race([
+          window.WPP.contact.queryWidExists(wid),
+          sleep(500).then(() => null),
+        ]);
+        if (check?.wid?._serialized) wid = check.wid._serialized;
+        else if (check?.id?._serialized) wid = check.id._serialized;
+      } catch (e) {
+        console.warn("[CRM] Ignorando falha de consulta de LID...");
+      }
+
       const result = await window.WPP.chat.sendTextMessage(wid, text, {
         waitForAck: false,
         createChat: true,
       });
 
-      const msgId = serializeWid(result.id || result);
+      const msgId =
+        result.id?._serialized || result.id || (typeof result === "string" ? result : null);
+
+      console.info(`[CRM] Mensagem injetada. Monitorando...`);
 
       const start = Date.now();
-      while (Date.now() - start < 30000) {
-        await sleep(2000);
-        const msg = await window.WPP.chat.getMessageById(msgId).catch(() => null);
+      while (Date.now() - start < 25000) {
+        await sleep(2500);
+        const msg = msgId ? await window.WPP.chat.getMessageById(msgId).catch(() => null) : null;
         const ack = msg?.ack ?? null;
 
         if (ack !== null && ack >= 1) {
-          console.info("[CRM] Sucesso: Mensagem confirmada pelo servidor.");
+          console.info("[CRM] Sucesso confirmado.");
           return true;
         }
 
-        if (Date.now() - start > 10000 && ack === 0) {
+        if (Date.now() - start > 8000 && ack === 0) {
           await window.WPP.chat.markIsRead(wid).catch(() => {});
-          if (Date.now() - start > 18000) {
-            console.warn("[CRM] Timeout de ACK no Mac, assumindo sucesso.");
-            return true;
-          }
+          if (Date.now() - start > 15000) return true;
         }
       }
       return true;
@@ -101,20 +85,17 @@
 
       await robustSend(d.phone, d.text);
 
-      window.postMessage({
-        __crm: d.__crm.replace("send", "sent"),
-        id: d.id,
-        ok: true,
-      }, "*");
+      window.postMessage(
+        { __crm: d.__crm.replace("send", "sent"), id: d.id, ok: true },
+        "*",
+      );
     } catch (e) {
-      window.postMessage({
-        __crm: d.__crm.replace("send", "sent"),
-        id: d.id,
-        ok: false,
-        error: e.message,
-      }, "*");
+      window.postMessage(
+        { __crm: d.__crm.replace("send", "sent"), id: d.id, ok: false, error: e.message },
+        "*",
+      );
     }
   });
 
-  console.info(`[CRM] Bridge ${BRIDGE_VERSION} (Manual Contacts + Mac Fix) pronto.`);
+  console.info(`[CRM] Bridge ${BRIDGE_VERSION} (Mac Force Send) pronto.`);
 })();
