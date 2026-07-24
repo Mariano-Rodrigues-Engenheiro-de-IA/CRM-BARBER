@@ -785,13 +785,30 @@ function DisparoView({
         Cada mensagem sai com espaçamento aleatório dentro dessa faixa.
       </p>
 
+      <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+        <p className="text-sm font-semibold text-neutral-900">Termo de uso</p>
+        <p className="mt-2 text-sm leading-relaxed text-neutral-700">
+          A pratica de envios em massa ou spam podem ocasionar o banimento do seu número por parte do WhatsApp. Envie mensagens apenas para pessoas que gostariam de receber sua mensagem.
+        </p>
+        <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-neutral-900">
+          <input
+            type="checkbox"
+            checked={acceptedTerms}
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+            className="h-4 w-4 rounded border-neutral-400"
+          />
+          Eu entendo e aceito os termos de uso.
+        </label>
+      </div>
+
       {err && <p className="text-sm text-red-500">{err}</p>}
       <button
-        disabled={busy}
+        disabled={busy || !acceptedTerms}
         className="w-full rounded-lg bg-neutral-900 px-4 py-3 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
       >
-        {busy ? "Criando..." : segment === "overdue" ? "Iniciar cobrança" : "Iniciar disparo"}
+        {busy ? "Criando..." : "Enviar Campanha"}
       </button>
+
     </form>
   );
 }
