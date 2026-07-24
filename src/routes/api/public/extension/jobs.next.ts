@@ -24,6 +24,18 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
           return jsonResponse(request, { ok: false, error: auth.error }, { status: auth.status });
         }
 
+        // Se a barbearia já tem instância WhatsApp conectada via servidor
+        // (UAZAPI/etc), o dispatcher server-side envia; a extensão só serve
+        // como ponte visual. Devolve `null` pra ela ficar quieta.
+        const { data: srvInstance } = await supabaseAdmin
+          .from("whatsapp_instances")
+          .select("status")
+          .eq("barbershop_id", auth.token.barbershop_id)
+          .maybeSingle();
+        if (srvInstance && srvInstance.status === "connected") {
+          return jsonResponse(request, { ok: true, job: null, reason: "server_dispatch" });
+        }
+
         const nowIso = new Date().toISOString();
         const staleClaimIso = new Date(Date.now() - 6 * 60 * 1000).toISOString();
 

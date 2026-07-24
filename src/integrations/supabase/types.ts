@@ -452,6 +452,56 @@ export type Database = {
           },
         ]
       }
+      whatsapp_instances: {
+        Row: {
+          barbershop_id: string
+          created_at: string
+          id: string
+          instance_id: string | null
+          instance_token: string | null
+          last_qr: string | null
+          last_synced_at: string | null
+          phone: string | null
+          provider: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          barbershop_id: string
+          created_at?: string
+          id?: string
+          instance_id?: string | null
+          instance_token?: string | null
+          last_qr?: string | null
+          last_synced_at?: string | null
+          phone?: string | null
+          provider?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          barbershop_id?: string
+          created_at?: string
+          id?: string
+          instance_id?: string | null
+          instance_token?: string | null
+          last_qr?: string | null
+          last_synced_at?: string | null
+          phone?: string | null
+          provider?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_instances_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: true
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
