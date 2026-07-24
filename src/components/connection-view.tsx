@@ -84,14 +84,7 @@ export function ConnectionView({ api }: { api: Api }) {
 
   return (
     <div className="space-y-4">
-      {/* Aviso permanente sobre risco */}
-      <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-        <p className="font-semibold">Atenção: disparo via API não-oficial (UAZAPI).</p>
-        <p className="mt-1 leading-relaxed">
-          Existe risco de bloqueio do número pelo WhatsApp. Use com moderação, com mensagens variadas
-          e intervalos humanos. Em breve, teremos opção de API oficial da Meta.
-        </p>
-      </div>
+
 
       <div className="rounded-2xl bg-white p-6 shadow-sm">
         <div className="flex items-start justify-between gap-4">
