@@ -23,6 +23,9 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/status")({
           return jsonResponse(request, { ok: false, error: auth.error }, { status: auth.status });
         }
 
+        const url = new URL(request.url);
+        const forceSync = url.searchParams.get("sync") === "1";
+
         const { data: inst } = await supabaseAdmin
           .from("whatsapp_instances")
           .select("id, status, phone, last_qr, last_synced_at, instance_id, instance_token, provider")
@@ -37,11 +40,10 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/status")({
           });
         }
 
-        // Estados não-conectados precisam sincronizar sempre: se o QR foi lido
-        // fora do painel, o cache local pode ficar preso em "connecting"/"disconnected".
+        // Força sync quando o cliente pede (`?sync=1`) ou quando o cache local não é `connected`.
         const staleMs = inst.status === "connected" ? 15000 : 0;
         const lastSync = inst.last_synced_at ? new Date(inst.last_synced_at).getTime() : 0;
-        const shouldSync = Date.now() - lastSync > staleMs;
+        const shouldSync = forceSync || Date.now() - lastSync > staleMs;
 
         let status = inst.status;
         let phone = inst.phone;
