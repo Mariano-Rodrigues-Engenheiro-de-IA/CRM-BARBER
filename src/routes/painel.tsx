@@ -61,12 +61,21 @@ function getToken(): string | null {
   const url = new URL(window.location.href);
   const q = url.searchParams.get("token");
   if (q) {
-    localStorage.setItem(TOKEN_KEY, q);
     url.searchParams.delete("token");
     window.history.replaceState({}, "", url.toString());
+    if (q === EXTENSION_BRIDGE_TOKEN) {
+      localStorage.removeItem(TOKEN_KEY);
+      return null;
+    }
+    localStorage.setItem(TOKEN_KEY, q);
     return q;
   }
-  return localStorage.getItem(TOKEN_KEY);
+  const stored = localStorage.getItem(TOKEN_KEY);
+  if (stored === EXTENSION_BRIDGE_TOKEN) {
+    localStorage.removeItem(TOKEN_KEY);
+    return null;
+  }
+  return stored;
 }
 
 function canUseExtensionBridge() {
