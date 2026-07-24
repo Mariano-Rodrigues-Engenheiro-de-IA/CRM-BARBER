@@ -202,7 +202,7 @@ export function ConnectionView({ api }: { api: Api }) {
           <div className="mt-6">
             <Button
               type="button"
-              onClick={() => setConfirmAction("connect")}
+              onClick={() => void connect()}
               disabled={busy}
               className="bg-neutral-900 text-white hover:bg-neutral-800"
             >
@@ -213,6 +213,7 @@ export function ConnectionView({ api }: { api: Api }) {
             </p>
           </div>
         )}
+
 
         {status === "connecting" && (
           <div className="mt-6">
