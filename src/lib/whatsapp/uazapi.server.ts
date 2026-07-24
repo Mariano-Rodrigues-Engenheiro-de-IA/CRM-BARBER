@@ -93,7 +93,18 @@ function normalizeStatus(input: unknown): InstanceStatus {
     if (statusPayload.connected === false || statusPayload.loggedIn === false) return "disconnected";
   }
   const s = String(input ?? "").toLowerCase();
-  if (s.includes("connected") || s === "open" || s === "authenticated") return "connected";
+  if (
+    s.includes("disconnect") ||
+    s.includes("not connected") ||
+    s.includes("not_connected") ||
+    s === "closed" ||
+    s === "close" ||
+    s === "offline" ||
+    s === "logout" ||
+    s === "loggedout" ||
+    s === "logged_out"
+  ) return "disconnected";
+  if (s === "connected" || s === "open" || s === "authenticated" || s === "loggedin" || s === "logged_in") return "connected";
   if (
     s.includes("connecting") ||
     s === "qrcode" ||

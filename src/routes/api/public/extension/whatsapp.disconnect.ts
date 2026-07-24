@@ -25,6 +25,17 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/disconnect"
           .eq("barbershop_id", auth.token.barbershop_id)
           .maybeSingle();
 
+        if (inst) {
+          await supabaseAdmin
+            .from("whatsapp_instances")
+            .update({
+              status: "disconnected",
+              last_qr: null,
+              last_synced_at: new Date().toISOString(),
+            })
+            .eq("id", inst.id);
+        }
+
         if (inst?.instance_token) {
           try {
             const { getWhatsAppProvider } = await import("@/lib/whatsapp/provider.server");
@@ -36,17 +47,12 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/disconnect"
             console.warn("[whatsapp/disconnect] provider retornou erro (ignorado)", err);
           }
 
-          await supabaseAdmin
-            .from("whatsapp_instances")
-            .update({
-              status: "disconnected",
-              last_qr: null,
-              last_synced_at: new Date().toISOString(),
-            })
-            .eq("id", inst.id);
         }
 
-        return jsonResponse(request, { ok: true });
+        return jsonResponse(request, {
+          ok: true,
+          connection: { status: "disconnected", phone: null, qrcode: null, provider: "uazapi" },
+        });
       },
     },
   },
