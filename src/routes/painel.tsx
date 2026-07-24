@@ -695,6 +695,11 @@ function DisparoView({
       setErr("Preencha nome e ao menos 1 mensagem.");
       return;
     }
+    if (!acceptedTerms) {
+      setErr("Você precisa aceitar o termo de uso para enviar a campanha.");
+      return;
+    }
+
     setBusy(true);
     setErr(null);
     const r = await api(token, "/api/public/extension/campaigns", {
