@@ -6,6 +6,7 @@
   "permissions": ["storage", "activeTab", "tabs", "scripting", "alarms"],
   "host_permissions": [
     "https://web.whatsapp.com/*",
+    "https://*.whatsapp.net/*",
     "https://buzz-boost-crm.lovable.app/*",
     "https://*.lovable.app/*",
     "https://*.lovableproject.com/*"
