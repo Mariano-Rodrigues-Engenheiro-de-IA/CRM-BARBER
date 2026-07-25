@@ -118,7 +118,15 @@ export function ConnectionView({ api }: { api: Api }) {
     }));
     const res = await api("/api/public/extension/whatsapp/connect", { method: "POST" });
     if (res.ok && res.connection) {
-      setConn(res.connection as Connection);
+      const c = res.connection as Connection & {
+        auth_mode?: string;
+        signup?: { url?: string | null } | null;
+      };
+      setConn(c);
+      // API oficial: não há QR — abre o pop-up de login da Meta.
+      if (c.auth_mode === "embedded_signup" && c.signup?.url) {
+        window.open(c.signup.url, "whatsapp-signup", "width=620,height=760");
+      }
     } else {
       setErr(res.error || "Falha ao iniciar conexão");
     }
