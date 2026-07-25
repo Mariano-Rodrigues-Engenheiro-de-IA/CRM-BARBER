@@ -111,16 +111,17 @@ async function fetchNextJob() {
   }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    await setLastError(`API da fila retornou HTTP ${res.status}: ${text.slice(0, 160)}`);
+    console.warn(`[CRM bg] fila HTTP ${res.status}`, text.slice(0, 160));
     return null;
   }
   const data = await res.json().catch(() => ({}));
   if (!data.ok) {
-    await setLastError(data.error || "API da fila retornou erro");
+    console.warn("[CRM bg] fila retornou erro", data.error);
     return null;
   }
   if (data.job) await clearLastError();
   return data.job || null;
+
 }
 
 async function reportJob(id, status, error) {
