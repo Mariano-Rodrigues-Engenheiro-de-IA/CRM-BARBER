@@ -110,6 +110,8 @@ export interface WhatsAppProvider {
     barbershop_id: string;
     /** `state` devolvido pelo pop-up, quando o BSP repassa. */
     state?: string | null;
+    /** Demais query params do redirect (ex.: `channels` no 360dialog). */
+    extra?: Record<string, string>;
   }): Promise<SignupCallbackResult>;
 
 }
