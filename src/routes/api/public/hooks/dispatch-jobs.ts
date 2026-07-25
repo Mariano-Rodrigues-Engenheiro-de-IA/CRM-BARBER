@@ -123,6 +123,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
 
             const result = await provider.sendText({
               instance_token: inst.instance_token,
+              phone_number_id: inst.phone_number_id ?? null,
               to: phone,
               text: job.rendered_body,
             });
