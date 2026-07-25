@@ -50,6 +50,28 @@ export const cloudAdapter: BspAdapter = {
     };
   },
 
+  /** POST /{phone_number_id}/register — libera o número pra enviar (133010). */
+  async register({ access_token, phone_number_id, pin }) {
+    try {
+      const res = await fetch(graphUrl(`${phone_number_id}/register`), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${access_token}`,
+        },
+        body: JSON.stringify({ messaging_product: "whatsapp", pin }),
+      });
+      const json = (await res.json().catch(() => ({}))) as Json;
+      if (!res.ok) {
+        const error = (json.error as Json | undefined)?.message;
+        return { ok: false, error: typeof error === "string" ? error : `HTTP ${res.status}` };
+      }
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  },
+
   async sendText({ access_token, phone_number_id, to, text }): Promise<SendResult> {
     if (!phone_number_id) {
       return { ok: false, error: "phone_number_id ausente na instância", retryable: false };

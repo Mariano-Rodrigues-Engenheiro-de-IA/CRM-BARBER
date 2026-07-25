@@ -20,6 +20,12 @@ export const testSchema = z.object({
   test_phone: z.string().trim().max(20).optional().or(z.literal("")),
 });
 
+export const registerSchema = z.object({
+  barbershop_id: z.string().uuid(),
+  /** PIN de 6 dígitos definido no registro (guarde: é pedido em migrações). */
+  pin: z.string().trim().regex(/^\d{6}$/, "O PIN deve ter exatamente 6 dígitos"),
+});
+
 export type AdminShopRow = {
   barbershop_id: string;
   name: string;
@@ -104,6 +110,45 @@ export type TestResult = {
   send?: SendResult;
 };
 
+/** Registra o número na Cloud API — resolve o erro 133010 no primeiro envio. */
+export async function registerNumber(
+  supabaseAdmin: Admin,
+  input: z.infer<typeof registerSchema>,
+): Promise<{ ok: boolean; message: string }> {
+  const { data: inst } = await supabaseAdmin
+    .from("whatsapp_instances")
+    .select("id, phone_number_id, meta_access_token")
+    .eq("barbershop_id", input.barbershop_id)
+    .maybeSingle();
+
+  if (!inst?.phone_number_id || !inst.meta_access_token) {
+    return { ok: false, message: "Salve phone_number_id e access_token antes de registrar." };
+  }
+
+  const { getBspAdapter } = await import("./whatsapp/bsp/index.server");
+  const bsp = getBspAdapter();
+  if (!bsp.register) {
+    return { ok: false, message: "Este provedor não expõe registro manual do número." };
+  }
+
+  const res = await bsp.register({
+    access_token: inst.meta_access_token,
+    phone_number_id: inst.phone_number_id,
+    pin: input.pin,
+  });
+
+  if (!res.ok) {
+    return { ok: false, message: `Falha ao registrar: ${res.error ?? "erro desconhecido"}` };
+  }
+
+  await supabaseAdmin
+    .from("whatsapp_instances")
+    .update({ status: "connected", last_synced_at: new Date().toISOString() })
+    .eq("id", inst.id);
+
+  return { ok: true, message: "Número registrado na Cloud API. Teste o envio agora." };
+}
+
 export async function testCredentials(
   supabaseAdmin: Admin,
   input: z.infer<typeof testSchema>,
@@ -145,12 +190,16 @@ export async function testCredentials(
     })
     .eq("id", inst.id);
 
+  const notRegistered = !!send && !send.ok && /133010|not registered/i.test(send.error ?? "");
+
   const message =
     s.status === "connected"
       ? send
         ? send.ok
           ? "Credenciais válidas e mensagem de teste enviada."
-          : `Credenciais válidas, mas o envio falhou: ${send.error}`
+          : notRegistered
+            ? `Credenciais válidas, mas o número ainda não está registrado na Cloud API (${send.error}). Use "Registrar número na Cloud API" com um PIN de 6 dígitos e teste de novo.`
+            : `Credenciais válidas, mas o envio falhou: ${send.error}`
         : "Credenciais válidas — número ativo na Cloud API."
       : s.status === "disconnected"
         ? "Token inválido ou sem permissão nesse phone_number_id (401/403)."

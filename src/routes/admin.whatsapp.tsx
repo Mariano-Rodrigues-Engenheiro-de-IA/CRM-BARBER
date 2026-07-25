@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   adminListShops,
+  adminRegisterMetaNumber,
   adminSaveMetaCredentials,
   adminTestMetaConnection,
 } from "@/lib/admin-whatsapp.functions";
@@ -35,6 +36,7 @@ function AdminWhatsApp() {
   const listShops = useServerFn(adminListShops);
   const saveCreds = useServerFn(adminSaveMetaCredentials);
   const testConn = useServerFn(adminTestMetaConnection);
+  const registerNum = useServerFn(adminRegisterMetaNumber);
 
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +45,8 @@ function AdminWhatsApp() {
   const [accessToken, setAccessToken] = useState("");
   const [wabaId, setWabaId] = useState("");
   const [testPhone, setTestPhone] = useState("");
-  const [busy, setBusy] = useState<"save" | "test" | null>(null);
+  const [pin, setPin] = useState("");
+  const [busy, setBusy] = useState<"save" | "test" | "register" | null>(null);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
 
   async function reload() {
@@ -107,6 +110,22 @@ function AdminWhatsApp() {
     }
     setBusy(null);
   }
+
+  async function onRegister() {
+    if (!selected) return;
+    setBusy("register");
+    setResult(null);
+    try {
+      const res = await registerNum({ data: { barbershop_id: selected, pin: pin.trim() } });
+      setResult({ ok: res.ok, text: res.message });
+      await reload();
+    } catch (err) {
+      setResult({ ok: false, text: err instanceof Error ? err.message : String(err) });
+    }
+    setBusy(null);
+  }
+
+
 
   return (
     <main className="min-h-screen bg-neutral-100 px-4 py-10">
@@ -181,6 +200,37 @@ function AdminWhatsApp() {
             </Button>
           </div>
         </section>
+
+        <section className="rounded-2xl bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-neutral-950">Registrar número na Cloud API</h2>
+          <p className="mt-1 text-sm text-neutral-600">
+            Obrigatório antes do primeiro envio. Se o teste retornar{" "}
+            <strong>(#133010) Account not registered</strong>, escolha um PIN de 6 dígitos e registre aqui.
+            Guarde esse PIN — a Meta pede em migrações futuras do número.
+          </p>
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <Field label="PIN de 6 dígitos">
+                <Input
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="123456"
+                  inputMode="numeric"
+                />
+              </Field>
+            </div>
+            <Button
+              type="button"
+              onClick={() => void onRegister()}
+              disabled={busy !== null || !selected || pin.trim().length !== 6}
+              className="bg-neutral-900 text-white hover:bg-neutral-800"
+            >
+              {busy === "register" ? "Registrando…" : "Registrar número"}
+            </Button>
+          </div>
+        </section>
+
+
 
         <section className="rounded-2xl bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-neutral-950">Testar conexão</h2>

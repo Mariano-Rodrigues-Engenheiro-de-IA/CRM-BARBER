@@ -41,4 +41,15 @@ export interface BspAdapter {
     to: string;
     text: string;
   }): Promise<SendResult>;
+
+  /**
+   * Registra o número na Cloud API (obrigatório antes do 1º envio — erro
+   * 133010 "Account not registered"). Só existe onde o número é gerenciado
+   * direto pela Meta; BSPs fazem isso por conta.
+   */
+  register?(input: {
+    access_token: string;
+    phone_number_id: string;
+    pin: string;
+  }): Promise<{ ok: boolean; error?: string }>;
 }
