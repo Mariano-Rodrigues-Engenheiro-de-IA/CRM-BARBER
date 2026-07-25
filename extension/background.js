@@ -342,10 +342,13 @@ chrome.tabs.onUpdated?.addListener((tabId, changeInfo, tab) => {
 
 // Kick off polling if already paired on startup.
 (async () => {
+  // Limpa erros de fila antigos gravados por versões anteriores.
+  await clearLastError();
   const { token } = await getAuth();
   if (token) {
     await getWhatsappTabs();
     scheduleAlarm();
     pollLoop();
   }
+
 })();
