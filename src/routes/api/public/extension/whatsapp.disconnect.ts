@@ -49,10 +49,17 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/disconnect"
 
         }
 
+        const { getWhatsAppProviderName } = await import("@/lib/whatsapp/provider.server");
         return jsonResponse(request, {
           ok: true,
-          connection: { status: "disconnected", phone: null, qrcode: null, provider: "uazapi" },
+          connection: {
+            status: "disconnected",
+            phone: null,
+            qrcode: null,
+            provider: inst?.provider ?? getWhatsAppProviderName(),
+          },
         });
+
       },
     },
   },
