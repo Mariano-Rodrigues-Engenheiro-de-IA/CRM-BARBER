@@ -459,12 +459,17 @@ export type Database = {
           id: string
           instance_id: string | null
           instance_token: string | null
+          is_coexistence: boolean
           last_qr: string | null
           last_synced_at: string | null
+          meta_access_token: string | null
+          meta_business_id: string | null
           phone: string | null
+          phone_number_id: string | null
           provider: string
           status: string
           updated_at: string
+          waba_id: string | null
         }
         Insert: {
           barbershop_id: string
@@ -472,12 +477,17 @@ export type Database = {
           id?: string
           instance_id?: string | null
           instance_token?: string | null
+          is_coexistence?: boolean
           last_qr?: string | null
           last_synced_at?: string | null
+          meta_access_token?: string | null
+          meta_business_id?: string | null
           phone?: string | null
+          phone_number_id?: string | null
           provider?: string
           status?: string
           updated_at?: string
+          waba_id?: string | null
         }
         Update: {
           barbershop_id?: string
@@ -485,12 +495,17 @@ export type Database = {
           id?: string
           instance_id?: string | null
           instance_token?: string | null
+          is_coexistence?: boolean
           last_qr?: string | null
           last_synced_at?: string | null
+          meta_access_token?: string | null
+          meta_business_id?: string | null
           phone?: string | null
+          phone_number_id?: string | null
           provider?: string
           status?: string
           updated_at?: string
+          waba_id?: string | null
         }
         Relationships: [
           {
