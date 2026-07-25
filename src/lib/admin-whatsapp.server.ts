@@ -190,12 +190,16 @@ export async function testCredentials(
     })
     .eq("id", inst.id);
 
+  const notRegistered = !!send && !send.ok && /133010|not registered/i.test(send.error ?? "");
+
   const message =
     s.status === "connected"
       ? send
         ? send.ok
           ? "Credenciais válidas e mensagem de teste enviada."
-          : `Credenciais válidas, mas o envio falhou: ${send.error}`
+          : notRegistered
+            ? `Credenciais válidas, mas o número ainda não está registrado na Cloud API (${send.error}). Use "Registrar número na Cloud API" com um PIN de 6 dígitos e teste de novo.`
+            : `Credenciais válidas, mas o envio falhou: ${send.error}`
         : "Credenciais válidas — número ativo na Cloud API."
       : s.status === "disconnected"
         ? "Token inválido ou sem permissão nesse phone_number_id (401/403)."
