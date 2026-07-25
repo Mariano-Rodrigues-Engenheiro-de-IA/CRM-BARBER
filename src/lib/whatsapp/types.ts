@@ -96,4 +96,17 @@ export interface WhatsAppProvider {
     instance_id: string;
     instance_token: string;
   }): Promise<void>;
+
+  /**
+   * Só em `authMode === "embedded_signup"`: troca o `code` devolvido pelo
+   * pop-up da Meta por credenciais permanentes (WABA + phone_number_id +
+   * token) e informa se o número entrou em modo Coexistência.
+   */
+  handleSignupCallback?(input: {
+    code: string;
+    barbershop_id: string;
+    /** `state` devolvido pelo pop-up, quando o BSP repassa. */
+    state?: string | null;
+  }): Promise<SignupCallbackResult>;
+
 }
