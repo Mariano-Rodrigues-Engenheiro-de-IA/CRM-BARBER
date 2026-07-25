@@ -87,9 +87,12 @@ export interface WhatsAppProvider {
   /** Envia texto. `to` é o telefone em dígitos (com DDI). */
   sendText(input: {
     instance_token: string;
+    /** Só na API oficial: número emissor quando o token não o identifica. */
+    phone_number_id?: string | null;
     to: string;
     text: string;
   }): Promise<SendResult>;
+
 
   /** Desconecta/hiberna a instância (preserva credenciais). */
   disconnect(input: {
@@ -107,6 +110,8 @@ export interface WhatsAppProvider {
     barbershop_id: string;
     /** `state` devolvido pelo pop-up, quando o BSP repassa. */
     state?: string | null;
+    /** Demais query params do redirect (ex.: `channels` no 360dialog). */
+    extra?: Record<string, string>;
   }): Promise<SignupCallbackResult>;
 
 }

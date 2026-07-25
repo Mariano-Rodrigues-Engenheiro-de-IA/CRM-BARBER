@@ -13,6 +13,7 @@ import { Route as PainelRouteImport } from './routes/painel'
 import { Route as InstalarRouteImport } from './routes/instalar'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPublicSignupRouteImport } from './routes/api/public/signup'
+import { Route as ApiPublicWhatsappSignupCallbackRouteImport } from './routes/api/public/whatsapp.signup-callback'
 import { Route as ApiPublicHooksDispatchJobsRouteImport } from './routes/api/public/hooks/dispatch-jobs'
 import { Route as ApiPublicExtensionPairRouteImport } from './routes/api/public/extension/pair'
 import { Route as ApiPublicExtensionMetaRouteImport } from './routes/api/public/extension/meta'
@@ -47,6 +48,12 @@ const ApiPublicSignupRoute = ApiPublicSignupRouteImport.update({
   path: '/api/public/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicWhatsappSignupCallbackRoute =
+  ApiPublicWhatsappSignupCallbackRouteImport.update({
+    id: '/api/public/whatsapp/signup-callback',
+    path: '/api/public/whatsapp/signup-callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksDispatchJobsRoute =
   ApiPublicHooksDispatchJobsRouteImport.update({
     id: '/api/public/hooks/dispatch-jobs',
@@ -134,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
   '/api/public/hooks/dispatch-jobs': typeof ApiPublicHooksDispatchJobsRoute
+  '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
@@ -153,6 +161,7 @@ export interface FileRoutesByTo {
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
   '/api/public/hooks/dispatch-jobs': typeof ApiPublicHooksDispatchJobsRoute
+  '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
@@ -173,6 +182,7 @@ export interface FileRoutesById {
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
   '/api/public/hooks/dispatch-jobs': typeof ApiPublicHooksDispatchJobsRoute
+  '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
@@ -194,6 +204,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
     | '/api/public/hooks/dispatch-jobs'
+    | '/api/public/whatsapp/signup-callback'
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
@@ -213,6 +224,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
     | '/api/public/hooks/dispatch-jobs'
+    | '/api/public/whatsapp/signup-callback'
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
@@ -232,6 +244,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
     | '/api/public/hooks/dispatch-jobs'
+    | '/api/public/whatsapp/signup-callback'
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
@@ -252,6 +265,7 @@ export interface RootRouteChildren {
   ApiPublicExtensionMetaRoute: typeof ApiPublicExtensionMetaRoute
   ApiPublicExtensionPairRoute: typeof ApiPublicExtensionPairRoute
   ApiPublicHooksDispatchJobsRoute: typeof ApiPublicHooksDispatchJobsRoute
+  ApiPublicWhatsappSignupCallbackRoute: typeof ApiPublicWhatsappSignupCallbackRoute
   ApiPublicExtensionJobsIdRoute: typeof ApiPublicExtensionJobsIdRoute
   ApiPublicExtensionJobsNextRoute: typeof ApiPublicExtensionJobsNextRoute
   ApiPublicExtensionWhatsappConnectRoute: typeof ApiPublicExtensionWhatsappConnectRoute
@@ -287,6 +301,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/signup'
       fullPath: '/api/public/signup'
       preLoaderRoute: typeof ApiPublicSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/whatsapp/signup-callback': {
+      id: '/api/public/whatsapp/signup-callback'
+      path: '/api/public/whatsapp/signup-callback'
+      fullPath: '/api/public/whatsapp/signup-callback'
+      preLoaderRoute: typeof ApiPublicWhatsappSignupCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/dispatch-jobs': {
@@ -426,6 +447,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicExtensionMetaRoute: ApiPublicExtensionMetaRoute,
   ApiPublicExtensionPairRoute: ApiPublicExtensionPairRoute,
   ApiPublicHooksDispatchJobsRoute: ApiPublicHooksDispatchJobsRoute,
+  ApiPublicWhatsappSignupCallbackRoute: ApiPublicWhatsappSignupCallbackRoute,
   ApiPublicExtensionJobsIdRoute: ApiPublicExtensionJobsIdRoute,
   ApiPublicExtensionJobsNextRoute: ApiPublicExtensionJobsNextRoute,
   ApiPublicExtensionWhatsappConnectRoute:

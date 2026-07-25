@@ -35,11 +35,13 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/connect")({
             existing_instance_token: existing?.instance_token ?? null,
           });
 
+          // No Embedded Signup as credenciais só nascem no callback: strings
+          // vazias significam "mantém o que já está salvo".
           const payload = {
             barbershop_id: auth.token.barbershop_id,
             provider: provider.name,
-            instance_id: result.instance_id,
-            instance_token: result.instance_token,
+            ...(result.instance_id ? { instance_id: result.instance_id } : {}),
+            ...(result.instance_token ? { instance_token: result.instance_token } : {}),
             status: result.status,
             last_qr: result.qrcode ?? null,
             last_synced_at: new Date().toISOString(),
