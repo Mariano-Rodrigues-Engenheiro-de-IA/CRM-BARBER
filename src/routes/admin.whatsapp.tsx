@@ -36,6 +36,7 @@ function AdminWhatsApp() {
   const listShops = useServerFn(adminListShops);
   const saveCreds = useServerFn(adminSaveMetaCredentials);
   const testConn = useServerFn(adminTestMetaConnection);
+  const registerNum = useServerFn(adminRegisterMetaNumber);
 
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +45,8 @@ function AdminWhatsApp() {
   const [accessToken, setAccessToken] = useState("");
   const [wabaId, setWabaId] = useState("");
   const [testPhone, setTestPhone] = useState("");
-  const [busy, setBusy] = useState<"save" | "test" | null>(null);
+  const [pin, setPin] = useState("");
+  const [busy, setBusy] = useState<"save" | "test" | "register" | null>(null);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
 
   async function reload() {
