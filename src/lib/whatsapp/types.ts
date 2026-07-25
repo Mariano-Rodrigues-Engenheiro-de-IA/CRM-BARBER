@@ -87,9 +87,12 @@ export interface WhatsAppProvider {
   /** Envia texto. `to` é o telefone em dígitos (com DDI). */
   sendText(input: {
     instance_token: string;
+    /** Só na API oficial: número emissor quando o token não o identifica. */
+    phone_number_id?: string | null;
     to: string;
     text: string;
   }): Promise<SendResult>;
+
 
   /** Desconecta/hiberna a instância (preserva credenciais). */
   disconnect(input: {
