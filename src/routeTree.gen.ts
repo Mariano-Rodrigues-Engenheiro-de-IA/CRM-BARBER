@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as PainelRouteImport } from './routes/painel'
 import { Route as InstalarRouteImport } from './routes/instalar'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminWhatsappRouteImport } from './routes/admin.whatsapp'
 import { Route as ApiPublicSignupRouteImport } from './routes/api/public/signup'
 import { Route as ApiPublicWhatsappSignupCallbackRouteImport } from './routes/api/public/whatsapp.signup-callback'
 import { Route as ApiPublicHooksDispatchJobsRouteImport } from './routes/api/public/hooks/dispatch-jobs'
@@ -41,6 +42,11 @@ const InstalarRoute = InstalarRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminWhatsappRoute = AdminWhatsappRouteImport.update({
+  id: '/admin/whatsapp',
+  path: '/admin/whatsapp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicSignupRoute = ApiPublicSignupRouteImport.update({
@@ -135,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/instalar': typeof InstalarRoute
   '/painel': typeof PainelRoute
+  '/admin/whatsapp': typeof AdminWhatsappRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
@@ -155,6 +162,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/instalar': typeof InstalarRoute
   '/painel': typeof PainelRoute
+  '/admin/whatsapp': typeof AdminWhatsappRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
@@ -176,6 +184,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/instalar': typeof InstalarRoute
   '/painel': typeof PainelRoute
+  '/admin/whatsapp': typeof AdminWhatsappRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
@@ -198,6 +207,7 @@ export interface FileRouteTypes {
     | '/'
     | '/instalar'
     | '/painel'
+    | '/admin/whatsapp'
     | '/api/public/signup'
     | '/api/public/extension/campaigns'
     | '/api/public/extension/customers'
@@ -218,6 +228,7 @@ export interface FileRouteTypes {
     | '/'
     | '/instalar'
     | '/painel'
+    | '/admin/whatsapp'
     | '/api/public/signup'
     | '/api/public/extension/campaigns'
     | '/api/public/extension/customers'
@@ -238,6 +249,7 @@ export interface FileRouteTypes {
     | '/'
     | '/instalar'
     | '/painel'
+    | '/admin/whatsapp'
     | '/api/public/signup'
     | '/api/public/extension/campaigns'
     | '/api/public/extension/customers'
@@ -259,6 +271,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   InstalarRoute: typeof InstalarRoute
   PainelRoute: typeof PainelRoute
+  AdminWhatsappRoute: typeof AdminWhatsappRoute
   ApiPublicSignupRoute: typeof ApiPublicSignupRoute
   ApiPublicExtensionCampaignsRoute: typeof ApiPublicExtensionCampaignsRouteWithChildren
   ApiPublicExtensionCustomersRoute: typeof ApiPublicExtensionCustomersRouteWithChildren
@@ -294,6 +307,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/whatsapp': {
+      id: '/admin/whatsapp'
+      path: '/admin/whatsapp'
+      fullPath: '/admin/whatsapp'
+      preLoaderRoute: typeof AdminWhatsappRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/signup': {
@@ -439,6 +459,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   InstalarRoute: InstalarRoute,
   PainelRoute: PainelRoute,
+  AdminWhatsappRoute: AdminWhatsappRoute,
   ApiPublicSignupRoute: ApiPublicSignupRoute,
   ApiPublicExtensionCampaignsRoute:
     ApiPublicExtensionCampaignsRouteWithChildren,
