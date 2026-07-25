@@ -133,7 +133,7 @@ async function reportJob(id, status, error) {
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, "X-CRM-Extension-Version": EXTENSION_VERSION },
     body: JSON.stringify({ status, error }),
   }).catch(() => {});
-  if (!res?.ok) await setLastError(`Falha ao reportar job ${id}: HTTP ${res?.status || "rede"}`);
+  if (!res?.ok) console.warn(`[CRM bg] falha ao reportar job ${id}: HTTP ${res?.status || "rede"}`);
 }
 
 async function ensureScripts(tabId) {
