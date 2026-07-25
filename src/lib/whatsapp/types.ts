@@ -5,6 +5,18 @@
 // de `provider.server.ts` — trocar de provider é uma variável de ambiente,
 // nada mais.
 
+/** Nome do provider ativo — gravado em `whatsapp_instances.provider`. */
+export type ProviderName = "uazapi" | "meta";
+
+/**
+ * Como o número é vinculado:
+ *  - "qr": QR code + polling de status (UAZAPI).
+ *  - "embedded_signup": pop-up de login da Meta devolve um `code` que o
+ *    servidor troca por token no callback (API oficial). Não há QR nem
+ *    polling de pareamento.
+ */
+export type AuthMode = "qr" | "embedded_signup";
+
 export type InstanceStatus =
   | "disconnected"
   | "connecting"
@@ -16,6 +28,13 @@ export type ConnectResult = {
   instance_token: string;
   status: InstanceStatus;
   qrcode?: string | null;
+  /** Preenchido quando `authMode === "embedded_signup"`: URL/config do pop-up. */
+  signup?: {
+    /** URL a abrir no navegador do usuário (ou null se o SDK do BSP cuida disso). */
+    url?: string | null;
+    /** Parâmetros do SDK (app_id, config_id, state…) quando aplicável. */
+    params?: Record<string, string>;
+  } | null;
 };
 
 export type StatusResult = {
@@ -24,9 +43,25 @@ export type StatusResult = {
   phone?: string | null;
 };
 
+/** Resultado da troca do `code` do Embedded Signup por credenciais. */
+export type SignupCallbackResult = {
+  status: InstanceStatus;
+  waba_id: string;
+  phone_number_id: string;
+  access_token: string;
+  business_id?: string | null;
+  phone?: string | null;
+  /**
+   * true quando o número já era usado no app WhatsApp Business e foi
+   * vinculado em modo Coexistência (não é um número novo).
+   */
+  is_coexistence: boolean;
+};
+
 export type SendResult =
   | { ok: true; provider_message_id?: string }
   | { ok: false; error: string; retryable: boolean };
+
 
 export interface WhatsAppProvider {
   /** Cria (ou reaproveita) a instância da barbearia e devolve dados iniciais. */
