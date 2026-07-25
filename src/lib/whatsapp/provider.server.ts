@@ -16,7 +16,8 @@ export function getWhatsAppProvider(): WhatsAppProvider {
   switch (name) {
     case "uazapi":
       return uazapiProvider;
-    default:
-      throw new Error(`WHATSAPP_PROVIDER sem implementação: ${name}`);
+    case "meta":
+      return metaProvider;
   }
 }
+
