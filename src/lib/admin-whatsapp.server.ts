@@ -110,6 +110,16 @@ export type TestResult = {
   send?: SendResult;
 };
 
+const smbRegisterUnavailablePattern = /Register endpoint is not available for SMB businesses/i;
+
+function isSmbRegisterUnavailable(error: string | undefined): boolean {
+  return !!error && smbRegisterUnavailablePattern.test(error);
+}
+
+function manualRegistrationMessage(): string {
+  return "A Meta não permite registrar esse número pelo endpoint /register para contas SMB. Não é erro do CRM nem do PIN: conclua o registro manualmente no Meta for Developers/WhatsApp Manager, confirme o número e a verificação em duas etapas, depois volte e teste o envio novamente.";
+}
+
 /** Registra o número na Cloud API — resolve o erro 133010 no primeiro envio. */
 export async function registerNumber(
   supabaseAdmin: Admin,
@@ -138,6 +148,9 @@ export async function registerNumber(
   });
 
   if (!res.ok) {
+    if (isSmbRegisterUnavailable(res.error)) {
+      return { ok: false, message: manualRegistrationMessage() };
+    }
     return { ok: false, message: `Falha ao registrar: ${res.error ?? "erro desconhecido"}` };
   }
 
@@ -198,7 +211,7 @@ export async function testCredentials(
         ? send.ok
           ? "Credenciais válidas e mensagem de teste enviada."
           : notRegistered
-            ? `Credenciais válidas, mas o número ainda não está registrado na Cloud API (${send.error}). Use "Registrar número na Cloud API" com um PIN de 6 dígitos e teste de novo.`
+            ? `Credenciais válidas, mas o número ainda não está registrado na Cloud API (${send.error}). Se o registro por PIN retornar “Register endpoint is not available for SMB businesses”, finalize esse registro manualmente no Meta for Developers/WhatsApp Manager e teste de novo.`
             : `Credenciais válidas, mas o envio falhou: ${send.error}`
         : "Credenciais válidas — número ativo na Cloud API."
       : s.status === "disconnected"
