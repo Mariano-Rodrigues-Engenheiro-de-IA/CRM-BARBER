@@ -96,9 +96,13 @@ async function fetchNextJob() {
     headers: { Authorization: `Bearer ${token}`, "X-CRM-Extension-Version": EXTENSION_VERSION },
     cache: "no-store",
   }).catch((e) => {
-    void setLastError(`Falha de rede ao buscar fila: ${String(e?.message || e)}`);
+    // Falha de rede aqui é transitória (service worker acordando, aba offline,
+    // preview sem sessão). O disparo real acontece no servidor, então isso não
+    // é um erro que o usuário precisa ver no painel lateral.
+    console.warn("[CRM bg] falha de rede ao buscar fila", String(e?.message || e));
     return null;
   });
+
   if (!res) return null;
   if (res.status === 401) {
     await chrome.storage.local.remove(["token", "barbershop"]);
