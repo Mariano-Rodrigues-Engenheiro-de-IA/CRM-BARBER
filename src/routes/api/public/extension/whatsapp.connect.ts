@@ -37,7 +37,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/connect")({
 
           const payload = {
             barbershop_id: auth.token.barbershop_id,
-            provider: "uazapi",
+            provider: provider.name,
             instance_id: result.instance_id,
             instance_token: result.instance_token,
             status: result.status,
@@ -60,9 +60,12 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/connect")({
               status: result.status,
               qrcode: result.qrcode ?? null,
               phone: null,
-              provider: "uazapi",
+              provider: provider.name,
+              auth_mode: provider.authMode,
+              signup: result.signup ?? null,
             },
           });
+
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           console.error("[whatsapp/connect]", msg);
