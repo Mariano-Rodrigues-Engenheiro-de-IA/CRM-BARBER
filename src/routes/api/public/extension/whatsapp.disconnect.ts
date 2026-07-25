@@ -21,7 +21,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/disconnect"
 
         const { data: inst } = await supabaseAdmin
           .from("whatsapp_instances")
-          .select("id, instance_id, instance_token")
+          .select("id, instance_id, instance_token, provider")
           .eq("barbershop_id", auth.token.barbershop_id)
           .maybeSingle();
 
@@ -49,10 +49,17 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/disconnect"
 
         }
 
+        const { getWhatsAppProviderName } = await import("@/lib/whatsapp/provider.server");
         return jsonResponse(request, {
           ok: true,
-          connection: { status: "disconnected", phone: null, qrcode: null, provider: "uazapi" },
+          connection: {
+            status: "disconnected",
+            phone: null,
+            qrcode: null,
+            provider: inst?.provider ?? getWhatsAppProviderName(),
+          },
         });
+
       },
     },
   },

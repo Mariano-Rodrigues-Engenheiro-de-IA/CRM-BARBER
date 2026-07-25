@@ -222,6 +222,10 @@ async function initInstance(barbershop_id: string, fallbackInstanceId: string | 
 }
 
 export const uazapiProvider: WhatsAppProvider = {
+  name: "uazapi",
+  authMode: "qr",
+
+
   async connect({ barbershop_id, existing_instance_id, existing_instance_token }) {
     let instance_id = existing_instance_id ?? null;
     let instance_token = existing_instance_token ?? null;
