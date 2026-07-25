@@ -202,6 +202,37 @@ function AdminWhatsApp() {
         </section>
 
         <section className="rounded-2xl bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-neutral-950">Registrar número na Cloud API</h2>
+          <p className="mt-1 text-sm text-neutral-600">
+            Obrigatório antes do primeiro envio. Se o teste retornar{" "}
+            <strong>(#133010) Account not registered</strong>, escolha um PIN de 6 dígitos e registre aqui.
+            Guarde esse PIN — a Meta pede em migrações futuras do número.
+          </p>
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <Field label="PIN de 6 dígitos">
+                <Input
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="123456"
+                  inputMode="numeric"
+                />
+              </Field>
+            </div>
+            <Button
+              type="button"
+              onClick={() => void onRegister()}
+              disabled={busy !== null || !selected || pin.trim().length !== 6}
+              className="bg-neutral-900 text-white hover:bg-neutral-800"
+            >
+              {busy === "register" ? "Registrando…" : "Registrar número"}
+            </Button>
+          </div>
+        </section>
+
+
+
+        <section className="rounded-2xl bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-neutral-950">Testar conexão</h2>
           <p className="mt-1 text-sm text-neutral-600">
             Confere o número na Cloud API. Se você informar um telefone, também envia uma mensagem de teste
