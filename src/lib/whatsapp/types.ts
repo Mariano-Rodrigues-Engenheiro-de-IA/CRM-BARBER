@@ -64,7 +64,14 @@ export type SendResult =
 
 
 export interface WhatsAppProvider {
+  /** Nome canônico — gravado em `whatsapp_instances.provider`. */
+  readonly name: ProviderName;
+
+  /** Como o vínculo do número acontece nesse provider. */
+  readonly authMode: AuthMode;
+
   /** Cria (ou reaproveita) a instância da barbearia e devolve dados iniciais. */
+
   connect(input: {
     barbershop_id: string;
     existing_instance_id?: string | null;
