@@ -73,11 +73,11 @@ export const metaProvider: WhatsAppProvider = {
     // desvínculo definitivo acontece no hub do BSP pelo próprio cliente.
   },
 
-  async handleSignupCallback({ code, barbershop_id, state }) {
+  async handleSignupCallback({ code, barbershop_id, state, extra }) {
     return getBspAdapter().exchangeSignup({
       code,
       barbershop_id,
-      extra: state ? { state } : undefined,
+      extra: { ...(extra ?? {}), ...(state ? { state } : {}) },
     });
   },
 };
