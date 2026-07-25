@@ -44,7 +44,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
         // Instâncias conectadas.
         const { data: instances } = await supabaseAdmin
           .from("whatsapp_instances")
-          .select("barbershop_id, instance_token")
+          .select("barbershop_id, instance_token, phone_number_id")
           .eq("status", "connected");
 
         if (!instances || instances.length === 0) {
