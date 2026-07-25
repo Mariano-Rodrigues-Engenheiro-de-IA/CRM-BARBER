@@ -111,6 +111,22 @@ function AdminWhatsApp() {
     setBusy(null);
   }
 
+  async function onRegister() {
+    if (!selected) return;
+    setBusy("register");
+    setResult(null);
+    try {
+      const res = await registerNum({ data: { barbershop_id: selected, pin: pin.trim() } });
+      setResult({ ok: res.ok, text: res.message });
+      await reload();
+    } catch (err) {
+      setResult({ ok: false, text: err instanceof Error ? err.message : String(err) });
+    }
+    setBusy(null);
+  }
+
+
+
   return (
     <main className="min-h-screen bg-neutral-100 px-4 py-10">
       <div className="mx-auto w-full max-w-3xl space-y-6">
