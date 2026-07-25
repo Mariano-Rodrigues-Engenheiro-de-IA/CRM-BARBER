@@ -8,7 +8,7 @@
 //
 // Rate limit: espaçamento aleatório entre 8s e 20s entre jobs (ritmo humano).
 
-const EXTENSION_VERSION = "0.18.42";
+const EXTENSION_VERSION = "0.18.43";
 const DEFAULT_API_BASE = "https://buzz-boost-crm.lovable.app";
 const POLL_MIN_MS = 8000;
 const POLL_MAX_MS = 20000;
@@ -96,9 +96,13 @@ async function fetchNextJob() {
     headers: { Authorization: `Bearer ${token}`, "X-CRM-Extension-Version": EXTENSION_VERSION },
     cache: "no-store",
   }).catch((e) => {
-    void setLastError(`Falha de rede ao buscar fila: ${String(e?.message || e)}`);
+    // Falha de rede aqui é transitória (service worker acordando, aba offline,
+    // preview sem sessão). O disparo real acontece no servidor, então isso não
+    // é um erro que o usuário precisa ver no painel lateral.
+    console.warn("[CRM bg] falha de rede ao buscar fila", String(e?.message || e));
     return null;
   });
+
   if (!res) return null;
   if (res.status === 401) {
     await chrome.storage.local.remove(["token", "barbershop"]);
@@ -107,16 +111,17 @@ async function fetchNextJob() {
   }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    await setLastError(`API da fila retornou HTTP ${res.status}: ${text.slice(0, 160)}`);
+    console.warn(`[CRM bg] fila HTTP ${res.status}`, text.slice(0, 160));
     return null;
   }
   const data = await res.json().catch(() => ({}));
   if (!data.ok) {
-    await setLastError(data.error || "API da fila retornou erro");
+    console.warn("[CRM bg] fila retornou erro", data.error);
     return null;
   }
   if (data.job) await clearLastError();
   return data.job || null;
+
 }
 
 async function reportJob(id, status, error) {
@@ -128,7 +133,7 @@ async function reportJob(id, status, error) {
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, "X-CRM-Extension-Version": EXTENSION_VERSION },
     body: JSON.stringify({ status, error }),
   }).catch(() => {});
-  if (!res?.ok) await setLastError(`Falha ao reportar job ${id}: HTTP ${res?.status || "rede"}`);
+  if (!res?.ok) console.warn(`[CRM bg] falha ao reportar job ${id}: HTTP ${res?.status || "rede"}`);
 }
 
 async function ensureScripts(tabId) {
@@ -337,10 +342,13 @@ chrome.tabs.onUpdated?.addListener((tabId, changeInfo, tab) => {
 
 // Kick off polling if already paired on startup.
 (async () => {
+  // Limpa erros de fila antigos gravados por versões anteriores.
+  await clearLastError();
   const { token } = await getAuth();
   if (token) {
     await getWhatsappTabs();
     scheduleAlarm();
     pollLoop();
   }
+
 })();
