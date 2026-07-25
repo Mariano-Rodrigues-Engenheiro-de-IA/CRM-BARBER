@@ -204,10 +204,16 @@ function AdminWhatsApp() {
         <section className="rounded-2xl bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-neutral-950">Registrar número na Cloud API</h2>
           <p className="mt-1 text-sm text-neutral-600">
-            Obrigatório antes do primeiro envio. Se o teste retornar{" "}
-            <strong>(#133010) Account not registered</strong>, escolha um PIN de 6 dígitos e registre aqui.
-            Guarde esse PIN — a Meta pede em migrações futuras do número.
+            Se o teste retornar <strong>(#133010) Account not registered</strong>, o número existe na conta,
+            mas ainda não foi ativado para envio. Tente o registro por PIN abaixo; se a Meta responder
+            <strong> “Register endpoint is not available for SMB businesses”</strong>, conclua o registro
+            manualmente no Meta for Developers/WhatsApp Manager e volte apenas para testar.
           </p>
+          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+            Para contas SMB, a Meta pode bloquear este endpoint. Nesse caso não adianta trocar o PIN:
+            confirme o número, configure/verifique o PIN de duas etapas no WhatsApp Manager e garanta que
+            o número apareça como pronto/ativo antes de testar o envio aqui.
+          </div>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex-1">
               <Field label="PIN de 6 dígitos">
