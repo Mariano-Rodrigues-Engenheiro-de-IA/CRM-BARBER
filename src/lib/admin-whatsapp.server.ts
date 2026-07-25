@@ -20,6 +20,12 @@ export const testSchema = z.object({
   test_phone: z.string().trim().max(20).optional().or(z.literal("")),
 });
 
+export const registerSchema = z.object({
+  barbershop_id: z.string().uuid(),
+  /** PIN de 6 dígitos definido no registro (guarde: é pedido em migrações). */
+  pin: z.string().trim().regex(/^\d{6}$/, "O PIN deve ter exatamente 6 dígitos"),
+});
+
 export type AdminShopRow = {
   barbershop_id: string;
   name: string;
