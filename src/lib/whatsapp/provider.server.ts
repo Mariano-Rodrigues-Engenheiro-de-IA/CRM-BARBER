@@ -1,8 +1,9 @@
 // Factory de provider WhatsApp. Escolha via env `WHATSAPP_PROVIDER`.
-// Padrão: uazapi. No futuro, `meta` liga a implementação oficial.
+// Padrão: uazapi (QR). `meta` liga a API oficial via BSP (Embedded Signup).
 
 import type { ProviderName, WhatsAppProvider } from "./types";
 import { uazapiProvider } from "./uazapi.server";
+import { metaProvider } from "./meta.server";
 
 /** Nome do provider ativo, sem instanciar nada. */
 export function getWhatsAppProviderName(): ProviderName {
