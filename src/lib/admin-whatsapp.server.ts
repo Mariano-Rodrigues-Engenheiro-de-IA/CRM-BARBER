@@ -110,6 +110,45 @@ export type TestResult = {
   send?: SendResult;
 };
 
+/** Registra o número na Cloud API — resolve o erro 133010 no primeiro envio. */
+export async function registerNumber(
+  supabaseAdmin: Admin,
+  input: z.infer<typeof registerSchema>,
+): Promise<{ ok: boolean; message: string }> {
+  const { data: inst } = await supabaseAdmin
+    .from("whatsapp_instances")
+    .select("id, phone_number_id, meta_access_token")
+    .eq("barbershop_id", input.barbershop_id)
+    .maybeSingle();
+
+  if (!inst?.phone_number_id || !inst.meta_access_token) {
+    return { ok: false, message: "Salve phone_number_id e access_token antes de registrar." };
+  }
+
+  const { getBspAdapter } = await import("./whatsapp/bsp/index.server");
+  const bsp = getBspAdapter();
+  if (!bsp.register) {
+    return { ok: false, message: "Este provedor não expõe registro manual do número." };
+  }
+
+  const res = await bsp.register({
+    access_token: inst.meta_access_token,
+    phone_number_id: inst.phone_number_id,
+    pin: input.pin,
+  });
+
+  if (!res.ok) {
+    return { ok: false, message: `Falha ao registrar: ${res.error ?? "erro desconhecido"}` };
+  }
+
+  await supabaseAdmin
+    .from("whatsapp_instances")
+    .update({ status: "connected", last_synced_at: new Date().toISOString() })
+    .eq("id", inst.id);
+
+  return { ok: true, message: "Número registrado na Cloud API. Teste o envio agora." };
+}
+
 export async function testCredentials(
   supabaseAdmin: Admin,
   input: z.infer<typeof testSchema>,
