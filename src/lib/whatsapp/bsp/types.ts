@@ -7,7 +7,7 @@
 
 import type { SendResult, SignupCallbackResult, StatusResult } from "../types";
 
-export type BspName = "360dialog";
+export type BspName = "360dialog" | "cloud";
 
 export interface BspAdapter {
   readonly name: BspName;
