@@ -198,6 +198,19 @@ function writeBrand(shopId: string, data: Brand) {
   localStorage.setItem(brandKey(shopId), JSON.stringify(data));
 }
 
+// Sistema de assinatura escolhido na configuração inicial (por barbearia).
+function systemKey(shopId: string) { return `crm_subsystem_${shopId || "default"}`; }
+function readSystem(shopId: string): SubscriptionSystemId | null {
+  if (typeof window === "undefined") return null;
+  const v = localStorage.getItem(systemKey(shopId));
+  return v === "appbarber" || v === "frisar" || v === "manual" ? v : null;
+}
+function writeSystem(shopId: string, id: SubscriptionSystemId) {
+  localStorage.setItem(systemKey(shopId), id);
+}
+
+
+
 
 function Painel() {
   const [token, setToken] = useState<string | null>(null);
