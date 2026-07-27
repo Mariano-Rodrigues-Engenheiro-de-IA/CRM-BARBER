@@ -10,6 +10,7 @@ import { TeamView } from "@/components/team-view";
 import { ConnectionView } from "@/components/connection-view";
 import {
   SUBSCRIPTION_SYSTEMS,
+  statusesForSystem,
   parseSubscriptionSheet,
   planFromTags,
   type SubscriptionSystemId,
@@ -71,6 +72,12 @@ const COLUMNS: Array<{ key: string; label: string }> = [
   { key: "reactivate", label: "Reativar" },
   { key: "canceled", label: "Cancelados" },
 ];
+
+/** Colunas visíveis conforme o sistema de assinatura escolhido. */
+function visibleColumns(shopId: string) {
+  const allowed = statusesForSystem(readSystem(shopId));
+  return allowed ? COLUMNS.filter((c) => allowed.includes(c.key)) : COLUMNS;
+}
 
 const TOKEN_KEY = "crm_ext_token_v1";
 const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
@@ -223,7 +230,8 @@ function systemKey(shopId: string) { return `crm_subsystem_${shopId || "default"
 function readSystem(shopId: string): SubscriptionSystemId | null {
   if (typeof window === "undefined") return null;
   const v = localStorage.getItem(systemKey(shopId));
-  return v === "appbarber" || v === "frisar" || v === "manual" ? v : null;
+  if (v === "frisar") return "frizzar"; // migração do nome antigo
+  return v === "appbarber" || v === "cashbarber" || v === "frizzar" || v === "manual" ? v : null;
 }
 function writeSystem(shopId: string, id: SubscriptionSystemId) {
   localStorage.setItem(systemKey(shopId), id);
@@ -318,6 +326,7 @@ function Painel() {
   const NAV_TOP: Array<{ key: Section; label: string; icon: React.ReactNode }> = [
     { key: "assinantes", label: "Assinantes", icon: <IconUsers /> },
     { key: "equipe", label: "Equipe", icon: <IconTrophy /> },
+    { key: "configuracoes", label: "Configurações", icon: <IconGear /> },
     { key: "conexao", label: "Conexão", icon: <IconUsers /> },
   ];
 
@@ -359,21 +368,13 @@ function Painel() {
           })}
         </nav>
 
-        <div className="px-3 pb-4 pt-2">
-          <div className="mb-3 h-px bg-neutral-200" />
-          <button onClick={() => setSection("configuracoes")} className={navRowCls(section === "configuracoes")}>
-            <span className="flex h-5 w-5 items-center justify-center"><IconGear /></span>
-            <span className="flex-1 truncate">Configurações</span>
-            <IconChevron className={section === "configuracoes" ? "text-neutral-900" : "text-neutral-400 group-hover:text-neutral-700"} />
-          </button>
-        </div>
       </aside>
 
       {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-neutral-200 bg-white text-neutral-900 px-4 py-3">
         <span className="text-[11px] font-semibold tracking-[0.22em] text-neutral-700">CRM BARBER</span>
         <div className="flex gap-1 rounded-lg bg-neutral-100 p-1">
-          {[...NAV_TOP, { key: "configuracoes" as Section, label: "Config", icon: null }].map((n) => (
+          {NAV_TOP.map((n) => (
             <button
               key={n.key}
               onClick={() => setSection(n.key)}
@@ -420,7 +421,7 @@ function Painel() {
                 <KanbanView customers={customers} loading={loading} token={token} reload={reload} shopId={shop?.id ?? "default"} onGoSettings={() => setSection("configuracoes")} />
               )}
               {tab === "disparo" && (
-                <DisparoView customers={customers} token={token} onDone={() => setTab("campanhas")} onNeedConnection={() => setSection("conexao")} />
+                <DisparoView customers={customers} token={token} shopId={shop?.id ?? "default"} onDone={() => setTab("campanhas")} onNeedConnection={() => setSection("conexao")} />
               )}
 
               {tab === "campanhas" && <CampaignsView token={token} />}
@@ -487,6 +488,8 @@ function KanbanView({
     setGoal(readGoal(shopId));
   }, [shopId]);
 
+  const cols = useMemo(() => visibleColumns(shopId), [shopId, showImport]);
+
   const effective = useMemo(
     () => customers.map((c) => (pending[c.id] ? { ...c, status: pending[c.id] } : c)),
     [customers, pending],
@@ -494,7 +497,7 @@ function KanbanView({
 
   const byStatus = useMemo(() => {
     const g: Record<string, Customer[]> = {};
-    for (const col of COLUMNS) g[col.key] = [];
+    for (const col of cols) g[col.key] = [];
     for (const c of effective) {
       if (!g[c.status]) g[c.status] = [];
       g[c.status].push(c);
@@ -592,7 +595,7 @@ function KanbanView({
       {loading && <p className="text-sm text-neutral-500">Carregando...</p>}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {COLUMNS.map((col) => (
+        {cols.map((col) => (
           <div
             key={col.key}
             onDragOver={(e) => { e.preventDefault(); setOverCol(col.key); }}
@@ -669,12 +672,13 @@ function KanbanView({
         ))}
       </div>
 
-      {showAdd && <AddModal token={token} onClose={() => { setShowAdd(false); reload(); }} />}
+      {showAdd && <AddModal token={token} cols={cols} onClose={() => { setShowAdd(false); reload(); }} />}
       {detail && (
         <CustomerDrawer
           token={token}
           customer={detail}
           plans={plans}
+          cols={cols}
           onMove={(status) => { moveTo(detail.id, status); setDetail(null); }}
           onClose={() => { setDetail(null); reload(); }}
         />
@@ -771,7 +775,7 @@ function CustomerDrawer({
             onChange={(e) => onMove(e.target.value)}
             className={inputCls}
           >
-            {COLUMNS.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+            {cols.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
           </select>
         </Field>
 
@@ -831,7 +835,7 @@ function CustomerDrawer({
 }
 
 
-function AddModal({ token, onClose }: { token: string; onClose: () => void }) {
+function AddModal({ token, cols, onClose }: { token: string; cols: Array<{ key: string; label: string }>; onClose: () => void }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [status, setStatus] = useState("active");
@@ -863,7 +867,7 @@ function AddModal({ token, onClose }: { token: string; onClose: () => void }) {
         </Field>
         <Field label="Coluna">
           <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
-            {COLUMNS.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+            {cols.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
           </select>
         </Field>
         {err && <p className="text-sm text-red-500">{err}</p>}
@@ -964,7 +968,7 @@ function ImportModal({
         <div className="space-y-4">
           <p className="text-sm text-neutral-700">
             Antes de importar, escolha em <strong>Configurações</strong> qual sistema de
-            assinatura a barbearia usa (App Barber, Frisar ou planilha manual). Assim o
+            assinatura a barbearia usa (App Barber, Cash Barber, Frizzar ou outro). Assim o
             CRM sabe como ler a planilha e distribuir os assinantes nas colunas certas.
           </p>
           <button
@@ -1038,14 +1042,17 @@ function ImportModal({
 function DisparoView({
   customers,
   token,
+  shopId,
   onDone,
   onNeedConnection,
 }: {
   customers: Customer[];
   token: string;
+  shopId: string;
   onDone: () => void;
   onNeedConnection: () => void;
 }) {
+  const cols = useMemo(() => visibleColumns(shopId), [shopId]);
 
   const [name, setName] = useState("");
   const [variants, setVariants] = useState<string[]>([""]);
@@ -1113,7 +1120,7 @@ function DisparoView({
 
       <Field label="Público-alvo">
         <select value={segment} onChange={(e) => setSegment(e.target.value)} className={inputCls}>
-          {COLUMNS.map((c) => <option key={c.key} value={c.key}>{c.label} ({customers.filter((cu) => cu.status === c.key).length})</option>)}
+          {cols.map((c) => <option key={c.key} value={c.key}>{c.label} ({customers.filter((cu) => cu.status === c.key).length})</option>)}
           <option value="all">Todos ({customers.length})</option>
         </select>
         <p className="mt-1 text-xs text-neutral-500">
@@ -1434,14 +1441,8 @@ function SettingsView({
       <h1 className="text-lg font-semibold text-neutral-900">Configurações</h1>
 
       <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-4">
-        <div>
-          <h2 className="text-sm font-semibold text-neutral-900">Sistema de assinatura</h2>
-          <p className="mt-1 text-xs text-neutral-500">
-            De onde vem a planilha de assinantes. O CRM usa isso para ler a planilha e
-            distribuir os contatos nas colunas certas automaticamente.
-          </p>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-3">
+        <h2 className="text-sm font-semibold text-neutral-900">Sistema de assinatura</h2>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {SUBSCRIPTION_SYSTEMS.map((s) => (
             <button
               key={s.id}
@@ -1455,9 +1456,6 @@ function SettingsView({
               }
             >
               <span className="block font-semibold">{s.label}</span>
-              <span className={"mt-1 block text-[11px] " + (system === s.id ? "text-yellow-200/80" : "text-neutral-500")}>
-                {s.hint}
-              </span>
             </button>
           ))}
         </div>
