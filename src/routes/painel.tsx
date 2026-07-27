@@ -402,7 +402,7 @@ function Painel() {
 
             <main className="px-6 py-6">
               {tab === "kanban" && (
-                <KanbanView customers={customers} loading={loading} token={token} reload={reload} />
+                <KanbanView customers={customers} loading={loading} token={token} reload={reload} shopId={shop?.id ?? "default"} onGoSettings={() => setSection("configuracoes")} />
               )}
               {tab === "disparo" && (
                 <DisparoView customers={customers} token={token} onDone={() => setTab("campanhas")} onNeedConnection={() => setSection("conexao")} />
