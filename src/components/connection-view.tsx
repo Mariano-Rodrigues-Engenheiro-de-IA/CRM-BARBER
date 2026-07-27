@@ -42,6 +42,7 @@ export function ConnectionView({ api }: { api: Api }) {
   const refreshSeqRef = useRef(0);
   const operationSeqRef = useRef(0);
   const actionRef = useRef<"connect" | "disconnect" | null>(null);
+  const statusRef = useRef<Connection["status"]>("disconnected");
 
   function clearPoll() {
     if (pollRef.current) {
