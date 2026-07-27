@@ -109,11 +109,14 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
             customersQ = customersQ.overlaps("tags", filter.tags);
           }
         }
-        const { data: targets, error: tErr } = await customersQ.limit(2000);
+        const { data: allTargets, error: tErr } = await customersQ.limit(2000);
         if (tErr) {
           return jsonResponse(request, { ok: false, error: tErr.message }, { status: 500 });
         }
-        if (!targets || targets.length === 0) {
+        // Planilhas sem coluna de telefone geram contatos com telefone placeholder
+        // ("sem-tel-..."). Eles ficam no CRM, mas nunca entram na fila de disparo.
+        const targets = (allTargets ?? []).filter((t) => /^\d{10,15}$/.test(String(t.phone ?? "")));
+        if (targets.length === 0) {
           return jsonResponse(
             request,
             { ok: false, error: "Nenhum assinante encontrado para os critérios" },
