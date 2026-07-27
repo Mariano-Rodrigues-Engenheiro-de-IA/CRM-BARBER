@@ -28,19 +28,33 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/status")({
 
         const { data: inst } = await supabaseAdmin
           .from("whatsapp_instances")
-          .select("id, status, phone, last_qr, last_synced_at, instance_id, instance_token, provider")
+          .select("id, status, phone, last_qr, last_synced_at, instance_id, instance_token, provider, phone_number_id, meta_access_token")
           .eq("barbershop_id", auth.token.barbershop_id)
           .maybeSingle();
 
         // Sem instância ainda.
         if (!inst) {
-          const { getWhatsAppProviderName } = await import("@/lib/whatsapp/provider.server");
+          const { getWhatsAppProvider } = await import("@/lib/whatsapp/provider.server");
+          const provider = getWhatsAppProvider();
           return jsonResponse(request, {
             ok: true,
-            connection: { status: "disconnected", phone: null, qrcode: null, provider: getWhatsAppProviderName() },
+            connection: {
+              status: "disconnected",
+              phone: null,
+              qrcode: null,
+              provider: provider.name,
+              auth_mode: provider.authMode,
+            },
           });
         }
 
+        const providerName = inst.provider === "meta" ? "meta" : "uazapi";
+        const instanceId = providerName === "meta"
+          ? inst.phone_number_id ?? inst.instance_id
+          : inst.instance_id ?? inst.instance_token;
+        const instanceToken = providerName === "meta"
+          ? inst.meta_access_token ?? inst.instance_token
+          : inst.instance_token;
 
         // Força sync quando o cliente pede (`?sync=1`) ou quando o cache local não é `connected`.
         const staleMs = inst.status === "connected" ? 15000 : 0;
@@ -54,13 +68,14 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/status")({
         let phone = inst.phone;
         let qrcode = inst.last_qr;
 
-        if (shouldSync && inst.instance_token) {
+        const { getWhatsAppProviderByName } = await import("@/lib/whatsapp/provider.server");
+        const provider = getWhatsAppProviderByName(providerName);
+
+        if (shouldSync && instanceToken) {
           try {
-            const { getWhatsAppProvider } = await import("@/lib/whatsapp/provider.server");
-            const provider = getWhatsAppProvider();
             const s = await provider.status({
-              instance_id: inst.instance_id ?? inst.instance_token,
-              instance_token: inst.instance_token,
+              instance_id: instanceId ?? instanceToken,
+              instance_token: instanceToken,
             });
             status = s.status;
             phone = s.phone ?? phone;
@@ -86,6 +101,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/status")({
             phone,
             qrcode: status === "connected" ? null : qrcode,
             provider: inst.provider,
+            auth_mode: provider.authMode,
           },
         });
       },

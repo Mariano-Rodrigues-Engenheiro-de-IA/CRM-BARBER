@@ -38,8 +38,9 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/disconnect"
 
         if (inst?.instance_token) {
           try {
-            const { getWhatsAppProvider } = await import("@/lib/whatsapp/provider.server");
-            await getWhatsAppProvider().disconnect({
+            const { getWhatsAppProviderByName } = await import("@/lib/whatsapp/provider.server");
+            const provider = getWhatsAppProviderByName(inst.provider === "meta" ? "meta" : "uazapi");
+            await provider.disconnect({
               instance_id: inst.instance_id ?? inst.instance_token,
               instance_token: inst.instance_token,
             });
@@ -49,14 +50,16 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/disconnect"
 
         }
 
-        const { getWhatsAppProviderName } = await import("@/lib/whatsapp/provider.server");
+        const { getWhatsAppProvider } = await import("@/lib/whatsapp/provider.server");
+        const defaultProvider = getWhatsAppProvider();
         return jsonResponse(request, {
           ok: true,
           connection: {
             status: "disconnected",
             phone: null,
             qrcode: null,
-            provider: inst?.provider ?? getWhatsAppProviderName(),
+            provider: inst?.provider ?? defaultProvider.name,
+            auth_mode: inst?.provider === "meta" ? "embedded_signup" : defaultProvider.authMode,
           },
         });
 

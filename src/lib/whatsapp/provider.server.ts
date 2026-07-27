@@ -12,13 +12,16 @@ export function getWhatsAppProviderName(): ProviderName {
   throw new Error(`WHATSAPP_PROVIDER desconhecido: ${name}`);
 }
 
-export function getWhatsAppProvider(): WhatsAppProvider {
-  const name = getWhatsAppProviderName();
+export function getWhatsAppProviderByName(name: ProviderName): WhatsAppProvider {
   switch (name) {
     case "uazapi":
       return uazapiProvider;
     case "meta":
       return metaProvider;
   }
+}
+
+export function getWhatsAppProvider(): WhatsAppProvider {
+  return getWhatsAppProviderByName(getWhatsAppProviderName());
 }
 
