@@ -30,6 +30,7 @@ type Connection = {
   phone: string | null;
   qrcode: string | null;
   provider: string;
+  auth_mode?: string | null;
 };
 
 export function ConnectionView({ api }: { api: Api }) {
@@ -68,6 +69,7 @@ export function ConnectionView({ api }: { api: Api }) {
     if (res.ok && res.connection) {
       const next = res.connection as Connection;
       statusRef.current = next.status;
+      setAuthMode(next.auth_mode ?? (next.provider === "meta" ? "embedded_signup" : null));
       setConn(next);
     } else if (res.error) {
       setErr(res.error);
@@ -132,7 +134,8 @@ export function ConnectionView({ api }: { api: Api }) {
       status: "connecting",
       phone: prev?.phone ?? null,
       qrcode: null,
-      provider: prev?.provider ?? "uazapi",
+      provider: prev?.provider ?? "meta",
+      auth_mode: prev?.auth_mode ?? authMode,
     }));
     const res = await api("/api/public/extension/whatsapp/connect", { method: "POST" });
     if (res.ok && res.connection) {
@@ -183,6 +186,7 @@ export function ConnectionView({ api }: { api: Api }) {
   }
 
   const status = conn?.status ?? "disconnected";
+  const isMetaConnection = conn?.provider === "meta" || conn?.auth_mode === "embedded_signup" || authMode === "embedded_signup";
 
   return (
     <div className="space-y-4">
@@ -238,7 +242,9 @@ export function ConnectionView({ api }: { api: Api }) {
               {busy ? "Preparando…" : "Conectar WhatsApp"}
             </Button>
             <p className="mt-3 text-xs text-neutral-500">
-              Vai gerar um QR code pra você escanear com o WhatsApp da barbearia.
+              {isMetaConnection
+                ? "Este número é configurado manualmente na API oficial; depois de salvar as credenciais, o status atualiza sozinho aqui."
+                : "Vai gerar um QR code pra você escanear com o WhatsApp da barbearia."}
             </p>
           </div>
         )}
@@ -253,7 +259,7 @@ export function ConnectionView({ api }: { api: Api }) {
                   Abra o WhatsApp da barbearia → Aparelhos conectados → Conectar aparelho → aponte a câmera pro código.
                 </p>
               </div>
-            ) : conn?.provider === "meta" || authMode === "embedded_signup" ? (
+            ) : isMetaConnection ? (
               <p className="text-sm text-neutral-500">
                 Este número usa a API oficial do WhatsApp — não há QR code. A conexão é liberada
                 assim que o número estiver configurado e verificado. O status atualiza sozinho aqui.
