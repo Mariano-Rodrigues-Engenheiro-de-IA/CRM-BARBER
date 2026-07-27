@@ -45,6 +45,20 @@ export const SUBSCRIPTION_SYSTEMS: Array<{
 
 // ---------- helpers ----------
 
+function decodeEntities(v: string) {
+  return v
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+/** Célula da planilha como texto limpo. */
+function cell(v: unknown) {
+  return decodeEntities(String(v ?? "")).trim();
+}
+
 function stripAccents(v: string) {
   return v.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
@@ -112,13 +126,13 @@ function parseAppBarber(matrix: string[][]): ParseReport {
 
   for (const row of matrix.slice(1)) {
     report.total += 1;
-    const name = String(row[iName] ?? "").trim();
+    const name = cell(row[iName]);
     const phone = normalizePhone(row[iPhone]);
     if (!name || !phone) {
       report.skipped += 1;
       continue;
     }
-    const rawStatus = String(row[iStatus] ?? "").trim();
+    const rawStatus = cell(row[iStatus]);
     const status = appBarberStatus(rawStatus);
     if (!status) {
       report.skipped += 1;
@@ -128,7 +142,7 @@ function parseAppBarber(matrix: string[][]): ParseReport {
       continue;
     }
     const tags = ["appbarber"];
-    const planTag = iPlan >= 0 ? tagFromPlan(String(row[iPlan] ?? "")) : null;
+    const planTag = iPlan >= 0 ? tagFromPlan(cell(row[iPlan])) : null;
     if (planTag) tags.push(planTag);
 
     report.rows.push({ name, phone, status, tags });
@@ -165,16 +179,16 @@ function parseGeneric(
 
   for (const row of body) {
     report.total += 1;
-    const name = String(row[iName] ?? "").trim();
+    const name = cell(row[iName]);
     const phone = normalizePhone(row[iPhone >= 0 ? iPhone : 1]);
     if (!name || !phone) {
       report.skipped += 1;
       continue;
     }
-    const rawStatus = iStatus >= 0 ? String(row[iStatus] ?? "").trim() : "";
+    const rawStatus = iStatus >= 0 ? cell(row[iStatus]) : "";
     const status = statusMapper(rawStatus) ?? "active";
     const tags: string[] = [];
-    const planTag = iPlan >= 0 ? tagFromPlan(String(row[iPlan] ?? "")) : null;
+    const planTag = iPlan >= 0 ? tagFromPlan(cell(row[iPlan])) : null;
     if (planTag) tags.push(planTag);
     report.rows.push({ name, phone, status, tags });
     report.byStatus[status] = (report.byStatus[status] ?? 0) + 1;
