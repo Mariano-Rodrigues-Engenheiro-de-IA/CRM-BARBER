@@ -1464,6 +1464,98 @@ function SettingsView({
         {systemSaved && <span className="text-xs font-medium text-emerald-600">Salvo ✔</span>}
       </div>
 
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-neutral-900">Planos e valores</h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            Cadastre o valor de cada plano. O CRM usa o plano que vem na planilha para
+            somar o faturamento de cada coluna do Kanban.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          {plans.length === 0 && (
+            <p className="text-xs text-neutral-400">
+              Nenhum plano ainda. Importe a planilha (os planos são detectados sozinhos) ou cadastre abaixo.
+            </p>
+          )}
+          {plans.map((p, i) => (
+            <div key={p.name + i} className="flex items-center gap-2">
+              <input
+                value={p.name}
+                onChange={(e) => {
+                  const next = [...plans];
+                  next[i] = { ...next[i], name: e.target.value };
+                  setPlans(next);
+                }}
+                onBlur={() => persistPlans(plans)}
+                className={inputCls}
+              />
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-neutral-500">R$</span>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={p.priceCents ? (p.priceCents / 100).toString() : ""}
+                  placeholder="0,00"
+                  onChange={(e) => {
+                    const next = [...plans];
+                    next[i] = { ...next[i], priceCents: Math.round(Number(e.target.value || 0) * 100) };
+                    setPlans(next);
+                  }}
+                  onBlur={() => persistPlans(plans)}
+                  className={inputCls + " w-28"}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => persistPlans(plans.filter((_, j) => j !== i))}
+                className="rounded p-2 text-neutral-400 hover:bg-red-50 hover:text-red-600"
+                title="Remover plano"
+              >
+                🗑
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            value={newPlan}
+            onChange={(e) => setNewPlan(e.target.value)}
+            placeholder="Novo plano (ex.: Night Plan)"
+            className={inputCls}
+          />
+          <button
+            type="button"
+            onClick={addPlan}
+            className="shrink-0 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
+          >
+            Adicionar
+          </button>
+        </div>
+        {plansSaved && <span className="text-xs font-medium text-emerald-600">Salvo ✔</span>}
+      </div>
+
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold text-neutral-900">Meta do mês</h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            Quantos assinantes ativos você quer fechar o mês. Vira a barra de progresso no Kanban.
+          </p>
+        </div>
+        <input
+          type="number"
+          min={0}
+          value={goal || ""}
+          placeholder="Ex.: 200"
+          onChange={(e) => setGoal(Number(e.target.value || 0))}
+          onBlur={() => writeGoal(shopId, goal)}
+          className={inputCls + " max-w-40"}
+        />
+      </div>
+
       <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-6">
 
         <div className="flex items-center gap-4">
