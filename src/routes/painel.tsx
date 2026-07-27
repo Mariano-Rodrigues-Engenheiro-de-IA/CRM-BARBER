@@ -11,8 +11,21 @@ import { ConnectionView } from "@/components/connection-view";
 import {
   SUBSCRIPTION_SYSTEMS,
   parseSubscriptionSheet,
+  planFromTags,
   type SubscriptionSystemId,
 } from "@/lib/subscription-systems";
+import {
+  formatBRL,
+  mergeDetectedPlans,
+  priceOf,
+  readGoal,
+  readPlans,
+  writeGoal,
+  writePlans,
+  normalizePlanName,
+  type Plan,
+} from "@/lib/shop-settings";
+
 
 export const Route = createFileRoute("/painel")({
   head: () => ({
@@ -37,6 +50,8 @@ type Customer = {
   tags: string[] | null;
   source: string;
   archived_at: string | null;
+  notes?: string | null;
+
 };
 
 type Campaign = {
@@ -459,22 +474,52 @@ function KanbanView({
 }) {
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [detail, setDetail] = useState<Customer | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overCol, setOverCol] = useState<string | null>(null);
+  // Move otimista: evita o card "voltar" enquanto o reload não chega.
+  const [pending, setPending] = useState<Record<string, string>>({});
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [goal, setGoal] = useState(0);
+
+  useEffect(() => {
+    setPlans(readPlans(shopId));
+    setGoal(readGoal(shopId));
+  }, [shopId]);
+
+  const effective = useMemo(
+    () => customers.map((c) => (pending[c.id] ? { ...c, status: pending[c.id] } : c)),
+    [customers, pending],
+  );
 
   const byStatus = useMemo(() => {
     const g: Record<string, Customer[]> = {};
     for (const col of COLUMNS) g[col.key] = [];
-    for (const c of customers) {
+    for (const c of effective) {
       if (!g[c.status]) g[c.status] = [];
       g[c.status].push(c);
     }
     return g;
-  }, [customers]);
+  }, [effective]);
+
+  const colTotal = (key: string) =>
+    (byStatus[key] ?? []).reduce((sum, c) => sum + priceOf(plans, planFromTags(c.tags)), 0);
+
+  const totalSubs = effective.filter((c) => c.status === "active" || c.status === "due_soon").length;
+  const missing = Math.max(0, goal - totalSubs);
+  const pct = goal > 0 ? Math.min(100, Math.round((totalSubs / goal) * 100)) : 0;
+  const mrr = effective
+    .filter((c) => c.status === "active" || c.status === "due_soon")
+    .reduce((sum, c) => sum + priceOf(plans, planFromTags(c.tags)), 0);
+  const plansMissingPrice = plans.filter((p) => p.priceCents <= 0).length;
 
   async function moveTo(id: string, status: string) {
-    await api(token, `/api/public/extension/customers/${id}`, {
+    setPending((p) => ({ ...p, [id]: status }));
+    const r = await api(token, `/api/public/extension/customers/${id}`, {
       method: "PATCH",
       body: JSON.stringify({ status }),
     });
+    if (!r?.ok) setPending((p) => { const n = { ...p }; delete n[id]; return n; });
     reload();
   }
 
@@ -486,6 +531,49 @@ function KanbanView({
 
   return (
     <div className="space-y-4">
+      {/* Card de meta — gamificação */}
+      <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500">
+              Assinantes ativos
+            </p>
+            <p className="text-3xl font-semibold text-neutral-900">{totalSubs}</p>
+            <p className="mt-1 text-xs text-neutral-500">
+              Receita recorrente estimada: <strong className="text-neutral-800">{formatBRL(mrr)}</strong>
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500">
+              Meta do mês
+            </p>
+            <p className="text-3xl font-semibold text-neutral-900">{goal || "—"}</p>
+            <p className="mt-1 text-xs text-neutral-500">
+              {goal === 0
+                ? "Defina a meta em Configurações"
+                : missing === 0
+                  ? "Meta batida 🎉"
+                  : `Faltam ${missing} assinante(s)`}
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-neutral-100">
+          <div
+            className="h-full rounded-full bg-yellow-400 transition-all"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <p className="mt-1 text-right text-[11px] font-medium text-neutral-500">{pct}% da meta</p>
+        {plansMissingPrice > 0 && (
+          <button
+            onClick={onGoSettings}
+            className="mt-3 text-xs font-medium text-neutral-900 underline underline-offset-2"
+          >
+            {plansMissingPrice} plano(s) sem valor cadastrado — definir agora
+          </button>
+        )}
+      </div>
+
       <div className="flex flex-wrap items-center justify-end gap-2">
         <button
           onClick={() => setShowImport(true)}
@@ -505,54 +593,76 @@ function KanbanView({
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {COLUMNS.map((col) => (
-          <div key={col.key} className="rounded-xl border border-neutral-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
-              <div>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-700">{col.label}</h3>
-                <p className="text-xs text-neutral-500">{byStatus[col.key]?.length ?? 0} contato(s)</p>
-              </div>
+          <div
+            key={col.key}
+            onDragOver={(e) => { e.preventDefault(); setOverCol(col.key); }}
+            onDragLeave={() => setOverCol((c) => (c === col.key ? null : c))}
+            onDrop={(e) => {
+              e.preventDefault();
+              setOverCol(null);
+              const id = dragId || e.dataTransfer.getData("text/plain");
+              setDragId(null);
+              if (id) moveTo(id, col.key);
+            }}
+            className={
+              "rounded-xl border bg-white shadow-sm transition " +
+              (overCol === col.key ? "border-yellow-400 ring-2 ring-yellow-300/60" : "border-neutral-200")
+            }
+          >
+            <div className="border-b border-neutral-200 px-4 py-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-700">{col.label}</h3>
+              <p className="text-xs text-neutral-500">{byStatus[col.key]?.length ?? 0} contato(s)</p>
+              <p className="mt-1 text-sm font-semibold text-neutral-900">{formatBRL(colTotal(col.key))}</p>
             </div>
             <div className="space-y-2 p-3 min-h-40">
-              {(byStatus[col.key] ?? []).map((c) => (
-                <div
-                  key={c.id}
-                  className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-sm hover:border-neutral-900 hover:shadow-sm transition"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="truncate font-semibold text-neutral-900">{c.name}</div>
-                      <div className="text-xs text-neutral-500">{c.phone}</div>
-                      {c.source === "spreadsheet" ? (
-                        <span className="mt-1 inline-block rounded bg-neutral-900 px-1.5 py-0.5 text-[10px] uppercase text-yellow-400">
-                          planilha
-                        </span>
-                      ) : (
-                        <span className="mt-1 inline-block rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] uppercase text-emerald-700">
-                          manual
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => remove(c.id)}
-                      className="rounded p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600"
-                      title="Remover"
-                    >
-                      🗑
-                    </button>
-                  </div>
-                  <select
-                    value={c.status}
-                    onChange={(e) => moveTo(c.id, e.target.value)}
-                    className="mt-2 w-full rounded-md border border-neutral-200 bg-white px-2 py-1 text-xs text-neutral-700"
+              {(byStatus[col.key] ?? []).map((c) => {
+                const plan = planFromTags(c.tags);
+                return (
+                  <div
+                    key={c.id}
+                    draggable
+                    onDragStart={(e) => {
+                      setDragId(c.id);
+                      e.dataTransfer.setData("text/plain", c.id);
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
+                    onDragEnd={() => { setDragId(null); setOverCol(null); }}
+                    onClick={() => setDetail(c)}
+                    className={
+                      "cursor-grab rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-sm transition hover:border-neutral-900 hover:shadow-sm active:cursor-grabbing " +
+                      (dragId === c.id ? "opacity-50" : "")
+                    }
                   >
-                    {COLUMNS.map((cc) => (
-                      <option key={cc.key} value={cc.key}>Mover para: {cc.label}</option>
-                    ))}
-                  </select>
-                </div>
-              ))}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="truncate font-semibold text-neutral-900">{c.name}</div>
+                        <div className="text-xs text-neutral-500">{c.phone}</div>
+                        <div className="mt-1 flex flex-wrap items-center gap-1">
+                          {plan && (
+                            <span className="rounded bg-yellow-100 px-1.5 py-0.5 text-[10px] font-medium text-yellow-800">
+                              {plan} · {formatBRL(priceOf(plans, plan))}
+                            </span>
+                          )}
+                          {c.notes && (
+                            <span className="rounded bg-neutral-200 px-1.5 py-0.5 text-[10px] text-neutral-700">
+                              anotação
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); remove(c.id); }}
+                        className="rounded p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600"
+                        title="Remover"
+                      >
+                        🗑
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
               {(byStatus[col.key]?.length ?? 0) === 0 && (
-                <p className="p-3 text-center text-xs text-neutral-400">Vazio</p>
+                <p className="p-3 text-center text-xs text-neutral-400">Arraste um card para cá</p>
               )}
             </div>
           </div>
@@ -560,17 +670,166 @@ function KanbanView({
       </div>
 
       {showAdd && <AddModal token={token} onClose={() => { setShowAdd(false); reload(); }} />}
+      {detail && (
+        <CustomerDrawer
+          token={token}
+          customer={detail}
+          plans={plans}
+          onMove={(status) => { moveTo(detail.id, status); setDetail(null); }}
+          onClose={() => { setDetail(null); reload(); }}
+        />
+      )}
       {showImport && (
         <ImportModal
           token={token}
+          shopId={shopId}
           system={readSystem(shopId)}
           onGoSettings={() => { setShowImport(false); onGoSettings(); }}
-          onClose={() => { setShowImport(false); reload(); }}
+          onClose={() => {
+            setShowImport(false);
+            setPending({});
+            setPlans(readPlans(shopId));
+            reload();
+          }}
         />
       )}
     </div>
   );
 }
+
+/** Pipeline do assinante: anotações + mensagem agendada. */
+function CustomerDrawer({
+  token,
+  customer,
+  plans,
+  onMove,
+  onClose,
+}: {
+  token: string;
+  customer: Customer;
+  plans: Plan[];
+  onMove: (status: string) => void;
+  onClose: () => void;
+}) {
+  const plan = planFromTags(customer.tags);
+  const [notes, setNotes] = useState(customer.notes ?? "");
+  const [savedNotes, setSavedNotes] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [when, setWhen] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function saveNotes() {
+    setBusy(true);
+    const r = await api(token, `/api/public/extension/customers/${customer.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ notes: notes.trim() || null }),
+    });
+    setBusy(false);
+    if (!r?.ok) { setErr(r?.error || "Erro ao salvar anotação"); return; }
+    setErr(null);
+    setSavedNotes(true);
+    setTimeout(() => setSavedNotes(false), 1800);
+  }
+
+  async function schedule() {
+    if (!msg.trim()) return;
+    setBusy(true);
+    setErr(null);
+    const r = await api(token, "/api/public/extension/campaigns", {
+      method: "POST",
+      body: JSON.stringify({
+        name: `Mensagem — ${customer.name}`,
+        message: msg.trim(),
+        customer_ids: [customer.id],
+        scheduled_for: when ? new Date(when).toISOString() : undefined,
+      }),
+    });
+    setBusy(false);
+    if (!r?.ok) { setErr(r?.error || "Erro ao agendar"); return; }
+    setMsg("");
+    setFeedback(when ? "Mensagem agendada ✔" : "Mensagem enfileirada para envio ✔");
+    nudgeExtensionPoll();
+  }
+
+  return (
+    <Modal onClose={onClose} title={customer.name}>
+      <div className="space-y-4">
+        <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-700">
+          <div>{customer.phone}</div>
+          {plan && (
+            <div className="mt-1">
+              Plano: <strong>{plan}</strong> · {formatBRL(priceOf(plans, plan))}
+            </div>
+          )}
+        </div>
+
+        <Field label="Etapa do funil">
+          <select
+            value={customer.status}
+            onChange={(e) => onMove(e.target.value)}
+            className={inputCls}
+          >
+            {COLUMNS.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+          </select>
+        </Field>
+
+        <Field label="Anotações">
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            maxLength={1000}
+            placeholder="Histórico, combinados, motivo do atraso..."
+            className={inputCls}
+          />
+        </Field>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={saveNotes}
+            disabled={busy}
+            className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50"
+          >
+            Salvar anotação
+          </button>
+          {savedNotes && <span className="text-xs font-medium text-emerald-600">Salvo ✔</span>}
+        </div>
+
+        <div className="h-px bg-neutral-200" />
+
+        <Field label="Mensagem para disparo">
+          <textarea
+            value={msg}
+            onChange={(e) => setMsg(e.target.value)}
+            rows={3}
+            maxLength={4000}
+            placeholder="Oi {nome}, sua mensalidade..."
+            className={inputCls}
+          />
+        </Field>
+        <Field label="Agendar para (vazio = enviar agora)">
+          <input
+            type="datetime-local"
+            value={when}
+            onChange={(e) => setWhen(e.target.value)}
+            className={inputCls}
+          />
+        </Field>
+        {err && <p className="text-sm text-red-500">{err}</p>}
+        {feedback && <p className="text-sm text-emerald-600">{feedback}</p>}
+        <button
+          onClick={schedule}
+          disabled={busy || !msg.trim()}
+          className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
+        >
+          {busy ? "Enviando..." : when ? "Agendar mensagem" : "Enviar mensagem"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 
 function AddModal({ token, onClose }: { token: string; onClose: () => void }) {
   const [name, setName] = useState("");
@@ -631,11 +890,13 @@ async function sheetToMatrix(file: File): Promise<string[][]> {
 
 function ImportModal({
   token,
+  shopId,
   onClose,
   system,
   onGoSettings,
 }: {
   token: string;
+  shopId: string;
   onClose: () => void;
   system: SubscriptionSystemId | null;
   onGoSettings: () => void;
@@ -669,6 +930,11 @@ function ImportModal({
       });
       if (!r?.ok) throw new Error(r?.error || "Erro na importação");
 
+      // Planos detectados na planilha entram no catálogo (valor a definir).
+      const detected = Object.keys(report.byPlan);
+      const merged = mergeDetectedPlans(shopId, detected);
+      const semValor = merged.filter((p) => p.priceCents <= 0).length;
+
       const dist = COLUMNS
         .filter((c) => report.byStatus[c.key])
         .map((c) => `${c.label}: ${report.byStatus[c.key]}`)
@@ -679,8 +945,10 @@ function ImportModal({
           `\nNovos: ${r.inserted} · Atualizados: ${r.updated}` +
           (r.archived ? ` · Removidos da planilha antiga: ${r.archived}` : "") +
           (dist ? `\n${dist}` : "") +
+          (detected.length ? `\nPlanos detectados: ${detected.join(" · ")}` : "") +
+          (semValor ? `\n${semValor} plano(s) sem valor — cadastre em Configurações.` : "") +
           (report.unmappedStatuses.length
-            ? `\nStatus não reconhecidos: ${report.unmappedStatuses.join(", ")}`
+            ? `\nStatus não reconhecidos (usei a data de vencimento): ${report.unmappedStatuses.join(", ")}`
             : ""),
       );
     } catch (e) {
@@ -1107,6 +1375,10 @@ function SettingsView({
   const [saved, setSaved] = useState(false);
   const [system, setSystem] = useState<SubscriptionSystemId | "">(() => readSystem(shopId) ?? "");
   const [systemSaved, setSystemSaved] = useState(false);
+  const [plans, setPlans] = useState<Plan[]>(() => readPlans(shopId));
+  const [plansSaved, setPlansSaved] = useState(false);
+  const [newPlan, setNewPlan] = useState("");
+  const [goal, setGoal] = useState<number>(() => readGoal(shopId));
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   function saveSystem(id: SubscriptionSystemId) {
@@ -1115,6 +1387,25 @@ function SettingsView({
     setSystemSaved(true);
     setTimeout(() => setSystemSaved(false), 1800);
   }
+
+  function persistPlans(next: Plan[]) {
+    setPlans(next);
+    writePlans(shopId, next);
+    setPlansSaved(true);
+    setTimeout(() => setPlansSaved(false), 1500);
+  }
+
+  function addPlan() {
+    const name = newPlan.trim();
+    if (!name) return;
+    if (plans.some((p) => normalizePlanName(p.name) === normalizePlanName(name))) {
+      setNewPlan("");
+      return;
+    }
+    persistPlans([...plans, { name, priceCents: 0 }]);
+    setNewPlan("");
+  }
+
 
 
   async function pickLogo(file: File) {
@@ -1171,6 +1462,98 @@ function SettingsView({
           ))}
         </div>
         {systemSaved && <span className="text-xs font-medium text-emerald-600">Salvo ✔</span>}
+      </div>
+
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-neutral-900">Planos e valores</h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            Cadastre o valor de cada plano. O CRM usa o plano que vem na planilha para
+            somar o faturamento de cada coluna do Kanban.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          {plans.length === 0 && (
+            <p className="text-xs text-neutral-400">
+              Nenhum plano ainda. Importe a planilha (os planos são detectados sozinhos) ou cadastre abaixo.
+            </p>
+          )}
+          {plans.map((p, i) => (
+            <div key={p.name + i} className="flex items-center gap-2">
+              <input
+                value={p.name}
+                onChange={(e) => {
+                  const next = [...plans];
+                  next[i] = { ...next[i], name: e.target.value };
+                  setPlans(next);
+                }}
+                onBlur={() => persistPlans(plans)}
+                className={inputCls}
+              />
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-neutral-500">R$</span>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={p.priceCents ? (p.priceCents / 100).toString() : ""}
+                  placeholder="0,00"
+                  onChange={(e) => {
+                    const next = [...plans];
+                    next[i] = { ...next[i], priceCents: Math.round(Number(e.target.value || 0) * 100) };
+                    setPlans(next);
+                  }}
+                  onBlur={() => persistPlans(plans)}
+                  className={inputCls + " w-28"}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => persistPlans(plans.filter((_, j) => j !== i))}
+                className="rounded p-2 text-neutral-400 hover:bg-red-50 hover:text-red-600"
+                title="Remover plano"
+              >
+                🗑
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            value={newPlan}
+            onChange={(e) => setNewPlan(e.target.value)}
+            placeholder="Novo plano (ex.: Night Plan)"
+            className={inputCls}
+          />
+          <button
+            type="button"
+            onClick={addPlan}
+            className="shrink-0 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
+          >
+            Adicionar
+          </button>
+        </div>
+        {plansSaved && <span className="text-xs font-medium text-emerald-600">Salvo ✔</span>}
+      </div>
+
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold text-neutral-900">Meta do mês</h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            Quantos assinantes ativos você quer fechar o mês. Vira a barra de progresso no Kanban.
+          </p>
+        </div>
+        <input
+          type="number"
+          min={0}
+          value={goal || ""}
+          placeholder="Ex.: 200"
+          onChange={(e) => setGoal(Number(e.target.value || 0))}
+          onBlur={() => writeGoal(shopId, goal)}
+          className={inputCls + " max-w-40"}
+        />
       </div>
 
       <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-6">
