@@ -559,7 +559,14 @@ function KanbanView({
       </div>
 
       {showAdd && <AddModal token={token} onClose={() => { setShowAdd(false); reload(); }} />}
-      {showImport && <ImportModal token={token} onClose={() => { setShowImport(false); reload(); }} />}
+      {showImport && (
+        <ImportModal
+          token={token}
+          system={readSystem(shopId)}
+          onGoSettings={() => { setShowImport(false); onGoSettings(); }}
+          onClose={() => { setShowImport(false); reload(); }}
+        />
+      )}
     </div>
   );
 }
