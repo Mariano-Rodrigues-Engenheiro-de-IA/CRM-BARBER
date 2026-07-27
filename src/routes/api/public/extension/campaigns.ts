@@ -29,6 +29,7 @@ const bodySchema = z
     pace_seconds_min: z.number().int().min(5).max(600).optional(),
     pace_seconds_max: z.number().int().min(5).max(600).optional(),
     customer_ids: z.array(z.string().uuid()).max(2000).optional(),
+    scheduled_for: z.string().min(4).max(40).optional(),
     filter: z
       .object({
         status: z.enum(CUSTOMER_STATUS_VALUES).optional(),
@@ -73,7 +74,13 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
         }
 
         const barbershopId = auth.token.barbershop_id;
-        const { name, message, message_variants, pace_seconds, pace_seconds_min, pace_seconds_max, customer_ids, filter } = parsed.data;
+        const { name, message, message_variants, pace_seconds, pace_seconds_min, pace_seconds_max, customer_ids, filter, scheduled_for } = parsed.data;
+
+        // Agendamento opcional: base do primeiro job. Datas no passado caem para agora.
+        const scheduledBase = scheduled_for ? Date.parse(scheduled_for) : NaN;
+        if (scheduled_for && Number.isNaN(scheduledBase)) {
+          return jsonResponse(request, { ok: false, error: "Data de agendamento inválida" }, { status: 400 });
+        }
 
         const variants = (message_variants && message_variants.length > 0)
           ? message_variants
@@ -136,7 +143,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
           );
         }
 
-        const now = Date.now();
+        const now = Math.max(Date.now(), Number.isNaN(scheduledBase) ? 0 : scheduledBase);
         const expiresAt = new Date(now + TTL_HOURS * 3600 * 1000).toISOString();
         let cursor = now;
         const jobs = targets.map((t, i) => {
