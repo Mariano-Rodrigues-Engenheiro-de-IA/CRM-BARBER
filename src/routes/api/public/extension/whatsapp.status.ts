@@ -34,8 +34,8 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/status")({
 
         // Sem instância ainda.
         if (!inst) {
-          const { getWhatsAppProvider } = await import("@/lib/whatsapp/provider.server");
-          const provider = getWhatsAppProvider();
+          const { getWhatsAppProviderByName } = await import("@/lib/whatsapp/provider.server");
+          const provider = getWhatsAppProviderByName("uazapi");
           return jsonResponse(request, {
             ok: true,
             connection: {
@@ -100,7 +100,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/status")({
             status,
             phone,
             qrcode: status === "connected" ? null : qrcode,
-            provider: inst.provider,
+            provider: providerName,
             auth_mode: provider.authMode,
           },
         });

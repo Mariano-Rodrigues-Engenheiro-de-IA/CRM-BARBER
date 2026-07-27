@@ -26,6 +26,11 @@ export const registerSchema = z.object({
   pin: z.string().trim().regex(/^\d{6}$/, "O PIN deve ter exatamente 6 dígitos"),
 });
 
+export const providerSchema = z.object({
+  barbershop_id: z.string().uuid(),
+  provider: z.enum(["uazapi", "meta"]),
+});
+
 export type AdminShopRow = {
   barbershop_id: string;
   name: string;
@@ -94,6 +99,46 @@ export async function saveCredentials(
     .select("id")
     .eq("barbershop_id", input.barbershop_id)
     .maybeSingle();
+
+  const { error } = existing
+    ? await supabaseAdmin.from("whatsapp_instances").update(payload).eq("id", existing.id)
+    : await supabaseAdmin.from("whatsapp_instances").insert(payload);
+  if (error) throw new Error(error.message);
+  return { ok: true };
+}
+
+export async function setProviderMode(
+  supabaseAdmin: Admin,
+  input: z.infer<typeof providerSchema>,
+): Promise<{ ok: true }> {
+  const { data: existing } = await supabaseAdmin
+    .from("whatsapp_instances")
+    .select("id, phone_number_id, meta_access_token")
+    .eq("barbershop_id", input.barbershop_id)
+    .maybeSingle();
+
+  const now = new Date().toISOString();
+  const payload = input.provider === "meta"
+    ? {
+        barbershop_id: input.barbershop_id,
+        provider: "meta",
+        instance_id: existing?.phone_number_id ?? null,
+        instance_token: existing?.meta_access_token ?? null,
+        status: existing?.phone_number_id && existing?.meta_access_token ? "connecting" : "disconnected",
+        phone: null,
+        last_qr: null,
+        last_synced_at: now,
+      }
+    : {
+        barbershop_id: input.barbershop_id,
+        provider: "uazapi",
+        instance_id: null,
+        instance_token: null,
+        status: "disconnected",
+        phone: null,
+        last_qr: null,
+        last_synced_at: now,
+      };
 
   const { error } = existing
     ? await supabaseAdmin.from("whatsapp_instances").update(payload).eq("id", existing.id)

@@ -10,6 +10,7 @@ import {
   adminListShops,
   adminRegisterMetaNumber,
   adminSaveMetaCredentials,
+  adminSetWhatsAppProvider,
   adminTestMetaConnection,
 } from "@/lib/admin-whatsapp.functions";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ function AdminWhatsApp() {
   const saveCreds = useServerFn(adminSaveMetaCredentials);
   const testConn = useServerFn(adminTestMetaConnection);
   const registerNum = useServerFn(adminRegisterMetaNumber);
+  const setProvider = useServerFn(adminSetWhatsAppProvider);
 
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +48,7 @@ function AdminWhatsApp() {
   const [wabaId, setWabaId] = useState("");
   const [testPhone, setTestPhone] = useState("");
   const [pin, setPin] = useState("");
-  const [busy, setBusy] = useState<"save" | "test" | "register" | null>(null);
+  const [busy, setBusy] = useState<"save" | "test" | "register" | "provider" | null>(null);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
 
   async function reload() {
@@ -125,6 +127,25 @@ function AdminWhatsApp() {
     setBusy(null);
   }
 
+  async function onSetProvider(provider: "uazapi" | "meta") {
+    if (!selected) return;
+    setBusy("provider");
+    setResult(null);
+    try {
+      await setProvider({ data: { barbershop_id: selected, provider } });
+      setResult({
+        ok: true,
+        text: provider === "meta"
+          ? "Modo API oficial ativado para esta barbearia. Salve/teste as credenciais abaixo."
+          : "Modo QR/não oficial ativado para esta barbearia. A aba Conexão vai gerar QR code novamente.",
+      });
+      await reload();
+    } catch (err) {
+      setResult({ ok: false, text: err instanceof Error ? err.message : String(err) });
+    }
+    setBusy(null);
+  }
+
 
 
   return (
@@ -167,6 +188,33 @@ function AdminWhatsApp() {
               <Info label="Token salvo" value={current.token_hint ?? "—"} />
             </dl>
           )}
+
+          <div className="mt-5 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Modo desta barbearia</p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <Button
+                type="button"
+                variant={current?.provider === "meta" ? "outline" : "default"}
+                onClick={() => void onSetProvider("uazapi")}
+                disabled={busy !== null || !selected}
+                className={current?.provider === "meta" ? "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100" : "bg-neutral-900 text-white hover:bg-neutral-800"}
+              >
+                QR / não oficial
+              </Button>
+              <Button
+                type="button"
+                variant={current?.provider === "meta" ? "default" : "outline"}
+                onClick={() => void onSetProvider("meta")}
+                disabled={busy !== null || !selected}
+                className={current?.provider === "meta" ? "bg-neutral-900 text-white hover:bg-neutral-800" : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100"}
+              >
+                API oficial / manual
+              </Button>
+            </div>
+            <p className="mt-3 text-xs text-neutral-500">
+              Essa escolha é individual por barbearia. O sistema não usa mais um provider global para decidir o fluxo.
+            </p>
+          </div>
 
           <div className="mt-6 space-y-4">
             <Field label="phone_number_id">

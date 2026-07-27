@@ -28,8 +28,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
         }
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { getWhatsAppProvider } = await import("@/lib/whatsapp/provider.server");
-        const provider = getWhatsAppProvider();
+        const { getWhatsAppProviderByName } = await import("@/lib/whatsapp/provider.server");
 
         const nowIso = new Date().toISOString();
 
@@ -44,7 +43,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
         // Instâncias conectadas.
         const { data: instances } = await supabaseAdmin
           .from("whatsapp_instances")
-          .select("barbershop_id, instance_token, phone_number_id")
+          .select("barbershop_id, provider, instance_token, phone_number_id, meta_access_token")
           .eq("status", "connected");
 
         if (!instances || instances.length === 0) {
@@ -62,7 +61,10 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
         let totalFailed = 0;
 
         for (const inst of instances) {
-          if (!inst.instance_token) continue;
+          const providerName = inst.provider === "meta" ? "meta" : "uazapi";
+          const provider = getWhatsAppProviderByName(providerName);
+          const instanceToken = providerName === "meta" ? inst.meta_access_token ?? inst.instance_token : inst.instance_token;
+          if (!instanceToken) continue;
           const { data: jobs } = await supabaseAdmin
             .from("message_jobs")
             .select("id, customer_id, rendered_body, campaign_id, attempts")
@@ -122,7 +124,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
             }
 
             const result = await provider.sendText({
-              instance_token: inst.instance_token,
+              instance_token: instanceToken,
               phone_number_id: inst.phone_number_id ?? null,
               to: phone,
               text: job.rendered_body,
