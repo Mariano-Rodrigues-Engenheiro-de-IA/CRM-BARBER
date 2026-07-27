@@ -1091,56 +1091,6 @@ function Modal({
   );
 }
 
-// CSV parser: aceita ; , ou tab, com/sem cabeçalho, colunas nome/telefone.
-function parseCsv(text: string, defaultStatus: string): Array<{ name: string; phone: string; status: string; tags: string[] }> {
-  const firstLine = text.split(/\r?\n/).find((l) => l.trim()) || "";
-  const counts = { ";": (firstLine.match(/;/g) || []).length, ",": (firstLine.match(/,/g) || []).length, "\t": (firstLine.match(/\t/g) || []).length } as Record<string, number>;
-  const delim = (Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0]) || ",";
-
-  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  if (!lines.length) return [];
-
-  const split = (line: string) => line.split(delim).map((c) => c.trim().replace(/^"|"$/g, ""));
-  const firstCells = split(lines[0]);
-  const hasHeader = !firstCells.some((c) => /\d{8,}/.test(c.replace(/\D+/g, "")));
-
-  let iName = 0, iPhone = 1;
-  let start = 0;
-  if (hasHeader) {
-    start = 1;
-    const norm = firstCells.map((h) => h.toLowerCase());
-    const find = (...keys: string[]) => {
-      for (const k of keys) {
-        const idx = norm.findIndex((h) => h.includes(k));
-        if (idx >= 0) return idx;
-      }
-      return -1;
-    };
-    const n = find("nome", "name", "contato");
-    const p = find("telefone", "phone", "celular", "whatsapp", "numero");
-    if (n >= 0) iName = n;
-    if (p >= 0) iPhone = p;
-  }
-
-  const out: Array<{ name: string; phone: string; status: string; tags: string[] }> = [];
-  for (let i = start; i < lines.length; i++) {
-    const cells = split(lines[i]);
-    let phone = "";
-    let name = "";
-    if (cells.length === 1) {
-      phone = cells[0].replace(/\D+/g, "");
-      name = `Contato ${phone.slice(-4)}`;
-    } else {
-      name = (cells[iName] || "").trim();
-      phone = (cells[iPhone] || "").replace(/\D+/g, "");
-      if (!name) name = `Contato ${phone.slice(-4)}`;
-    }
-    if (phone.length < 8) continue;
-    out.push({ name, phone, status: defaultStatus, tags: [] });
-  }
-  return out;
-}
-
 function SettingsView({
   brand,
   fallbackName,
