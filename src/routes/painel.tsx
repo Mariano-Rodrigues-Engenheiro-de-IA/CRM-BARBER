@@ -502,7 +502,7 @@ function KanbanView({
 
       {loading && <p className="text-sm text-neutral-500">Carregando...</p>}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {COLUMNS.map((col) => (
           <div key={col.key} className="rounded-xl border border-neutral-200 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
