@@ -4,7 +4,7 @@
 // isolado neste módulo. O painel só escolhe o id do sistema e entrega a
 // matriz de células da planilha (linha 0 = cabeçalho).
 
-export type SubscriptionSystemId = "appbarber" | "frisar" | "manual";
+export type SubscriptionSystemId = "appbarber" | "cashbarber" | "frizzar" | "manual";
 
 export type ParsedCustomer = {
   name: string;
@@ -44,19 +44,51 @@ export const SUBSCRIPTION_SYSTEMS: Array<{
   {
     id: "appbarber",
     label: "App Barber",
-    hint: "Exporte o relatório de assinantes (.xlsx ou .csv) direto do App Barber e anexe aqui.",
+    hint: "Exporte o relatório de assinantes (.xlsx, .xls ou .csv) do App Barber e anexe aqui.",
   },
   {
-    id: "frisar",
-    label: "Frisar",
-    hint: "Exporte a lista de assinantes do Frisar (.xlsx ou .csv).",
+    id: "cashbarber",
+    label: "Cash Barber",
+    hint: "Exporte o relatório de assinantes (.xlsx, .xls ou .csv) do Cash Barber e anexe aqui.",
+  },
+  {
+    id: "frizzar",
+    label: "Frizzar",
+    hint: "Exporte a lista de assinantes do Frizzar (.xlsx, .xls ou .csv).",
   },
   {
     id: "manual",
-    label: "Outro sistema / planilha manual",
-    hint: "Planilha simples com as colunas nome e telefone (.xlsx ou .csv).",
+    label: "Outro sistema",
+    hint: "Planilha simples com as colunas nome e telefone (.xlsx, .xls ou .csv).",
   },
 ];
+
+/** Sistemas estruturados usam só as colunas que fazem sentido no fluxo de assinatura. */
+const STRUCTURED_STATUSES = ["active", "due_soon", "overdue", "canceled"];
+
+export function statusesForSystem(system: SubscriptionSystemId | null): string[] | null {
+  if (system === "appbarber" || system === "cashbarber" || system === "frizzar") {
+    return STRUCTURED_STATUSES;
+  }
+  return null; // null = mostrar todas as colunas
+}
+
+/** Telefone real (só dígitos) x placeholder de planilha sem telefone. */
+export const NO_PHONE_PREFIX = "sem-tel-";
+
+export function isSendablePhone(phone: string | null | undefined): boolean {
+  return !!phone && /^\d{10,15}$/.test(phone);
+}
+
+function placeholderPhone(name: string) {
+  const slug = stripAccents(name.toLowerCase()).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return (NO_PHONE_PREFIX + slug).slice(0, 40);
+}
+
+/** Linhas de rodapé de relatório ("Total", "Total Ativos", ...). */
+function isSummaryRow(name: string) {
+  return /^total\b/i.test(name.trim());
+}
 
 // ---------- helpers ----------
 
@@ -174,8 +206,9 @@ function parseAppBarber(matrix: string[][], origin = "appbarber"): ParseReport {
   const iDue = findCol(header, "proximo vencimento", "vencimento", "proxima cobranca");
 
   for (const row of matrix.slice(1)) {
-    report.total += 1;
     const name = cell(row[iName]);
+    if (isSummaryRow(name)) continue;
+    report.total += 1;
     const phone = normalizePhone(row[iPhone]);
     if (!name || !phone) {
       report.skipped += 1;
@@ -203,8 +236,44 @@ function parseAppBarber(matrix: string[][], origin = "appbarber"): ParseReport {
 // Layout ainda não confirmado: mesmos cabeçalhos equivalentes e mesmo
 // mapeamento de status, marcando a origem com a tag "frisar".
 
-function parseFrisar(matrix: string[][]): ParseReport {
-  return parseAppBarber(matrix, "frisar");
+function parseFrizzar(matrix: string[][]): ParseReport {
+  return parseAppBarber(matrix, "frizzar");
+}
+
+// ---------- Cash Barber ----------
+// Colunas nativas: Cliente | Plano | Status | Data de criação (telefone é opcional
+// e nem sempre vem na exportação). Rodapé traz linhas "Total".
+
+function parseCashBarber(matrix: string[][]): ParseReport {
+  const report = emptyReport();
+  if (!matrix.length) return report;
+  const header = matrix[0];
+  const iName = findCol(header, "cliente", "nome", "assinante");
+  const iPhone = findCol(header, "celular", "telefone", "whatsapp", "fone");
+  const iStatus = findCol(header, "status", "situacao");
+  const iPlan = findCol(header, "plano");
+  const iDue = findCol(header, "vencimento", "proxima cobranca");
+
+  for (const row of matrix.slice(1)) {
+    const name = cell(row[iName >= 0 ? iName : 0]);
+    if (!name || isSummaryRow(name)) continue;
+    report.total += 1;
+    const phone = iPhone >= 0 ? normalizePhone(row[iPhone]) : null;
+    const rawStatus = iStatus >= 0 ? cell(row[iStatus]) : "";
+    let status = appBarberStatus(rawStatus);
+    if (!status) {
+      if (rawStatus && !report.unmappedStatuses.includes(rawStatus)) {
+        report.unmappedStatuses.push(rawStatus);
+      }
+      status = (iDue >= 0 ? statusFromDueDate(cell(row[iDue])) : null) ?? "active";
+    }
+    const plan = iPlan >= 0 ? cleanPlan(cell(row[iPlan])) : null;
+    const tags = ["cashbarber"];
+    if (plan) tags.push(planTag(plan));
+    if (!phone) tags.push("sem-telefone");
+    pushRow(report, { name, phone: phone ?? placeholderPhone(name), status, tags, plan });
+  }
+  return report;
 }
 
 // ---------- Genérico / manual ----------
@@ -248,6 +317,7 @@ export function parseSubscriptionSheet(
   matrix: string[][],
 ): ParseReport {
   if (system === "appbarber") return parseAppBarber(matrix);
-  if (system === "frisar") return parseFrisar(matrix);
+  if (system === "cashbarber") return parseCashBarber(matrix);
+  if (system === "frizzar") return parseFrizzar(matrix);
   return parseGeneric(matrix);
 }
