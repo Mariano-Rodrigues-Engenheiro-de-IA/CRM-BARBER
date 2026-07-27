@@ -46,6 +46,7 @@ type Campaign = {
 
 const COLUMNS: Array<{ key: string; label: string }> = [
   { key: "active", label: "Ativos" },
+  { key: "due_soon", label: "A vencer" },
   { key: "overdue", label: "Inadimplentes" },
   { key: "reactivate", label: "Reativar" },
   { key: "canceled", label: "Cancelados" },
