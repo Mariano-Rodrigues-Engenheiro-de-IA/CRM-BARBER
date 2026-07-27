@@ -503,7 +503,7 @@ function KanbanView({
       g[c.status].push(c);
     }
     return g;
-  }, [effective]);
+  }, [effective, cols]);
 
   const colTotal = (key: string) =>
     (byStatus[key] ?? []).reduce((sum, c) => sum + priceOf(plans, planFromTags(c.tags)), 0);
@@ -594,7 +594,7 @@ function KanbanView({
 
       {loading && <p className="text-sm text-neutral-500">Carregando...</p>}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         {cols.map((col) => (
           <div
             key={col.key}
@@ -706,12 +706,14 @@ function CustomerDrawer({
   token,
   customer,
   plans,
+  cols,
   onMove,
   onClose,
 }: {
   token: string;
   customer: Customer;
   plans: Plan[];
+  cols: Array<{ key: string; label: string }>;
   onMove: (status: string) => void;
   onClose: () => void;
 }) {
