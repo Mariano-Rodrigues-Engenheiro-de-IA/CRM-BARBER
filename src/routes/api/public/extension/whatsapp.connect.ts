@@ -40,9 +40,16 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/connect")({
 
           if (provider.name === "meta" && !existingInstanceToken) {
             return jsonResponse(request, {
-              ok: false,
-              error: "Conexão oficial configurada manualmente: salve phone_number_id e access_token em /admin/whatsapp antes de conectar.",
-            }, { status: 409 });
+              ok: true,
+              connection: {
+                status: "disconnected",
+                qrcode: null,
+                phone: null,
+                provider: provider.name,
+                auth_mode: provider.authMode,
+                needs_manual_credentials: true,
+              },
+            });
           }
 
           const result = await provider.connect({
