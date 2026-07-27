@@ -38,6 +38,7 @@ export function ConnectionView({ api }: { api: Api }) {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmAction, setConfirmAction] = useState<"connect" | "disconnect" | null>(null);
+  const [authMode, setAuthMode] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshSeqRef = useRef(0);
   const operationSeqRef = useRef(0);
