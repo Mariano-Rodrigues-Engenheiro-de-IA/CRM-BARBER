@@ -126,6 +126,7 @@ export function ConnectionView({ api }: { api: Api }) {
     clearPoll();
     setBusy(true);
     setErr(null);
+    statusRef.current = "connecting";
     setConn((prev) => ({
       status: "connecting",
       phone: prev?.phone ?? null,
@@ -138,6 +139,8 @@ export function ConnectionView({ api }: { api: Api }) {
         auth_mode?: string;
         signup?: { url?: string | null } | null;
       };
+      statusRef.current = c.status;
+      setAuthMode(c.auth_mode ?? null);
       setConn(c);
       // API oficial: não há QR — abre o pop-up de login da Meta.
       if (c.auth_mode === "embedded_signup" && c.signup?.url) {
@@ -158,6 +161,7 @@ export function ConnectionView({ api }: { api: Api }) {
     clearPoll();
     setBusy(true);
     setErr(null);
+    statusRef.current = "disconnected";
     setConn((prev) => (prev ? { ...prev, status: "disconnected", phone: null, qrcode: null } : prev));
     await api("/api/public/extension/whatsapp/disconnect", { method: "POST" });
     actionRef.current = null;
