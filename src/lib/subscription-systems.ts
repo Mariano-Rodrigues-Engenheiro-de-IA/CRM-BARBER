@@ -11,6 +11,7 @@ export type ParsedCustomer = {
   phone: string;
   status: string;
   tags: string[];
+  plan: string | null;
 };
 
 export type ParseReport = {
@@ -18,8 +19,22 @@ export type ParseReport = {
   total: number;
   skipped: number;
   byStatus: Record<string, number>;
+  byPlan: Record<string, number>;
   unmappedStatuses: string[];
 };
+
+/** Prefixo usado para gravar o plano do assinante como tag. */
+export const PLAN_TAG_PREFIX = "plano:";
+
+export function planTag(plan: string) {
+  return PLAN_TAG_PREFIX + plan.trim().toLowerCase().replace(/\s+/g, " ").slice(0, 34);
+}
+
+export function planFromTags(tags: string[] | null | undefined): string | null {
+  const t = (tags ?? []).find((x) => x.startsWith(PLAN_TAG_PREFIX));
+  return t ? t.slice(PLAN_TAG_PREFIX.length) : null;
+}
+
 
 export const SUBSCRIPTION_SYSTEMS: Array<{
   id: SubscriptionSystemId;
