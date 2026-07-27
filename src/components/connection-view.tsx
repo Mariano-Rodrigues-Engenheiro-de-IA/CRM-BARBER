@@ -173,6 +173,30 @@ export function ConnectionView({ api }: { api: Api }) {
     setBusy(false);
   }
 
+  async function switchProvider(provider: "uazapi" | "meta") {
+    actionRef.current = provider === "meta" ? "connect" : "disconnect";
+    operationSeqRef.current += 1;
+    refreshSeqRef.current += 1;
+    clearPoll();
+    setBusy(true);
+    setErr(null);
+    const res = await api("/api/public/extension/whatsapp/provider", {
+      method: "POST",
+      body: JSON.stringify({ provider }),
+    });
+    if (res.ok && res.connection) {
+      const next = res.connection as Connection;
+      statusRef.current = next.status;
+      setAuthMode(next.auth_mode ?? (next.provider === "meta" ? "embedded_signup" : null));
+      setConn(next);
+    } else {
+      setErr(res.error || "Falha ao trocar modo de conexão");
+    }
+    actionRef.current = null;
+    operationSeqRef.current += 1;
+    setBusy(false);
+  }
+
   async function runConfirmedAction() {
     const action = confirmAction;
     setConfirmAction(null);
@@ -212,6 +236,32 @@ export function ConnectionView({ api }: { api: Api }) {
         {err && (
           <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">{err}</div>
         )}
+
+        <div className="mt-5 rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">Modo de conexão</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={isMetaConnection ? "outline" : "default"}
+              disabled={busy}
+              onClick={() => void switchProvider("uazapi")}
+              className={isMetaConnection ? "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100" : "bg-neutral-900 text-white hover:bg-neutral-800"}
+            >
+              QR / não oficial
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={isMetaConnection ? "default" : "outline"}
+              disabled={busy}
+              onClick={() => void switchProvider("meta")}
+              className={isMetaConnection ? "bg-neutral-900 text-white hover:bg-neutral-800" : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100"}
+            >
+              API oficial / manual
+            </Button>
+          </div>
+        </div>
 
         {status === "connected" && (
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
