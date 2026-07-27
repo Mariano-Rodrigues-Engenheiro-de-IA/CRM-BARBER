@@ -446,11 +446,15 @@ function KanbanView({
   loading,
   token,
   reload,
+  shopId,
+  onGoSettings,
 }: {
   customers: Customer[];
   loading: boolean;
   token: string;
   reload: () => void;
+  shopId: string;
+  onGoSettings: () => void;
 }) {
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
