@@ -107,30 +107,63 @@ function findCol(header: string[], ...keys: string[]) {
   return -1;
 }
 
-function tagFromPlan(plan: string): string | null {
-  const t = plan.trim().toLowerCase().replace(/\s+/g, " ").slice(0, 40);
+function cleanPlan(plan: string): string | null {
+  const t = plan.trim().replace(/\s+/g, " ").slice(0, 34);
   return t ? t : null;
 }
 
 function emptyReport(): ParseReport {
-  return { rows: [], total: 0, skipped: 0, byStatus: {}, unmappedStatuses: [] };
+  return { rows: [], total: 0, skipped: 0, byStatus: {}, byPlan: {}, unmappedStatuses: [] };
+}
+
+function pushRow(report: ParseReport, row: ParsedCustomer) {
+  report.rows.push(row);
+  report.byStatus[row.status] = (report.byStatus[row.status] ?? 0) + 1;
+  if (row.plan) report.byPlan[row.plan] = (report.byPlan[row.plan] ?? 0) + 1;
+}
+
+/** dd/mm/aaaa (App Barber) ou aaaa-mm-dd. Retorna dias até a data (negativo = vencido). */
+function daysUntil(raw: string): number | null {
+  const s = raw.trim();
+  let d: Date | null = null;
+  const br = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if (br) {
+    const y = Number(br[3].length === 2 ? "20" + br[3] : br[3]);
+    d = new Date(y, Number(br[2]) - 1, Number(br[1]));
+  } else if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    d = new Date(s.slice(0, 10) + "T00:00:00");
+  }
+  if (!d || Number.isNaN(d.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((d.getTime() - today.getTime()) / 86400000);
 }
 
 // ---------- App Barber ----------
-// Colunas: Nome | Plano | Contratação | Próximo Vencimento | Status | Celular | E-mail
-// Status observados: Em Dia, A vencer, Inadimplente, Atrasado, Vencido, (Cancelado/Inativo)
+// Colunas nativas: Nome | Plano | Contratação | Próximo Vencimento | Status | Celular | E-mail
+// Status nativos: Em Dia, A vencer, Inadimplente, Atrasado, Vencido, Cancelado/Inativo
 
 function appBarberStatus(raw: string): string | null {
   const s = norm(raw);
-  if (!s) return "active";
-  if (s.includes("em dia") || s.includes("ativo") || s.includes("pago")) return "active";
-  if (s.includes("a vencer") || s.includes("vencendo")) return "due_soon";
-  if (s.includes("inadimplente") || s.includes("atrasad") || s.includes("vencido")) return "overdue";
+  if (!s) return null;
   if (s.includes("cancelad") || s.includes("inativ") || s.includes("encerrad")) return "canceled";
+  if (s.includes("inadimplente") || s.includes("atrasad") || s.includes("vencido")) return "overdue";
+  if (s.includes("a vencer") || s.includes("vencendo")) return "due_soon";
+  if (s.includes("em dia") || s.includes("ativo") || s.includes("pago") || s.includes("adimplente"))
+    return "active";
   return null;
 }
 
-function parseAppBarber(matrix: string[][]): ParseReport {
+/** Fallback determinístico pelo Próximo Vencimento quando o Status não é reconhecido. */
+function statusFromDueDate(rawDate: string): string | null {
+  const d = daysUntil(rawDate);
+  if (d === null) return null;
+  if (d < 0) return "overdue";
+  if (d <= 7) return "due_soon";
+  return "active";
+}
+
+function parseAppBarber(matrix: string[][], origin = "appbarber"): ParseReport {
   const report = emptyReport();
   if (!matrix.length) return report;
   const header = matrix[0];
@@ -138,6 +171,7 @@ function parseAppBarber(matrix: string[][]): ParseReport {
   const iPhone = findCol(header, "celular", "telefone", "whatsapp", "fone");
   const iStatus = findCol(header, "status", "situacao");
   const iPlan = findCol(header, "plano");
+  const iDue = findCol(header, "proximo vencimento", "vencimento", "proxima cobranca");
 
   for (const row of matrix.slice(1)) {
     report.total += 1;
@@ -148,40 +182,34 @@ function parseAppBarber(matrix: string[][]): ParseReport {
       continue;
     }
     const rawStatus = cell(row[iStatus]);
-    const status = appBarberStatus(rawStatus);
+    const rawDue = iDue >= 0 ? cell(row[iDue]) : "";
+    let status = appBarberStatus(rawStatus);
     if (!status) {
-      report.skipped += 1;
       if (rawStatus && !report.unmappedStatuses.includes(rawStatus)) {
         report.unmappedStatuses.push(rawStatus);
       }
-      continue;
+      status = statusFromDueDate(rawDue) ?? "active";
     }
-    const tags = ["appbarber"];
-    const planTag = iPlan >= 0 ? tagFromPlan(cell(row[iPlan])) : null;
-    if (planTag) tags.push(planTag);
+    const plan = iPlan >= 0 ? cleanPlan(cell(row[iPlan])) : null;
+    const tags = [origin];
+    if (plan) tags.push(planTag(plan));
 
-    report.rows.push({ name, phone, status, tags });
-    report.byStatus[status] = (report.byStatus[status] ?? 0) + 1;
+    pushRow(report, { name, phone, status, tags, plan });
   }
   return report;
 }
 
 // ---------- Frisar ----------
-// Layout ainda não confirmado: usa cabeçalhos equivalentes e o mesmo
+// Layout ainda não confirmado: mesmos cabeçalhos equivalentes e mesmo
 // mapeamento de status, marcando a origem com a tag "frisar".
 
 function parseFrisar(matrix: string[][]): ParseReport {
-  const r = parseGeneric(matrix, appBarberStatus);
-  for (const row of r.rows) row.tags = ["frisar", ...row.tags.filter((t) => t !== "appbarber")];
-  return r;
+  return parseAppBarber(matrix, "frisar");
 }
 
 // ---------- Genérico / manual ----------
 
-function parseGeneric(
-  matrix: string[][],
-  statusMapper: (raw: string) => string | null = () => "active",
-): ParseReport {
+function parseGeneric(matrix: string[][]): ParseReport {
   const report = emptyReport();
   if (!matrix.length) return report;
   const header = matrix[0];
@@ -190,6 +218,7 @@ function parseGeneric(
   const iPhone = headerLooksLikeData ? 1 : findCol(header, "celular", "telefone", "whatsapp", "fone", "numero");
   const iStatus = headerLooksLikeData ? -1 : findCol(header, "status", "situacao");
   const iPlan = headerLooksLikeData ? -1 : findCol(header, "plano");
+  const iDue = headerLooksLikeData ? -1 : findCol(header, "vencimento");
   const body = headerLooksLikeData ? matrix : matrix.slice(1);
 
   for (const row of body) {
@@ -201,15 +230,16 @@ function parseGeneric(
       continue;
     }
     const rawStatus = iStatus >= 0 ? cell(row[iStatus]) : "";
-    const status = statusMapper(rawStatus) ?? "active";
+    const status =
+      appBarberStatus(rawStatus) ?? (iDue >= 0 ? statusFromDueDate(cell(row[iDue])) : null) ?? "active";
+    const plan = iPlan >= 0 ? cleanPlan(cell(row[iPlan])) : null;
     const tags: string[] = [];
-    const planTag = iPlan >= 0 ? tagFromPlan(cell(row[iPlan])) : null;
-    if (planTag) tags.push(planTag);
-    report.rows.push({ name, phone, status, tags });
-    report.byStatus[status] = (report.byStatus[status] ?? 0) + 1;
+    if (plan) tags.push(planTag(plan));
+    pushRow(report, { name, phone, status, tags, plan });
   }
   return report;
 }
+
 
 // ---------- entrada única ----------
 
