@@ -8,6 +8,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TeamView } from "@/components/team-view";
 import { ConnectionView } from "@/components/connection-view";
+import {
+  SUBSCRIPTION_SYSTEMS,
+  parseSubscriptionSheet,
+  type SubscriptionSystemId,
+} from "@/lib/subscription-systems";
 
 export const Route = createFileRoute("/painel")({
   head: () => ({
@@ -46,6 +51,7 @@ type Campaign = {
 
 const COLUMNS: Array<{ key: string; label: string }> = [
   { key: "active", label: "Ativos" },
+  { key: "due_soon", label: "A vencer" },
   { key: "overdue", label: "Inadimplentes" },
   { key: "reactivate", label: "Reativar" },
   { key: "canceled", label: "Cancelados" },
@@ -196,6 +202,19 @@ function readBrand(shopId: string): Brand {
 function writeBrand(shopId: string, data: Brand) {
   localStorage.setItem(brandKey(shopId), JSON.stringify(data));
 }
+
+// Sistema de assinatura escolhido na configuração inicial (por barbearia).
+function systemKey(shopId: string) { return `crm_subsystem_${shopId || "default"}`; }
+function readSystem(shopId: string): SubscriptionSystemId | null {
+  if (typeof window === "undefined") return null;
+  const v = localStorage.getItem(systemKey(shopId));
+  return v === "appbarber" || v === "frisar" || v === "manual" ? v : null;
+}
+function writeSystem(shopId: string, id: SubscriptionSystemId) {
+  localStorage.setItem(systemKey(shopId), id);
+}
+
+
 
 
 function Painel() {
@@ -383,7 +402,7 @@ function Painel() {
 
             <main className="px-6 py-6">
               {tab === "kanban" && (
-                <KanbanView customers={customers} loading={loading} token={token} reload={reload} />
+                <KanbanView customers={customers} loading={loading} token={token} reload={reload} shopId={shop?.id ?? "default"} onGoSettings={() => setSection("configuracoes")} />
               )}
               {tab === "disparo" && (
                 <DisparoView customers={customers} token={token} onDone={() => setTab("campanhas")} onNeedConnection={() => setSection("conexao")} />
@@ -412,6 +431,7 @@ function Painel() {
               brand={brand}
               fallbackName={shop?.name || ""}
               onSave={saveBrand}
+              shopId={shop?.id ?? "default"}
             />
           </main>
         )}
@@ -427,11 +447,15 @@ function KanbanView({
   loading,
   token,
   reload,
+  shopId,
+  onGoSettings,
 }: {
   customers: Customer[];
   loading: boolean;
   token: string;
   reload: () => void;
+  shopId: string;
+  onGoSettings: () => void;
 }) {
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -479,7 +503,7 @@ function KanbanView({
 
       {loading && <p className="text-sm text-neutral-500">Carregando...</p>}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {COLUMNS.map((col) => (
           <div key={col.key} className="rounded-xl border border-neutral-200 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
@@ -536,7 +560,14 @@ function KanbanView({
       </div>
 
       {showAdd && <AddModal token={token} onClose={() => { setShowAdd(false); reload(); }} />}
-      {showImport && <ImportModal token={token} onClose={() => { setShowImport(false); reload(); }} />}
+      {showImport && (
+        <ImportModal
+          token={token}
+          system={readSystem(shopId)}
+          onGoSettings={() => { setShowImport(false); onGoSettings(); }}
+          onClose={() => { setShowImport(false); reload(); }}
+        />
+      )}
     </div>
   );
 }
@@ -588,32 +619,69 @@ function AddModal({ token, onClose }: { token: string; onClose: () => void }) {
   );
 }
 
-function ImportModal({ token, onClose }: { token: string; onClose: () => void }) {
+async function sheetToMatrix(file: File): Promise<string[][]> {
+  const XLSX = await import("xlsx");
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: "array", raw: false });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  if (!ws) return [];
+  const rows = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1, blankrows: false, defval: "" });
+  return rows.map((r) => (r as unknown[]).map((c) => String(c ?? "")));
+}
+
+function ImportModal({
+  token,
+  onClose,
+  system,
+  onGoSettings,
+}: {
+  token: string;
+  onClose: () => void;
+  system: SubscriptionSystemId | null;
+  onGoSettings: () => void;
+}) {
   const [file, setFile] = useState<File | null>(null);
-  const [status, setStatus] = useState("active");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
+  const meta = SUBSCRIPTION_SYSTEMS.find((s) => s.id === system);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!file) return;
+    if (!file || !system) return;
     setBusy(true);
     setErr(null);
     setResult(null);
     try {
-      const text = await file.text();
-      const rows = parseCsv(text, status);
-      if (!rows.length) throw new Error("Nenhuma linha válida. Use CSV com colunas: nome;telefone");
+      const matrix = await sheetToMatrix(file);
+      const report = parseSubscriptionSheet(system, matrix);
+      if (!report.rows.length) {
+        throw new Error(
+          "Nenhuma linha válida encontrada. Confira se a planilha é a exportação do " +
+            (meta?.label ?? "sistema") + " e tem colunas de nome e telefone.",
+        );
+      }
       const r = await api(token, "/api/public/extension/customers/import", {
         method: "POST",
-        body: JSON.stringify({ customers: rows, mode: "replace_spreadsheet" }),
+        body: JSON.stringify({ customers: report.rows, mode: "replace_spreadsheet" }),
       });
       if (!r?.ok) throw new Error(r?.error || "Erro na importação");
+
+      const dist = COLUMNS
+        .filter((c) => report.byStatus[c.key])
+        .map((c) => `${c.label}: ${report.byStatus[c.key]}`)
+        .join(" · ");
       setResult(
-        `Recebido: ${r.received} · Novos: ${r.inserted} · Atualizados: ${r.updated}` +
-        (r.archived ? ` · Substituídos da planilha antiga: ${r.archived}` : ""),
+        `Linhas lidas: ${report.total} · Importadas: ${report.rows.length}` +
+          (report.skipped ? ` · Ignoradas (sem telefone/status): ${report.skipped}` : "") +
+          `\nNovos: ${r.inserted} · Atualizados: ${r.updated}` +
+          (r.archived ? ` · Removidos da planilha antiga: ${r.archived}` : "") +
+          (dist ? `\n${dist}` : "") +
+          (report.unmappedStatuses.length
+            ? `\nStatus não reconhecidos: ${report.unmappedStatuses.join(", ")}`
+            : ""),
       );
     } catch (e) {
       setErr((e as Error).message);
@@ -622,19 +690,47 @@ function ImportModal({ token, onClose }: { token: string; onClose: () => void })
     }
   }
 
+  if (!system) {
+    return (
+      <Modal onClose={onClose} title="Importar planilha">
+        <div className="space-y-4">
+          <p className="text-sm text-neutral-700">
+            Antes de importar, escolha em <strong>Configurações</strong> qual sistema de
+            assinatura a barbearia usa (App Barber, Frisar ou planilha manual). Assim o
+            CRM sabe como ler a planilha e distribuir os assinantes nas colunas certas.
+          </p>
+          <button
+            onClick={onGoSettings}
+            className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
+          >
+            Ir para Configurações
+          </button>
+        </div>
+      </Modal>
+    );
+  }
+
   return (
-    <Modal onClose={onClose} title="Importar planilha">
+    <Modal onClose={onClose} title={`Importar planilha — ${meta?.label ?? ""}`}>
       <form onSubmit={submit} className="space-y-4">
         <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-700">
-          <div><strong className="text-neutral-900">Formato:</strong> CSV com 2 colunas — <code>nome</code> e <code>telefone</code>.</div>
-          <pre className="mt-2 rounded bg-white border border-neutral-200 p-2 text-[11px] text-neutral-800">nome;telefone{"\n"}João Silva;61999998888{"\n"}Maria Souza;5561988887777</pre>
+          <div>{meta?.hint}</div>
+          {system === "appbarber" && (
+            <div className="mt-2 text-[11px] text-neutral-600">
+              O CRM lê as colunas <code>Nome</code>, <code>Celular</code>, <code>Status</code> e{" "}
+              <code>Plano</code> e distribui sozinho: <strong>Em Dia → Ativos</strong>,{" "}
+              <strong>A vencer → A vencer</strong>,{" "}
+              <strong>Inadimplente / Atrasado / Vencido → Inadimplentes</strong>,{" "}
+              <strong>Cancelado / Inativo → Cancelados</strong>.
+            </div>
+          )}
         </div>
 
-        <Field label="Arquivo (.csv)">
+        <Field label="Arquivo (.xlsx ou .csv)">
           <input
             ref={fileRef}
             type="file"
-            accept=".csv,.tsv,.txt,text/csv,text/plain"
+            accept=".xlsx,.xls,.csv,.tsv,.txt"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             className="hidden"
           />
@@ -652,28 +748,24 @@ function ImportModal({ token, onClose }: { token: string; onClose: () => void })
           </div>
         </Field>
 
-        <Field label="Todos os contatos entram na coluna">
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
-            {COLUMNS.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
-          </select>
-        </Field>
-
         <p className="text-xs text-neutral-500">
           Ao importar, a planilha anterior é substituída. Contatos adicionados manualmente são preservados.
         </p>
 
         {err && <p className="text-sm text-red-500">{err}</p>}
-        {result && <p className="text-sm text-emerald-600">{result}</p>}
+        {result && <p className="whitespace-pre-line text-sm text-emerald-600">{result}</p>}
         <button
           disabled={busy || !file}
           className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
         >
-          {busy ? "Importando..." : "Substituir planilha"}
+          {busy ? "Importando..." : "Importar e organizar"}
         </button>
       </form>
     </Modal>
   );
 }
+
+
 
 function DisparoView({
   customers,
@@ -999,69 +1091,31 @@ function Modal({
   );
 }
 
-// CSV parser: aceita ; , ou tab, com/sem cabeçalho, colunas nome/telefone.
-function parseCsv(text: string, defaultStatus: string): Array<{ name: string; phone: string; status: string; tags: string[] }> {
-  const firstLine = text.split(/\r?\n/).find((l) => l.trim()) || "";
-  const counts = { ";": (firstLine.match(/;/g) || []).length, ",": (firstLine.match(/,/g) || []).length, "\t": (firstLine.match(/\t/g) || []).length } as Record<string, number>;
-  const delim = (Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0]) || ",";
-
-  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  if (!lines.length) return [];
-
-  const split = (line: string) => line.split(delim).map((c) => c.trim().replace(/^"|"$/g, ""));
-  const firstCells = split(lines[0]);
-  const hasHeader = !firstCells.some((c) => /\d{8,}/.test(c.replace(/\D+/g, "")));
-
-  let iName = 0, iPhone = 1;
-  let start = 0;
-  if (hasHeader) {
-    start = 1;
-    const norm = firstCells.map((h) => h.toLowerCase());
-    const find = (...keys: string[]) => {
-      for (const k of keys) {
-        const idx = norm.findIndex((h) => h.includes(k));
-        if (idx >= 0) return idx;
-      }
-      return -1;
-    };
-    const n = find("nome", "name", "contato");
-    const p = find("telefone", "phone", "celular", "whatsapp", "numero");
-    if (n >= 0) iName = n;
-    if (p >= 0) iPhone = p;
-  }
-
-  const out: Array<{ name: string; phone: string; status: string; tags: string[] }> = [];
-  for (let i = start; i < lines.length; i++) {
-    const cells = split(lines[i]);
-    let phone = "";
-    let name = "";
-    if (cells.length === 1) {
-      phone = cells[0].replace(/\D+/g, "");
-      name = `Contato ${phone.slice(-4)}`;
-    } else {
-      name = (cells[iName] || "").trim();
-      phone = (cells[iPhone] || "").replace(/\D+/g, "");
-      if (!name) name = `Contato ${phone.slice(-4)}`;
-    }
-    if (phone.length < 8) continue;
-    out.push({ name, phone, status: defaultStatus, tags: [] });
-  }
-  return out;
-}
-
 function SettingsView({
   brand,
   fallbackName,
   onSave,
+  shopId,
 }: {
   brand: Brand;
   fallbackName: string;
   onSave: (b: Brand) => void;
+  shopId: string;
 }) {
   const [name, setName] = useState(brand.name || fallbackName || "");
   const [logo, setLogo] = useState(brand.logo || "");
   const [saved, setSaved] = useState(false);
+  const [system, setSystem] = useState<SubscriptionSystemId | "">(() => readSystem(shopId) ?? "");
+  const [systemSaved, setSystemSaved] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
+
+  function saveSystem(id: SubscriptionSystemId) {
+    setSystem(id);
+    writeSystem(shopId, id);
+    setSystemSaved(true);
+    setTimeout(() => setSystemSaved(false), 1800);
+  }
+
 
   async function pickLogo(file: File) {
     if (file.size > 400_000) {
@@ -1088,7 +1142,39 @@ function SettingsView({
     <div className="mx-auto max-w-2xl space-y-6">
       <h1 className="text-lg font-semibold text-neutral-900">Configurações</h1>
 
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-neutral-900">Sistema de assinatura</h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            De onde vem a planilha de assinantes. O CRM usa isso para ler a planilha e
+            distribuir os contatos nas colunas certas automaticamente.
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {SUBSCRIPTION_SYSTEMS.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => saveSystem(s.id)}
+              className={
+                "rounded-xl border px-3 py-3 text-left text-sm transition " +
+                (system === s.id
+                  ? "border-neutral-900 bg-neutral-900 text-yellow-400"
+                  : "border-neutral-200 bg-white text-neutral-800 hover:border-neutral-400")
+              }
+            >
+              <span className="block font-semibold">{s.label}</span>
+              <span className={"mt-1 block text-[11px] " + (system === s.id ? "text-yellow-200/80" : "text-neutral-500")}>
+                {s.hint}
+              </span>
+            </button>
+          ))}
+        </div>
+        {systemSaved && <span className="text-xs font-medium text-emerald-600">Salvo ✔</span>}
+      </div>
+
       <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-6">
+
         <div className="flex items-center gap-4">
           <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl bg-neutral-900 text-2xl font-semibold text-yellow-400 shadow-sm">
             {logo ? <img src={logo} alt="logo" className="h-full w-full object-cover" /> : initial}
