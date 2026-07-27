@@ -1375,6 +1375,10 @@ function SettingsView({
   const [saved, setSaved] = useState(false);
   const [system, setSystem] = useState<SubscriptionSystemId | "">(() => readSystem(shopId) ?? "");
   const [systemSaved, setSystemSaved] = useState(false);
+  const [plans, setPlans] = useState<Plan[]>(() => readPlans(shopId));
+  const [plansSaved, setPlansSaved] = useState(false);
+  const [newPlan, setNewPlan] = useState("");
+  const [goal, setGoal] = useState<number>(() => readGoal(shopId));
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   function saveSystem(id: SubscriptionSystemId) {
@@ -1383,6 +1387,25 @@ function SettingsView({
     setSystemSaved(true);
     setTimeout(() => setSystemSaved(false), 1800);
   }
+
+  function persistPlans(next: Plan[]) {
+    setPlans(next);
+    writePlans(shopId, next);
+    setPlansSaved(true);
+    setTimeout(() => setPlansSaved(false), 1500);
+  }
+
+  function addPlan() {
+    const name = newPlan.trim();
+    if (!name) return;
+    if (plans.some((p) => normalizePlanName(p.name) === normalizePlanName(name))) {
+      setNewPlan("");
+      return;
+    }
+    persistPlans([...plans, { name, priceCents: 0 }]);
+    setNewPlan("");
+  }
+
 
 
   async function pickLogo(file: File) {
