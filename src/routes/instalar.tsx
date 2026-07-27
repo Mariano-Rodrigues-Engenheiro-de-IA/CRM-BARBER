@@ -29,7 +29,7 @@ export const Route = createFileRoute("/instalar")({
 function downloadZip() {
   const version = Date.now();
   const urls = [
-    `/crm-assinaturas-extension-v1843.zip?v=${version}`,
+    `/crm-assinaturas-extension-v1844.zip?v=${version}`,
     `/crm-assinaturas-extension.zip?v=${version}`,
   ];
   urls
@@ -44,7 +44,7 @@ function downloadZip() {
     .then((blob) => {
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = "crm-assinaturas-extension-v1843.zip";
+      a.download = "crm-assinaturas-extension-v1844.zip";
       a.click();
       URL.revokeObjectURL(a.href);
     })
@@ -64,10 +64,10 @@ function Install() {
         </CardHeader>
         <CardContent className="space-y-4">
           <Button size="lg" className="w-full" onClick={downloadZip}>
-            Baixar extensão v0.18.43 (.zip)
+            Baixar extensão v0.18.44 (.zip)
           </Button>
           <p className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-            Importante: remova a versão anterior em <code className="rounded bg-muted px-1">chrome://extensions</code> antes de instalar. A versão precisa aparecer como <strong>0.18.43</strong>.
+            Importante: remova a versão anterior em <code className="rounded bg-muted px-1">chrome://extensions</code> antes de instalar. A versão precisa aparecer como <strong>0.18.44</strong>.
           </p>
           <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
             <li>Descompacte o arquivo baixado em uma pasta.</li>
