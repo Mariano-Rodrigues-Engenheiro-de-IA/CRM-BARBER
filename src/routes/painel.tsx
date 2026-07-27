@@ -890,11 +890,13 @@ async function sheetToMatrix(file: File): Promise<string[][]> {
 
 function ImportModal({
   token,
+  shopId,
   onClose,
   system,
   onGoSettings,
 }: {
   token: string;
+  shopId: string;
   onClose: () => void;
   system: SubscriptionSystemId | null;
   onGoSettings: () => void;
@@ -928,6 +930,11 @@ function ImportModal({
       });
       if (!r?.ok) throw new Error(r?.error || "Erro na importação");
 
+      // Planos detectados na planilha entram no catálogo (valor a definir).
+      const detected = Object.keys(report.byPlan);
+      const merged = mergeDetectedPlans(shopId, detected);
+      const semValor = merged.filter((p) => p.priceCents <= 0).length;
+
       const dist = COLUMNS
         .filter((c) => report.byStatus[c.key])
         .map((c) => `${c.label}: ${report.byStatus[c.key]}`)
@@ -938,8 +945,10 @@ function ImportModal({
           `\nNovos: ${r.inserted} · Atualizados: ${r.updated}` +
           (r.archived ? ` · Removidos da planilha antiga: ${r.archived}` : "") +
           (dist ? `\n${dist}` : "") +
+          (detected.length ? `\nPlanos detectados: ${detected.join(" · ")}` : "") +
+          (semValor ? `\n${semValor} plano(s) sem valor — cadastre em Configurações.` : "") +
           (report.unmappedStatuses.length
-            ? `\nStatus não reconhecidos: ${report.unmappedStatuses.join(", ")}`
+            ? `\nStatus não reconhecidos (usei a data de vencimento): ${report.unmappedStatuses.join(", ")}`
             : ""),
       );
     } catch (e) {
