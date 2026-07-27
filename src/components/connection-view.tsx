@@ -31,6 +31,7 @@ type Connection = {
   qrcode: string | null;
   provider: string;
   auth_mode?: string | null;
+  needs_manual_credentials?: boolean;
 };
 
 export function ConnectionView({ api }: { api: Api }) {
@@ -151,6 +152,15 @@ export function ConnectionView({ api }: { api: Api }) {
         window.open(c.signup.url, "whatsapp-signup", "width=620,height=760");
       }
     } else {
+      statusRef.current = "disconnected";
+      setConn((prev) => ({
+        status: "disconnected",
+        phone: prev?.phone ?? null,
+        qrcode: null,
+        provider: prev?.provider ?? "uazapi",
+        auth_mode: prev?.auth_mode ?? authMode,
+        needs_manual_credentials: prev?.needs_manual_credentials,
+      }));
       setErr(res.error || "Falha ao iniciar conexão");
     }
     actionRef.current = null;
@@ -211,6 +221,7 @@ export function ConnectionView({ api }: { api: Api }) {
 
   const status = conn?.status ?? "disconnected";
   const isMetaConnection = conn?.provider === "meta" || conn?.auth_mode === "embedded_signup" || authMode === "embedded_signup";
+  const needsManualCredentials = Boolean(conn?.needs_manual_credentials && isMetaConnection);
 
   return (
     <div className="space-y-4">
@@ -292,7 +303,9 @@ export function ConnectionView({ api }: { api: Api }) {
               {busy ? "Preparando…" : "Conectar WhatsApp"}
             </Button>
             <p className="mt-3 text-xs text-neutral-500">
-              {isMetaConnection
+              {needsManualCredentials
+                ? "Modo oficial selecionado, mas ainda falta salvar phone_number_id e access_token na tela admin. Se esta barbearia deve usar QR, selecione QR / não oficial acima."
+                : isMetaConnection
                 ? "Este número é configurado manualmente na API oficial; depois de salvar as credenciais, o status atualiza sozinho aqui."
                 : "Vai gerar um QR code pra você escanear com o WhatsApp da barbearia."}
             </p>
@@ -311,8 +324,9 @@ export function ConnectionView({ api }: { api: Api }) {
               </div>
             ) : isMetaConnection ? (
               <p className="text-sm text-neutral-500">
-                Este número usa a API oficial do WhatsApp — não há QR code. A conexão é liberada
-                assim que o número estiver configurado e verificado. O status atualiza sozinho aqui.
+                {needsManualCredentials
+                  ? "Modo oficial selecionado, mas faltam phone_number_id e access_token. Para usar QR nesta barbearia, selecione QR / não oficial acima."
+                  : "Este número usa a API oficial do WhatsApp — não há QR code. A conexão é liberada assim que o número estiver configurado e verificado. O status atualiza sozinho aqui."}
               </p>
             ) : (
               <p className="text-sm text-neutral-500">Gerando QR code…</p>
