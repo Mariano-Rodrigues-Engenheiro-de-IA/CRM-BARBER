@@ -82,7 +82,7 @@ function Landing() {
           <p className="text-lg text-muted-foreground">
             Instale a extensão, abra o WhatsApp Web e pronto — cadastre clientes
             assinantes, crie campanhas de cobrança e reativação, e dispare mensagens
-            direto da sua própria sessão. Sem trocar de aba, sem servidor rodando 24h.
+            direto da sua própria sessão ou por API oficial nos clientes selecionados.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <Button size="lg" onClick={scrollToForm}>

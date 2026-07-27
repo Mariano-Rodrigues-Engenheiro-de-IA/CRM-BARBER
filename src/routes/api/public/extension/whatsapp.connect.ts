@@ -27,10 +27,10 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/connect")({
           .maybeSingle();
 
         try {
-          const { getWhatsAppProvider, getWhatsAppProviderByName } = await import("@/lib/whatsapp/provider.server");
+          const { getWhatsAppProviderByName } = await import("@/lib/whatsapp/provider.server");
           const provider = existing?.provider === "meta"
             ? getWhatsAppProviderByName("meta")
-            : getWhatsAppProvider();
+            : getWhatsAppProviderByName("uazapi");
           const existingInstanceId = provider.name === "meta"
             ? existing?.phone_number_id ?? existing?.instance_id ?? null
             : existing?.instance_id ?? null;

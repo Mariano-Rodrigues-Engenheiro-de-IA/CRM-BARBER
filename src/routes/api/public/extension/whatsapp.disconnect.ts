@@ -50,8 +50,8 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/disconnect"
 
         }
 
-        const { getWhatsAppProvider } = await import("@/lib/whatsapp/provider.server");
-        const defaultProvider = getWhatsAppProvider();
+        const { getWhatsAppProviderByName } = await import("@/lib/whatsapp/provider.server");
+        const defaultProvider = getWhatsAppProviderByName("uazapi");
         return jsonResponse(request, {
           ok: true,
           connection: {
