@@ -11,8 +11,21 @@ import { ConnectionView } from "@/components/connection-view";
 import {
   SUBSCRIPTION_SYSTEMS,
   parseSubscriptionSheet,
+  planFromTags,
   type SubscriptionSystemId,
 } from "@/lib/subscription-systems";
+import {
+  formatBRL,
+  mergeDetectedPlans,
+  priceOf,
+  readGoal,
+  readPlans,
+  writeGoal,
+  writePlans,
+  normalizePlanName,
+  type Plan,
+} from "@/lib/shop-settings";
+
 
 export const Route = createFileRoute("/painel")({
   head: () => ({
