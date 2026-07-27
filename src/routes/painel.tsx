@@ -431,6 +431,7 @@ function Painel() {
               brand={brand}
               fallbackName={shop?.name || ""}
               onSave={saveBrand}
+              shopId={shop?.id ?? "default"}
             />
           </main>
         )}
