@@ -22,17 +22,33 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/connect")({
 
         const { data: existing } = await supabaseAdmin
           .from("whatsapp_instances")
-          .select("id, instance_id, instance_token")
+          .select("id, instance_id, instance_token, provider, phone_number_id, meta_access_token")
           .eq("barbershop_id", auth.token.barbershop_id)
           .maybeSingle();
 
         try {
-          const { getWhatsAppProvider } = await import("@/lib/whatsapp/provider.server");
-          const provider = getWhatsAppProvider();
+          const { getWhatsAppProvider, getWhatsAppProviderByName } = await import("@/lib/whatsapp/provider.server");
+          const provider = existing?.provider === "meta"
+            ? getWhatsAppProviderByName("meta")
+            : getWhatsAppProvider();
+          const existingInstanceId = provider.name === "meta"
+            ? existing?.phone_number_id ?? existing?.instance_id ?? null
+            : existing?.instance_id ?? null;
+          const existingInstanceToken = provider.name === "meta"
+            ? existing?.meta_access_token ?? existing?.instance_token ?? null
+            : existing?.instance_token ?? null;
+
+          if (provider.name === "meta" && !existingInstanceToken) {
+            return jsonResponse(request, {
+              ok: false,
+              error: "Conexão oficial configurada manualmente: salve phone_number_id e access_token em /admin/whatsapp antes de conectar.",
+            }, { status: 409 });
+          }
+
           const result = await provider.connect({
             barbershop_id: auth.token.barbershop_id,
-            existing_instance_id: existing?.instance_id ?? null,
-            existing_instance_token: existing?.instance_token ?? null,
+            existing_instance_id: existingInstanceId,
+            existing_instance_token: existingInstanceToken,
           });
 
           // No Embedded Signup as credenciais só nascem no callback: strings
@@ -42,6 +58,8 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/connect")({
             provider: provider.name,
             ...(result.instance_id ? { instance_id: result.instance_id } : {}),
             ...(result.instance_token ? { instance_token: result.instance_token } : {}),
+            ...(provider.name === "meta" && result.instance_id ? { phone_number_id: result.instance_id } : {}),
+            ...(provider.name === "meta" && result.instance_token ? { meta_access_token: result.instance_token } : {}),
             status: result.status,
             last_qr: result.qrcode ?? null,
             last_synced_at: new Date().toISOString(),
