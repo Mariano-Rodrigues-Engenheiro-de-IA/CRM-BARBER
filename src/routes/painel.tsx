@@ -611,32 +611,69 @@ function AddModal({ token, onClose }: { token: string; onClose: () => void }) {
   );
 }
 
-function ImportModal({ token, onClose }: { token: string; onClose: () => void }) {
+async function sheetToMatrix(file: File): Promise<string[][]> {
+  const XLSX = await import("xlsx");
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: "array", raw: false });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  if (!ws) return [];
+  const rows = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1, blankrows: false, defval: "" });
+  return rows.map((r) => (r as unknown[]).map((c) => String(c ?? "")));
+}
+
+function ImportModal({
+  token,
+  onClose,
+  system,
+  onGoSettings,
+}: {
+  token: string;
+  onClose: () => void;
+  system: SubscriptionSystemId | null;
+  onGoSettings: () => void;
+}) {
   const [file, setFile] = useState<File | null>(null);
-  const [status, setStatus] = useState("active");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
+  const meta = SUBSCRIPTION_SYSTEMS.find((s) => s.id === system);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!file) return;
+    if (!file || !system) return;
     setBusy(true);
     setErr(null);
     setResult(null);
     try {
-      const text = await file.text();
-      const rows = parseCsv(text, status);
-      if (!rows.length) throw new Error("Nenhuma linha válida. Use CSV com colunas: nome;telefone");
+      const matrix = await sheetToMatrix(file);
+      const report = parseSubscriptionSheet(system, matrix);
+      if (!report.rows.length) {
+        throw new Error(
+          "Nenhuma linha válida encontrada. Confira se a planilha é a exportação do " +
+            (meta?.label ?? "sistema") + " e tem colunas de nome e telefone.",
+        );
+      }
       const r = await api(token, "/api/public/extension/customers/import", {
         method: "POST",
-        body: JSON.stringify({ customers: rows, mode: "replace_spreadsheet" }),
+        body: JSON.stringify({ customers: report.rows, mode: "replace_spreadsheet" }),
       });
       if (!r?.ok) throw new Error(r?.error || "Erro na importação");
+
+      const dist = COLUMNS
+        .filter((c) => report.byStatus[c.key])
+        .map((c) => `${c.label}: ${report.byStatus[c.key]}`)
+        .join(" · ");
       setResult(
-        `Recebido: ${r.received} · Novos: ${r.inserted} · Atualizados: ${r.updated}` +
-        (r.archived ? ` · Substituídos da planilha antiga: ${r.archived}` : ""),
+        `Linhas lidas: ${report.total} · Importadas: ${report.rows.length}` +
+          (report.skipped ? ` · Ignoradas (sem telefone/status): ${report.skipped}` : "") +
+          `\nNovos: ${r.inserted} · Atualizados: ${r.updated}` +
+          (r.archived ? ` · Removidos da planilha antiga: ${r.archived}` : "") +
+          (dist ? `\n${dist}` : "") +
+          (report.unmappedStatuses.length
+            ? `\nStatus não reconhecidos: ${report.unmappedStatuses.join(", ")}`
+            : ""),
       );
     } catch (e) {
       setErr((e as Error).message);
@@ -645,19 +682,47 @@ function ImportModal({ token, onClose }: { token: string; onClose: () => void })
     }
   }
 
+  if (!system) {
+    return (
+      <Modal onClose={onClose} title="Importar planilha">
+        <div className="space-y-4">
+          <p className="text-sm text-neutral-700">
+            Antes de importar, escolha em <strong>Configurações</strong> qual sistema de
+            assinatura a barbearia usa (App Barber, Frisar ou planilha manual). Assim o
+            CRM sabe como ler a planilha e distribuir os assinantes nas colunas certas.
+          </p>
+          <button
+            onClick={onGoSettings}
+            className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
+          >
+            Ir para Configurações
+          </button>
+        </div>
+      </Modal>
+    );
+  }
+
   return (
-    <Modal onClose={onClose} title="Importar planilha">
+    <Modal onClose={onClose} title={`Importar planilha — ${meta?.label ?? ""}`}>
       <form onSubmit={submit} className="space-y-4">
         <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-700">
-          <div><strong className="text-neutral-900">Formato:</strong> CSV com 2 colunas — <code>nome</code> e <code>telefone</code>.</div>
-          <pre className="mt-2 rounded bg-white border border-neutral-200 p-2 text-[11px] text-neutral-800">nome;telefone{"\n"}João Silva;61999998888{"\n"}Maria Souza;5561988887777</pre>
+          <div>{meta?.hint}</div>
+          {system === "appbarber" && (
+            <div className="mt-2 text-[11px] text-neutral-600">
+              O CRM lê as colunas <code>Nome</code>, <code>Celular</code>, <code>Status</code> e{" "}
+              <code>Plano</code> e distribui sozinho: <strong>Em Dia → Ativos</strong>,{" "}
+              <strong>A vencer → A vencer</strong>,{" "}
+              <strong>Inadimplente / Atrasado / Vencido → Inadimplentes</strong>,{" "}
+              <strong>Cancelado / Inativo → Cancelados</strong>.
+            </div>
+          )}
         </div>
 
-        <Field label="Arquivo (.csv)">
+        <Field label="Arquivo (.xlsx ou .csv)">
           <input
             ref={fileRef}
             type="file"
-            accept=".csv,.tsv,.txt,text/csv,text/plain"
+            accept=".xlsx,.xls,.csv,.tsv,.txt"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             className="hidden"
           />
@@ -675,28 +740,24 @@ function ImportModal({ token, onClose }: { token: string; onClose: () => void })
           </div>
         </Field>
 
-        <Field label="Todos os contatos entram na coluna">
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
-            {COLUMNS.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
-          </select>
-        </Field>
-
         <p className="text-xs text-neutral-500">
           Ao importar, a planilha anterior é substituída. Contatos adicionados manualmente são preservados.
         </p>
 
         {err && <p className="text-sm text-red-500">{err}</p>}
-        {result && <p className="text-sm text-emerald-600">{result}</p>}
+        {result && <p className="whitespace-pre-line text-sm text-emerald-600">{result}</p>}
         <button
           disabled={busy || !file}
           className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
         >
-          {busy ? "Importando..." : "Substituir planilha"}
+          {busy ? "Importando..." : "Importar e organizar"}
         </button>
       </form>
     </Modal>
   );
 }
+
+
 
 function DisparoView({
   customers,
