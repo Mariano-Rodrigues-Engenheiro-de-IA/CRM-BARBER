@@ -1145,15 +1145,27 @@ function SettingsView({
   brand,
   fallbackName,
   onSave,
+  shopId,
 }: {
   brand: Brand;
   fallbackName: string;
   onSave: (b: Brand) => void;
+  shopId: string;
 }) {
   const [name, setName] = useState(brand.name || fallbackName || "");
   const [logo, setLogo] = useState(brand.logo || "");
   const [saved, setSaved] = useState(false);
+  const [system, setSystem] = useState<SubscriptionSystemId | "">(() => readSystem(shopId) ?? "");
+  const [systemSaved, setSystemSaved] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
+
+  function saveSystem(id: SubscriptionSystemId) {
+    setSystem(id);
+    writeSystem(shopId, id);
+    setSystemSaved(true);
+    setTimeout(() => setSystemSaved(false), 1800);
+  }
+
 
   async function pickLogo(file: File) {
     if (file.size > 400_000) {
