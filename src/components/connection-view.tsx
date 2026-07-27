@@ -38,10 +38,12 @@ export function ConnectionView({ api }: { api: Api }) {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmAction, setConfirmAction] = useState<"connect" | "disconnect" | null>(null);
+  const [authMode, setAuthMode] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshSeqRef = useRef(0);
   const operationSeqRef = useRef(0);
   const actionRef = useRef<"connect" | "disconnect" | null>(null);
+  const statusRef = useRef<Connection["status"]>("disconnected");
 
   function clearPoll() {
     if (pollRef.current) {
@@ -64,7 +66,9 @@ export function ConnectionView({ api }: { api: Api }) {
       return;
     }
     if (res.ok && res.connection) {
-      setConn(res.connection as Connection);
+      const next = res.connection as Connection;
+      statusRef.current = next.status;
+      setConn(next);
     } else if (res.error) {
       setErr(res.error);
     }
@@ -79,14 +83,27 @@ export function ConnectionView({ api }: { api: Api }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Polling automático: 2.5s enquanto conectando, 10s quando conectado/desconectado.
+  // Polling automático contínuo: 2.5s enquanto conectando, 10s nos demais estados.
+  // Reagenda a si mesmo depois de cada refresh — sem isso o polling parava
+  // no primeiro tick quando o status não mudava.
   useEffect(() => {
     clearPoll();
     if (busy) return;
-    const interval = conn?.status === "connecting" ? 2500 : 10000;
-    pollRef.current = setTimeout(() => void refresh(true), interval);
+    let cancelled = false;
+    const schedule = () => {
+      const interval = statusRef.current === "connecting" ? 2500 : 10000;
+      pollRef.current = setTimeout(async () => {
+        await refresh(true);
+        if (!cancelled) schedule();
+      }, interval);
+    };
+    schedule();
+    return () => {
+      cancelled = true;
+      clearPoll();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conn?.status, conn?.qrcode, busy]);
+  }, [busy]);
 
   // Re-sincroniza quando a aba volta ao foco (usuário voltou da UAZAPI etc.).
   useEffect(() => {
@@ -110,6 +127,7 @@ export function ConnectionView({ api }: { api: Api }) {
     clearPoll();
     setBusy(true);
     setErr(null);
+    statusRef.current = "connecting";
     setConn((prev) => ({
       status: "connecting",
       phone: prev?.phone ?? null,
@@ -122,6 +140,8 @@ export function ConnectionView({ api }: { api: Api }) {
         auth_mode?: string;
         signup?: { url?: string | null } | null;
       };
+      statusRef.current = c.status;
+      setAuthMode(c.auth_mode ?? null);
       setConn(c);
       // API oficial: não há QR — abre o pop-up de login da Meta.
       if (c.auth_mode === "embedded_signup" && c.signup?.url) {
@@ -142,6 +162,7 @@ export function ConnectionView({ api }: { api: Api }) {
     clearPoll();
     setBusy(true);
     setErr(null);
+    statusRef.current = "disconnected";
     setConn((prev) => (prev ? { ...prev, status: "disconnected", phone: null, qrcode: null } : prev));
     await api("/api/public/extension/whatsapp/disconnect", { method: "POST" });
     actionRef.current = null;
@@ -232,6 +253,11 @@ export function ConnectionView({ api }: { api: Api }) {
                   Abra o WhatsApp da barbearia → Aparelhos conectados → Conectar aparelho → aponte a câmera pro código.
                 </p>
               </div>
+            ) : conn?.provider === "meta" || authMode === "embedded_signup" ? (
+              <p className="text-sm text-neutral-500">
+                Este número usa a API oficial do WhatsApp — não há QR code. A conexão é liberada
+                assim que o número estiver configurado e verificado. O status atualiza sozinho aqui.
+              </p>
             ) : (
               <p className="text-sm text-neutral-500">Gerando QR code…</p>
             )}
