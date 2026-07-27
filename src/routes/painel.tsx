@@ -50,6 +50,8 @@ type Customer = {
   tags: string[] | null;
   source: string;
   archived_at: string | null;
+  notes?: string | null;
+
 };
 
 type Campaign = {
