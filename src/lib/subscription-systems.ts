@@ -206,8 +206,9 @@ function parseAppBarber(matrix: string[][], origin = "appbarber"): ParseReport {
   const iDue = findCol(header, "proximo vencimento", "vencimento", "proxima cobranca");
 
   for (const row of matrix.slice(1)) {
-    report.total += 1;
     const name = cell(row[iName]);
+    if (isSummaryRow(name)) continue;
+    report.total += 1;
     const phone = normalizePhone(row[iPhone]);
     if (!name || !phone) {
       report.skipped += 1;

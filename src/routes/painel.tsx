@@ -941,6 +941,8 @@ function ImportModal({
       const merged = mergeDetectedPlans(shopId, detected);
       const semValor = merged.filter((p) => p.priceCents <= 0).length;
 
+      const semTelefone = report.rows.filter((r) => r.tags.includes("sem-telefone")).length;
+
       const dist = COLUMNS
         .filter((c) => report.byStatus[c.key])
         .map((c) => `${c.label}: ${report.byStatus[c.key]}`)
@@ -953,6 +955,9 @@ function ImportModal({
           (dist ? `\n${dist}` : "") +
           (detected.length ? `\nPlanos detectados: ${detected.join(" · ")}` : "") +
           (semValor ? `\n${semValor} plano(s) sem valor — cadastre em Configurações.` : "") +
+          (semTelefone
+            ? `\n${semTelefone} assinante(s) sem telefone na planilha — entram no Kanban, mas ficam fora dos disparos.`
+            : "") +
           (report.unmappedStatuses.length
             ? `\nStatus não reconhecidos (usei a data de vencimento): ${report.unmappedStatuses.join(", ")}`
             : ""),
