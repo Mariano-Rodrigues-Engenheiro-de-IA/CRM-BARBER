@@ -79,14 +79,27 @@ export function ConnectionView({ api }: { api: Api }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Polling automático: 2.5s enquanto conectando, 10s quando conectado/desconectado.
+  // Polling automático contínuo: 2.5s enquanto conectando, 10s nos demais estados.
+  // Reagenda a si mesmo depois de cada refresh — sem isso o polling parava
+  // no primeiro tick quando o status não mudava.
   useEffect(() => {
     clearPoll();
     if (busy) return;
-    const interval = conn?.status === "connecting" ? 2500 : 10000;
-    pollRef.current = setTimeout(() => void refresh(true), interval);
+    let cancelled = false;
+    const schedule = () => {
+      const interval = statusRef.current === "connecting" ? 2500 : 10000;
+      pollRef.current = setTimeout(async () => {
+        await refresh(true);
+        if (!cancelled) schedule();
+      }, interval);
+    };
+    schedule();
+    return () => {
+      cancelled = true;
+      clearPoll();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conn?.status, conn?.qrcode, busy]);
+  }, [busy]);
 
   // Re-sincroniza quando a aba volta ao foco (usuário voltou da UAZAPI etc.).
   useEffect(() => {
