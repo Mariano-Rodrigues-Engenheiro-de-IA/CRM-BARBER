@@ -55,6 +55,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/status")({
         const instanceToken = providerName === "meta"
           ? inst.meta_access_token ?? inst.instance_token
           : inst.instance_token;
+        const metaNeedsManualCredentials = providerName === "meta" && (!inst.phone_number_id || !inst.meta_access_token);
 
         // Força sync quando o cliente pede (`?sync=1`) ou quando o cache local não é `connected`.
         const staleMs = inst.status === "connected" ? 15000 : 0;
@@ -64,14 +65,21 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/status")({
         const shouldRespectLocalDisconnect = inst.status === "disconnected" && ageMs < disconnectCooldownMs;
         const shouldSync = !shouldRespectLocalDisconnect && (forceSync || ageMs > staleMs);
 
-        let status = inst.status;
+        let status = metaNeedsManualCredentials ? "disconnected" : inst.status;
         let phone = inst.phone;
-        let qrcode = inst.last_qr;
+        let qrcode = metaNeedsManualCredentials ? null : inst.last_qr;
 
         const { getWhatsAppProviderByName } = await import("@/lib/whatsapp/provider.server");
         const provider = getWhatsAppProviderByName(providerName);
 
-        if (shouldSync && instanceToken) {
+        if (metaNeedsManualCredentials && inst.status !== "disconnected") {
+          await supabaseAdmin
+            .from("whatsapp_instances")
+            .update({ status: "disconnected", last_qr: null, last_synced_at: new Date().toISOString() })
+            .eq("id", inst.id);
+        }
+
+        if (!metaNeedsManualCredentials && shouldSync && instanceToken) {
           try {
             const s = await provider.status({
               instance_id: instanceId ?? instanceToken,
@@ -102,6 +110,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/status")({
             qrcode: status === "connected" ? null : qrcode,
             provider: providerName,
             auth_mode: provider.authMode,
+            needs_manual_credentials: metaNeedsManualCredentials,
           },
         });
       },
