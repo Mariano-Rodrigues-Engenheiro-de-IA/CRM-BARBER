@@ -8,6 +8,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TeamView } from "@/components/team-view";
 import { ConnectionView } from "@/components/connection-view";
+import {
+  SUBSCRIPTION_SYSTEMS,
+  parseSubscriptionSheet,
+  type SubscriptionSystemId,
+} from "@/lib/subscription-systems";
 
 export const Route = createFileRoute("/painel")({
   head: () => ({
