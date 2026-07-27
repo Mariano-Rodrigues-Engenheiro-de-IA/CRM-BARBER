@@ -1192,7 +1192,39 @@ function SettingsView({
     <div className="mx-auto max-w-2xl space-y-6">
       <h1 className="text-lg font-semibold text-neutral-900">Configurações</h1>
 
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-neutral-900">Sistema de assinatura</h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            De onde vem a planilha de assinantes. O CRM usa isso para ler a planilha e
+            distribuir os contatos nas colunas certas automaticamente.
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {SUBSCRIPTION_SYSTEMS.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => saveSystem(s.id)}
+              className={
+                "rounded-xl border px-3 py-3 text-left text-sm transition " +
+                (system === s.id
+                  ? "border-neutral-900 bg-neutral-900 text-yellow-400"
+                  : "border-neutral-200 bg-white text-neutral-800 hover:border-neutral-400")
+              }
+            >
+              <span className="block font-semibold">{s.label}</span>
+              <span className={"mt-1 block text-[11px] " + (system === s.id ? "text-yellow-200/80" : "text-neutral-500")}>
+                {s.hint}
+              </span>
+            </button>
+          ))}
+        </div>
+        {systemSaved && <span className="text-xs font-medium text-emerald-600">Salvo ✔</span>}
+      </div>
+
       <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-6">
+
         <div className="flex items-center gap-4">
           <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl bg-neutral-900 text-2xl font-semibold text-yellow-400 shadow-sm">
             {logo ? <img src={logo} alt="logo" className="h-full w-full object-cover" /> : initial}
