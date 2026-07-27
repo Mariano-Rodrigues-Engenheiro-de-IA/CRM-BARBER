@@ -253,6 +253,11 @@ export function ConnectionView({ api }: { api: Api }) {
                   Abra o WhatsApp da barbearia → Aparelhos conectados → Conectar aparelho → aponte a câmera pro código.
                 </p>
               </div>
+            ) : conn?.provider === "meta" || authMode === "embedded_signup" ? (
+              <p className="text-sm text-neutral-500">
+                Este número usa a API oficial do WhatsApp — não há QR code. A conexão é liberada
+                assim que o número estiver configurado e verificado. O status atualiza sozinho aqui.
+              </p>
             ) : (
               <p className="text-sm text-neutral-500">Gerando QR code…</p>
             )}
