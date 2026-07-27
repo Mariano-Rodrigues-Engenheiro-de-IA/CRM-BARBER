@@ -65,7 +65,9 @@ export function ConnectionView({ api }: { api: Api }) {
       return;
     }
     if (res.ok && res.connection) {
-      setConn(res.connection as Connection);
+      const next = res.connection as Connection;
+      statusRef.current = next.status;
+      setConn(next);
     } else if (res.error) {
       setErr(res.error);
     }
