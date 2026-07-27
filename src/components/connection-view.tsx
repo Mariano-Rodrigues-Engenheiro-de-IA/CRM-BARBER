@@ -134,7 +134,7 @@ export function ConnectionView({ api }: { api: Api }) {
       status: "connecting",
       phone: prev?.phone ?? null,
       qrcode: null,
-      provider: prev?.provider ?? "meta",
+      provider: prev?.provider ?? "uazapi",
       auth_mode: prev?.auth_mode ?? authMode,
     }));
     const res = await api("/api/public/extension/whatsapp/connect", { method: "POST" });
