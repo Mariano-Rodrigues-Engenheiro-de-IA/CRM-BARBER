@@ -4,6 +4,7 @@
 
 export const CUSTOMER_STATUSES = [
   { value: "active", label: "Ativo" },
+  { value: "due_soon", label: "A vencer" },
   { value: "overdue", label: "Em atraso" },
   { value: "reactivate", label: "Reativar" },
   { value: "canceled", label: "Cancelado" },
