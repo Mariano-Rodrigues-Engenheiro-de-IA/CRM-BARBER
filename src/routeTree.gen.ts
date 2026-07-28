@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PainelRouteImport } from './routes/painel'
 import { Route as InstalarRouteImport } from './routes/instalar'
+import { Route as AssinarRouteImport } from './routes/assinar'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AssinarRetornoRouteImport } from './routes/assinar.retorno'
 import { Route as AdminWhatsappRouteImport } from './routes/admin.whatsapp'
 import { Route as ApiPublicSignupRouteImport } from './routes/api/public/signup'
 import { Route as ApiPublicWhatsappSignupCallbackRouteImport } from './routes/api/public/whatsapp.signup-callback'
@@ -45,10 +47,20 @@ const InstalarRoute = InstalarRouteImport.update({
   path: '/instalar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AssinarRoute = AssinarRouteImport.update({
+  id: '/assinar',
+  path: '/assinar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AssinarRetornoRoute = AssinarRetornoRouteImport.update({
+  id: '/retorno',
+  path: '/retorno',
+  getParentRoute: () => AssinarRoute,
 } as any)
 const AdminWhatsappRoute = AdminWhatsappRouteImport.update({
   id: '/admin/whatsapp',
@@ -181,9 +193,11 @@ const ApiPublicExtensionCampaignsIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/assinar': typeof AssinarRouteWithChildren
   '/instalar': typeof InstalarRoute
   '/painel': typeof PainelRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
+  '/assinar/retorno': typeof AssinarRetornoRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
@@ -208,9 +222,11 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/assinar': typeof AssinarRouteWithChildren
   '/instalar': typeof InstalarRoute
   '/painel': typeof PainelRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
+  '/assinar/retorno': typeof AssinarRetornoRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
@@ -236,9 +252,11 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/assinar': typeof AssinarRouteWithChildren
   '/instalar': typeof InstalarRoute
   '/painel': typeof PainelRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
+  '/assinar/retorno': typeof AssinarRetornoRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
@@ -265,9 +283,11 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/assinar'
     | '/instalar'
     | '/painel'
     | '/admin/whatsapp'
+    | '/assinar/retorno'
     | '/api/public/signup'
     | '/api/public/extension/billing'
     | '/api/public/extension/campaigns'
@@ -292,9 +312,11 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/assinar'
     | '/instalar'
     | '/painel'
     | '/admin/whatsapp'
+    | '/assinar/retorno'
     | '/api/public/signup'
     | '/api/public/extension/billing'
     | '/api/public/extension/campaigns'
@@ -319,9 +341,11 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/assinar'
     | '/instalar'
     | '/painel'
     | '/admin/whatsapp'
+    | '/assinar/retorno'
     | '/api/public/signup'
     | '/api/public/extension/billing'
     | '/api/public/extension/campaigns'
@@ -347,6 +371,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AssinarRoute: typeof AssinarRouteWithChildren
   InstalarRoute: typeof InstalarRoute
   PainelRoute: typeof PainelRoute
   AdminWhatsappRoute: typeof AdminWhatsappRoute
@@ -384,12 +409,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InstalarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/assinar': {
+      id: '/assinar'
+      path: '/assinar'
+      fullPath: '/assinar'
+      preLoaderRoute: typeof AssinarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/assinar/retorno': {
+      id: '/assinar/retorno'
+      path: '/retorno'
+      fullPath: '/assinar/retorno'
+      preLoaderRoute: typeof AssinarRetornoRouteImport
+      parentRoute: typeof AssinarRoute
     }
     '/admin/whatsapp': {
       id: '/admin/whatsapp'
@@ -548,6 +587,17 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AssinarRouteChildren {
+  AssinarRetornoRoute: typeof AssinarRetornoRoute
+}
+
+const AssinarRouteChildren: AssinarRouteChildren = {
+  AssinarRetornoRoute: AssinarRetornoRoute,
+}
+
+const AssinarRouteWithChildren =
+  AssinarRoute._addFileChildren(AssinarRouteChildren)
+
 interface ApiPublicExtensionCampaignsRouteChildren {
   ApiPublicExtensionCampaignsIdRoute: typeof ApiPublicExtensionCampaignsIdRoute
 }
@@ -599,6 +649,7 @@ const ApiPublicExtensionQuickRepliesRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AssinarRoute: AssinarRouteWithChildren,
   InstalarRoute: InstalarRoute,
   PainelRoute: PainelRoute,
   AdminWhatsappRoute: AdminWhatsappRoute,
