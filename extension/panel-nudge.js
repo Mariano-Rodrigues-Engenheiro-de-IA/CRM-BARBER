@@ -1,6 +1,6 @@
 // Roda no painel web e conecta a página ao service worker da extensão.
 (function () {
-  const NUDGE_VERSION = "0.19.1";
+  const NUDGE_VERSION = "0.19.2";
   if (window.__crmPanelNudgeVersion === NUDGE_VERSION) return;
   window.__crmPanelNudgeVersion = NUDGE_VERSION;
   console.info(`[CRM panel-nudge v${NUDGE_VERSION}] pronto`, location.href);
