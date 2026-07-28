@@ -267,6 +267,7 @@ function Painel() {
   const [tab, setTab] = useState<AssinantesTab>("kanban");
   const [shop, setShop] = useState<{ id: string; name: string } | null>(null);
   const [brand, setBrand] = useState<Brand>({});
+  const [billing, setBilling] = useState<BillingStatus | null>(null);
 
 
   useEffect(() => {
@@ -299,6 +300,9 @@ function Painel() {
         setShop(r.barbershop);
         setBrand(readBrand(r.barbershop.id));
       }
+    });
+    api(token, "/api/public/extension/billing").then((r) => {
+      if (r?.ok && r.billing) setBilling(r.billing as BillingStatus);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
