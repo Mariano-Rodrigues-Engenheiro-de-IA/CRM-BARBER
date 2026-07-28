@@ -833,7 +833,7 @@ function KanbanView({
                           <CardAction
                             title="Abrir WhatsApp / enviar resposta rápida"
                             onClick={() => setWaTarget(c)}
-                            disabled={!isRealPhone(c.phone)}
+                            
                           >
                             <IconWhatsapp />
                           </CardAction>
