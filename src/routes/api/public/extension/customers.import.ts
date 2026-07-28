@@ -127,6 +127,17 @@ export const Route = createFileRoute("/api/public/extension/customers/import")({
           }
         }
 
+        const { getBillingStatus, limitBlock } = await import("@/lib/billing.server");
+        const billing = await getBillingStatus(supabaseAdmin, barbershopId);
+        const blocked = limitBlock(billing, "customers", toInsert.length);
+        if (blocked) {
+          return jsonResponse(
+            request,
+            { ok: false, error: blocked, code: "limit_reached", billing },
+            { status: 402 },
+          );
+        }
+
         let inserted = 0;
         if (toInsert.length > 0) {
           const { error: insErr, count } = await supabaseAdmin
