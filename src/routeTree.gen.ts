@@ -16,6 +16,7 @@ import { Route as AdminWhatsappRouteImport } from './routes/admin.whatsapp'
 import { Route as ApiPublicSignupRouteImport } from './routes/api/public/signup'
 import { Route as ApiPublicWhatsappSignupCallbackRouteImport } from './routes/api/public/whatsapp.signup-callback'
 import { Route as ApiPublicHooksDispatchJobsRouteImport } from './routes/api/public/hooks/dispatch-jobs'
+import { Route as ApiPublicExtensionQuickRepliesRouteImport } from './routes/api/public/extension/quick-replies'
 import { Route as ApiPublicExtensionPairRouteImport } from './routes/api/public/extension/pair'
 import { Route as ApiPublicExtensionMetaRouteImport } from './routes/api/public/extension/meta'
 import { Route as ApiPublicExtensionCustomersRouteImport } from './routes/api/public/extension/customers'
@@ -24,6 +25,8 @@ import { Route as ApiPublicExtensionWhatsappStatusRouteImport } from './routes/a
 import { Route as ApiPublicExtensionWhatsappProviderRouteImport } from './routes/api/public/extension/whatsapp.provider'
 import { Route as ApiPublicExtensionWhatsappDisconnectRouteImport } from './routes/api/public/extension/whatsapp.disconnect'
 import { Route as ApiPublicExtensionWhatsappConnectRouteImport } from './routes/api/public/extension/whatsapp.connect'
+import { Route as ApiPublicExtensionQuickRepliesUploadRouteImport } from './routes/api/public/extension/quick-replies.upload'
+import { Route as ApiPublicExtensionQuickRepliesIdRouteImport } from './routes/api/public/extension/quick-replies.$id'
 import { Route as ApiPublicExtensionJobsNextRouteImport } from './routes/api/public/extension/jobs.next'
 import { Route as ApiPublicExtensionJobsIdRouteImport } from './routes/api/public/extension/jobs.$id'
 import { Route as ApiPublicExtensionCustomersImportRouteImport } from './routes/api/public/extension/customers.import'
@@ -65,6 +68,12 @@ const ApiPublicHooksDispatchJobsRoute =
   ApiPublicHooksDispatchJobsRouteImport.update({
     id: '/api/public/hooks/dispatch-jobs',
     path: '/api/public/hooks/dispatch-jobs',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionQuickRepliesRoute =
+  ApiPublicExtensionQuickRepliesRouteImport.update({
+    id: '/api/public/extension/quick-replies',
+    path: '/api/public/extension/quick-replies',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicExtensionPairRoute = ApiPublicExtensionPairRouteImport.update({
@@ -113,6 +122,18 @@ const ApiPublicExtensionWhatsappConnectRoute =
     path: '/api/public/extension/whatsapp/connect',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicExtensionQuickRepliesUploadRoute =
+  ApiPublicExtensionQuickRepliesUploadRouteImport.update({
+    id: '/upload',
+    path: '/upload',
+    getParentRoute: () => ApiPublicExtensionQuickRepliesRoute,
+  } as any)
+const ApiPublicExtensionQuickRepliesIdRoute =
+  ApiPublicExtensionQuickRepliesIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicExtensionQuickRepliesRoute,
+  } as any)
 const ApiPublicExtensionJobsNextRoute =
   ApiPublicExtensionJobsNextRouteImport.update({
     id: '/api/public/extension/jobs/next',
@@ -154,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
+  '/api/public/extension/quick-replies': typeof ApiPublicExtensionQuickRepliesRouteWithChildren
   '/api/public/hooks/dispatch-jobs': typeof ApiPublicHooksDispatchJobsRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
@@ -161,6 +183,8 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
+  '/api/public/extension/quick-replies/$id': typeof ApiPublicExtensionQuickRepliesIdRoute
+  '/api/public/extension/quick-replies/upload': typeof ApiPublicExtensionQuickRepliesUploadRoute
   '/api/public/extension/whatsapp/connect': typeof ApiPublicExtensionWhatsappConnectRoute
   '/api/public/extension/whatsapp/disconnect': typeof ApiPublicExtensionWhatsappDisconnectRoute
   '/api/public/extension/whatsapp/provider': typeof ApiPublicExtensionWhatsappProviderRoute
@@ -176,6 +200,7 @@ export interface FileRoutesByTo {
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
+  '/api/public/extension/quick-replies': typeof ApiPublicExtensionQuickRepliesRouteWithChildren
   '/api/public/hooks/dispatch-jobs': typeof ApiPublicHooksDispatchJobsRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
@@ -183,6 +208,8 @@ export interface FileRoutesByTo {
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
+  '/api/public/extension/quick-replies/$id': typeof ApiPublicExtensionQuickRepliesIdRoute
+  '/api/public/extension/quick-replies/upload': typeof ApiPublicExtensionQuickRepliesUploadRoute
   '/api/public/extension/whatsapp/connect': typeof ApiPublicExtensionWhatsappConnectRoute
   '/api/public/extension/whatsapp/disconnect': typeof ApiPublicExtensionWhatsappDisconnectRoute
   '/api/public/extension/whatsapp/provider': typeof ApiPublicExtensionWhatsappProviderRoute
@@ -199,6 +226,7 @@ export interface FileRoutesById {
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
+  '/api/public/extension/quick-replies': typeof ApiPublicExtensionQuickRepliesRouteWithChildren
   '/api/public/hooks/dispatch-jobs': typeof ApiPublicHooksDispatchJobsRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
@@ -206,6 +234,8 @@ export interface FileRoutesById {
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
+  '/api/public/extension/quick-replies/$id': typeof ApiPublicExtensionQuickRepliesIdRoute
+  '/api/public/extension/quick-replies/upload': typeof ApiPublicExtensionQuickRepliesUploadRoute
   '/api/public/extension/whatsapp/connect': typeof ApiPublicExtensionWhatsappConnectRoute
   '/api/public/extension/whatsapp/disconnect': typeof ApiPublicExtensionWhatsappDisconnectRoute
   '/api/public/extension/whatsapp/provider': typeof ApiPublicExtensionWhatsappProviderRoute
@@ -223,6 +253,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/customers'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
+    | '/api/public/extension/quick-replies'
     | '/api/public/hooks/dispatch-jobs'
     | '/api/public/whatsapp/signup-callback'
     | '/api/public/extension/campaigns/$id'
@@ -230,6 +261,8 @@ export interface FileRouteTypes {
     | '/api/public/extension/customers/import'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
+    | '/api/public/extension/quick-replies/$id'
+    | '/api/public/extension/quick-replies/upload'
     | '/api/public/extension/whatsapp/connect'
     | '/api/public/extension/whatsapp/disconnect'
     | '/api/public/extension/whatsapp/provider'
@@ -245,6 +278,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/customers'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
+    | '/api/public/extension/quick-replies'
     | '/api/public/hooks/dispatch-jobs'
     | '/api/public/whatsapp/signup-callback'
     | '/api/public/extension/campaigns/$id'
@@ -252,6 +286,8 @@ export interface FileRouteTypes {
     | '/api/public/extension/customers/import'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
+    | '/api/public/extension/quick-replies/$id'
+    | '/api/public/extension/quick-replies/upload'
     | '/api/public/extension/whatsapp/connect'
     | '/api/public/extension/whatsapp/disconnect'
     | '/api/public/extension/whatsapp/provider'
@@ -267,6 +303,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/customers'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
+    | '/api/public/extension/quick-replies'
     | '/api/public/hooks/dispatch-jobs'
     | '/api/public/whatsapp/signup-callback'
     | '/api/public/extension/campaigns/$id'
@@ -274,6 +311,8 @@ export interface FileRouteTypes {
     | '/api/public/extension/customers/import'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
+    | '/api/public/extension/quick-replies/$id'
+    | '/api/public/extension/quick-replies/upload'
     | '/api/public/extension/whatsapp/connect'
     | '/api/public/extension/whatsapp/disconnect'
     | '/api/public/extension/whatsapp/provider'
@@ -290,6 +329,7 @@ export interface RootRouteChildren {
   ApiPublicExtensionCustomersRoute: typeof ApiPublicExtensionCustomersRouteWithChildren
   ApiPublicExtensionMetaRoute: typeof ApiPublicExtensionMetaRoute
   ApiPublicExtensionPairRoute: typeof ApiPublicExtensionPairRoute
+  ApiPublicExtensionQuickRepliesRoute: typeof ApiPublicExtensionQuickRepliesRouteWithChildren
   ApiPublicHooksDispatchJobsRoute: typeof ApiPublicHooksDispatchJobsRoute
   ApiPublicWhatsappSignupCallbackRoute: typeof ApiPublicWhatsappSignupCallbackRoute
   ApiPublicExtensionJobsIdRoute: typeof ApiPublicExtensionJobsIdRoute
@@ -351,6 +391,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksDispatchJobsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/extension/quick-replies': {
+      id: '/api/public/extension/quick-replies'
+      path: '/api/public/extension/quick-replies'
+      fullPath: '/api/public/extension/quick-replies'
+      preLoaderRoute: typeof ApiPublicExtensionQuickRepliesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/extension/pair': {
       id: '/api/public/extension/pair'
       path: '/api/public/extension/pair'
@@ -406,6 +453,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/public/extension/whatsapp/connect'
       preLoaderRoute: typeof ApiPublicExtensionWhatsappConnectRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/quick-replies/upload': {
+      id: '/api/public/extension/quick-replies/upload'
+      path: '/upload'
+      fullPath: '/api/public/extension/quick-replies/upload'
+      preLoaderRoute: typeof ApiPublicExtensionQuickRepliesUploadRouteImport
+      parentRoute: typeof ApiPublicExtensionQuickRepliesRoute
+    }
+    '/api/public/extension/quick-replies/$id': {
+      id: '/api/public/extension/quick-replies/$id'
+      path: '/$id'
+      fullPath: '/api/public/extension/quick-replies/$id'
+      preLoaderRoute: typeof ApiPublicExtensionQuickRepliesIdRouteImport
+      parentRoute: typeof ApiPublicExtensionQuickRepliesRoute
     }
     '/api/public/extension/jobs/next': {
       id: '/api/public/extension/jobs/next'
@@ -476,6 +537,24 @@ const ApiPublicExtensionCustomersRouteWithChildren =
     ApiPublicExtensionCustomersRouteChildren,
   )
 
+interface ApiPublicExtensionQuickRepliesRouteChildren {
+  ApiPublicExtensionQuickRepliesIdRoute: typeof ApiPublicExtensionQuickRepliesIdRoute
+  ApiPublicExtensionQuickRepliesUploadRoute: typeof ApiPublicExtensionQuickRepliesUploadRoute
+}
+
+const ApiPublicExtensionQuickRepliesRouteChildren: ApiPublicExtensionQuickRepliesRouteChildren =
+  {
+    ApiPublicExtensionQuickRepliesIdRoute:
+      ApiPublicExtensionQuickRepliesIdRoute,
+    ApiPublicExtensionQuickRepliesUploadRoute:
+      ApiPublicExtensionQuickRepliesUploadRoute,
+  }
+
+const ApiPublicExtensionQuickRepliesRouteWithChildren =
+  ApiPublicExtensionQuickRepliesRoute._addFileChildren(
+    ApiPublicExtensionQuickRepliesRouteChildren,
+  )
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   InstalarRoute: InstalarRoute,
@@ -488,6 +567,8 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicExtensionCustomersRouteWithChildren,
   ApiPublicExtensionMetaRoute: ApiPublicExtensionMetaRoute,
   ApiPublicExtensionPairRoute: ApiPublicExtensionPairRoute,
+  ApiPublicExtensionQuickRepliesRoute:
+    ApiPublicExtensionQuickRepliesRouteWithChildren,
   ApiPublicHooksDispatchJobsRoute: ApiPublicHooksDispatchJobsRoute,
   ApiPublicWhatsappSignupCallbackRoute: ApiPublicWhatsappSignupCallbackRoute,
   ApiPublicExtensionJobsIdRoute: ApiPublicExtensionJobsIdRoute,

@@ -8,6 +8,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TeamView } from "@/components/team-view";
 import { ConnectionView } from "@/components/connection-view";
+import { QuickRepliesView } from "@/components/quick-replies-view";
+import { sendWaAction, isRealPhone } from "@/lib/wa-actions";
+import type { QuickReply } from "@/lib/quick-replies";
+
 import {
   SUBSCRIPTION_SYSTEMS,
   statusesForSystem,
@@ -173,7 +177,7 @@ function nudgeExtensionPoll() {
   window.postMessage({ __crm: "poll_now_v180" }, window.location.origin);
 }
 
-type Section = "assinantes" | "equipe" | "conexao" | "configuracoes";
+type Section = "assinantes" | "respostas" | "equipe" | "conexao" | "configuracoes";
 
 function IconUsers() {
   return (
@@ -204,7 +208,15 @@ function IconGear() {
     </svg>
   );
 }
+function IconChat() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-4.9A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z" />
+    </svg>
+  );
+}
 function IconChevron({ className = "" }: { className?: string }) {
+
   return (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={"transition " + className}>
       <path d="M9 6l6 6-6 6" />
@@ -248,7 +260,7 @@ function Painel() {
   const initialSection: Section = (() => {
     if (typeof window === "undefined") return "assinantes";
     const s = new URLSearchParams(window.location.search).get("section");
-    if (s === "equipe" || s === "conexao" || s === "configuracoes") return s;
+    if (s === "equipe" || s === "conexao" || s === "configuracoes" || s === "respostas") return s;
     return "assinantes";
   })();
   const [section, setSection] = useState<Section>(initialSection);
@@ -325,7 +337,9 @@ function Painel() {
 
   const NAV_TOP: Array<{ key: Section; label: string; icon: React.ReactNode }> = [
     { key: "assinantes", label: "Assinantes", icon: <IconUsers /> },
+    { key: "respostas", label: "Respostas rápidas", icon: <IconChat /> },
     { key: "equipe", label: "Equipe", icon: <IconTrophy /> },
+
     { key: "configuracoes", label: "Configurações", icon: <IconGear /> },
     { key: "conexao", label: "Conexão", icon: <IconUsers /> },
   ];
@@ -429,7 +443,14 @@ function Painel() {
           </>
         )}
 
+        {section === "respostas" && token && (
+          <main className="px-6 py-6 mt-14 md:mt-0">
+            <QuickRepliesView token={token} api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+          </main>
+        )}
+
         {section === "equipe" && (
+
           <main className="px-6 py-6 mt-14 md:mt-0">
             <TeamView shopId={shop?.id ?? "default"} />
           </main>
@@ -458,7 +479,154 @@ function Painel() {
 }
 
 
+type DrawerTab = "notes" | "schedule";
+
+function IconWhatsapp() {
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+      <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.4 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-1.7-.1-.4-.1-.9-.3-1.5-.6a11 11 0 0 1-4.3-3.9c-.3-.5-.8-1.3-.8-2.4s.6-1.7.8-1.9c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.4l.8 1.9c.1.2 0 .4-.1.5l-.3.4-.3.3c-.1.1-.2.3-.1.5.2.4.7 1.2 1.4 1.8.9.8 1.6 1.1 1.9 1.2.2.1.4.1.5-.1l.7-.8c.2-.2.3-.2.5-.1l1.8.9c.2.1.4.2.4.3.1.2.1.7-.1 1.3z" />
+    </svg>
+  );
+}
+function IconNote() {
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+      <path d="M14 3v6h6M8 13h8M8 17h5" />
+    </svg>
+  );
+}
+function IconClock() {
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  );
+}
+
+/** Botãozinho de ação rápida no card do lead. */
+function CardAction({
+  title,
+  onClick,
+  disabled,
+  children,
+}: {
+  title: string;
+  onClick: () => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      title={title}
+      disabled={disabled}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      className="grid h-7 w-7 place-items-center rounded-md border border-neutral-200 bg-white text-neutral-600 transition hover:border-neutral-900 hover:text-neutral-900 disabled:opacity-40"
+    >
+      {children}
+    </button>
+  );
+}
+
+/** Abrir conversa / enviar resposta rápida ou mensagem manual pelo CRM. */
+function WhatsAppActionModal({
+  token,
+  customer,
+  onClose,
+}: {
+  token: string;
+  customer: Customer;
+  onClose: () => void;
+}) {
+  const [replies, setReplies] = useState<QuickReply[]>([]);
+  const [selected, setSelected] = useState<string>("");
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    api(token, "/api/public/extension/quick-replies").then((r) => {
+      if (r?.ok) setReplies((r.quick_replies as QuickReply[]) || []);
+    });
+  }, [token]);
+
+  async function run(openOnly: boolean) {
+    setBusy(true);
+    setErr(null);
+    setFeedback(null);
+    const qr = replies.find((q) => q.id === selected);
+    const r = await sendWaAction({
+      phone: customer.phone,
+      name: customer.name,
+      openOnly,
+      text: openOnly ? undefined : text.trim() || undefined,
+      actions: openOnly ? undefined : qr?.actions,
+    });
+    setBusy(false);
+    if (!r.ok) { setErr(r.error || "Falha ao falar com a extensão"); return; }
+    setFeedback(openOnly ? "Conversa aberta no WhatsApp ✔" : "Mensagem enviada ✔");
+  }
+
+  return (
+    <Modal onClose={onClose} title={`WhatsApp — ${customer.name}`}>
+      <div className="space-y-4">
+        <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-700">
+          {customer.phone}
+        </div>
+
+        <Field label="Resposta rápida">
+          <select value={selected} onChange={(e) => setSelected(e.target.value)} className={inputCls}>
+            <option value="">— nenhuma (mensagem manual) —</option>
+            {replies.map((q) => (
+              <option key={q.id} value={q.id}>{q.title}</option>
+            ))}
+          </select>
+        </Field>
+
+        {!selected && (
+          <Field label="Mensagem">
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              rows={3}
+              maxLength={4000}
+              placeholder="Oi {nome}, tudo certo?"
+              className={inputCls}
+            />
+          </Field>
+        )}
+
+        {err && <p className="text-sm text-red-500">{err}</p>}
+        {feedback && <p className="text-sm text-emerald-600">{feedback}</p>}
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => run(true)}
+            disabled={busy}
+            className="flex-1 rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50"
+          >
+            Abrir conversa
+          </button>
+          <button
+            onClick={() => run(false)}
+            disabled={busy || (!selected && !text.trim())}
+            className="flex-1 rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
+          >
+            {busy ? "Enviando..." : "Enviar agora"}
+          </button>
+        </div>
+        <p className="text-[11px] text-neutral-500">
+          O envio usa a sessão do WhatsApp Web já aberta — mantenha a aba do WhatsApp aberta.
+        </p>
+      </div>
+    </Modal>
+  );
+}
+
 function KanbanView({
+
   customers,
   loading,
   token,
@@ -476,6 +644,9 @@ function KanbanView({
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [detail, setDetail] = useState<Customer | null>(null);
+  const [detailTab, setDetailTab] = useState<DrawerTab>("notes");
+  const [waTarget, setWaTarget] = useState<Customer | null>(null);
+
   const [dragId, setDragId] = useState<string | null>(null);
   const [overCol, setOverCol] = useState<string | null>(null);
   // Move otimista: evita o card "voltar" enquanto o reload não chega.
@@ -652,6 +823,28 @@ function KanbanView({
                             </span>
                           )}
                         </div>
+                        {/* Ações rápidas no próprio card */}
+                        <div className="mt-2 flex items-center gap-1">
+                          <CardAction
+                            title="Abrir WhatsApp / enviar resposta rápida"
+                            onClick={() => setWaTarget(c)}
+                            disabled={!isRealPhone(c.phone)}
+                          >
+                            <IconWhatsapp />
+                          </CardAction>
+                          <CardAction
+                            title="Anotações"
+                            onClick={() => { setDetailTab("notes"); setDetail(c); }}
+                          >
+                            <IconNote />
+                          </CardAction>
+                          <CardAction
+                            title="Mensagem agendada"
+                            onClick={() => { setDetailTab("schedule"); setDetail(c); }}
+                          >
+                            <IconClock />
+                          </CardAction>
+                        </div>
                       </div>
                       <button
                         onClick={(e) => { e.stopPropagation(); remove(c.id); }}
@@ -673,16 +866,26 @@ function KanbanView({
       </div>
 
       {showAdd && <AddModal token={token} cols={cols} onClose={() => { setShowAdd(false); reload(); }} />}
+      {waTarget && (
+        <WhatsAppActionModal
+          token={token}
+          customer={waTarget}
+          onClose={() => setWaTarget(null)}
+        />
+      )}
       {detail && (
         <CustomerDrawer
           token={token}
           customer={detail}
           plans={plans}
           cols={cols}
+          initialTab={detailTab}
+          onOpenWhatsapp={() => { setWaTarget(detail); setDetail(null); }}
           onMove={(status) => { moveTo(detail.id, status); setDetail(null); }}
           onClose={() => { setDetail(null); reload(); }}
         />
       )}
+
       {showImport && (
         <ImportModal
           token={token}
@@ -707,6 +910,8 @@ function CustomerDrawer({
   customer,
   plans,
   cols,
+  initialTab = "notes",
+  onOpenWhatsapp,
   onMove,
   onClose,
 }: {
@@ -714,10 +919,13 @@ function CustomerDrawer({
   customer: Customer;
   plans: Plan[];
   cols: Array<{ key: string; label: string }>;
+  initialTab?: DrawerTab;
+  onOpenWhatsapp?: () => void;
   onMove: (status: string) => void;
   onClose: () => void;
 }) {
   const plan = planFromTags(customer.tags);
+  const [drawerTab, setDrawerTab] = useState<DrawerTab>(initialTab);
   const [notes, setNotes] = useState(customer.notes ?? "");
   const [savedNotes, setSavedNotes] = useState(false);
   const [msg, setMsg] = useState("");
@@ -725,6 +933,7 @@ function CustomerDrawer({
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+
 
   async function saveNotes() {
     setBusy(true);
@@ -771,6 +980,31 @@ function CustomerDrawer({
           )}
         </div>
 
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1 rounded-lg bg-neutral-100 p-1">
+            {(["notes", "schedule"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setDrawerTab(t)}
+                className={
+                  "rounded-md px-3 py-1.5 text-xs font-medium transition " +
+                  (drawerTab === t ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
+                }
+              >
+                {t === "notes" ? "Anotações" : "Mensagens agendadas"}
+              </button>
+            ))}
+          </div>
+          {onOpenWhatsapp && isRealPhone(customer.phone) && (
+            <button
+              onClick={onOpenWhatsapp}
+              className="ml-auto flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
+            >
+              <IconWhatsapp /> WhatsApp
+            </button>
+          )}
+        </div>
+
         <Field label="Etapa do funil">
           <select
             value={customer.status}
@@ -781,57 +1015,65 @@ function CustomerDrawer({
           </select>
         </Field>
 
-        <Field label="Anotações">
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-            maxLength={1000}
-            placeholder="Histórico, combinados, motivo do atraso..."
-            className={inputCls}
-          />
-        </Field>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={saveNotes}
-            disabled={busy}
-            className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50"
-          >
-            Salvar anotação
-          </button>
-          {savedNotes && <span className="text-xs font-medium text-emerald-600">Salvo ✔</span>}
-        </div>
+        {drawerTab === "notes" && (
+          <>
+            <Field label="Anotações">
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={4}
+                maxLength={1000}
+                placeholder="Histórico, combinados, motivo do atraso..."
+                className={inputCls}
+              />
+            </Field>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={saveNotes}
+                disabled={busy}
+                className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50"
+              >
+                Salvar anotação
+              </button>
+              {savedNotes && <span className="text-xs font-medium text-emerald-600">Salvo ✔</span>}
+            </div>
+          </>
+        )}
 
-        <div className="h-px bg-neutral-200" />
+        {drawerTab === "schedule" && (
+          <>
+            <Field label="Mensagem para disparo">
+              <textarea
+                value={msg}
+                onChange={(e) => setMsg(e.target.value)}
+                rows={3}
+                maxLength={4000}
+                placeholder="Oi {nome}, sua mensalidade..."
+                className={inputCls}
+              />
+            </Field>
+            <Field label="Agendar para (vazio = enviar agora)">
+              <input
+                type="datetime-local"
+                value={when}
+                onChange={(e) => setWhen(e.target.value)}
+                className={inputCls}
+              />
+            </Field>
+            <button
+              onClick={schedule}
+              disabled={busy || !msg.trim()}
+              className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
+            >
+              {busy ? "Enviando..." : when ? "Agendar mensagem" : "Enviar mensagem"}
+            </button>
+          </>
+        )}
 
-        <Field label="Mensagem para disparo">
-          <textarea
-            value={msg}
-            onChange={(e) => setMsg(e.target.value)}
-            rows={3}
-            maxLength={4000}
-            placeholder="Oi {nome}, sua mensalidade..."
-            className={inputCls}
-          />
-        </Field>
-        <Field label="Agendar para (vazio = enviar agora)">
-          <input
-            type="datetime-local"
-            value={when}
-            onChange={(e) => setWhen(e.target.value)}
-            className={inputCls}
-          />
-        </Field>
         {err && <p className="text-sm text-red-500">{err}</p>}
         {feedback && <p className="text-sm text-emerald-600">{feedback}</p>}
-        <button
-          onClick={schedule}
-          disabled={busy || !msg.trim()}
-          className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
-        >
-          {busy ? "Enviando..." : when ? "Agendar mensagem" : "Enviar mensagem"}
-        </button>
       </div>
+
     </Modal>
   );
 }

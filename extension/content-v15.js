@@ -1,7 +1,7 @@
-// Content script v0.18.44 — ponte minimalista: CRM BARBER, Assinantes, Equipe e Conexão.
+// Content script v0.19.0 — ponte minimalista: CRM BARBER, Assinantes, Equipe e Conexão.
 
 (function () {
-  const CRM_VERSION = "0.18.44";
+  const CRM_VERSION = "0.19.0";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
@@ -202,9 +202,16 @@
         .catch((e) => sendResponse({ ok: false, error: String(e?.message || e) }));
       return true;
     }
+    if (msg?.type === "wa_action_v190") {
+      handleWaAction(msg.action)
+        .then(sendResponse)
+        .catch((e) => sendResponse({ ok: false, error: String(e?.message || e) }));
+      return true;
+    }
     if (msg?.type === "show_panel") { ensurePanel(); sendResponse({ ok: true }); return true; }
     return false;
   });
+
 
   function escapeHtml(value) {
     return String(value || "")
@@ -220,13 +227,64 @@
   window.addEventListener("message", (ev) => {
     if (ev.source !== window) return;
     const d = ev.data;
-    if (!d || (d.__crm !== "sent_v180" && d.__crm !== "sent_v170")) return;
+    if (!d || (d.__crm !== "sent_v180" && d.__crm !== "sent_v170" && d.__crm !== "action_done_v190")) return;
     const p = pending.get(d.id);
     if (!p) return;
     pending.delete(d.id);
     clearTimeout(p.timeout);
     p.resolve({ ok: !!d.ok, error: d.error });
   });
+
+  function bridgeRequest(payload, timeoutMs = 180000) {
+    const id = crypto.randomUUID();
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        pending.delete(id);
+        resolve({ ok: false, error: "Timeout na ação do WhatsApp" });
+      }, timeoutMs);
+      pending.set(id, { resolve, timeout });
+      window.postMessage({ ...payload, id }, "*");
+    });
+  }
+
+  // Ação vinda do painel: abrir conversa, enviar texto ou resposta rápida.
+  async function handleWaAction(action) {
+    const phone = action?.phone;
+    if (!phone) return { ok: false, error: "Telefone inválido" };
+    try {
+      await ensureWaScriptsInjected();
+    } catch (e) {
+      return { ok: false, error: `Falha ao carregar wa-js/bridge: ${String(e?.message || e)}` };
+    }
+    const vars = { nome: action?.name || "" };
+    const fill = (t) => String(t || "").replace(/\{(\w+)\}/g, (m, k) => (vars[k] !== undefined ? vars[k] : m));
+
+    const actions = [];
+    if (!action.openOnly) {
+      if (Array.isArray(action.actions) && action.actions.length) {
+        for (const a of action.actions) {
+          actions.push({
+            type: a.type,
+            text: fill(a.text),
+            caption: fill(a.caption),
+            url: a.url || null,
+            filename: a.filename || null,
+            mime: a.mime || null,
+          });
+        }
+      } else if (action.text) {
+        actions.push({ type: "text", text: fill(action.text) });
+      }
+    }
+
+    return bridgeRequest({
+      __crm: "action_v190",
+      phone,
+      openOnly: !!action.openOnly,
+      actions,
+    });
+  }
+
   async function handleSend(job) {
     const phone = job?.customer?.phone;
     const text = job?.body;
@@ -236,15 +294,8 @@
     } catch (e) {
       return { ok: false, error: `Falha ao carregar wa-js/bridge: ${String(e?.message || e)}` };
     }
-    const id = crypto.randomUUID();
-    const silent = await new Promise((resolve) => {
-      const timeout = setTimeout(() => {
-        pending.delete(id);
-        resolve({ ok: false, error: "Timeout no envio silencioso" });
-      }, 180000);
-      pending.set(id, { resolve, timeout });
-      window.postMessage({ __crm: "send_v180", id, phone, text }, "*");
-    });
+    const silent = await bridgeRequest({ __crm: "send_v180", phone, text });
+
     if (silent?.ok) return silent;
     return { ok: false, error: silent?.error || "Envio silencioso falhou" };
   }
