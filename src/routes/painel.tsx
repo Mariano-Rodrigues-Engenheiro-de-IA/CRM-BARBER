@@ -1050,7 +1050,7 @@ function CustomerDrawer({
               </button>
             ))}
           </div>
-          {onOpenWhatsapp && isRealPhone(customer.phone) && (
+          {onOpenWhatsapp && (
             <button
               onClick={onOpenWhatsapp}
               className="ml-auto flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
@@ -1392,9 +1392,16 @@ function DisparoView({
     ? selectedReply.actions.filter((a) => a.type !== "text").length
     : 0;
 
-  const total = segment === "all"
-    ? customers.length
-    : customers.filter((c) => c.status === segment).length;
+  // Contatos sem telefone real (placeholder de planilha) nunca entram na fila,
+  // então o alvo mostrado precisa refletir só quem é enviável.
+  const sendable = customers.filter((c) => isRealPhone(c.phone));
+  const countIn = (key: string) =>
+    key === "all" ? sendable.length : sendable.filter((c) => c.status === key).length;
+  const total = countIn(segment);
+  const semTelefone = (segment === "all"
+    ? customers
+    : customers.filter((c) => c.status === segment)
+  ).filter((c) => !isRealPhone(c.phone)).length;
 
   function updateVariant(i: number, v: string) {
     setVariants((prev) => prev.map((x, idx) => (idx === i ? v : x)));
@@ -1410,6 +1417,10 @@ function DisparoView({
     }
     if (!acceptedTerms) {
       setErr("Você precisa aceitar o termo de uso para enviar a campanha.");
+      return;
+    }
+    if (total === 0) {
+      setErr("Nenhum contato com telefone válido nesse público. Escolha outro público ou cadastre os telefones.");
       return;
     }
 
@@ -1449,11 +1460,12 @@ function DisparoView({
 
       <Field label="Público-alvo">
         <select value={segment} onChange={(e) => setSegment(e.target.value)} className={inputCls}>
-          {cols.map((c) => <option key={c.key} value={c.key}>{c.label} ({customers.filter((cu) => cu.status === c.key).length})</option>)}
-          <option value="all">Todos ({customers.length})</option>
+          {cols.map((c) => <option key={c.key} value={c.key}>{c.label} ({countIn(c.key)})</option>)}
+          <option value="all">Todos ({countIn("all")})</option>
         </select>
         <p className="mt-1 text-xs text-neutral-500">
           Vai disparar para <strong className="text-neutral-900">{total}</strong> contato(s).
+          {semTelefone > 0 && ` ${semTelefone} contato(s) ficam de fora por não ter telefone cadastrado.`}
         </p>
       </Field>
 
