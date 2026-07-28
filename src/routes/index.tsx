@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -377,8 +377,13 @@ function Landing() {
         </div>
       </section>
 
-      <footer className="border-t border-white/10 py-8 text-center text-xs text-neutral-500">
-        CRM Barber · CRM de assinaturas para barbearias
+      <footer className="border-t border-white/10 py-8">
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-5 text-xs text-neutral-500">
+          <span>CRM Barber · CRM de assinaturas para barbearias</span>
+          <Link to="/politicas" className="text-neutral-400 transition-colors hover:text-yellow-400">
+            Política de Privacidade e Termos de Uso
+          </Link>
+        </div>
       </footer>
     </div>
   );
