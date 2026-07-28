@@ -445,6 +445,9 @@ function Painel() {
 
       {/* Content */}
       <div className="flex-1 min-w-0">
+        <div className="mt-14 md:mt-0">
+          <PlanBanner billing={billing} shopId={shop?.id} />
+        </div>
         {section === "assinantes" && (
           <>
             <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
