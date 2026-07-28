@@ -1320,7 +1320,31 @@ function DisparoView({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [replies, setReplies] = useState<QuickReply[]>([]);
+  const [quickReplyId, setQuickReplyId] = useState("");
 
+  useEffect(() => {
+    api(token, "/api/public/extension/quick-replies").then((r) => {
+      if (r?.ok) setReplies((r.quick_replies as QuickReply[]) || []);
+    });
+  }, [token]);
+
+  /** Usa os textos da resposta rápida como variações da campanha. */
+  function applyQuickReply(id: string) {
+    setQuickReplyId(id);
+    const qr = replies.find((q) => q.id === id);
+    if (!qr) return;
+    const texts = qr.actions
+      .filter((a) => a.type === "text" && a.text?.trim())
+      .map((a) => (a.text as string).trim());
+    if (texts.length) setVariants(texts.slice(0, 3));
+    if (!name.trim()) setName(qr.title);
+  }
+
+  const selectedReply = replies.find((q) => q.id === quickReplyId);
+  const droppedMedia = selectedReply
+    ? selectedReply.actions.filter((a) => a.type !== "text").length
+    : 0;
 
   const total = segment === "all"
     ? customers.length
@@ -1329,6 +1353,7 @@ function DisparoView({
   function updateVariant(i: number, v: string) {
     setVariants((prev) => prev.map((x, idx) => (idx === i ? v : x)));
   }
+
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
