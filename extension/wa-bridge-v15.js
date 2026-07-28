@@ -97,8 +97,18 @@
     return target;
   }
 
+  /** chat.get pode ser síncrono nesta build — nunca encadear .catch direto. */
+  async function getChatSafe(target) {
+    try {
+      if (typeof window.WPP?.chat?.get !== "function") return null;
+      return await Promise.resolve(window.WPP.chat.get(target));
+    } catch {
+      return null;
+    }
+  }
+
   async function sendTextToTarget(target, text) {
-    const chat = await window.WPP.chat.get(target).catch(() => null);
+    const chat = await getChatSafe(target);
     const attempts = [
       ["chat.sendMessage", () => {
         if (!chat || typeof chat.sendMessage !== "function") throw new Error("chat.sendMessage indisponível");
