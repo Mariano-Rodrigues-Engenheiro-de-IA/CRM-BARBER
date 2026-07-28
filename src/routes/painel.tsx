@@ -519,8 +519,13 @@ function CardAction({
 }) {
   return (
     <button
+      type="button"
       title={title}
       disabled={disabled}
+      draggable={false}
+      onDragStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      onPointerDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       className="grid h-7 w-7 place-items-center rounded-md border border-neutral-200 bg-white text-neutral-600 transition hover:border-neutral-900 hover:text-neutral-900 disabled:opacity-40"
     >
@@ -553,6 +558,10 @@ function WhatsAppActionModal({
   }, [token]);
 
   async function run(openOnly: boolean) {
+    if (!isRealPhone(customer.phone)) {
+      setErr("Este contato não tem um telefone válido cadastrado.");
+      return;
+    }
     setBusy(true);
     setErr(null);
     setFeedback(null);
@@ -828,7 +837,7 @@ function KanbanView({
                           <CardAction
                             title="Abrir WhatsApp / enviar resposta rápida"
                             onClick={() => setWaTarget(c)}
-                            disabled={!isRealPhone(c.phone)}
+                            
                           >
                             <IconWhatsapp />
                           </CardAction>
@@ -1311,7 +1320,31 @@ function DisparoView({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [replies, setReplies] = useState<QuickReply[]>([]);
+  const [quickReplyId, setQuickReplyId] = useState("");
 
+  useEffect(() => {
+    api(token, "/api/public/extension/quick-replies").then((r) => {
+      if (r?.ok) setReplies((r.quick_replies as QuickReply[]) || []);
+    });
+  }, [token]);
+
+  /** Usa os textos da resposta rápida como variações da campanha. */
+  function applyQuickReply(id: string) {
+    setQuickReplyId(id);
+    const qr = replies.find((q) => q.id === id);
+    if (!qr) return;
+    const texts = qr.actions
+      .filter((a) => a.type === "text" && a.text?.trim())
+      .map((a) => (a.text as string).trim());
+    if (texts.length) setVariants(texts.slice(0, 3));
+    if (!name.trim()) setName(qr.title);
+  }
+
+  const selectedReply = replies.find((q) => q.id === quickReplyId);
+  const droppedMedia = selectedReply
+    ? selectedReply.actions.filter((a) => a.type !== "text").length
+    : 0;
 
   const total = segment === "all"
     ? customers.length
@@ -1320,6 +1353,7 @@ function DisparoView({
   function updateVariant(i: number, v: string) {
     setVariants((prev) => prev.map((x, idx) => (idx === i ? v : x)));
   }
+
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -1376,6 +1410,20 @@ function DisparoView({
           Vai disparar para <strong className="text-neutral-900">{total}</strong> contato(s).
         </p>
       </Field>
+
+      {replies.length > 0 && (
+        <Field label="Resposta rápida (opcional)">
+          <select value={quickReplyId} onChange={(e) => applyQuickReply(e.target.value)} className={inputCls}>
+            <option value="">— escrever mensagem manualmente —</option>
+            {replies.map((q) => <option key={q.id} value={q.id}>{q.title}</option>)}
+          </select>
+          <p className="mt-1 text-xs text-neutral-500">
+            Os textos da resposta rápida viram as variações abaixo (você pode editar).
+            {droppedMedia > 0 && " Mídias não são enviadas no disparo em massa — só texto."}
+          </p>
+        </Field>
+      )}
+
 
       <div>
         <label className="mb-2 block text-sm font-medium text-neutral-700">
