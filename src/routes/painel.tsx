@@ -558,6 +558,10 @@ function WhatsAppActionModal({
   }, [token]);
 
   async function run(openOnly: boolean) {
+    if (!isRealPhone(customer.phone)) {
+      setErr("Este contato não tem um telefone válido cadastrado.");
+      return;
+    }
     setBusy(true);
     setErr(null);
     setFeedback(null);
