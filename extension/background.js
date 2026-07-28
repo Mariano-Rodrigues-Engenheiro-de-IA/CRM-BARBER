@@ -8,7 +8,7 @@
 //
 // Rate limit: espaçamento aleatório entre 8s e 20s entre jobs (ritmo humano).
 
-const EXTENSION_VERSION = "0.19.0";
+const EXTENSION_VERSION = "0.19.1";
 const DEFAULT_API_BASE = "https://buzz-boost-crm.lovable.app";
 const POLL_MIN_MS = 8000;
 const POLL_MAX_MS = 20000;

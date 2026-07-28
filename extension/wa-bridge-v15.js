@@ -1,55 +1,140 @@
 (function () {
-  const BRIDGE_VERSION = "0.19.0";
+  const BRIDGE_VERSION = "0.19.1";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  async function robustSend(phone, text) {
-    const digits = String(phone).replace(/\D/g, "");
-    const wid = digits.startsWith("55") ? `${digits}@c.us` : `55${digits}@c.us`;
+  function normalizePhone(phone) {
+    const digits = String(phone || "").replace(/\D/g, "");
+    if (!digits) throw new Error("Telefone inválido");
+    return digits.startsWith("55") ? digits : `55${digits}`;
+  }
 
+  function toWid(phone) {
+    return `${normalizePhone(phone)}@c.us`;
+  }
+
+  function serialized(value) {
+    if (!value) return null;
+    if (typeof value === "string") return value;
+    return value._serialized ||
+      value.serialized ||
+      value.id?._serialized ||
+      value.wid?._serialized ||
+      value.jid?._serialized ||
+      value.contact?.id?._serialized ||
+      null;
+  }
+
+  async function waitForWpp() {
+    for (let i = 0; i < 30; i += 1) {
+      if (window.WPP?.chat) return;
+      await sleep(500);
+    }
+    throw new Error("WhatsApp ainda não carregou o motor interno. Atualize o WhatsApp Web e tente de novo.");
+  }
+
+  async function tryStep(label, fn) {
     try {
-      console.log(`[CRM] Sincronizando: ${wid}`);
-
-      // 1. Resolve o LID (Isso nós já confirmamos que funciona!)
-      const profile = await window.WPP.contact.getProfile(wid).catch(() => null);
-      const target = profile?.id?._serialized || profile?.id || wid;
-
-      console.log(`[CRM] Alvo: ${target}. Enviando via motor nativo...`);
-
-      // 2. ENVIO UNIVERSAL (Bypass de biblioteca)
-      // Se a função sendTextMessage não existe, usamos o MsgStore diretamente
-      // Este método existe em 100% das versões do WhatsApp Web
-      const chat = await window.WPP.chat.get(target);
-
-      // Tenta os 3 métodos de envio possíveis do mais novo para o mais velho
-      if (chat && typeof chat.sendMessage === "function") {
-        await chat.sendMessage(text);
-      } else if (window.WPP.chat.sendTextMessage) {
-        await window.WPP.chat.sendTextMessage(target, text, { waitForAck: false });
-      } else {
-        // Fallback supremo: Injeta no motor de mensagens
-        await window.WPP.whatsapp.MsgStore.addMsgAndSend({
-          to: target,
-          body: text,
-          type: "chat",
-        });
-      }
-
-      console.info(`[CRM] Sucesso: Mensagem entregue para ${target}`);
-      return true;
+      const result = await fn();
+      console.info(`[CRM] ${label}: ok`);
+      return { ok: true, result };
     } catch (e) {
-      console.error(`[CRM] Erro no disparo: ${e?.message || e}`);
-      return true;
+      console.warn(`[CRM] ${label}: ${e?.message || e}`);
+      return { ok: false, error: e?.message || String(e) };
     }
   }
 
   async function resolveTarget(phone) {
-    const digits = String(phone).replace(/\D/g, "");
-    const wid = digits.startsWith("55") ? `${digits}@c.us` : `55${digits}@c.us`;
-    const profile = await window.WPP.contact.getProfile(wid).catch(() => null);
-    return profile?.id?._serialized || profile?.id || wid;
+    const wid = toWid(phone);
+
+    // Não usamos mais WPP.contact.getProfile: essa função saiu da build atual
+    // do WhatsApp/wa-js e quebrava abrir conversa + respostas rápidas.
+    const resolvers = [
+      async () => {
+        if (typeof window.WPP?.contact?.queryExists !== "function") throw new Error("queryExists indisponível");
+        const res = await window.WPP.contact.queryExists(wid);
+        return serialized(res) || serialized(res?.wid) || serialized(res?.id);
+      },
+      async () => {
+        if (typeof window.WPP?.contact?.queryWidExists !== "function") throw new Error("queryWidExists indisponível");
+        const res = await window.WPP.contact.queryWidExists(wid);
+        return serialized(res) || serialized(res?.wid) || serialized(res?.id);
+      },
+      async () => {
+        if (typeof window.WPP?.chat?.get !== "function") throw new Error("chat.get indisponível");
+        const chat = await window.WPP.chat.get(wid);
+        return serialized(chat) || serialized(chat?.id);
+      },
+    ];
+
+    for (const resolver of resolvers) {
+      const result = await resolver().catch(() => null);
+      if (result) return result;
+    }
+    return wid;
+  }
+
+  async function openChat(phone) {
+    await waitForWpp();
+    const target = await resolveTarget(phone);
+    const attempts = [
+      ["openChatBottom", () => window.WPP.chat.openChatBottom(target)],
+      ["openChatAt", () => window.WPP.chat.openChatAt(target)],
+      ["openChat", () => window.WPP.chat.openChat(target)],
+    ].filter(([, fn]) => typeof fn === "function");
+
+    let lastError = "Não foi possível abrir a conversa";
+    for (const [label, fn] of attempts) {
+      const result = await tryStep(label, fn);
+      if (result.ok) return target;
+      lastError = result.error || lastError;
+    }
+
+    window.location.href = `https://web.whatsapp.com/send?phone=${normalizePhone(phone)}`;
+    await sleep(1200);
+    return target;
+  }
+
+  async function sendTextToTarget(target, text) {
+    const chat = await window.WPP.chat.get(target).catch(() => null);
+    const attempts = [
+      ["chat.sendMessage", () => {
+        if (!chat || typeof chat.sendMessage !== "function") throw new Error("chat.sendMessage indisponível");
+        return chat.sendMessage(text);
+      }],
+      ["sendTextMessage", () => {
+        if (typeof window.WPP.chat.sendTextMessage !== "function") throw new Error("sendTextMessage indisponível");
+        return window.WPP.chat.sendTextMessage(target, text, { waitForAck: false });
+      }],
+      ["MsgStore.addMsgAndSend", () => {
+        const addMsgAndSend = window.WPP?.whatsapp?.MsgStore?.addMsgAndSend;
+        if (typeof addMsgAndSend !== "function") throw new Error("MsgStore.addMsgAndSend indisponível");
+        return addMsgAndSend.call(window.WPP.whatsapp.MsgStore, {
+          to: target,
+          body: text,
+          type: "chat",
+        });
+      }],
+    ];
+
+    let lastError = "Motor de envio indisponível";
+    for (const [label, fn] of attempts) {
+      const result = await tryStep(label, fn);
+      if (result.ok) return true;
+      lastError = result.error || lastError;
+    }
+    throw new Error(lastError);
+  }
+
+  async function robustSend(phone, text) {
+    await waitForWpp();
+    const target = await resolveTarget(phone);
+    console.log(`[CRM] Alvo resolvido: ${target}. Enviando...`);
+    await sendTextToTarget(target, text);
+    console.info(`[CRM] Sucesso: mensagem enviada para ${target}`);
+    return true;
   }
 
   async function fetchBlob(url) {
@@ -70,9 +155,10 @@
 
   /** Executa uma sequência de ações (texto/mídia) na conversa do contato. */
   async function runActions(phone, openOnly, actions) {
+    await waitForWpp();
     const target = await resolveTarget(phone);
     if (openOnly) {
-      await window.WPP.chat.openChatBottom(target);
+      await openChat(phone);
       return;
     }
     for (const action of actions || []) {
