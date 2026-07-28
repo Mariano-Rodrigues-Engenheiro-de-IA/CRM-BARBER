@@ -13,6 +13,7 @@ import { CUSTOMER_STATUS_VALUES } from "@/lib/customer-presets";
 const patchSchema = z.object({
   status: z.enum(CUSTOMER_STATUS_VALUES).optional(),
   name: z.string().trim().min(1).max(120).optional(),
+  phone: z.string().trim().min(8).max(25).optional(),
   tags: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
   notes: z.string().max(1000).nullable().optional(),
 });
