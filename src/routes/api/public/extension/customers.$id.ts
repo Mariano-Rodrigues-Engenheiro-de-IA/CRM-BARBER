@@ -9,6 +9,7 @@ import { z } from "zod";
 import { jsonResponse, preflight } from "@/lib/extension-cors";
 import { authenticateExtension } from "@/lib/extension-auth";
 import { CUSTOMER_STATUS_VALUES } from "@/lib/customer-presets";
+import { normalizePhone } from "@/lib/subscription-systems";
 
 const patchSchema = z.object({
   status: z.enum(CUSTOMER_STATUS_VALUES).optional(),
@@ -43,7 +44,7 @@ export const Route = createFileRoute("/api/public/extension/customers/$id")({
             { status: 400 },
           );
         }
-        const patch: Record<string, unknown> = { ...parsed.data };
+        const patch: { status?: string; name?: string; phone?: string; tags?: string[]; notes?: string | null } = { ...parsed.data };
         // Telefone informado à mão substitui o placeholder "sem-tel-..." da planilha.
         if (parsed.data.phone !== undefined) {
           const digits = normalizePhone(parsed.data.phone);
