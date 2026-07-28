@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PoliticasRouteImport } from './routes/politicas'
 import { Route as PainelRouteImport } from './routes/painel'
 import { Route as InstalarRouteImport } from './routes/instalar'
 import { Route as AssinarRouteImport } from './routes/assinar'
@@ -37,6 +38,11 @@ import { Route as ApiPublicExtensionCustomersImportRouteImport } from './routes/
 import { Route as ApiPublicExtensionCustomersIdRouteImport } from './routes/api/public/extension/customers.$id'
 import { Route as ApiPublicExtensionCampaignsIdRouteImport } from './routes/api/public/extension/campaigns.$id'
 
+const PoliticasRoute = PoliticasRouteImport.update({
+  id: '/politicas',
+  path: '/politicas',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PainelRoute = PainelRouteImport.update({
   id: '/painel',
   path: '/painel',
@@ -196,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/assinar': typeof AssinarRouteWithChildren
   '/instalar': typeof InstalarRoute
   '/painel': typeof PainelRoute
+  '/politicas': typeof PoliticasRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/assinar/retorno': typeof AssinarRetornoRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
@@ -225,6 +232,7 @@ export interface FileRoutesByTo {
   '/assinar': typeof AssinarRouteWithChildren
   '/instalar': typeof InstalarRoute
   '/painel': typeof PainelRoute
+  '/politicas': typeof PoliticasRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/assinar/retorno': typeof AssinarRetornoRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
@@ -255,6 +263,7 @@ export interface FileRoutesById {
   '/assinar': typeof AssinarRouteWithChildren
   '/instalar': typeof InstalarRoute
   '/painel': typeof PainelRoute
+  '/politicas': typeof PoliticasRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/assinar/retorno': typeof AssinarRetornoRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
@@ -286,6 +295,7 @@ export interface FileRouteTypes {
     | '/assinar'
     | '/instalar'
     | '/painel'
+    | '/politicas'
     | '/admin/whatsapp'
     | '/assinar/retorno'
     | '/api/public/signup'
@@ -315,6 +325,7 @@ export interface FileRouteTypes {
     | '/assinar'
     | '/instalar'
     | '/painel'
+    | '/politicas'
     | '/admin/whatsapp'
     | '/assinar/retorno'
     | '/api/public/signup'
@@ -344,6 +355,7 @@ export interface FileRouteTypes {
     | '/assinar'
     | '/instalar'
     | '/painel'
+    | '/politicas'
     | '/admin/whatsapp'
     | '/assinar/retorno'
     | '/api/public/signup'
@@ -374,6 +386,7 @@ export interface RootRouteChildren {
   AssinarRoute: typeof AssinarRouteWithChildren
   InstalarRoute: typeof InstalarRoute
   PainelRoute: typeof PainelRoute
+  PoliticasRoute: typeof PoliticasRoute
   AdminWhatsappRoute: typeof AdminWhatsappRoute
   ApiPublicSignupRoute: typeof ApiPublicSignupRoute
   ApiPublicExtensionBillingRoute: typeof ApiPublicExtensionBillingRoute
@@ -395,6 +408,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/politicas': {
+      id: '/politicas'
+      path: '/politicas'
+      fullPath: '/politicas'
+      preLoaderRoute: typeof PoliticasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/painel': {
       id: '/painel'
       path: '/painel'
@@ -652,6 +672,7 @@ const rootRouteChildren: RootRouteChildren = {
   AssinarRoute: AssinarRouteWithChildren,
   InstalarRoute: InstalarRoute,
   PainelRoute: PainelRoute,
+  PoliticasRoute: PoliticasRoute,
   AdminWhatsappRoute: AdminWhatsappRoute,
   ApiPublicSignupRoute: ApiPublicSignupRoute,
   ApiPublicExtensionBillingRoute: ApiPublicExtensionBillingRoute,
@@ -679,13 +700,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
