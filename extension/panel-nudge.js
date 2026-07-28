@@ -1,6 +1,6 @@
 // Roda no painel web e conecta a página ao service worker da extensão.
 (function () {
-  const NUDGE_VERSION = "0.18.44";
+  const NUDGE_VERSION = "0.19.0";
   if (window.__crmPanelNudgeVersion === NUDGE_VERSION) return;
   window.__crmPanelNudgeVersion = NUDGE_VERSION;
   console.info(`[CRM panel-nudge v${NUDGE_VERSION}] pronto`, location.href);
@@ -13,6 +13,22 @@
       chrome.runtime.sendMessage({ type: "poll_now" }).catch(() => null);
       return;
     }
+    if (data.__crm === "crm_wa_action_v190") {
+      chrome.runtime
+        .sendMessage({ type: "wa_action", action: data.action || {} })
+        .then((payload) => {
+          window.postMessage({ __crm: "crm_wa_action_result_v190", id: data.id, payload }, window.location.origin);
+        })
+        .catch((error) => {
+          window.postMessage({
+            __crm: "crm_wa_action_result_v190",
+            id: data.id,
+            payload: { ok: false, error: `Extensão não respondeu: ${String(error?.message || error)}` },
+          }, window.location.origin);
+        });
+      return;
+    }
+
     if (data.__crm !== "crm_api_request_v180" && data.__crm !== "crm_api_request_v162") return;
     const responseType = data.__crm === "crm_api_request_v180" ? "crm_api_response_v180" : "crm_api_response_v162";
     const method = String(data.opts?.method || "GET").toUpperCase();

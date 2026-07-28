@@ -8,7 +8,7 @@
 //
 // Rate limit: espaçamento aleatório entre 8s e 20s entre jobs (ritmo humano).
 
-const EXTENSION_VERSION = "0.18.44";
+const EXTENSION_VERSION = "0.19.0";
 const DEFAULT_API_BASE = "https://buzz-boost-crm.lovable.app";
 const POLL_MIN_MS = 8000;
 const POLL_MAX_MS = 20000;
@@ -189,6 +189,39 @@ async function sendToTab(job) {
   return { ok: false, error: lastError };
 }
 
+// Ação disparada pelo painel (abrir conversa / enviar texto ou resposta rápida).
+async function runWaAction(action) {
+  const tabs = await getWhatsappTabs();
+  const candidates = tabs
+    .filter((tab) => tab.id && !tab.discarded)
+    .sort((a, b) => Number(!!b.active) - Number(!!a.active));
+  if (candidates.length === 0) {
+    return { ok: false, error: "Abra o WhatsApp Web em uma aba e tente de novo." };
+  }
+  let lastError = "WhatsApp Web não respondeu";
+  for (const tab of candidates) {
+    try {
+      await ensureScripts(tab.id);
+      const result = await chrome.tabs.sendMessage(tab.id, { type: "wa_action_v190", action });
+      if (result?.ok) {
+        // Só trazemos a aba pra frente quando o usuário pediu para abrir a conversa.
+        if (action?.openOnly) {
+          try {
+            await chrome.tabs.update(tab.id, { active: true });
+            if (tab.windowId != null) await chrome.windows.update(tab.windowId, { focused: true });
+          } catch {}
+        }
+        return result;
+      }
+      lastError = result?.error || lastError;
+    } catch (e) {
+      lastError = String(e?.message || e);
+    }
+  }
+  return { ok: false, error: lastError };
+}
+
+
 async function showPanel() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id || !tab.url?.startsWith("https://web.whatsapp.com/")) {
@@ -303,7 +336,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       }
     } else if (msg?.type === "show_panel") {
       sendResponse(await showPanel());
+    } else if (msg?.type === "wa_action") {
+      sendResponse(await runWaAction(msg.action || {}));
     } else if (msg?.type === "poll_now") {
+
       await pollNow();
       sendResponse({ ok: true });
     }
