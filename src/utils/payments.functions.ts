@@ -82,8 +82,6 @@ export const createPremiumCheckout = createServerFn({ method: "POST" })
         ui_mode: "embedded_page",
         return_url: data.returnUrl,
         customer: customerId,
-        automatic_tax: { enabled: true },
-        customer_update: { address: "auto" },
         metadata: { barbershop_id: barbershopId, managed_payments: "false" },
         subscription_data: { metadata: { barbershop_id: barbershopId } },
       });
