@@ -1411,6 +1411,20 @@ function DisparoView({
         </p>
       </Field>
 
+      {replies.length > 0 && (
+        <Field label="Resposta rápida (opcional)">
+          <select value={quickReplyId} onChange={(e) => applyQuickReply(e.target.value)} className={inputCls}>
+            <option value="">— escrever mensagem manualmente —</option>
+            {replies.map((q) => <option key={q.id} value={q.id}>{q.title}</option>)}
+          </select>
+          <p className="mt-1 text-xs text-neutral-500">
+            Os textos da resposta rápida viram as variações abaixo (você pode editar).
+            {droppedMedia > 0 && " Mídias não são enviadas no disparo em massa — só texto."}
+          </p>
+        </Field>
+      )}
+
+
       <div>
         <label className="mb-2 block text-sm font-medium text-neutral-700">
           Variações de mensagem (rotacionadas por contato — reduz chance de bloqueio)
