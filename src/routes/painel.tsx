@@ -519,8 +519,13 @@ function CardAction({
 }) {
   return (
     <button
+      type="button"
       title={title}
       disabled={disabled}
+      draggable={false}
+      onDragStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      onPointerDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       className="grid h-7 w-7 place-items-center rounded-md border border-neutral-200 bg-white text-neutral-600 transition hover:border-neutral-900 hover:text-neutral-900 disabled:opacity-40"
     >
