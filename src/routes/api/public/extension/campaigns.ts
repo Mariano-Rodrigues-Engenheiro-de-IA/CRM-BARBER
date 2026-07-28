@@ -124,6 +124,17 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
           );
         }
 
+        const { getBillingStatus, limitBlock } = await import("@/lib/billing.server");
+        const billing = await getBillingStatus(supabaseAdmin, barbershopId);
+        const blockedMsg = limitBlock(billing, "messages", targets.length);
+        if (blockedMsg) {
+          return jsonResponse(
+            request,
+            { ok: false, error: blockedMsg, code: "limit_reached", billing },
+            { status: 402 },
+          );
+        }
+
         const { data: campaign, error: cErr } = await supabaseAdmin
           .from("campaigns")
           .insert({

@@ -11,6 +11,39 @@ import { ConnectionView } from "@/components/connection-view";
 import { QuickRepliesView } from "@/components/quick-replies-view";
 import { sendWaAction, isRealPhone } from "@/lib/wa-actions";
 import type { QuickReply } from "@/lib/quick-replies";
+import { PREMIUM_PRICE_LABEL, type BillingStatus } from "@/lib/billing";
+
+/** Faixa de plano: mostra uso do grátis e leva pro checkout Premium. */
+function PlanBanner({ billing, shopId }: { billing: BillingStatus | null; shopId?: string }) {
+  if (!billing) return null;
+  if (billing.premium) {
+    return (
+      <div className="mx-6 mt-4 flex items-center justify-between rounded-xl border border-yellow-400/60 bg-yellow-50 px-4 py-2.5 text-sm">
+        <span className="font-medium text-neutral-900">Plano Premium ativo — sem limites.</span>
+      </div>
+    );
+  }
+  const restCustomers = Math.max(0, billing.limits.customers - billing.usage.customers);
+  const restMessages = Math.max(0, billing.limits.messages - billing.usage.messages);
+  return (
+    <div className="mx-6 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-900/10 bg-neutral-900 px-4 py-3 text-sm text-neutral-100">
+      <div>
+        <p className="font-semibold text-yellow-400">Plano grátis</p>
+        <p className="text-xs text-neutral-300">
+          Restam {restCustomers} assinantes e {restMessages} mensagens. Depois disso o disparo trava.
+        </p>
+      </div>
+      <a
+        href={shopId ? `/assinar?shop=${shopId}` : "/assinar"}
+        target="_blank"
+        rel="noreferrer"
+        className="rounded-lg bg-yellow-400 px-4 py-2 text-xs font-bold text-neutral-900 hover:bg-yellow-300"
+      >
+        COMPRAR PREMIUM · {PREMIUM_PRICE_LABEL}
+      </a>
+    </div>
+  );
+}
 
 import {
   SUBSCRIPTION_SYSTEMS,
@@ -267,6 +300,7 @@ function Painel() {
   const [tab, setTab] = useState<AssinantesTab>("kanban");
   const [shop, setShop] = useState<{ id: string; name: string } | null>(null);
   const [brand, setBrand] = useState<Brand>({});
+  const [billing, setBilling] = useState<BillingStatus | null>(null);
 
 
   useEffect(() => {
@@ -299,6 +333,9 @@ function Painel() {
         setShop(r.barbershop);
         setBrand(readBrand(r.barbershop.id));
       }
+    });
+    api(token, "/api/public/extension/billing").then((r) => {
+      if (r?.ok && r.billing) setBilling(r.billing as BillingStatus);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
@@ -408,6 +445,9 @@ function Painel() {
 
       {/* Content */}
       <div className="flex-1 min-w-0">
+        <div className="mt-14 md:mt-0">
+          <PlanBanner billing={billing} shopId={shop?.id} />
+        </div>
         {section === "assinantes" && (
           <>
             <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
