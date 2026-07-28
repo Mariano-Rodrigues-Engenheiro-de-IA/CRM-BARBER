@@ -43,9 +43,27 @@ export const Route = createFileRoute("/api/public/extension/customers/$id")({
             { status: 400 },
           );
         }
+        const patch: Record<string, unknown> = { ...parsed.data };
+        // Telefone informado à mão substitui o placeholder "sem-tel-..." da planilha.
+        if (parsed.data.phone !== undefined) {
+          const digits = normalizePhone(parsed.data.phone);
+          if (!digits) {
+            return jsonResponse(request, { ok: false, error: "Telefone inválido" }, { status: 400 });
+          }
+          patch.phone = digits;
+          const { data: current } = await supabaseAdmin
+            .from("customers")
+            .select("tags")
+            .eq("id", params.id)
+            .eq("barbershop_id", auth.token.barbershop_id)
+            .maybeSingle();
+          if (current?.tags && parsed.data.tags === undefined) {
+            patch.tags = current.tags.filter((t: string) => t !== "sem-telefone");
+          }
+        }
         const { data, error } = await supabaseAdmin
           .from("customers")
-          .update(parsed.data)
+          .update(patch)
           .eq("id", params.id)
           .eq("barbershop_id", auth.token.barbershop_id)
           .select("id, name, phone, status, tags, notes")
