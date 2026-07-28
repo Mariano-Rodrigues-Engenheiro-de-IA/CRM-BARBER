@@ -9,10 +9,12 @@ import { z } from "zod";
 import { jsonResponse, preflight } from "@/lib/extension-cors";
 import { authenticateExtension } from "@/lib/extension-auth";
 import { CUSTOMER_STATUS_VALUES } from "@/lib/customer-presets";
+import { normalizePhone } from "@/lib/subscription-systems";
 
 const patchSchema = z.object({
   status: z.enum(CUSTOMER_STATUS_VALUES).optional(),
   name: z.string().trim().min(1).max(120).optional(),
+  phone: z.string().trim().min(8).max(25).optional(),
   tags: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
   notes: z.string().max(1000).nullable().optional(),
 });
@@ -42,9 +44,27 @@ export const Route = createFileRoute("/api/public/extension/customers/$id")({
             { status: 400 },
           );
         }
+        const patch: { status?: string; name?: string; phone?: string; tags?: string[]; notes?: string | null } = { ...parsed.data };
+        // Telefone informado à mão substitui o placeholder "sem-tel-..." da planilha.
+        if (parsed.data.phone !== undefined) {
+          const digits = normalizePhone(parsed.data.phone);
+          if (!digits) {
+            return jsonResponse(request, { ok: false, error: "Telefone inválido" }, { status: 400 });
+          }
+          patch.phone = digits;
+          const { data: current } = await supabaseAdmin
+            .from("customers")
+            .select("tags")
+            .eq("id", params.id)
+            .eq("barbershop_id", auth.token.barbershop_id)
+            .maybeSingle();
+          if (current?.tags && parsed.data.tags === undefined) {
+            patch.tags = current.tags.filter((t: string) => t !== "sem-telefone");
+          }
+        }
         const { data, error } = await supabaseAdmin
           .from("customers")
-          .update(parsed.data)
+          .update(patch)
           .eq("id", params.id)
           .eq("barbershop_id", auth.token.barbershop_id)
           .select("id, name, phone, status, tags, notes")

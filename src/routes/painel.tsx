@@ -534,6 +534,11 @@ function CardAction({
   );
 }
 
+/** Planilhas sem coluna de telefone geram placeholder "sem-tel-..." — nunca mostrar cru. */
+function phoneLabel(phone: string) {
+  return isRealPhone(phone) ? phone : "Sem telefone cadastrado";
+}
+
 /** Abrir conversa / enviar resposta rápida ou mensagem manual pelo CRM. */
 function WhatsAppActionModal({
   token,
@@ -550,6 +555,8 @@ function WhatsAppActionModal({
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [phone, setPhone] = useState(isRealPhone(customer.phone) ? customer.phone : "");
+  const [phoneDraft, setPhoneDraft] = useState("");
 
   useEffect(() => {
     api(token, "/api/public/extension/quick-replies").then((r) => {
@@ -557,9 +564,25 @@ function WhatsAppActionModal({
     });
   }, [token]);
 
+  /** Contato veio de planilha sem telefone: dá pra cadastrar aqui mesmo. */
+  async function savePhone() {
+    if (!phoneDraft.trim()) return;
+    setBusy(true);
+    setErr(null);
+    const r = await api(token, `/api/public/extension/customers/${customer.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ phone: phoneDraft.trim() }),
+    });
+    setBusy(false);
+    if (!r?.ok) { setErr(r?.error || "Não foi possível salvar o telefone"); return; }
+    setPhone(r.customer.phone as string);
+    setPhoneDraft("");
+    setFeedback("Telefone salvo ✔");
+  }
+
   async function run(openOnly: boolean) {
-    if (!isRealPhone(customer.phone)) {
-      setErr("Este contato não tem um telefone válido cadastrado.");
+    if (!isRealPhone(phone)) {
+      setErr("Cadastre um telefone válido para este contato antes de enviar.");
       return;
     }
     setBusy(true);
@@ -567,7 +590,7 @@ function WhatsAppActionModal({
     setFeedback(null);
     const qr = replies.find((q) => q.id === selected);
     const r = await sendWaAction({
-      phone: customer.phone,
+      phone,
       name: customer.name,
       openOnly,
       text: openOnly ? undefined : text.trim() || undefined,
@@ -582,7 +605,30 @@ function WhatsAppActionModal({
     <Modal onClose={onClose} title={`WhatsApp — ${customer.name}`}>
       <div className="space-y-4">
         <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-700">
-          {customer.phone}
+          {isRealPhone(phone) ? (
+            phone
+          ) : (
+            <div className="space-y-2">
+              <p className="text-neutral-600">
+                Este contato veio da planilha sem telefone. Cadastre para poder enviar.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  value={phoneDraft}
+                  onChange={(e) => setPhoneDraft(e.target.value)}
+                  placeholder="(11) 91234-5678"
+                  className={inputCls}
+                />
+                <button
+                  onClick={savePhone}
+                  disabled={busy || !phoneDraft.trim()}
+                  className="whitespace-nowrap rounded-lg bg-neutral-900 px-3 py-2 text-xs font-semibold text-yellow-400 disabled:opacity-50"
+                >
+                  Salvar
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <Field label="Resposta rápida">
@@ -819,7 +865,7 @@ function KanbanView({
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="truncate font-semibold text-neutral-900">{c.name}</div>
-                        <div className="text-xs text-neutral-500">{c.phone}</div>
+                        <div className="text-xs text-neutral-500">{phoneLabel(c.phone)}</div>
                         <div className="mt-1 flex flex-wrap items-center gap-1">
                           {plan && (
                             <span className="rounded bg-yellow-100 px-1.5 py-0.5 text-[10px] font-medium text-yellow-800">
@@ -981,7 +1027,7 @@ function CustomerDrawer({
     <Modal onClose={onClose} title={customer.name}>
       <div className="space-y-4">
         <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-700">
-          <div>{customer.phone}</div>
+          <div>{phoneLabel(customer.phone)}</div>
           {plan && (
             <div className="mt-1">
               Plano: <strong>{plan}</strong> · {formatBRL(priceOf(plans, plan))}
@@ -1004,7 +1050,7 @@ function CustomerDrawer({
               </button>
             ))}
           </div>
-          {onOpenWhatsapp && isRealPhone(customer.phone) && (
+          {onOpenWhatsapp && (
             <button
               onClick={onOpenWhatsapp}
               className="ml-auto flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
@@ -1346,9 +1392,16 @@ function DisparoView({
     ? selectedReply.actions.filter((a) => a.type !== "text").length
     : 0;
 
-  const total = segment === "all"
-    ? customers.length
-    : customers.filter((c) => c.status === segment).length;
+  // Contatos sem telefone real (placeholder de planilha) nunca entram na fila,
+  // então o alvo mostrado precisa refletir só quem é enviável.
+  const sendable = customers.filter((c) => isRealPhone(c.phone));
+  const countIn = (key: string) =>
+    key === "all" ? sendable.length : sendable.filter((c) => c.status === key).length;
+  const total = countIn(segment);
+  const semTelefone = (segment === "all"
+    ? customers
+    : customers.filter((c) => c.status === segment)
+  ).filter((c) => !isRealPhone(c.phone)).length;
 
   function updateVariant(i: number, v: string) {
     setVariants((prev) => prev.map((x, idx) => (idx === i ? v : x)));
@@ -1364,6 +1417,10 @@ function DisparoView({
     }
     if (!acceptedTerms) {
       setErr("Você precisa aceitar o termo de uso para enviar a campanha.");
+      return;
+    }
+    if (total === 0) {
+      setErr("Nenhum contato com telefone válido nesse público. Escolha outro público ou cadastre os telefones.");
       return;
     }
 
@@ -1403,11 +1460,12 @@ function DisparoView({
 
       <Field label="Público-alvo">
         <select value={segment} onChange={(e) => setSegment(e.target.value)} className={inputCls}>
-          {cols.map((c) => <option key={c.key} value={c.key}>{c.label} ({customers.filter((cu) => cu.status === c.key).length})</option>)}
-          <option value="all">Todos ({customers.length})</option>
+          {cols.map((c) => <option key={c.key} value={c.key}>{c.label} ({countIn(c.key)})</option>)}
+          <option value="all">Todos ({countIn("all")})</option>
         </select>
         <p className="mt-1 text-xs text-neutral-500">
           Vai disparar para <strong className="text-neutral-900">{total}</strong> contato(s).
+          {semTelefone > 0 && ` ${semTelefone} contato(s) ficam de fora por não ter telefone cadastrado.`}
         </p>
       </Field>
 
