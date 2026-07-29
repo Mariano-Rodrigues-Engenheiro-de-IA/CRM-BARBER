@@ -1,36 +1,162 @@
 // Adaptador da Cloud API oficial da Meta acessada DIRETO (sem BSP).
 //
-// Modo manual: o admin cria o app/WABA/número no Meta for Developers, gera um
-// token permanente de Usuário do Sistema e cola `phone_number_id` +
-// `access_token` na tela /admin/whatsapp. Não há Embedded Signup aqui —
-// `signupUrl`/`exchangeSignup` são intencionalmente indisponíveis.
+// Dois caminhos de vínculo, ambos suportados:
+//  1. Manual (admin): phone_number_id + access_token colados em /admin/whatsapp.
+//  2. Cadastro Incorporado (Embedded Signup): o cliente faz login na Meta pelo
+//     pop-up OAuth, autoriza a WABA e o `code` é trocado aqui por um token de
+//     usuário do sistema da integração (não expira).
+//
+// Requer as variáveis META_APP_ID, META_APP_SECRET e (recomendado)
+// META_CONFIG_ID, além de WHATSAPP_SIGNUP_REDIRECT_URL apontando para
+// /api/public/whatsapp/signup-callback no domínio público do app.
 
 import type { BspAdapter } from "./types";
-import type { SendResult, StatusResult } from "../types";
+import type { SendResult, SignupCallbackResult, StatusResult } from "../types";
 
 type Json = Record<string, unknown>;
 
 const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
 
+function graphVersion(): string {
+  return process.env.META_GRAPH_VERSION ?? "v21.0";
+}
+
 function graphUrl(path: string): string {
-  const version = process.env.META_GRAPH_VERSION ?? "v21.0";
-  return `https://graph.facebook.com/${version}/${path}`;
+  return `https://graph.facebook.com/${graphVersion()}/${path}`;
+}
+
+function requireEnv(name: string): string {
+  const v = process.env[name];
+  if (!v || !v.trim()) {
+    throw new Error(
+      `Cadastro Incorporado indisponível: variável ${name} não configurada. Configure-a ou use o modo manual em /admin/whatsapp.`,
+    );
+  }
+  return v.trim();
+}
+
+function redirectUri(): string {
+  return requireEnv("WHATSAPP_SIGNUP_REDIRECT_URL");
+}
+
+async function graphJson(url: string): Promise<Json> {
+  const res = await fetch(url);
+  const json = (await res.json().catch(() => ({}))) as Json;
+  if (!res.ok) {
+    const error = (json.error as Json | undefined)?.message;
+    throw new Error(typeof error === "string" ? error : `Meta Graph HTTP ${res.status}`);
+  }
+  return json;
+}
+
+/** Lê o WABA autorizado a partir dos escopos granulares do token. */
+function wabaFromScopes(debug: Json): string | null {
+  const data = (debug.data ?? {}) as Json;
+  const scopes = Array.isArray(data.granular_scopes) ? (data.granular_scopes as Json[]) : [];
+  for (const scope of scopes) {
+    if (str(scope.scope) === "whatsapp_business_management" || str(scope.scope) === "whatsapp_business_messaging") {
+      const ids = Array.isArray(scope.target_ids) ? scope.target_ids : [];
+      const first = str(ids[0]);
+      if (first) return first;
+    }
+  }
+  return null;
+}
+
+function businessFromScopes(debug: Json): string | null {
+  const data = (debug.data ?? {}) as Json;
+  const scopes = Array.isArray(data.granular_scopes) ? (data.granular_scopes as Json[]) : [];
+  for (const scope of scopes) {
+    if (str(scope.scope) === "business_management") {
+      const ids = Array.isArray(scope.target_ids) ? scope.target_ids : [];
+      const first = str(ids[0]);
+      if (first) return first;
+    }
+  }
+  return null;
 }
 
 export const cloudAdapter: BspAdapter = {
   name: "cloud",
 
-  signupUrl() {
-    throw new Error(
-      "Conexão automática desativada: configure phone_number_id e access_token em /admin/whatsapp.",
+  /** URL do pop-up OAuth do Cadastro Incorporado da Meta. */
+  signupUrl({ state }) {
+    const appId = requireEnv("META_APP_ID");
+    const url = new URL(`https://www.facebook.com/${graphVersion()}/dialog/oauth`);
+    url.searchParams.set("client_id", appId);
+    url.searchParams.set("redirect_uri", redirectUri());
+    url.searchParams.set("state", state);
+    url.searchParams.set("response_type", "code");
+    url.searchParams.set("override_default_response_type", "true");
+
+    const configId = process.env.META_CONFIG_ID?.trim();
+    if (configId) {
+      url.searchParams.set("config_id", configId);
+    } else {
+      url.searchParams.set(
+        "scope",
+        "whatsapp_business_management,whatsapp_business_messaging,business_management",
+      );
+    }
+    url.searchParams.set(
+      "extras",
+      JSON.stringify({ feature: "whatsapp_embedded_signup", sessionInfoVersion: 3, version: 3 }),
     );
+
+    return { url: url.toString(), params: { app_id: appId, ...(configId ? { config_id: configId } : {}) } };
   },
 
-  async exchangeSignup(): Promise<never> {
-    throw new Error(
-      "Conexão automática desativada: configure phone_number_id e access_token em /admin/whatsapp.",
+  /**
+   * Troca o `code` do pop-up por token permanente, descobre a WABA e o número,
+   * e assina o app nos webhooks da WABA.
+   */
+  async exchangeSignup({ code }): Promise<SignupCallbackResult> {
+    const appId = requireEnv("META_APP_ID");
+    const appSecret = requireEnv("META_APP_SECRET");
+
+    const tokenUrl = new URL(graphUrl("oauth/access_token"));
+    tokenUrl.searchParams.set("client_id", appId);
+    tokenUrl.searchParams.set("client_secret", appSecret);
+    tokenUrl.searchParams.set("redirect_uri", redirectUri());
+    tokenUrl.searchParams.set("code", code);
+    const tokenJson = await graphJson(tokenUrl.toString());
+    const accessToken = str(tokenJson.access_token);
+    if (!accessToken) throw new Error("Meta não devolveu access_token para este code.");
+
+    const debugUrl = new URL(graphUrl("debug_token"));
+    debugUrl.searchParams.set("input_token", accessToken);
+    debugUrl.searchParams.set("access_token", `${appId}|${appSecret}`);
+    const debug = await graphJson(debugUrl.toString());
+
+    const wabaId = wabaFromScopes(debug);
+    if (!wabaId) throw new Error("Nenhuma conta WhatsApp Business foi autorizada no Cadastro Incorporado.");
+
+    const phones = await graphJson(
+      `${graphUrl(`${wabaId}/phone_numbers?fields=id,display_phone_number,verified_name,platform_type,code_verification_status`)}&access_token=${encodeURIComponent(accessToken)}`,
     );
+    const first = (Array.isArray(phones.data) ? (phones.data[0] as Json | undefined) : undefined) ?? {};
+    const phoneNumberId = str(first.id);
+    if (!phoneNumberId) throw new Error("A WABA autorizada ainda não tem número de telefone disponível.");
+
+    // Assina o app nos webhooks da WABA (status de mensagem, respostas etc.).
+    await fetch(`${graphUrl(`${wabaId}/subscribed_apps`)}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }).catch(() => undefined);
+
+    const platform = (str(first.platform_type) ?? "").toUpperCase();
+
+    return {
+      status: "connected",
+      waba_id: wabaId,
+      phone_number_id: phoneNumberId,
+      access_token: accessToken,
+      business_id: businessFromScopes(debug),
+      phone: str(first.display_phone_number)?.replace(/\D/g, "") ?? null,
+      is_coexistence: platform === "SMB_APP",
+    };
   },
+
 
   /** Lê o número no Graph API — serve como teste de credenciais. */
   async status({ access_token, phone_number_id }): Promise<StatusResult> {

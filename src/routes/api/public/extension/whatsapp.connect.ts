@@ -38,19 +38,10 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/connect")({
             ? existing?.meta_access_token ?? existing?.instance_token ?? null
             : existing?.instance_token ?? null;
 
-          if (provider.name === "meta" && !existingInstanceToken) {
-            return jsonResponse(request, {
-              ok: true,
-              connection: {
-                status: "disconnected",
-                qrcode: null,
-                phone: null,
-                provider: provider.name,
-                auth_mode: provider.authMode,
-                needs_manual_credentials: true,
-              },
-            });
-          }
+          // Sem token salvo a API oficial NÃO é bloqueada: é justamente o
+          // caso do primeiro Cadastro Incorporado (o token nasce no callback).
+
+
 
           const result = await provider.connect({
             barbershop_id: auth.token.barbershop_id,
@@ -96,8 +87,25 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/connect")({
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           console.error("[whatsapp/connect]", msg);
+          // Cadastro Incorporado sem credenciais de app configuradas: cai no
+          // modo manual em vez de estourar erro genérico.
+          if (existing?.provider === "meta" && /Cadastro Incorporado indispon/i.test(msg)) {
+            return jsonResponse(request, {
+              ok: true,
+              connection: {
+                status: "disconnected",
+                qrcode: null,
+                phone: null,
+                provider: "meta",
+                auth_mode: "embedded_signup",
+                needs_manual_credentials: true,
+                message: msg,
+              },
+            });
+          }
           return jsonResponse(request, { ok: false, error: msg }, { status: 502 });
         }
+
       },
     },
   },
