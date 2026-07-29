@@ -38,19 +38,10 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/connect")({
             ? existing?.meta_access_token ?? existing?.instance_token ?? null
             : existing?.instance_token ?? null;
 
-          if (provider.name === "meta" && !existingInstanceToken) {
-            return jsonResponse(request, {
-              ok: true,
-              connection: {
-                status: "disconnected",
-                qrcode: null,
-                phone: null,
-                provider: provider.name,
-                auth_mode: provider.authMode,
-                needs_manual_credentials: true,
-              },
-            });
-          }
+          // Sem token salvo a API oficial NÃO é bloqueada: é justamente o
+          // caso do primeiro Cadastro Incorporado (o token nasce no callback).
+
+
 
           const result = await provider.connect({
             barbershop_id: auth.token.barbershop_id,
