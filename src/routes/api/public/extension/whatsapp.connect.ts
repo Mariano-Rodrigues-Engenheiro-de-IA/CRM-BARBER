@@ -87,8 +87,25 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/connect")({
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           console.error("[whatsapp/connect]", msg);
+          // Cadastro Incorporado sem credenciais de app configuradas: cai no
+          // modo manual em vez de estourar erro genérico.
+          if (existing?.provider === "meta" && /Cadastro Incorporado indispon/i.test(msg)) {
+            return jsonResponse(request, {
+              ok: true,
+              connection: {
+                status: "disconnected",
+                qrcode: null,
+                phone: null,
+                provider: "meta",
+                auth_mode: "embedded_signup",
+                needs_manual_credentials: true,
+                message: msg,
+              },
+            });
+          }
           return jsonResponse(request, { ok: false, error: msg }, { status: 502 });
         }
+
       },
     },
   },
