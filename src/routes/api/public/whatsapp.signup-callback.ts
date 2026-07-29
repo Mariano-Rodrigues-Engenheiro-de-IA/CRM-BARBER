@@ -35,6 +35,12 @@ export const Route = createFileRoute("/api/public/whatsapp/signup-callback")({
           return page("Link inválido ou expirado", "Volte ao painel e clique em Conectar novamente.", false, 400);
         }
 
+        // Usuário cancelou ou negou permissões no pop-up da Meta.
+        const oauthError = url.searchParams.get("error_description") ?? url.searchParams.get("error");
+        if (oauthError) {
+          return page("Vínculo cancelado", oauthError, false, 400);
+        }
+
         // No 360dialog o identificador do cliente vem em `client`.
         const code = url.searchParams.get("client") ?? url.searchParams.get("code");
         if (!code) {
@@ -47,11 +53,14 @@ export const Route = createFileRoute("/api/public/whatsapp/signup-callback")({
         }
 
         try {
-          const { getWhatsAppProvider } = await import("@/lib/whatsapp/provider.server");
-          const provider = getWhatsAppProvider();
+          // O Cadastro Incorporado só existe na API oficial — não depende da
+          // env global `WHATSAPP_PROVIDER` (que pode estar em uazapi).
+          const { getWhatsAppProviderByName } = await import("@/lib/whatsapp/provider.server");
+          const provider = getWhatsAppProviderByName("meta");
           if (!provider.handleSignupCallback) {
             return page("Provedor sem signup", "O provedor ativo não usa o login da Meta.", false, 400);
           }
+
 
           const result = await provider.handleSignupCallback({
             code,
