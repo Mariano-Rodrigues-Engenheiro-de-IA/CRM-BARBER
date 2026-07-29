@@ -144,6 +144,20 @@ export const cloudAdapter: BspAdapter = {
       headers: { Authorization: `Bearer ${accessToken}` },
     }).catch(() => undefined);
 
+    // Registro do número na Cloud API (evita o erro 133010 no 1º envio).
+    // Só roda quando há PIN padrão configurado; falha aqui não invalida o
+    // vínculo — o admin ainda pode registrar em /admin/whatsapp.
+    const pin = process.env.META_REGISTER_PIN?.trim();
+    if (pin && phoneNumberId) {
+      await fetch(graphUrl(`${phoneNumberId}/register`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ messaging_product: "whatsapp", pin }),
+      }).catch(() => undefined);
+    }
+
+
+
     const platform = (str(first.platform_type) ?? "").toUpperCase();
 
     return {
