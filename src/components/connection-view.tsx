@@ -149,8 +149,13 @@ export function ConnectionView({ api }: { api: Api }) {
       setConn(c);
       // API oficial: não há QR — abre o pop-up de login da Meta.
       if (c.auth_mode === "embedded_signup" && c.signup?.url) {
-        window.open(c.signup.url, "whatsapp-signup", "width=620,height=760");
+        const win = window.open(c.signup.url, "whatsapp-signup", "width=620,height=760");
+        if (!win) {
+          // Pop-up bloqueado: navega na própria aba para não travar o fluxo.
+          window.location.href = c.signup.url;
+        }
       }
+
     } else {
       statusRef.current = "disconnected";
       setConn((prev) => ({
