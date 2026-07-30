@@ -481,9 +481,13 @@ function Painel() {
           <>
             <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
               <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-2.5">
-                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
-                  Funis de vendas
-                </h1>
+                {funisTab === "kanban" ? (
+                  <div ref={setFunisHeaderEl} className="flex min-w-0 items-center gap-2" />
+                ) : (
+                  <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
+                    Funis de vendas
+                  </h1>
+                )}
                 <nav className="flex shrink-0 gap-1 rounded-lg bg-neutral-100 p-1">
                   {(["kanban", "disparo", "campanhas"] as const).map((t) => (
                     <button
@@ -500,9 +504,12 @@ function Painel() {
                 </nav>
               </div>
             </header>
-            <main className="px-4 py-4">
+            <main className="px-4 py-3">
               {funisTab === "kanban" && (
-                <FunnelsView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+                <FunnelsView
+                  api={(path: string, opts?: RequestInit) => api(token, path, opts)}
+                  headerHost={funisHeaderEl}
+                />
               )}
               {funisTab === "disparo" && (
                 <FunnelDispatchView
