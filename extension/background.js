@@ -189,9 +189,53 @@ async function sendToTab(job) {
   return { ok: false, error: lastError };
 }
 
+// A página do WhatsApp Web tem CSP restritiva (connect-src): um fetch para o
+// Storage feito de dentro dela é bloqueado silenciosamente e a mídia nunca é
+// enviada. O service worker não tem essa restrição, então baixamos aqui e
+// entregamos o arquivo já em base64 para a bridge montar o File.
+function bytesToBase64(bytes) {
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return btoa(bin);
+}
+
+async function prefetchMedia(actions) {
+  const out = [];
+  for (const a of actions || []) {
+    if (!a || a.type === "text" || !a.url) {
+      out.push(a);
+      continue;
+    }
+    try {
+      const res = await fetch(a.url, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const buf = new Uint8Array(await res.arrayBuffer());
+      out.push({
+        ...a,
+        mime: a.mime || res.headers.get("content-type") || "application/octet-stream",
+        data_base64: bytesToBase64(buf),
+      });
+    } catch (e) {
+      out.push({ ...a, media_error: `Falha ao baixar mídia: ${String(e?.message || e)}` });
+    }
+  }
+  return out;
+}
+
 // Ação disparada pelo painel (abrir conversa / enviar texto ou resposta rápida).
-async function runWaAction(action) {
+async function runWaAction(rawAction) {
+  const action = { ...(rawAction || {}) };
+  if (!action.openOnly && Array.isArray(action.actions) && action.actions.length) {
+    action.actions = await prefetchMedia(action.actions);
+    const broken = action.actions.find((a) => a.media_error);
+    if (broken) return { ok: false, error: broken.media_error };
+  }
   const tabs = await getWhatsappTabs();
+  const candidates = tabs
+    .filter((tab) => tab.id && !tab.discarded)
   const candidates = tabs
     .filter((tab) => tab.id && !tab.discarded)
     .sort((a, b) => Number(!!b.active) - Number(!!a.active));
