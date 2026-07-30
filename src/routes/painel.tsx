@@ -12,6 +12,8 @@ import { QuickRepliesView } from "@/components/quick-replies-view";
 import { sendWaAction, isRealPhone } from "@/lib/wa-actions";
 import type { QuickReply } from "@/lib/quick-replies";
 import { PREMIUM_PRICE_LABEL, type BillingStatus } from "@/lib/billing";
+import { useConfirm } from "@/components/confirm-dialog";
+import { toast } from "sonner";
 
 /** Faixa de plano: mostra uso do grátis e leva pro checkout Premium. */
 function PlanBanner({ billing, shopId }: { billing: BillingStatus | null; shopId?: string }) {
@@ -793,13 +795,20 @@ function KanbanView({
   }
 
   async function remove(id: string) {
-    if (!confirm("Remover este contato do CRM? (fica arquivado no histórico)")) return;
+    const ok = await confirm({
+      title: "Remover este contato do CRM?",
+      description: "Ele fica arquivado no histórico e some dos funis.",
+      confirmLabel: "Remover",
+      destructive: true,
+    });
+    if (!ok) return;
     await api(token, `/api/public/extension/customers/${id}`, { method: "DELETE" });
     reload();
   }
 
   return (
     <div className="space-y-4">
+      {dialog}
       {/* Card de meta — gamificação */}
       <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -1635,7 +1644,14 @@ function CampaignsView({ token }: { token: string }) {
   }
 
   async function cancelCamp(c: Campaign) {
-    if (!confirm(`Cancelar campanha "${c.name}"? Jobs pendentes não serão disparados.`)) return;
+    const ok = await confirm({
+      title: `Cancelar campanha "${c.name}"?`,
+      description: "Os jobs pendentes não serão disparados.",
+      confirmLabel: "Cancelar campanha",
+      cancelLabel: "Voltar",
+      destructive: true,
+    });
+    if (!ok) return;
     await api(token, `/api/public/extension/campaigns/${c.id}`, {
       method: "PATCH",
       body: JSON.stringify({ status: "canceled" }),
@@ -1644,7 +1660,13 @@ function CampaignsView({ token }: { token: string }) {
   }
 
   async function deleteCamp(c: Campaign) {
-    if (!confirm(`Apagar a campanha "${c.name}"? Isso remove a campanha e todos os jobs dela do histórico. Não dá pra desfazer.`)) return;
+    const ok = await confirm({
+      title: `Apagar a campanha "${c.name}"?`,
+      description: "Remove a campanha e todos os jobs dela do histórico. Não dá pra desfazer.",
+      confirmLabel: "Apagar",
+      destructive: true,
+    });
+    if (!ok) return;
     await api(token, `/api/public/extension/campaigns/${c.id}`, { method: "DELETE" });
     reload();
   }
@@ -1656,6 +1678,7 @@ function CampaignsView({ token }: { token: string }) {
 
   return (
     <div className="space-y-3">
+      {dialog}
       {campaigns.map((c) => {
         const total = c.stats.pending + c.stats.sent + c.stats.failed;
         const done = c.stats.sent + c.stats.failed;
@@ -1812,7 +1835,7 @@ function SettingsView({
 
   async function pickLogo(file: File) {
     if (file.size > 400_000) {
-      alert("Logo muito grande. Use uma imagem até 400KB.");
+      toast.error("Logo muito grande. Use uma imagem até 400KB.");
       return;
     }
     const dataUrl: string = await new Promise((res) => {
