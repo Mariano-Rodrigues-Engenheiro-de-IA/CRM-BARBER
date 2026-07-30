@@ -166,10 +166,12 @@ export function FunnelsView({ api }: { api: ApiFn }) {
           </div>
 
           <div className="flex gap-3 overflow-x-auto pb-4">
-            <div className="flex w-72 shrink-0 flex-col rounded-xl border border-dashed border-neutral-300 bg-white p-3">
+            <div className="flex w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-3">
               <div className="flex items-baseline justify-between">
                 <h3 className="text-sm font-semibold text-neutral-900">Inbox</h3>
-                <span className="text-[11px] text-neutral-500">{inboxContacts.length}</span>
+                <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-[11px] font-semibold text-neutral-700">
+                  {inboxContacts.length}
+                </span>
               </div>
               <input
                 value={inboxQuery}
@@ -177,7 +179,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                 placeholder="Buscar"
                 className="mt-2 w-full rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs outline-none focus:border-neutral-900"
               />
-              <div className="mt-2 max-h-[520px] space-y-1.5 overflow-y-auto">
+              <div className="mt-3 space-y-2">
                 {inboxContacts
                   .filter((c) => {
                     const t = inboxQuery.trim().toLowerCase();
@@ -192,14 +194,15 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                         draggedContact.current = c;
                         dragged.current = null;
                       }}
-                      className="cursor-grab rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-2 text-xs active:cursor-grabbing"
+                      className="cursor-grab rounded-lg border border-neutral-200 bg-white p-3 shadow-sm active:cursor-grabbing"
                     >
-                      <p className="truncate font-medium text-neutral-900">{c.name || c.phone || c.wa_id}</p>
-                      {c.phone && <p className="truncate text-[11px] text-neutral-500">{c.phone}</p>}
+                      <p className="truncate text-sm font-medium text-neutral-900">{c.name || c.phone || c.wa_id}</p>
+                      {c.phone && <p className="mt-0.5 truncate text-[11px] text-neutral-500">{c.phone}</p>}
                     </div>
                   ))}
               </div>
             </div>
+
 
             {active.stages.map((stage) => {
               const cards = active.cards.filter((c) => c.stage_id === stage.id);
