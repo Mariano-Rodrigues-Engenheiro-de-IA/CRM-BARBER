@@ -316,7 +316,7 @@ function QuickReplyEditor({
           <input
             ref={fileInput}
             type="file"
-            accept={acceptFor((currentType as QuickReplyActionType) || "image")}
+            accept="image/*,video/*,audio/*"
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
