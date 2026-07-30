@@ -10,8 +10,8 @@ import { TeamView } from "@/components/team-view";
 import { ConnectionView } from "@/components/connection-view";
 import { QuickRepliesView } from "@/components/quick-replies-view";
 import { FunnelsView } from "@/components/funnels-view";
-import { sendWaAction, isRealPhone } from "@/lib/wa-actions";
-import type { QuickReply } from "@/lib/quick-replies";
+import { sendWaAction, isRealPhone, openWhatsappChat, applyFunnelActions } from "@/lib/wa-actions";
+import { sendableActions, type QuickReply } from "@/lib/quick-replies";
 import { PREMIUM_PRICE_LABEL, type BillingStatus } from "@/lib/billing";
 import { useConfirm } from "@/components/confirm-dialog";
 import { toast } from "sonner";
@@ -646,15 +646,22 @@ function WhatsAppActionModal({
     setErr(null);
     setFeedback(null);
     const qr = replies.find((q) => q.id === selected);
-    const r = await sendWaAction({
-      phone,
-      name: customer.name,
-      openOnly,
-      text: openOnly ? undefined : text.trim() || undefined,
-      actions: openOnly ? undefined : qr?.actions,
-    });
+    const r = openOnly
+      ? await openWhatsappChat(phone, customer.name)
+      : await sendWaAction({
+          phone,
+          name: customer.name,
+          text: text.trim() || undefined,
+          actions: qr ? sendableActions(qr.actions) : undefined,
+        });
     setBusy(false);
     if (!r.ok) { setErr(r.error || "Falha ao falar com a extensão"); return; }
+    if (!openOnly && qr) {
+      await applyFunnelActions((path, opts) => api(token, path, opts), qr.actions, {
+        title: customer.name,
+        phone,
+      });
+    }
     setFeedback(openOnly ? "Conversa aberta no WhatsApp ✔" : "Mensagem enviada ✔");
   }
 
