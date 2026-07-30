@@ -14,7 +14,7 @@ import {
   type WaContact,
   type WaLabel,
 } from "@/lib/funnels";
-import { applyFunnelActions, isRealPhone, openWhatsappChat } from "@/lib/wa-actions";
+import { applyFunnelActions, canOpenWhatsapp, isRealPhone, openWhatsappChat } from "@/lib/wa-actions";
 import { sendableActions, type QuickReply } from "@/lib/quick-replies";
 
 type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
@@ -182,47 +182,45 @@ export function FunnelsView({ api }: { api: ApiFn }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 sm:flex sm:flex-wrap sm:justify-between">
-        <h2 className="truncate text-lg font-semibold text-neutral-900">Funis de vendas</h2>
-        <button
-          onClick={() => setCreating(true)}
-          className="shrink-0 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
-        >
-          + Criar
-        </button>
-      </div>
-
       {err && <p className="text-sm text-red-500">{err}</p>}
       {loading && <p className="text-sm text-neutral-500">Carregando...</p>}
 
       {!loading && funnels.length === 0 && <p className="text-sm text-neutral-500">Nenhum funil ainda.</p>}
 
-      {funnels.length > 0 && (
-        <nav className="flex flex-wrap gap-1 rounded-lg bg-neutral-100 p-1">
-          {funnels.map((f) => (
-            <button
-              key={f.id}
-              onClick={() => setActiveId(f.id)}
-              className={
-                "rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition " +
-                (f.id === activeId ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
-              }
-            >
-              {f.name}
-            </button>
-
-          ))}
-        </nav>
-      )}
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        {funnels.length > 0 && (
+          <nav className="flex flex-wrap justify-center gap-1 rounded-lg bg-neutral-100 p-1">
+            {funnels.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setActiveId(f.id)}
+                className={
+                  "rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition " +
+                  (f.id === activeId ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
+                }
+              >
+                {f.name}
+              </button>
+            ))}
+          </nav>
+        )}
+        <button
+          onClick={() => setCreating(true)}
+          className="shrink-0 rounded-lg bg-neutral-900 px-4 py-2 text-xs font-semibold text-yellow-400 hover:bg-neutral-800"
+        >
+          + Criar
+        </button>
+      </div>
 
       {active && (
         <>
-          <div className="flex items-center justify-between gap-2 text-xs text-neutral-500">
+          <div className="flex items-center justify-center gap-3 text-xs text-neutral-500">
             <span>{active.cards.length} lead(s)</span>
             <button onClick={() => removeFunnel(active.id)} className="text-red-600 hover:underline">
               excluir
             </button>
           </div>
+
 
           <div className="flex gap-3 overflow-x-auto pb-4">
             <div className="flex w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-3">
@@ -238,7 +236,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                 placeholder="Buscar"
                 className="mt-2 w-full rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs outline-none focus:border-neutral-900"
               />
-              <div className="mt-3 max-h-[calc(100vh-320px)] space-y-2 overflow-y-auto pr-1">
+              <div className="mt-3 max-h-[calc(100vh-250px)] space-y-2 overflow-y-auto pr-1">
                 {inboxContacts
                   .filter((c) => {
                     const t = inboxQuery.trim().toLowerCase();
@@ -262,8 +260,8 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                       <div className="mt-2 flex items-center gap-1">
                         <CardAction
                           title="Abrir conversa no WhatsApp"
-                          disabled={!isRealPhone(c.phone)}
-                          onClick={() => void openWhatsappChat(c.phone!, c.name || undefined)}
+                          disabled={!canOpenWhatsapp(c.phone, c.wa_id)}
+                          onClick={() => void openWhatsappChat(c.phone || "", c.name || undefined, c.wa_id)}
                         >
                           <IconWhatsapp />
                         </CardAction>
@@ -311,7 +309,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                     <span className="shrink-0 text-[11px] text-neutral-500">{cards.length}</span>
                   </div>
 
-                  <div className="mt-3 max-h-[calc(100vh-320px)] space-y-2 overflow-y-auto pr-1">
+                  <div className="mt-3 max-h-[calc(100vh-250px)] space-y-2 overflow-y-auto pr-1">
                     {cards.map((card) => (
                       <div
                         key={card.id}

@@ -72,6 +72,7 @@
   let topbarRef = null;
   let status = { paired: false };
   let funnels = [];
+  let billing = null;
   let waData = { labels: [], contacts: [] };
   let syncTimer = null;
   let syncing = false;
@@ -227,6 +228,12 @@
       if (gear) {
         e.stopPropagation();
         return openStageMenu(gear, gear.getAttribute("data-funnel"), gear.getAttribute("data-stage"));
+      }
+
+      const premium = e.target.closest("[data-premium]");
+      if (premium) {
+        window.open(`${status.api_base || ""}/assinar`, "_blank", "noopener");
+        return;
       }
 
       const addBtn = e.target.closest(".crm-pill-add");
@@ -497,7 +504,7 @@
         `<span class="crm-topbar-hint">${
           syncing ? "sincronizando etiquetas…" : "Nenhuma etiqueta sincronizada ainda."
         }</span>`
-      }`;
+      }${premiumPill()}`;
       return;
     }
 
@@ -517,8 +524,25 @@
       )
       .join("");
 
-    topbarRef.innerHTML = `${filter}${pills}<button class="crm-pill crm-pill-add">+ etapa</button>`;
+    topbarRef.innerHTML = `${filter}${pills}<button class="crm-pill crm-pill-add">+ etapa</button>${premiumPill()}`;
   }
+
+  /** Aviso de plano vive aqui (no WhatsApp), não mais dentro do painel do CRM. */
+  function premiumPill() {
+    if (!billing || billing.premium) return "";
+    return `<button class="crm-pill crm-pill-premium" data-premium="1" title="Assinar o plano Premium">COMPRAR PREMIUM</button>`;
+  }
+
+  async function loadBilling() {
+    const r = await chrome.runtime
+      .sendMessage({ type: "api", path: "/api/public/extension/billing" })
+      .catch(() => null);
+    if (r?.ok) {
+      billing = r.billing || null;
+      renderTopbar();
+    }
+  }
+
 
 
   async function refresh() {
@@ -541,6 +565,7 @@
     startPollHeartbeat();
     startSync();
     loadFunnels();
+    loadBilling();
   }
 
   function ensureShell() {

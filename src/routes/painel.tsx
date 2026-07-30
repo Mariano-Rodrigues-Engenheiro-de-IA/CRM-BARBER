@@ -12,41 +12,10 @@ import { QuickRepliesView } from "@/components/quick-replies-view";
 import { FunnelsView, FunnelDispatchView } from "@/components/funnels-view";
 import { sendWaAction, isRealPhone, openWhatsappChat, applyFunnelActions } from "@/lib/wa-actions";
 import { sendableActions, type QuickReply } from "@/lib/quick-replies";
-import { PREMIUM_PRICE_LABEL, type BillingStatus } from "@/lib/billing";
+
 import { useConfirm } from "@/components/confirm-dialog";
 import { toast } from "sonner";
 
-/** Faixa de plano: mostra uso do grátis e leva pro checkout Premium. */
-function PlanBanner({ billing, shopId }: { billing: BillingStatus | null; shopId?: string }) {
-  if (!billing) return null;
-  if (billing.premium) {
-    return (
-      <div className="mx-6 mt-4 flex items-center justify-between rounded-xl border border-yellow-400/60 bg-yellow-50 px-4 py-2.5 text-sm">
-        <span className="font-medium text-neutral-900">Plano Premium ativo — sem limites.</span>
-      </div>
-    );
-  }
-  const restCustomers = Math.max(0, billing.limits.customers - billing.usage.customers);
-  const restMessages = Math.max(0, billing.limits.messages - billing.usage.messages);
-  return (
-    <div className="mx-6 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-900/10 bg-neutral-900 px-4 py-3 text-sm text-neutral-100">
-      <div>
-        <p className="font-semibold text-yellow-400">Plano grátis</p>
-        <p className="text-xs text-neutral-300">
-          Restam {restCustomers} assinantes e {restMessages} mensagens.
-        </p>
-      </div>
-      <a
-        href={shopId ? `/assinar?shop=${shopId}` : "/assinar"}
-        target="_blank"
-        rel="noreferrer"
-        className="rounded-lg bg-yellow-400 px-4 py-2 text-xs font-bold text-neutral-900 hover:bg-yellow-300"
-      >
-        COMPRAR PREMIUM · {PREMIUM_PRICE_LABEL}
-      </a>
-    </div>
-  );
-}
 
 import {
   SUBSCRIPTION_SYSTEMS,
@@ -311,7 +280,7 @@ function Painel() {
   const [funisTab, setFunisTab] = useState<"kanban" | "disparo" | "campanhas">("kanban");
   const [shop, setShop] = useState<{ id: string; name: string } | null>(null);
   const [brand, setBrand] = useState<Brand>({});
-  const [billing, setBilling] = useState<BillingStatus | null>(null);
+  const [showSubSettings, setShowSubSettings] = useState(false);
 
 
   useEffect(() => {
@@ -344,9 +313,6 @@ function Painel() {
         setShop(r.barbershop);
         setBrand(readBrand(r.barbershop.id));
       }
-    });
-    api(token, "/api/public/extension/billing").then((r) => {
-      if (r?.ok && r.billing) setBilling(r.billing as BillingStatus);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
@@ -457,14 +423,23 @@ function Painel() {
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="mt-14 md:mt-0">
-          <PlanBanner billing={billing} shopId={shop?.id} />
-        </div>
         {section === "assinantes" && (
           <>
             <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
-              <div className="flex flex-wrap items-center justify-end gap-4 px-6 py-4">
-                <nav className="flex gap-1 rounded-lg bg-neutral-100 p-1">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-2.5">
+                <div className="flex min-w-0 items-center gap-2">
+                  <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
+                    Gestão de assinaturas
+                  </h1>
+                  <button
+                    onClick={() => setShowSubSettings(true)}
+                    title="Configurações da assinatura"
+                    className="shrink-0 rounded-lg border border-neutral-200 p-1.5 text-neutral-500 hover:border-neutral-900 hover:text-neutral-900"
+                  >
+                    <IconGear />
+                  </button>
+                </div>
+                <nav className="flex shrink-0 gap-1 rounded-lg bg-neutral-100 p-1">
                   {(["kanban", "disparo", "campanhas"] as const).map((t) => (
                     <button
                       key={t}
@@ -482,9 +457,9 @@ function Painel() {
             </header>
 
 
-            <main className="px-6 py-6">
+            <main className="px-4 py-4">
               {tab === "kanban" && (
-                <KanbanView customers={customers} loading={loading} token={token} reload={reload} shopId={shop?.id ?? "default"} onGoSettings={() => setSection("configuracoes")} />
+                <KanbanView customers={customers} loading={loading} token={token} reload={reload} shopId={shop?.id ?? "default"} onGoSettings={() => setShowSubSettings(true)} />
               )}
               {tab === "disparo" && (
                 <DisparoView customers={customers} token={token} shopId={shop?.id ?? "default"} onDone={() => setTab("campanhas")} onNeedConnection={() => setSection("conexao")} />
@@ -495,11 +470,21 @@ function Painel() {
           </>
         )}
 
+        {showSubSettings && (
+          <SubscriptionSettingsModal
+            shopId={shop?.id ?? "default"}
+            onClose={() => setShowSubSettings(false)}
+          />
+        )}
+
         {section === "funis" && token && (
           <>
             <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
-              <div className="flex flex-wrap items-center justify-end gap-4 px-6 py-4">
-                <nav className="flex gap-1 rounded-lg bg-neutral-100 p-1">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-2.5">
+                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
+                  Funis de vendas
+                </h1>
+                <nav className="flex shrink-0 gap-1 rounded-lg bg-neutral-100 p-1">
                   {(["kanban", "disparo", "campanhas"] as const).map((t) => (
                     <button
                       key={t}
@@ -515,7 +500,7 @@ function Painel() {
                 </nav>
               </div>
             </header>
-            <main className="px-6 py-6">
+            <main className="px-4 py-4">
               {funisTab === "kanban" && (
                 <FunnelsView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
               )}
@@ -878,7 +863,7 @@ function KanbanView({
             <p className="text-3xl font-semibold text-neutral-900">{goal || "—"}</p>
             <p className="mt-1 text-xs text-neutral-500">
               {goal === 0
-                ? "Defina a meta em Configurações"
+                ? "Defina a meta na engrenagem acima"
                 : missing === 0
                   ? "Meta batida 🎉"
                   : `Faltam ${missing} assinante(s)`}
@@ -942,7 +927,7 @@ function KanbanView({
               <p className="text-xs text-neutral-500">{byStatus[col.key]?.length ?? 0} contato(s)</p>
               <p className="mt-1 text-sm font-semibold text-neutral-900">{formatBRL(colTotal(col.key))}</p>
             </div>
-            <div className="space-y-2 p-3 min-h-40">
+            <div className="max-h-[calc(100vh-330px)] min-h-40 space-y-2 overflow-y-auto p-3">
               {(byStatus[col.key] ?? []).map((c) => {
                 const plan = planFromTags(c.tags);
                 return (
@@ -1642,31 +1627,11 @@ function DisparoView({
 // Cache module-scoped: sobrevive à troca de aba, evita "Carregando..." piscando.
 const campaignsCache: Record<string, Campaign[] | undefined> = {};
 
-/** Disparo avulso: mensagem enfileirada direto de um lead, sem campanha. */
-type LooseJob = {
-  id: string;
-  phone: string;
-  rendered_body: string;
-  status: string;
-  scheduled_for: string;
-  sent_at: string | null;
-  last_error: string | null;
-};
-
-function jobStatusLabel(status: string) {
-  if (status === "sent") return "Enviado";
-  if (status === "failed") return "Falhou";
-  if (status === "expired") return "Expirado";
-  if (status === "in_flight") return "Enviando";
-  return "Na fila";
-}
 
 function CampaignsView({ token, scope = "assinaturas" }: { token: string; scope?: "assinaturas" | "funil" }) {
   const { confirm, dialog } = useConfirm();
   const [campaigns, setCampaigns] = useState<Campaign[]>(campaignsCache[scope] ?? []);
   const [loaded, setLoaded] = useState<boolean>(campaignsCache[scope] !== undefined);
-  const [looseJobs, setLooseJobs] = useState<LooseJob[]>([]);
-  const [historyTab, setHistoryTab] = useState<"campanhas" | "disparos">("campanhas");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function reload() {
@@ -1675,7 +1640,6 @@ function CampaignsView({ token, scope = "assinaturas" }: { token: string; scope?
       const list: Campaign[] = r.campaigns || [];
       campaignsCache[scope] = list;
       setCampaigns(list);
-      setLooseJobs((r.loose_jobs as LooseJob[]) || []);
     }
     setLoaded(true);
   }
@@ -1724,54 +1688,12 @@ function CampaignsView({ token, scope = "assinaturas" }: { token: string; scope?
     reload();
   }
 
-  if (!loaded && campaigns.length === 0 && looseJobs.length === 0) return null;
-
-  const tabs = (
-    <div className="flex gap-1 rounded-lg bg-neutral-100 p-1">
-      {(["campanhas", "disparos"] as const).map((t) => (
-        <button
-          key={t}
-          onClick={() => setHistoryTab(t)}
-          className={
-            "rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition " +
-            (historyTab === t ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
-          }
-        >
-          {t === "campanhas" ? `Campanhas (${campaigns.length})` : `Disparos (${looseJobs.length})`}
-        </button>
-      ))}
-    </div>
-  );
-
-  if (historyTab === "disparos") {
-    return (
-      <div className="space-y-3">
-        {dialog}
-        {tabs}
-        {looseJobs.length === 0 && <p className="text-sm text-neutral-500">Nenhum disparo avulso ainda.</p>}
-        {looseJobs.map((j) => (
-          <div key={j.id} className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-sm font-semibold text-neutral-900">{j.phone}</span>
-              <span className="text-xs uppercase tracking-wide text-neutral-500">{jobStatusLabel(j.status)}</span>
-            </div>
-            <p className="mt-1 line-clamp-2 text-xs text-neutral-600">{j.rendered_body}</p>
-            <p className="mt-1 text-[11px] text-neutral-400">
-              {new Date(j.sent_at || j.scheduled_for).toLocaleString("pt-BR", {
-                day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
-              })}
-              {j.last_error ? ` · ${j.last_error}` : ""}
-            </p>
-          </div>
-        ))}
-      </div>
-    );
-  }
+  if (!loaded && campaigns.length === 0) return null;
 
   return (
     <div className="space-y-3">
       {dialog}
-      {tabs}
+
       {loaded && campaigns.length === 0 && (
         <p className="text-sm text-neutral-500">Nenhuma campanha criada ainda.</p>
       )}
@@ -1880,40 +1802,21 @@ function Modal({
   );
 }
 
-function SettingsView({
-  brand,
-  fallbackName,
-  onSave,
-  shopId,
-}: {
-  brand: Brand;
-  fallbackName: string;
-  onSave: (b: Brand) => void;
-  shopId: string;
-}) {
-  const [name, setName] = useState(brand.name || fallbackName || "");
-  const [logo, setLogo] = useState(brand.logo || "");
-  const [saved, setSaved] = useState(false);
+/** Configurações da assinatura (sistema, planos e meta) — abre pela engrenagem. */
+function SubscriptionSettingsModal({ shopId, onClose }: { shopId: string; onClose: () => void }) {
   const [system, setSystem] = useState<SubscriptionSystemId | "">(() => readSystem(shopId) ?? "");
-  const [systemSaved, setSystemSaved] = useState(false);
   const [plans, setPlans] = useState<Plan[]>(() => readPlans(shopId));
-  const [plansSaved, setPlansSaved] = useState(false);
   const [newPlan, setNewPlan] = useState("");
   const [goal, setGoal] = useState<number>(() => readGoal(shopId));
-  const fileRef = useRef<HTMLInputElement | null>(null);
 
   function saveSystem(id: SubscriptionSystemId) {
     setSystem(id);
     writeSystem(shopId, id);
-    setSystemSaved(true);
-    setTimeout(() => setSystemSaved(false), 1800);
   }
 
   function persistPlans(next: Plan[]) {
     setPlans(next);
     writePlans(shopId, next);
-    setPlansSaved(true);
-    setTimeout(() => setPlansSaved(false), 1500);
   }
 
   function addPlan() {
@@ -1927,7 +1830,131 @@ function SettingsView({
     setNewPlan("");
   }
 
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-neutral-900/50 p-4 backdrop-blur-sm">
+      <div className="my-8 w-full max-w-lg space-y-5 rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-neutral-900">
+            Configurações da assinatura
+          </h2>
+          <button onClick={onClose} className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900">✕</button>
+        </div>
 
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Sistema</h3>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {SUBSCRIPTION_SYSTEMS.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => saveSystem(s.id)}
+                className={
+                  "rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition " +
+                  (system === s.id
+                    ? "border-neutral-900 bg-neutral-900 text-yellow-400"
+                    : "border-neutral-200 bg-white text-neutral-800 hover:border-neutral-400")
+                }
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Planos e valores</h3>
+          {plans.length === 0 && <p className="text-xs text-neutral-400">Nenhum plano ainda.</p>}
+          {plans.map((p, i) => (
+            <div key={p.name + i} className="flex items-center gap-2">
+              <input
+                value={p.name}
+                onChange={(e) => {
+                  const next = [...plans];
+                  next[i] = { ...next[i], name: e.target.value };
+                  setPlans(next);
+                }}
+                onBlur={() => persistPlans(plans)}
+                className={inputCls}
+              />
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={p.priceCents ? (p.priceCents / 100).toString() : ""}
+                placeholder="0,00"
+                onChange={(e) => {
+                  const next = [...plans];
+                  next[i] = { ...next[i], priceCents: Math.round(Number(e.target.value || 0) * 100) };
+                  setPlans(next);
+                }}
+                onBlur={() => persistPlans(plans)}
+                className={inputCls + " w-28"}
+              />
+              <button
+                type="button"
+                onClick={() => persistPlans(plans.filter((_, j) => j !== i))}
+                className="rounded p-2 text-neutral-400 hover:bg-red-50 hover:text-red-600"
+                title="Remover plano"
+              >
+                🗑
+              </button>
+            </div>
+          ))}
+          <div className="flex items-center gap-2">
+            <input
+              value={newPlan}
+              onChange={(e) => setNewPlan(e.target.value)}
+              placeholder="Novo plano"
+              className={inputCls}
+            />
+            <button
+              type="button"
+              onClick={addPlan}
+              className="shrink-0 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
+            >
+              Adicionar
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Meta do mês</h3>
+          <input
+            type="number"
+            min={0}
+            value={goal || ""}
+            placeholder="Ex.: 200"
+            onChange={(e) => setGoal(Number(e.target.value || 0))}
+            onBlur={() => writeGoal(shopId, goal)}
+            className={inputCls + " max-w-40"}
+          />
+        </div>
+
+        <button
+          onClick={() => { writeGoal(shopId, goal); persistPlans(plans); onClose(); }}
+          className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
+        >
+          Salvar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SettingsView({
+  brand,
+  fallbackName,
+  onSave,
+}: {
+  brand: Brand;
+  fallbackName: string;
+  onSave: (b: Brand) => void;
+  shopId: string;
+}) {
+  const [name, setName] = useState(brand.name || fallbackName || "");
+  const [logo, setLogo] = useState(brand.logo || "");
+  const [saved, setSaved] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
   async function pickLogo(file: File) {
     if (file.size > 400_000) {
@@ -1954,113 +1981,7 @@ function SettingsView({
     <div className="mx-auto max-w-2xl space-y-6">
       <h1 className="text-lg font-semibold text-neutral-900">Configurações</h1>
 
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-4">
-        <h2 className="text-sm font-semibold text-neutral-900">Sistema de assinatura</h2>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          {SUBSCRIPTION_SYSTEMS.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => saveSystem(s.id)}
-              className={
-                "rounded-xl border px-3 py-3 text-left text-sm transition " +
-                (system === s.id
-                  ? "border-neutral-900 bg-neutral-900 text-yellow-400"
-                  : "border-neutral-200 bg-white text-neutral-800 hover:border-neutral-400")
-              }
-            >
-              <span className="block font-semibold">{s.label}</span>
-            </button>
-          ))}
-        </div>
-        {systemSaved && <span className="text-xs font-medium text-emerald-600">Salvo ✔</span>}
-      </div>
-
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-4">
-        <div>
-          <h2 className="text-sm font-semibold text-neutral-900">Planos e valores</h2>
-        </div>
-
-        <div className="space-y-2">
-          {plans.length === 0 && (
-            <p className="text-xs text-neutral-400">Nenhum plano ainda.</p>
-          )}
-          {plans.map((p, i) => (
-            <div key={p.name + i} className="flex items-center gap-2">
-              <input
-                value={p.name}
-                onChange={(e) => {
-                  const next = [...plans];
-                  next[i] = { ...next[i], name: e.target.value };
-                  setPlans(next);
-                }}
-                onBlur={() => persistPlans(plans)}
-                className={inputCls}
-              />
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-neutral-500">R$</span>
-                <input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={p.priceCents ? (p.priceCents / 100).toString() : ""}
-                  placeholder="0,00"
-                  onChange={(e) => {
-                    const next = [...plans];
-                    next[i] = { ...next[i], priceCents: Math.round(Number(e.target.value || 0) * 100) };
-                    setPlans(next);
-                  }}
-                  onBlur={() => persistPlans(plans)}
-                  className={inputCls + " w-28"}
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => persistPlans(plans.filter((_, j) => j !== i))}
-                className="rounded p-2 text-neutral-400 hover:bg-red-50 hover:text-red-600"
-                title="Remover plano"
-              >
-                🗑
-              </button>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <input
-            value={newPlan}
-            onChange={(e) => setNewPlan(e.target.value)}
-            placeholder="Novo plano (ex.: Night Plan)"
-            className={inputCls}
-          />
-          <button
-            type="button"
-            onClick={addPlan}
-            className="shrink-0 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
-          >
-            Adicionar
-          </button>
-        </div>
-        {plansSaved && <span className="text-xs font-medium text-emerald-600">Salvo ✔</span>}
-      </div>
-
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-3">
-        <div>
-          <h2 className="text-sm font-semibold text-neutral-900">Meta do mês</h2>
-        </div>
-        <input
-          type="number"
-          min={0}
-          value={goal || ""}
-          placeholder="Ex.: 200"
-          onChange={(e) => setGoal(Number(e.target.value || 0))}
-          onBlur={() => writeGoal(shopId, goal)}
-          className={inputCls + " max-w-40"}
-        />
-      </div>
-
       <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-6">
-
         <div className="flex items-center gap-4">
           <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl bg-neutral-900 text-2xl font-semibold text-yellow-400 shadow-sm">
             {logo ? <img src={logo} alt="logo" className="h-full w-full object-cover" /> : initial}

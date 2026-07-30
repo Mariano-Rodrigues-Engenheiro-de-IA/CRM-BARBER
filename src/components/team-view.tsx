@@ -44,6 +44,9 @@ async function fileToDataUrl(file: File, max = 320): Promise<string> {
 
 type CatalogItem = { id: string; name: string; priceCents: number };
 
+/** Cliente da barbearia — usado para jornada de compra e ranking de clientes. */
+type Client = { id: string; name: string; phone?: string; createdAt: string };
+
 type Entry = {
   id: string;
   memberId: string;
@@ -52,6 +55,8 @@ type Entry = {
   amountCents: number;
   points: number;
   createdAt: string;
+  clientId?: string;
+  clientName?: string;
 };
 
 type TeamConfig = {
@@ -67,6 +72,7 @@ type TeamState = {
   config: TeamConfig;
   services: CatalogItem[];
   products: CatalogItem[];
+  clients: Client[];
 };
 
 const DEFAULT_STATE: TeamState = {
@@ -74,6 +80,7 @@ const DEFAULT_STATE: TeamState = {
   entries: [],
   services: [],
   products: [],
+  clients: [],
   config: {
     monthGoalCents: 5000000,
     perMemberGoalCents: 1500000,
@@ -97,6 +104,7 @@ function loadState(shopId: string): TeamState {
       ...parsed,
       services: parsed.services ?? [],
       products: parsed.products ?? [],
+      clients: parsed.clients ?? [],
       config: { ...DEFAULT_STATE.config, ...(parsed.config || {}) },
     };
   } catch {
@@ -161,6 +169,7 @@ export function TeamView({ shopId }: { shopId: string }) {
   const { confirm, dialog } = useConfirm();
   const [state, setState] = useState<TeamState>(DEFAULT_STATE);
   const [ready, setReady] = useState(false);
+  const [tab, setTab] = useState<"ranking" | "clientes">("ranking");
   const [showConfig, setShowConfig] = useState(false);
   const [showAddEntry, setShowAddEntry] = useState<null | string>(null);
   const [showPerf, setShowPerf] = useState<null | string>(null);
@@ -244,6 +253,36 @@ export function TeamView({ shopId }: { shopId: string }) {
   return (
     <div className="space-y-6">
       {dialog}
+      <nav className="flex gap-1 rounded-lg bg-neutral-100 p-1 w-fit">
+        {(["ranking", "clientes"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={
+              "rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition " +
+              (tab === t ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
+            }
+          >
+            {t === "ranking" ? "Equipe" : `Clientes (${state.clients.length})`}
+          </button>
+        ))}
+      </nav>
+
+      {tab === "clientes" && (
+        <ClientsPanel
+          clients={state.clients}
+          entries={state.entries}
+          onAddClient={(c) => setState((s) => ({ ...s, clients: [c, ...s.clients] }))}
+          onRemoveClient={async (id) => {
+            const ok = await confirm({ title: "Remover esse cliente?", confirmLabel: "Remover", destructive: true });
+            if (!ok) return;
+            setState((s) => ({ ...s, clients: s.clients.filter((c) => c.id !== id) }));
+          }}
+        />
+      )}
+
+      {tab === "ranking" && (
+      <>
       {/* Header + KPIs */}
       <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -416,6 +455,8 @@ export function TeamView({ shopId }: { shopId: string }) {
           })}
         </div>
       )}
+      </>
+      )}
 
       {showAddEntry && (
         <AddEntryModal
@@ -423,6 +464,8 @@ export function TeamView({ shopId }: { shopId: string }) {
           config={state.config}
           services={state.services}
           products={state.products}
+          clients={state.clients}
+          onAddClient={(c) => setState((s) => ({ ...s, clients: [c, ...s.clients] }))}
           onClose={() => setShowAddEntry(null)}
           onAdd={(entry) => setState((s) => ({ ...s, entries: [entry, ...s.entries] }))}
         />
@@ -547,6 +590,8 @@ function AddEntryModal({
   config,
   services,
   products,
+  clients,
+  onAddClient,
   onClose,
   onAdd,
 }: {
@@ -554,15 +599,42 @@ function AddEntryModal({
   config: TeamConfig;
   services: CatalogItem[];
   products: CatalogItem[];
+  clients: Client[];
+  onAddClient: (c: Client) => void;
   onClose: () => void;
   onAdd: (e: Entry) => void;
 }) {
   const [kind, setKind] = useState<"service" | "product" | "extra">("service");
   const [label, setLabel] = useState("");
   const [amount, setAmount] = useState("");
+  const [clientId, setClientId] = useState("");
+  const [clientSearch, setClientSearch] = useState("");
+  const [newClientName, setNewClientName] = useState("");
+  const [newClientPhone, setNewClientPhone] = useState("");
   const cents = Math.round(Number(amount.replace(",", ".")) * 100) || 0;
   const basePoints = Math.round((cents / 100) * config.pointsPerReal);
   const points = kind === "extra" ? basePoints + config.bonusExtra : basePoints;
+
+  const term = clientSearch.trim().toLowerCase();
+  const filteredClients = term
+    ? clients.filter((c) => c.name.toLowerCase().includes(term) || (c.phone ?? "").includes(term))
+    : clients;
+  const selectedClient = clients.find((c) => c.id === clientId) ?? null;
+
+  function createClient() {
+    const name = newClientName.trim();
+    if (!name) return;
+    const c: Client = {
+      id: crypto.randomUUID(),
+      name,
+      phone: newClientPhone.replace(/\D/g, "") || undefined,
+      createdAt: new Date().toISOString(),
+    };
+    onAddClient(c);
+    setClientId(c.id);
+    setNewClientName("");
+    setNewClientPhone("");
+  }
 
   const catalog = kind === "service" ? services : kind === "product" ? products : [];
 
@@ -572,6 +644,7 @@ function AddEntryModal({
     setLabel(item.name);
     setAmount((item.priceCents / 100).toString().replace(".", ","));
   }
+
 
   return (
     <ModalShell title={`Lançar venda · ${member.name}`} onClose={onClose}>
@@ -622,6 +695,48 @@ function AddEntryModal({
           </label>
         )}
 
+        <div className="space-y-2 rounded-lg border border-neutral-200 p-3">
+          <span className="block text-sm font-medium text-neutral-700">Cliente</span>
+          <input
+            value={clientSearch}
+            onChange={(e) => setClientSearch(e.target.value)}
+            placeholder="Buscar cliente por nome ou telefone"
+            className={inputCls}
+          />
+          <select value={clientId} onChange={(e) => setClientId(e.target.value)} className={inputCls}>
+            <option value="">— sem cliente —</option>
+            {filteredClients.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ""}</option>
+            ))}
+          </select>
+          <details>
+            <summary className="cursor-pointer text-xs font-medium text-neutral-600">Cadastrar novo cliente</summary>
+            <div className="mt-2 space-y-2">
+              <input
+                value={newClientName}
+                onChange={(e) => setNewClientName(e.target.value)}
+                placeholder="Nome"
+                className={inputCls}
+              />
+              <input
+                value={newClientPhone}
+                onChange={(e) => setNewClientPhone(e.target.value)}
+                placeholder="Telefone (só números)"
+                inputMode="tel"
+                className={inputCls}
+              />
+              <button
+                type="button"
+                onClick={createClient}
+                disabled={!newClientName.trim()}
+                className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold text-neutral-800 hover:bg-neutral-50 disabled:opacity-40"
+              >
+                Cadastrar e selecionar
+              </button>
+            </div>
+          </details>
+        </div>
+
         <label className="block">
           <span className="mb-1 block text-sm font-medium text-neutral-700">Descrição</span>
           <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="ex: Corte + Barba" className={inputCls} />
@@ -650,6 +765,8 @@ function AddEntryModal({
               amountCents: cents,
               points,
               createdAt: new Date().toISOString(),
+              clientId: selectedClient?.id,
+              clientName: selectedClient?.name,
             });
             onClose();
           }}
@@ -659,6 +776,138 @@ function AddEntryModal({
         </button>
       </div>
     </ModalShell>
+  );
+}
+
+/** Lista de clientes com jornada de compra e ranking de consumo. */
+function ClientsPanel({
+  clients,
+  entries,
+  onAddClient,
+  onRemoveClient,
+}: {
+  clients: Client[];
+  entries: Entry[];
+  onAddClient: (c: Client) => void;
+  onRemoveClient: (id: string) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  const rows = useMemo(() => {
+    const list = clients.map((c) => {
+      const es = entries
+        .filter((e) => e.clientId === c.id)
+        .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+      return {
+        client: c,
+        entries: es,
+        cents: es.reduce((s, e) => s + e.amountCents, 0),
+        visits: es.length,
+        last: es[0]?.createdAt ?? null,
+      };
+    });
+    list.sort((a, b) => b.cents - a.cents);
+    const term = search.trim().toLowerCase();
+    return term
+      ? list.filter((r) => r.client.name.toLowerCase().includes(term) || (r.client.phone ?? "").includes(term))
+      : list;
+  }, [clients, entries, search]);
+
+  const medal = (i: number) => (i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}º`);
+
+  function add() {
+    const n = name.trim();
+    if (!n) return;
+    onAddClient({
+      id: crypto.randomUUID(),
+      name: n,
+      phone: phone.replace(/\D/g, "") || undefined,
+      createdAt: new Date().toISOString(),
+    });
+    setName("");
+    setPhone("");
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do cliente" className={inputCls} />
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Telefone" inputMode="tel" className={inputCls} />
+          <button
+            onClick={add}
+            disabled={!name.trim()}
+            className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-40"
+          >
+            Adicionar
+          </button>
+        </div>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar cliente"
+          className={inputCls + " mt-2"}
+        />
+      </div>
+
+      {rows.length === 0 && (
+        <p className="rounded-2xl border border-dashed border-neutral-300 bg-white p-8 text-center text-sm text-neutral-500">
+          Nenhum cliente cadastrado ainda.
+        </p>
+      )}
+
+      {rows.map((r, i) => (
+        <div key={r.client.id} className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+          <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-100 text-sm">{medal(i)}</span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-neutral-900">{r.client.name}</p>
+              <p className="truncate text-[11px] text-neutral-500">
+                {r.client.phone ? `${r.client.phone} · ` : ""}
+                {r.visits} compras · {fmtBRL(r.cents)}
+                {r.last ? ` · última em ${new Date(r.last).toLocaleDateString("pt-BR")}` : ""}
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <button
+                onClick={() => setOpenId(openId === r.client.id ? null : r.client.id)}
+                className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
+              >
+                Jornada
+              </button>
+              <button
+                onClick={() => onRemoveClient(r.client.id)}
+                className="rounded-lg border border-neutral-300 bg-white px-2 py-1.5 text-xs text-red-600 hover:border-red-300 hover:bg-red-50"
+                title="Remover cliente"
+              >
+                Excluir
+              </button>
+            </div>
+          </div>
+
+          {openId === r.client.id && (
+            <ul className="mt-3 divide-y divide-neutral-200 border-t border-neutral-200 pt-2">
+              {r.entries.length === 0 && (
+                <li className="py-2 text-xs text-neutral-500">Nenhuma compra registrada.</li>
+              )}
+              {r.entries.map((e) => (
+                <li key={e.id} className="py-2 text-xs">
+                  <p className="font-medium text-neutral-900">{e.label}</p>
+                  <p className="text-[10px] uppercase tracking-wide text-neutral-500">
+                    {e.kind === "service" ? "Serviço" : e.kind === "product" ? "Produto" : "Extra"} ·{" "}
+                    {new Date(e.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} ·{" "}
+                    {fmtBRL(e.amountCents)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }
 
