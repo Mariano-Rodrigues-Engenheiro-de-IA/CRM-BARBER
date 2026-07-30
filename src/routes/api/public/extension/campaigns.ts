@@ -41,12 +41,15 @@ const bodySchema = z
       .max(2000)
       .optional(),
     scheduled_for: z.string().min(4).max(40).optional(),
+    // Módulos independentes: "assinaturas" (Gestão de Assinaturas) x "funil".
+    scope: z.enum(["assinaturas", "funil"]).optional(),
     filter: z
       .object({
         status: z.enum(CUSTOMER_STATUS_VALUES).optional(),
         tags: z.array(z.string().min(1).max(40)).max(10).optional(),
       })
       .optional(),
+
   })
   .refine((v) => v.message || (v.message_variants && v.message_variants.length > 0), {
     message: "Informe message ou message_variants",
