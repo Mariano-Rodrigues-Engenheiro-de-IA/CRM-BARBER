@@ -738,6 +738,7 @@ function KanbanView({
   shopId: string;
   onGoSettings: () => void;
 }) {
+  const { confirm, dialog } = useConfirm();
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [detail, setDetail] = useState<Customer | null>(null);
@@ -1613,6 +1614,7 @@ function DisparoView({
 let campaignsCache: Campaign[] | null = null;
 
 function CampaignsView({ token }: { token: string }) {
+  const { confirm, dialog } = useConfirm();
   const [campaigns, setCampaigns] = useState<Campaign[]>(campaignsCache ?? []);
   const [loaded, setLoaded] = useState<boolean>(campaignsCache !== null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
