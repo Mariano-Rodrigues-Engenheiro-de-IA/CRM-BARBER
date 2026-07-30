@@ -180,46 +180,95 @@ export function FunnelsView({ api }: { api: ApiFn }) {
     void reload();
   }
 
+  /** Renomeia uma coluna do funil ativo. */
+  async function renameStage(stage: { id: string; name: string; sort_order: number }, name: string) {
+    if (!active || !name.trim() || name.trim() === stage.name) return;
+    const funnelId = active.id;
+    setFunnels((list) =>
+      list.map((f) =>
+        f.id !== funnelId
+          ? f
+          : { ...f, stages: f.stages.map((s) => (s.id === stage.id ? { ...s, name: name.trim() } : s)) },
+      ),
+    );
+    await api(`/api/public/extension/funnels/${funnelId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ stages: [{ id: stage.id, name: name.trim(), sort_order: stage.sort_order }] }),
+    });
+  }
+
+  /** Remove uma coluna (e os cards dela, em cascata no banco). */
+  async function removeStage(stageId: string) {
+    if (!active) return;
+    const funnelId = active.id;
+    setFunnels((list) =>
+      list.map((f) =>
+        f.id !== funnelId
+          ? f
+          : {
+              ...f,
+              stages: f.stages.filter((s) => s.id !== stageId),
+              cards: f.cards.filter((c) => c.stage_id !== stageId),
+            },
+      ),
+    );
+    await api(`/api/public/extension/funnels/${funnelId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ removed_stage_ids: [stageId] }),
+    });
+  }
+
+  async function renameFunnel(id: string, name: string) {
+    if (!name.trim()) return;
+    setFunnels((list) => list.map((f) => (f.id === id ? { ...f, name: name.trim() } : f)));
+    await api(`/api/public/extension/funnels/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name: name.trim() }),
+    });
+  }
+
+  const header = (
+    <>
+      <FunnelPicker
+        funnels={funnels}
+        activeId={activeId}
+        onSelect={setActiveId}
+        onRename={renameFunnel}
+        onRemove={removeFunnel}
+      />
+      <button
+        onClick={() => setCreating(true)}
+        className="shrink-0 rounded-lg bg-neutral-900 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-yellow-400 transition hover:bg-neutral-800"
+      >
+        Criar
+      </button>
+    </>
+  );
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
+      {headerHost ? createPortal(header, headerHost) : <div className="flex items-center gap-2">{header}</div>}
+
       {err && <p className="text-sm text-red-500">{err}</p>}
-      {loading && <p className="text-sm text-neutral-500">Carregando...</p>}
 
-      {!loading && funnels.length === 0 && <p className="text-sm text-neutral-500">Nenhum funil ainda.</p>}
+      {loading && (
+        <div className="flex gap-3 overflow-hidden">
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-[calc(100vh-170px)] w-72 shrink-0 animate-pulse rounded-xl border border-neutral-200 bg-neutral-50"
+            />
+          ))}
+        </div>
+      )}
 
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        {funnels.length > 0 && (
-          <nav className="flex flex-wrap justify-center gap-1 rounded-lg bg-neutral-100 p-1">
-            {funnels.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setActiveId(f.id)}
-                className={
-                  "rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition " +
-                  (f.id === activeId ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
-                }
-              >
-                {f.name}
-              </button>
-            ))}
-          </nav>
-        )}
-        <button
-          onClick={() => setCreating(true)}
-          className="shrink-0 rounded-lg bg-neutral-900 px-4 py-2 text-xs font-semibold text-yellow-400 hover:bg-neutral-800"
-        >
-          + Criar
-        </button>
-      </div>
+      {!loading && funnels.length === 0 && (
+        <p className="text-sm text-neutral-500">Nenhum funil ainda. Use “Criar” para começar.</p>
+      )}
 
       {active && (
         <>
-          <div className="flex items-center justify-center gap-3 text-xs text-neutral-500">
-            <span>{active.cards.length} lead(s)</span>
-            <button onClick={() => removeFunnel(active.id)} className="text-red-600 hover:underline">
-              excluir
-            </button>
-          </div>
+
 
 
           <div className="flex gap-3 overflow-x-auto pb-4">
