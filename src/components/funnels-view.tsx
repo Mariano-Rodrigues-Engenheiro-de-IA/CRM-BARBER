@@ -7,6 +7,7 @@
 // anotações, mensagem agendada e disparo/abrir conversa no WhatsApp.
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   type Funnel,
   type FunnelCard,
@@ -23,7 +24,7 @@ const inputCls =
   "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-900";
 
 
-export function FunnelsView({ api }: { api: ApiFn }) {
+export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTMLElement | null }) {
   const [funnels, setFunnels] = useState<Funnel[]>([]);
   const [labels, setLabels] = useState<WaLabel[]>([]);
   const [contacts, setContacts] = useState<WaContact[]>([]);
@@ -271,7 +272,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
 
 
 
-          <div className="flex gap-3 overflow-x-auto pb-4">
+          <div className="flex gap-3 overflow-x-auto pb-2">
             <div className="flex w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-3">
               <div className="flex items-baseline justify-between gap-2">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-900">Inbox</h3>
@@ -285,7 +286,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                 placeholder="Buscar"
                 className="mt-2 w-full rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs outline-none focus:border-neutral-900"
               />
-              <div className="mt-3 max-h-[calc(100vh-250px)] space-y-2 overflow-y-auto pr-1">
+              <div className="mt-3 max-h-[calc(100vh-215px)] space-y-2 overflow-y-auto pr-1">
                 {inboxContacts
                   .filter((c) => {
                     const t = inboxQuery.trim().toLowerCase();
@@ -358,7 +359,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                     <span className="shrink-0 text-[11px] text-neutral-500">{cards.length}</span>
                   </div>
 
-                  <div className="mt-3 max-h-[calc(100vh-250px)] space-y-2 overflow-y-auto pr-1">
+                  <div className="mt-3 max-h-[calc(100vh-215px)] space-y-2 overflow-y-auto pr-1">
                     {cards.map((card) => (
                       <div
                         key={card.id}
@@ -1064,8 +1065,8 @@ export function FunnelDispatchView({ api, onDone }: { api: ApiFn; onDone?: () =>
   }
 
   return (
-    <div className="max-w-xl space-y-4">
-      <h2 className="text-lg font-semibold text-neutral-900">Novo disparo</h2>
+    <div className="mx-auto w-full max-w-xl space-y-4">
+      <h2 className="text-center text-lg font-semibold text-neutral-900">Novo disparo</h2>
 
       <div>
         <label className="mb-1 block text-xs font-medium text-neutral-600">Nome do disparo</label>
