@@ -166,6 +166,7 @@
   const GEAR_SVG = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
   const FILTER_SVG = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 8v7l-4 2v-9L3 4z"/></svg>`;
 
+  let autoSyncTried = false;
   let topbarFilter = "tabs";
   try {
     topbarFilter = localStorage.getItem("crm-topbar-filter") === "labels" ? "labels" : "tabs";
@@ -348,7 +349,12 @@
   }
 
   /** Etiqueta: filtra a lista de conversas pelos contatos daquela etiqueta. */
-  function filterByLabel(labelId, _labelName) {
+  async function filterByLabel(labelId, _labelName) {
+    // Etiqueta clicada antes da sincronização terminar: sincroniza na hora.
+    if (!(waData.contacts || []).length) {
+      syncing = false;
+      await syncWaData();
+    }
     const terms = [];
     for (const c of waData.contacts || []) {
       if (!(c.label_ids || []).includes(labelId)) continue;
@@ -482,6 +488,10 @@
             </button>`;
         })
         .join("");
+      if (!pills && !syncing && !autoSyncTried) {
+        autoSyncTried = true;
+        setTimeout(() => syncWaData(), 0);
+      }
       topbarRef.innerHTML = `${filter}${
         pills ||
         `<span class="crm-topbar-hint">${
