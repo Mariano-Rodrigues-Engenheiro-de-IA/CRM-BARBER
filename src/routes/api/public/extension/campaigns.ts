@@ -129,7 +129,9 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
               .eq("barbershop_id", barbershopId)
               .is("archived_at", null)
               .in("phone", phones);
-            const byPhone = new Map((existing ?? []).map((c) => [String(c.phone), c]));
+            const byPhone = new Map<string, { id: string; phone: string }>(
+              (existing ?? []).map((c) => [String(c.phone), { id: c.id, phone: String(c.phone) }]),
+            );
             const missing = phones.filter((p) => !byPhone.has(p));
             if (missing.length > 0) {
               const { data: created, error: insErr } = await supabaseAdmin
@@ -147,7 +149,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
               if (insErr) {
                 return jsonResponse(request, { ok: false, error: insErr.message }, { status: 500 });
               }
-              for (const c of created ?? []) byPhone.set(String(c.phone), c);
+              for (const c of created ?? []) byPhone.set(String(c.phone), { id: c.id, phone: String(c.phone) });
             }
             targets = phones.map((p) => byPhone.get(p)).filter(Boolean) as typeof targets;
           }
@@ -172,7 +174,9 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
           }
           // Planilhas sem coluna de telefone geram contatos com telefone placeholder
           // ("sem-tel-..."). Eles ficam no CRM, mas nunca entram na fila de disparo.
-          targets = (allTargets ?? []).filter((t) => /^\d{10,15}$/.test(String(t.phone ?? "")));
+          targets = (allTargets ?? [])
+            .filter((t) => /^\d{10,15}$/.test(String(t.phone ?? "")))
+            .map((t) => ({ id: t.id, phone: String(t.phone) }));
         }
 
         if (targets.length === 0) {
