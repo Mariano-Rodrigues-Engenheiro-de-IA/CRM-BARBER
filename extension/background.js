@@ -236,8 +236,6 @@ async function runWaAction(rawAction) {
   const tabs = await getWhatsappTabs();
   const candidates = tabs
     .filter((tab) => tab.id && !tab.discarded)
-  const candidates = tabs
-    .filter((tab) => tab.id && !tab.discarded)
     .sort((a, b) => Number(!!b.active) - Number(!!a.active));
   if (candidates.length === 0) {
     return { ok: false, error: "Abra o WhatsApp Web em uma aba e tente de novo." };
