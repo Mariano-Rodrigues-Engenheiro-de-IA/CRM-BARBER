@@ -1,0 +1,1 @@
+revoke execute on function public.current_barbershop_id() from anon, public;
