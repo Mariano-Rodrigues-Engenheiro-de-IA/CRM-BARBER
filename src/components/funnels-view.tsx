@@ -354,9 +354,17 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                   }}
                   className="flex w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-3"
                 >
-                  <div className="flex items-baseline justify-between gap-2">
-                    <h3 className="truncate text-sm font-semibold uppercase tracking-wide text-neutral-900">{stage.name}</h3>
-                    <span className="shrink-0 text-[11px] text-neutral-500">{cards.length}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <StageTitle name={stage.name} onRename={(n) => void renameStage(stage, n)} />
+                    <div className="flex shrink-0 items-center gap-1">
+                      <span className="text-[11px] text-neutral-500">{cards.length}</span>
+                      <DotsMenu
+                        items={[
+                          { label: "Renomear", onClick: () => setRenamingStage(stage.id) },
+                          { label: "Excluir", danger: true, onClick: () => void removeStage(stage.id) },
+                        ]}
+                      />
+                    </div>
                   </div>
 
                   <div className="mt-3 max-h-[calc(100vh-215px)] space-y-2 overflow-y-auto pr-1">
