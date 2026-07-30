@@ -41,6 +41,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
   const [inboxQuery, setInboxQuery] = useState("");
   const dragged = useRef<FunnelCard | null>(null);
   const draggedContact = useRef<WaContact | null>(null);
+  const pendingContacts = useRef<Set<string>>(new Set());
 
   async function reload() {
     const [f, w] = await Promise.all([
