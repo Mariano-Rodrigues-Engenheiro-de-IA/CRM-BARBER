@@ -225,7 +225,7 @@
       const gear = e.target.closest(".crm-pill-gear");
       if (gear) {
         e.stopPropagation();
-        return openTabMenu(gear, gear.getAttribute("data-funnel"));
+        return openStageMenu(gear, gear.getAttribute("data-funnel"), gear.getAttribute("data-stage"));
       }
 
       const addBtn = e.target.closest(".crm-pill-add");
@@ -233,10 +233,10 @@
 
       const pill = e.target.closest(".crm-pill");
       if (!pill) return;
-      const id = pill.getAttribute("data-funnel");
-      const label = pill.getAttribute("data-label-id");
-      if (label) return openPainel("funis");
-      openPainel("funis", id ? `&funnel=${encodeURIComponent(id)}` : "");
+      const labelId = pill.getAttribute("data-label-id");
+      if (labelId) return filterByLabel(labelId, pill.getAttribute("data-name") || "");
+      const stageId = pill.getAttribute("data-stage");
+      if (stageId) return filterByStage(pill.getAttribute("data-funnel"), stageId);
     });
 
     renderTopbar();
