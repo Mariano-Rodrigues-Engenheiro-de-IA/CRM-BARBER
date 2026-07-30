@@ -147,20 +147,56 @@
     return true;
   }
 
-  async function fetchBlob(url) {
-    const res = await fetch(url);
+  function base64ToBlob(base64, mime) {
+    const clean = base64.includes(",") ? base64.slice(base64.indexOf(",") + 1) : base64;
+    const bin = atob(clean);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], { type: mime || "application/octet-stream" });
+  }
+
+  /**
+   * A mídia chega em base64 do service worker: a página do WhatsApp Web tem
+   * CSP restritiva e um fetch direto pro Storage é bloqueado. O fetch aqui
+   * fica só como último recurso (mídia servida do mesmo domínio).
+   */
+  async function resolveMediaBlob(action) {
+    if (action.data_base64) return base64ToBlob(action.data_base64, action.mime);
+    if (!action.url) throw new Error("Mídia sem arquivo");
+    const res = await fetch(action.url);
     if (!res.ok) throw new Error(`Falha ao baixar mídia (HTTP ${res.status})`);
     return res.blob();
   }
 
   async function sendMediaAction(target, action) {
-    if (!action.url) throw new Error("Mídia sem URL");
-    const blob = await fetchBlob(action.url);
-    const file = new File([blob], action.filename || "arquivo", { type: action.mime || blob.type });
-    const opts = { type: action.type === "audio" ? "audio" : action.type === "video" ? "video" : "image", waitForAck: false };
+    const blob = await resolveMediaBlob(action);
+    const mime = action.mime || blob.type || "application/octet-stream";
+    const file = new File([blob], action.filename || "arquivo", { type: mime });
+    const kind = action.type === "audio" ? "audio" : action.type === "video" ? "video" : "image";
+    const opts = { type: kind, waitForAck: false };
     if (action.caption) opts.caption = action.caption;
-    if (action.type === "audio") opts.isPtt = true;
-    await window.WPP.chat.sendFileMessage(target, file, opts);
+    // PTT (áudio de voz) só é aceito em ogg/opus. Outros formatos vão como
+    // áudio comum — forçar isPtt faz o WhatsApp descartar o envio em silêncio.
+    if (kind === "audio" && /ogg|opus/i.test(mime)) opts.isPtt = true;
+
+    const attempts = [
+      ["sendFileMessage", () => {
+        if (typeof window.WPP?.chat?.sendFileMessage !== "function") throw new Error("sendFileMessage indisponível");
+        return window.WPP.chat.sendFileMessage(target, file, opts);
+      }],
+      ["sendFileMessage(document)", () => {
+        if (typeof window.WPP?.chat?.sendFileMessage !== "function") throw new Error("sendFileMessage indisponível");
+        return window.WPP.chat.sendFileMessage(target, file, { ...opts, type: "document" });
+      }],
+    ];
+
+    let lastError = "Não foi possível enviar a mídia";
+    for (const [label, fn] of attempts) {
+      const result = await tryStep(label, fn);
+      if (result.ok) return true;
+      lastError = result.error || lastError;
+    }
+    throw new Error(lastError);
   }
 
   /** Executa uma sequência de ações (texto/mídia) na conversa do contato. */
