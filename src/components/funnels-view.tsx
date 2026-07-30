@@ -38,8 +38,9 @@ export function FunnelsView({ api }: { api: ApiFn }) {
   const [creating, setCreating] = useState(false);
   const [detail, setDetail] = useState<FunnelCard | null>(null);
   const [detailTab, setDetailTab] = useState<"notes" | "schedule">("notes");
-  const [inboxOpen, setInboxOpen] = useState<string | null>(null);
+  const [inboxQuery, setInboxQuery] = useState("");
   const dragged = useRef<FunnelCard | null>(null);
+  const draggedContact = useRef<WaContact | null>(null);
 
   async function reload() {
     const [f, w] = await Promise.all([
