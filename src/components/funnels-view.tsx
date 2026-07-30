@@ -739,25 +739,22 @@ function NewFunnelModal({
     if (mode === "label") {
       if (!labels.length) return;
       onCreate(
-        {
-          name: name.trim() || "Etiquetas do WhatsApp",
-          mode: "label",
-          source_label_id: null,
-          stages: labels.map((l) => l.name),
-        },
+        { name: "Etiquetas", mode: "label", source_label_id: null, stages: labels.map((l) => l.name) },
         labels,
       );
       return;
     }
-    if (mode === "tab" && tabFunnel) {
+    if (mode === "tab") {
       if (!tabs.length) return;
-      onAddTabStages(tabFunnel, tabs);
+      if (tabFunnel) {
+        onAddTabStages(tabFunnel, tabs);
+        return;
+      }
+      onCreate({ name: "Funil principal", mode: "tab", source_label_id: null, stages: tabs });
       return;
     }
-    if (!name.trim()) return;
-    const cols = mode === "tab" ? tabs : stages;
-    if (!cols.length) return;
-    onCreate({ name: name.trim(), mode, source_label_id: null, stages: cols });
+    if (!name.trim() || !stages.length) return;
+    onCreate({ name: name.trim(), mode, source_label_id: null, stages });
   }
 
   return (
@@ -780,26 +777,22 @@ function NewFunnelModal({
           ))}
         </div>
 
-        {mode !== "label" && !(mode === "tab" && tabFunnel) && (
+        {mode === "manual" && (
           <div>
             <label className="mb-1 block text-xs font-medium text-neutral-600">Nome</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               className={inputCls}
-              placeholder={mode === "tab" ? "Funil principal" : "Ex.: Recuperação"}
+              placeholder="Ex.: Recuperação"
             />
           </div>
         )}
 
         {mode === "tab" && (
-          <StageListEditor
-            label={tabFunnel ? `Novas etapas em ${tabFunnel.name}` : "Etapas"}
-            placeholder="Ex.: Leads"
-            items={tabs}
-            onChange={setTabs}
-          />
+          <StageListEditor label="Etapas" placeholder="Ex.: Leads" items={tabs} onChange={setTabs} />
         )}
+
 
         {mode === "manual" && (
           <StageListEditor label="Etapas" placeholder="Ex.: Negociando" items={stages} onChange={setStages} />
