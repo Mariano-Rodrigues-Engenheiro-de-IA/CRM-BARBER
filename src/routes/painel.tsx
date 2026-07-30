@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { TeamView } from "@/components/team-view";
 import { ConnectionView } from "@/components/connection-view";
 import { QuickRepliesView } from "@/components/quick-replies-view";
-import { FunnelsView } from "@/components/funnels-view";
+import { FunnelsView, FunnelDispatchView } from "@/components/funnels-view";
 import { sendWaAction, isRealPhone, openWhatsappChat, applyFunnelActions } from "@/lib/wa-actions";
 import { sendableActions, type QuickReply } from "@/lib/quick-replies";
 import { PREMIUM_PRICE_LABEL, type BillingStatus } from "@/lib/billing";
@@ -308,6 +308,7 @@ function Painel() {
   })();
   const [section, setSection] = useState<Section>(initialSection);
   const [tab, setTab] = useState<AssinantesTab>("kanban");
+  const [funisTab, setFunisTab] = useState<"kanban" | "disparo" | "campanhas">("kanban");
   const [shop, setShop] = useState<{ id: string; name: string } | null>(null);
   const [brand, setBrand] = useState<Brand>({});
   const [billing, setBilling] = useState<BillingStatus | null>(null);
@@ -495,9 +496,38 @@ function Painel() {
         )}
 
         {section === "funis" && token && (
-          <main className="px-6 py-6 mt-14 md:mt-0">
-            <FunnelsView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
-          </main>
+          <>
+            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
+              <div className="flex flex-wrap items-center justify-end gap-4 px-6 py-4">
+                <nav className="flex gap-1 rounded-lg bg-neutral-100 p-1">
+                  {(["kanban", "disparo", "campanhas"] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setFunisTab(t)}
+                      className={
+                        "rounded-md px-3 py-1.5 text-xs font-medium transition " +
+                        (funisTab === t ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
+                      }
+                    >
+                      {t === "kanban" ? "Funis" : t === "disparo" ? "Novo disparo" : "Campanhas"}
+                    </button>
+                  ))}
+                </nav>
+              </div>
+            </header>
+            <main className="px-6 py-6">
+              {funisTab === "kanban" && (
+                <FunnelsView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+              )}
+              {funisTab === "disparo" && (
+                <FunnelDispatchView
+                  api={(path: string, opts?: RequestInit) => api(token, path, opts)}
+                  onDone={() => setFunisTab("campanhas")}
+                />
+              )}
+              {funisTab === "campanhas" && <CampaignsView token={token} scope="funil" />}
+            </main>
+          </>
         )}
 
         {section === "respostas" && token && (
