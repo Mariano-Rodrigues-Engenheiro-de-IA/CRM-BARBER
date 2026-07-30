@@ -205,9 +205,9 @@ function IconTrophy() {
     </svg>
   );
 }
-function IconGear() {
+function IconGear({ size = 18 }: { size?: number }) {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
     </svg>
@@ -278,6 +278,9 @@ function Painel() {
   const [section, setSection] = useState<Section>(initialSection);
   const [tab, setTab] = useState<AssinantesTab>("kanban");
   const [funisTab, setFunisTab] = useState<"kanban" | "disparo" | "campanhas">("kanban");
+  // Host do cabeçalho dos funis: o seletor de funil + "criar" moram na barra
+  // superior, mas o estado deles vive dentro do FunnelsView (portal).
+  const [funisHeaderEl, setFunisHeaderEl] = useState<HTMLDivElement | null>(null);
   const [shop, setShop] = useState<{ id: string; name: string } | null>(null);
   const [brand, setBrand] = useState<Brand>({});
   const [showSubSettings, setShowSubSettings] = useState(false);
@@ -434,9 +437,9 @@ function Painel() {
                   <button
                     onClick={() => setShowSubSettings(true)}
                     title="Configurações da assinatura"
-                    className="shrink-0 rounded-lg border border-neutral-200 p-1.5 text-neutral-500 hover:border-neutral-900 hover:text-neutral-900"
+                    className="shrink-0 rounded-md p-1 text-neutral-400 transition hover:text-neutral-900"
                   >
-                    <IconGear />
+                    <IconGear size={13} />
                   </button>
                 </div>
                 <nav className="flex shrink-0 gap-1 rounded-lg bg-neutral-100 p-1">
@@ -481,9 +484,13 @@ function Painel() {
           <>
             <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
               <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-2.5">
-                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
-                  Funis de vendas
-                </h1>
+                {funisTab === "kanban" ? (
+                  <div ref={setFunisHeaderEl} className="flex min-w-0 items-center gap-2" />
+                ) : (
+                  <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
+                    Funis de vendas
+                  </h1>
+                )}
                 <nav className="flex shrink-0 gap-1 rounded-lg bg-neutral-100 p-1">
                   {(["kanban", "disparo", "campanhas"] as const).map((t) => (
                     <button
@@ -500,9 +507,12 @@ function Painel() {
                 </nav>
               </div>
             </header>
-            <main className="px-4 py-4">
+            <main className="px-4 py-3">
               {funisTab === "kanban" && (
-                <FunnelsView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+                <FunnelsView
+                  api={(path: string, opts?: RequestInit) => api(token, path, opts)}
+                  headerHost={funisHeaderEl}
+                />
               )}
               {funisTab === "disparo" && (
                 <FunnelDispatchView

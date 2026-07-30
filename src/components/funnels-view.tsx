@@ -7,6 +7,7 @@
 // anotações, mensagem agendada e disparo/abrir conversa no WhatsApp.
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   type Funnel,
   type FunnelCard,
@@ -23,7 +24,7 @@ const inputCls =
   "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-900";
 
 
-export function FunnelsView({ api }: { api: ApiFn }) {
+export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTMLElement | null }) {
   const [funnels, setFunnels] = useState<Funnel[]>([]);
   const [labels, setLabels] = useState<WaLabel[]>([]);
   const [contacts, setContacts] = useState<WaContact[]>([]);
@@ -34,6 +35,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
   const [detail, setDetail] = useState<FunnelCard | null>(null);
   const [detailTab, setDetailTab] = useState<"notes" | "schedule">("notes");
   const [inboxQuery, setInboxQuery] = useState("");
+  const [renamingStage, setRenamingStage] = useState<string | null>(null);
   const dragged = useRef<FunnelCard | null>(null);
   const draggedContact = useRef<WaContact | null>(null);
   const pendingContacts = useRef<Set<string>>(new Set());
@@ -180,49 +182,98 @@ export function FunnelsView({ api }: { api: ApiFn }) {
     void reload();
   }
 
+  /** Renomeia uma coluna do funil ativo. */
+  async function renameStage(stage: { id: string; name: string; sort_order: number }, name: string) {
+    if (!active || !name.trim() || name.trim() === stage.name) return;
+    const funnelId = active.id;
+    setFunnels((list) =>
+      list.map((f) =>
+        f.id !== funnelId
+          ? f
+          : { ...f, stages: f.stages.map((s) => (s.id === stage.id ? { ...s, name: name.trim() } : s)) },
+      ),
+    );
+    await api(`/api/public/extension/funnels/${funnelId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ stages: [{ id: stage.id, name: name.trim(), sort_order: stage.sort_order }] }),
+    });
+  }
+
+  /** Remove uma coluna (e os cards dela, em cascata no banco). */
+  async function removeStage(stageId: string) {
+    if (!active) return;
+    const funnelId = active.id;
+    setFunnels((list) =>
+      list.map((f) =>
+        f.id !== funnelId
+          ? f
+          : {
+              ...f,
+              stages: f.stages.filter((s) => s.id !== stageId),
+              cards: f.cards.filter((c) => c.stage_id !== stageId),
+            },
+      ),
+    );
+    await api(`/api/public/extension/funnels/${funnelId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ removed_stage_ids: [stageId] }),
+    });
+  }
+
+  async function renameFunnel(id: string, name: string) {
+    if (!name.trim()) return;
+    setFunnels((list) => list.map((f) => (f.id === id ? { ...f, name: name.trim() } : f)));
+    await api(`/api/public/extension/funnels/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name: name.trim() }),
+    });
+  }
+
+  const header = (
+    <>
+      <FunnelPicker
+        funnels={funnels}
+        activeId={activeId}
+        onSelect={setActiveId}
+        onRename={renameFunnel}
+        onRemove={removeFunnel}
+      />
+      <button
+        onClick={() => setCreating(true)}
+        className="shrink-0 rounded-lg bg-neutral-900 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-yellow-400 transition hover:bg-neutral-800"
+      >
+        Criar
+      </button>
+    </>
+  );
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
+      {headerHost ? createPortal(header, headerHost) : <div className="flex items-center gap-2">{header}</div>}
+
       {err && <p className="text-sm text-red-500">{err}</p>}
-      {loading && <p className="text-sm text-neutral-500">Carregando...</p>}
 
-      {!loading && funnels.length === 0 && <p className="text-sm text-neutral-500">Nenhum funil ainda.</p>}
+      {loading && (
+        <div className="flex gap-3 overflow-hidden">
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-[calc(100vh-170px)] w-72 shrink-0 animate-pulse rounded-xl border border-neutral-200 bg-neutral-50"
+            />
+          ))}
+        </div>
+      )}
 
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        {funnels.length > 0 && (
-          <nav className="flex flex-wrap justify-center gap-1 rounded-lg bg-neutral-100 p-1">
-            {funnels.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setActiveId(f.id)}
-                className={
-                  "rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition " +
-                  (f.id === activeId ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
-                }
-              >
-                {f.name}
-              </button>
-            ))}
-          </nav>
-        )}
-        <button
-          onClick={() => setCreating(true)}
-          className="shrink-0 rounded-lg bg-neutral-900 px-4 py-2 text-xs font-semibold text-yellow-400 hover:bg-neutral-800"
-        >
-          + Criar
-        </button>
-      </div>
+      {!loading && funnels.length === 0 && (
+        <p className="text-sm text-neutral-500">Nenhum funil ainda. Use “Criar” para começar.</p>
+      )}
 
       {active && (
         <>
-          <div className="flex items-center justify-center gap-3 text-xs text-neutral-500">
-            <span>{active.cards.length} lead(s)</span>
-            <button onClick={() => removeFunnel(active.id)} className="text-red-600 hover:underline">
-              excluir
-            </button>
-          </div>
 
 
-          <div className="flex gap-3 overflow-x-auto pb-4">
+
+          <div className="flex gap-3 overflow-x-auto pb-2">
             <div className="flex w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-3">
               <div className="flex items-baseline justify-between gap-2">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-900">Inbox</h3>
@@ -236,7 +287,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                 placeholder="Buscar"
                 className="mt-2 w-full rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs outline-none focus:border-neutral-900"
               />
-              <div className="mt-3 max-h-[calc(100vh-250px)] space-y-2 overflow-y-auto pr-1">
+              <div className="mt-3 max-h-[calc(100vh-215px)] space-y-2 overflow-y-auto pr-1">
                 {inboxContacts
                   .filter((c) => {
                     const t = inboxQuery.trim().toLowerCase();
@@ -304,12 +355,28 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                   }}
                   className="flex w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-3"
                 >
-                  <div className="flex items-baseline justify-between gap-2">
-                    <h3 className="truncate text-sm font-semibold uppercase tracking-wide text-neutral-900">{stage.name}</h3>
-                    <span className="shrink-0 text-[11px] text-neutral-500">{cards.length}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <StageTitle
+                      name={stage.name}
+                      editing={renamingStage === stage.id}
+                      onRename={(n: string) => {
+                        setRenamingStage(null);
+                        void renameStage(stage, n);
+                      }}
+                      onCancel={() => setRenamingStage(null)}
+                    />
+                    <div className="flex shrink-0 items-center gap-1">
+                      <span className="text-[11px] text-neutral-500">{cards.length}</span>
+                      <DotsMenu
+                        items={[
+                          { label: "Renomear", onClick: () => setRenamingStage(stage.id) },
+                          { label: "Excluir", danger: true, onClick: () => void removeStage(stage.id) },
+                        ]}
+                      />
+                    </div>
                   </div>
 
-                  <div className="mt-3 max-h-[calc(100vh-250px)] space-y-2 overflow-y-auto pr-1">
+                  <div className="mt-3 max-h-[calc(100vh-215px)] space-y-2 overflow-y-auto pr-1">
                     {cards.map((card) => (
                       <div
                         key={card.id}
@@ -454,6 +521,158 @@ export function FunnelsView({ api }: { api: ApiFn }) {
         />
       )}
 
+    </div>
+  );
+}
+
+/** Título editável de uma coluna do funil. */
+function StageTitle({
+  name,
+  editing,
+  onRename,
+  onCancel,
+}: {
+  name: string;
+  editing: boolean;
+  onRename: (name: string) => void;
+  onCancel: () => void;
+}) {
+  if (!editing) {
+    return (
+      <h3 className="truncate text-sm font-semibold uppercase tracking-wide text-neutral-900">{name}</h3>
+    );
+  }
+  return (
+    <input
+      autoFocus
+      defaultValue={name}
+      onBlur={(e) => onRename(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") onRename((e.target as HTMLInputElement).value);
+        if (e.key === "Escape") onCancel();
+      }}
+      className="w-full min-w-0 rounded-md border border-neutral-300 px-2 py-1 text-sm font-semibold uppercase tracking-wide text-neutral-900 outline-none focus:border-neutral-900"
+    />
+  );
+}
+
+/** Menu de três pontos reutilizável (colunas e funis). */
+function DotsMenu({ items }: { items: { label: string; onClick: () => void; danger?: boolean }[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        onBlur={() => setTimeout(() => setOpen(false), 120)}
+        title="Opções"
+        className="rounded-md px-1 text-neutral-400 transition hover:text-neutral-900"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <circle cx="5" cy="12" r="1.8" />
+          <circle cx="12" cy="12" r="1.8" />
+          <circle cx="19" cy="12" r="1.8" />
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-6 z-20 w-36 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 shadow-lg">
+          {items.map((it) => (
+            <button
+              key={it.label}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setOpen(false);
+                it.onClick();
+              }}
+              className={
+                "block w-full px-3 py-1.5 text-left text-xs transition hover:bg-neutral-100 " +
+                (it.danger ? "text-red-600" : "text-neutral-700")
+              }
+            >
+              {it.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** "FUNIS DE VENDAS" vira o seletor de funil: só um funil por vez na tela. */
+function FunnelPicker({
+  funnels,
+  activeId,
+  onSelect,
+  onRename,
+  onRemove,
+}: {
+  funnels: Funnel[];
+  activeId: string | null;
+  onSelect: (id: string) => void;
+  onRename: (id: string, name: string) => void;
+  onRemove: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const active = funnels.find((f) => f.id === activeId) || null;
+
+  if (renaming && active) {
+    return (
+      <input
+        autoFocus
+        defaultValue={active.name}
+        onBlur={(e) => {
+          setRenaming(false);
+          onRename(active.id, e.target.value);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          if (e.key === "Escape") setRenaming(false);
+        }}
+        className="min-w-0 rounded-md border border-neutral-300 px-2 py-1 text-[13px] font-semibold uppercase tracking-widest text-neutral-900 outline-none focus:border-neutral-900"
+      />
+    );
+  }
+
+  return (
+    <div className="relative flex min-w-0 items-center gap-1">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        className="flex min-w-0 items-center gap-1.5 text-[13px] font-semibold uppercase tracking-widest text-neutral-900"
+      >
+        <span className="truncate">{active ? active.name : "Funis de vendas"}</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+      {active && (
+        <DotsMenu
+          items={[
+            { label: "Renomear", onClick: () => setRenaming(true) },
+            { label: "Excluir", danger: true, onClick: () => onRemove(active.id) },
+          ]}
+        />
+      )}
+      {open && funnels.length > 0 && (
+        <div className="absolute left-0 top-7 z-30 w-56 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 shadow-lg">
+          {funnels.map((f) => (
+            <button
+              key={f.id}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setOpen(false);
+                onSelect(f.id);
+              }}
+              className={
+                "block w-full truncate px-3 py-1.5 text-left text-xs transition hover:bg-neutral-100 " +
+                (f.id === activeId ? "font-semibold text-neutral-900" : "text-neutral-600")
+              }
+            >
+              {f.name}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1015,8 +1234,8 @@ export function FunnelDispatchView({ api, onDone }: { api: ApiFn; onDone?: () =>
   }
 
   return (
-    <div className="max-w-xl space-y-4">
-      <h2 className="text-lg font-semibold text-neutral-900">Novo disparo</h2>
+    <div className="mx-auto w-full max-w-xl space-y-4">
+      <h2 className="text-center text-lg font-semibold text-neutral-900">Novo disparo</h2>
 
       <div>
         <label className="mb-1 block text-xs font-medium text-neutral-600">Nome do disparo</label>
