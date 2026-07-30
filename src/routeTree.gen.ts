@@ -24,6 +24,7 @@ import { Route as ApiPublicHooksDispatchJobsRouteImport } from './routes/api/pub
 import { Route as ApiPublicExtensionQuickRepliesRouteImport } from './routes/api/public/extension/quick-replies'
 import { Route as ApiPublicExtensionPairRouteImport } from './routes/api/public/extension/pair'
 import { Route as ApiPublicExtensionMetaRouteImport } from './routes/api/public/extension/meta'
+import { Route as ApiPublicExtensionFunnelsRouteImport } from './routes/api/public/extension/funnels'
 import { Route as ApiPublicExtensionCustomersRouteImport } from './routes/api/public/extension/customers'
 import { Route as ApiPublicExtensionCampaignsRouteImport } from './routes/api/public/extension/campaigns'
 import { Route as ApiPublicExtensionBillingRouteImport } from './routes/api/public/extension/billing'
@@ -120,6 +121,12 @@ const ApiPublicExtensionMetaRoute = ApiPublicExtensionMetaRouteImport.update({
   path: '/api/public/extension/meta',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicExtensionFunnelsRoute =
+  ApiPublicExtensionFunnelsRouteImport.update({
+    id: '/api/public/extension/funnels',
+    path: '/api/public/extension/funnels',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicExtensionCustomersRoute =
   ApiPublicExtensionCustomersRouteImport.update({
     id: '/api/public/extension/customers',
@@ -230,6 +237,7 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
+  '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRoute
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
   '/api/public/extension/quick-replies': typeof ApiPublicExtensionQuickRepliesRouteWithChildren
@@ -263,6 +271,7 @@ export interface FileRoutesByTo {
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
+  '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRoute
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
   '/api/public/extension/quick-replies': typeof ApiPublicExtensionQuickRepliesRouteWithChildren
@@ -297,6 +306,7 @@ export interface FileRoutesById {
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
+  '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRoute
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
   '/api/public/extension/quick-replies': typeof ApiPublicExtensionQuickRepliesRouteWithChildren
@@ -332,6 +342,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/billing'
     | '/api/public/extension/campaigns'
     | '/api/public/extension/customers'
+    | '/api/public/extension/funnels'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
     | '/api/public/extension/quick-replies'
@@ -365,6 +376,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/billing'
     | '/api/public/extension/campaigns'
     | '/api/public/extension/customers'
+    | '/api/public/extension/funnels'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
     | '/api/public/extension/quick-replies'
@@ -398,6 +410,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/billing'
     | '/api/public/extension/campaigns'
     | '/api/public/extension/customers'
+    | '/api/public/extension/funnels'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
     | '/api/public/extension/quick-replies'
@@ -431,6 +444,7 @@ export interface RootRouteChildren {
   ApiPublicExtensionBillingRoute: typeof ApiPublicExtensionBillingRoute
   ApiPublicExtensionCampaignsRoute: typeof ApiPublicExtensionCampaignsRouteWithChildren
   ApiPublicExtensionCustomersRoute: typeof ApiPublicExtensionCustomersRouteWithChildren
+  ApiPublicExtensionFunnelsRoute: typeof ApiPublicExtensionFunnelsRoute
   ApiPublicExtensionMetaRoute: typeof ApiPublicExtensionMetaRoute
   ApiPublicExtensionPairRoute: typeof ApiPublicExtensionPairRoute
   ApiPublicExtensionQuickRepliesRoute: typeof ApiPublicExtensionQuickRepliesRouteWithChildren
@@ -552,6 +566,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/extension/meta'
       fullPath: '/api/public/extension/meta'
       preLoaderRoute: typeof ApiPublicExtensionMetaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/funnels': {
+      id: '/api/public/extension/funnels'
+      path: '/api/public/extension/funnels'
+      fullPath: '/api/public/extension/funnels'
+      preLoaderRoute: typeof ApiPublicExtensionFunnelsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/extension/customers': {
@@ -743,6 +764,7 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicExtensionCampaignsRouteWithChildren,
   ApiPublicExtensionCustomersRoute:
     ApiPublicExtensionCustomersRouteWithChildren,
+  ApiPublicExtensionFunnelsRoute: ApiPublicExtensionFunnelsRoute,
   ApiPublicExtensionMetaRoute: ApiPublicExtensionMetaRoute,
   ApiPublicExtensionPairRoute: ApiPublicExtensionPairRoute,
   ApiPublicExtensionQuickRepliesRoute:
