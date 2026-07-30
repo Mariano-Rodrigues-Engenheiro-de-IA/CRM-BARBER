@@ -15,7 +15,8 @@ import {
   type WaContact,
   type WaLabel,
 } from "@/lib/funnels";
-import { isRealPhone, sendWaAction } from "@/lib/wa-actions";
+import { isRealPhone, openWhatsappChat } from "@/lib/wa-actions";
+import { sendableActions, type QuickReply } from "@/lib/quick-replies";
 
 type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
 
@@ -189,7 +190,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
               key={f.id}
               onClick={() => setActiveId(f.id)}
               className={
-                "rounded-md px-3 py-1.5 text-xs font-medium transition " +
+                "rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition " +
                 (f.id === activeId ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
               }
             >
@@ -212,7 +213,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
           <div className="flex gap-3 overflow-x-auto pb-4">
             <div className="flex w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-3">
               <div className="flex items-baseline justify-between">
-                <h3 className="text-sm font-semibold text-neutral-900">Inbox</h3>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-900">Inbox</h3>
                 <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-[11px] font-semibold text-neutral-700">
                   {inboxContacts.length}
                 </span>
@@ -273,7 +274,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                   className="flex w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-3"
                 >
                   <div className="flex items-baseline justify-between">
-                    <h3 className="text-sm font-semibold text-neutral-900">{stage.name}</h3>
+                    <h3 className="truncate text-sm font-semibold uppercase tracking-wide text-neutral-900">{stage.name}</h3>
                     <span className="text-[11px] text-neutral-500">{cards.length}</span>
                   </div>
                   <p className="mt-0.5 text-[11px] font-medium text-neutral-500">{formatBRL(total)}</p>
@@ -315,7 +316,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                             title="Abrir conversa no WhatsApp"
                             disabled={!isRealPhone(card.phone)}
                             onClick={() =>
-                              void sendWaAction({ phone: card.phone!, name: card.title, openOnly: true })
+                              void openWhatsappChat(card.phone!, card.title)
                             }
                           >
                             <IconWhatsapp />
@@ -563,7 +564,7 @@ function CardDrawer({
                 key={t}
                 onClick={() => setTab(t)}
                 className={
-                  "rounded-md px-3 py-1.5 text-xs font-medium transition " +
+                  "rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition " +
                   (tab === t ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
                 }
               >
@@ -573,7 +574,7 @@ function CardDrawer({
           </div>
           {isRealPhone(card.phone) && (
             <button
-              onClick={() => void sendWaAction({ phone: card.phone!, name: card.title, openOnly: true })}
+              onClick={() => void openWhatsappChat(card.phone!, card.title)}
               className="ml-auto flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
             >
               <IconWhatsapp /> WhatsApp
