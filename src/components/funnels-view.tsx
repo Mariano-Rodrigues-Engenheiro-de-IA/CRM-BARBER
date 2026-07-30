@@ -22,11 +22,6 @@ type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknow
 const inputCls =
   "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-900";
 
-const MODE_LABEL: Record<FunnelMode, string> = {
-  tab: "principal",
-  label: "etiqueta",
-  manual: "funil",
-};
 
 export function FunnelsView({ api }: { api: ApiFn }) {
   const [funnels, setFunnels] = useState<Funnel[]>([]);
