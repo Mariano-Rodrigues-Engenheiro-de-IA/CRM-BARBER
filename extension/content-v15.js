@@ -1,9 +1,9 @@
-// Content script v0.23.0 — abas do CRM no topo do WhatsApp Web + trilho de
+// Content script v0.23.1 — abas do CRM no topo do WhatsApp Web + trilho de
 // ícones minimalista à esquerda. Clicar numa aba/etiqueta filtra a própria
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.23.0";
+  const CRM_VERSION = "0.23.1";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -163,7 +163,7 @@
     exit: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>`,
   };
 
-  const GEAR_SVG = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9M4.6 9a1.7 1.7 0 0 0-.3-1.9"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>`;
+  const GEAR_SVG = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
   const FILTER_SVG = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 8v7l-4 2v-9L3 4z"/></svg>`;
 
   let topbarFilter = "tabs";
@@ -318,9 +318,14 @@
     if (!activeFilter) return;
     for (const row of chatRows()) {
       const text = rowText(row);
-      row.style.display = activeFilter.terms.some((t) => t && text.includes(t)) ? "" : "none";
+      const digits = text.replace(/\D/g, "");
+      const match = activeFilter.terms.some((t) =>
+        /^\d{8,}$/.test(t) ? digits.includes(t.slice(-8)) : text.includes(t),
+      );
+      row.style.display = match ? "" : "none";
     }
   }
+
 
   function clearChatFilter() {
     for (const row of chatRows()) row.style.display = "";
@@ -342,37 +347,31 @@
     renderTopbar();
   }
 
-  /** Etiqueta: tenta o filtro nativo do WhatsApp; se não achar, filtra a lista. */
-  function filterByLabel(labelId, labelName) {
-    const key = `label:${labelId}`;
-    if (activeFilter?.key !== key) {
-      const name = String(labelName || "").trim().toLowerCase();
-      const native = Array.from(document.querySelectorAll('button, [role="button"], [role="tab"]')).find(
-        (el) =>
-          !el.closest("#crm-topbar") &&
-          !el.closest("#crm-rail") &&
-          String(el.getAttribute("aria-label") || el.textContent || "").trim().toLowerCase() === name,
-      );
-      if (native) {
-        native.click();
-        return;
-      }
+  /** Etiqueta: filtra a lista de conversas pelos contatos daquela etiqueta. */
+  function filterByLabel(labelId, _labelName) {
+    const terms = [];
+    for (const c of waData.contacts || []) {
+      if (!(c.label_ids || []).includes(labelId)) continue;
+      if (c.name) terms.push(c.name);
+      if (c.phone) terms.push(c.phone);
+      if (!c.name && !c.phone && c.wa_id) terms.push(String(c.wa_id).split("@")[0]);
     }
-    const terms = (waData.contacts || [])
-      .filter((c) => (c.label_ids || []).includes(labelId))
-      .map((c) => c.name || c.phone || c.wa_id);
-    setChatFilter(key, terms);
+    setChatFilter(`label:${labelId}`, terms);
   }
 
   /** Aba/etapa do funil principal: filtra a lista pelos leads daquela etapa. */
   function filterByStage(funnelId, stageId) {
     const funnel = funnels.find((f) => f.id === funnelId);
     if (!funnel) return;
-    const terms = (funnel.cards || [])
-      .filter((c) => c.stage_id === stageId)
-      .map((c) => c.title || c.phone);
+    const terms = [];
+    for (const c of funnel.cards || []) {
+      if (c.stage_id !== stageId) continue;
+      if (c.title) terms.push(c.title);
+      if (c.phone) terms.push(c.phone);
+    }
     setChatFilter(`stage:${stageId}`, terms);
   }
+
 
   function tabFunnel() {
     return funnels.find((f) => f.mode === "tab") || null;
@@ -497,15 +496,14 @@
       .flatMap((f) =>
         (f.stages || []).map((s) => {
           const cards = (f.cards || []).filter((c) => c.stage_id === s.id);
-          const total = cards.reduce((sum, c) => sum + (c.value_cents || 0), 0);
           const on = activeFilter?.key === `stage:${s.id}`;
           return `<span class="crm-pill${on ? " crm-pill-on" : ""}" data-funnel="${escapeHtml(f.id)}" data-stage="${escapeHtml(s.id)}">
             ${escapeHtml(s.name)}
             <span class="crm-pill-count">${cards.length}</span>
-            <span class="crm-pill-value">${escapeHtml(formatBRL(total))}</span>
             <button class="crm-pill-gear" data-funnel="${escapeHtml(f.id)}" data-stage="${escapeHtml(s.id)}" title="Opções">${GEAR_SVG}</button>
           </span>`;
         }),
+
       )
       .join("");
 

@@ -22,11 +22,6 @@ type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknow
 const inputCls =
   "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-900";
 
-const MODE_LABEL: Record<FunnelMode, string> = {
-  tab: "principal",
-  label: "etiqueta",
-  manual: "funil",
-};
 
 export function FunnelsView({ api }: { api: ApiFn }) {
   const [funnels, setFunnels] = useState<Funnel[]>([]);
@@ -41,6 +36,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
   const [inboxQuery, setInboxQuery] = useState("");
   const dragged = useRef<FunnelCard | null>(null);
   const draggedContact = useRef<WaContact | null>(null);
+  const pendingContacts = useRef<Set<string>>(new Set());
 
   async function reload() {
     const [f, w] = await Promise.all([
@@ -70,11 +66,10 @@ export function FunnelsView({ api }: { api: ApiFn }) {
 
   const inboxContacts = useMemo(() => {
     if (!active) return [];
-    return contacts
-      .filter((c) => !c.is_group)
-      .filter((c) => !active.cards.some((card) => card.wa_contact_id === c.id))
-      .slice(0, 200);
+    const used = new Set(active.cards.map((card) => card.wa_contact_id).filter(Boolean) as string[]);
+    return contacts.filter((c) => !c.is_group).filter((c) => !used.has(c.id));
   }, [active, contacts]);
+
 
   async function moveCard(card: FunnelCard, stageId: string) {
     if (card.stage_id === stageId) return;
@@ -107,13 +102,62 @@ export function FunnelsView({ api }: { api: ApiFn }) {
     payload: { title: string; phone?: string; value_cents?: number; wa_contact_id?: string },
   ) {
     if (!active || !stageId) return;
+    // Guard: um mesmo contato só pode entrar uma vez no funil (constraint
+    // funnel_cards_unique_contact). Sem isso, o drop repetido enquanto a
+    // requisição está em voo criava duas inserções.
+    const key = payload.wa_contact_id;
+    if (key) {
+      if (pendingContacts.current.has(key)) return;
+      if (active.cards.some((c) => c.wa_contact_id === key)) return;
+      pendingContacts.current.add(key);
+    }
+
+    const funnelId = active.id;
+    // Card otimista: some do Inbox e aparece na coluna na hora (sem delay).
+    const tempId = `tmp-${key ?? Math.random().toString(36).slice(2)}`;
+    setFunnels((list) =>
+      list.map((f) =>
+        f.id !== funnelId
+          ? f
+          : {
+              ...f,
+              cards: [
+                ...f.cards,
+                {
+                  id: tempId,
+                  funnel_id: funnelId,
+                  stage_id: stageId,
+                  title: payload.title,
+                  phone: payload.phone ?? null,
+                  value_cents: payload.value_cents ?? null,
+                  notes: null,
+                  sort_order: f.cards.length,
+                  customer_id: null,
+                  wa_contact_id: key ?? null,
+                } as FunnelCard,
+              ],
+            },
+      ),
+    );
+
     const r = await api("/api/public/extension/funnel-cards", {
       method: "POST",
-      body: JSON.stringify({ funnel_id: active.id, stage_id: stageId, ...payload }),
+      body: JSON.stringify({ funnel_id: funnelId, stage_id: stageId, ...payload }),
     });
-    if (r?.ok) void reload();
-    else setErr((r?.error as string) || "Erro ao criar card");
+    if (key) pendingContacts.current.delete(key);
+    if (r?.ok && r.card) {
+      const created = r.card as FunnelCard;
+      setFunnels((list) =>
+        list.map((f) =>
+          f.id !== funnelId ? f : { ...f, cards: f.cards.map((c) => (c.id === tempId ? created : c)) },
+        ),
+      );
+      return;
+    }
+    setErr((r?.error as string) || "Erro ao criar card");
+    void reload();
   }
+
 
   async function removeFunnel(id: string) {
     await api(`/api/public/extension/funnels/${id}`, { method: "DELETE" });
@@ -150,8 +194,8 @@ export function FunnelsView({ api }: { api: ApiFn }) {
               }
             >
               {f.name}
-              <span className="ml-1 text-[10px] text-yellow-700">{MODE_LABEL[f.mode]}</span>
             </button>
+
           ))}
         </nav>
       )}
@@ -166,10 +210,12 @@ export function FunnelsView({ api }: { api: ApiFn }) {
           </div>
 
           <div className="flex gap-3 overflow-x-auto pb-4">
-            <div className="flex w-72 shrink-0 flex-col rounded-xl border border-dashed border-neutral-300 bg-white p-3">
+            <div className="flex w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-3">
               <div className="flex items-baseline justify-between">
                 <h3 className="text-sm font-semibold text-neutral-900">Inbox</h3>
-                <span className="text-[11px] text-neutral-500">{inboxContacts.length}</span>
+                <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-[11px] font-semibold text-neutral-700">
+                  {inboxContacts.length}
+                </span>
               </div>
               <input
                 value={inboxQuery}
@@ -177,7 +223,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                 placeholder="Buscar"
                 className="mt-2 w-full rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs outline-none focus:border-neutral-900"
               />
-              <div className="mt-2 max-h-[520px] space-y-1.5 overflow-y-auto">
+              <div className="mt-3 space-y-2">
                 {inboxContacts
                   .filter((c) => {
                     const t = inboxQuery.trim().toLowerCase();
@@ -192,14 +238,15 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                         draggedContact.current = c;
                         dragged.current = null;
                       }}
-                      className="cursor-grab rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-2 text-xs active:cursor-grabbing"
+                      className="cursor-grab rounded-lg border border-neutral-200 bg-white p-3 shadow-sm active:cursor-grabbing"
                     >
-                      <p className="truncate font-medium text-neutral-900">{c.name || c.phone || c.wa_id}</p>
-                      {c.phone && <p className="truncate text-[11px] text-neutral-500">{c.phone}</p>}
+                      <p className="truncate text-sm font-medium text-neutral-900">{c.name || c.phone || c.wa_id}</p>
+                      {c.phone && <p className="mt-0.5 truncate text-[11px] text-neutral-500">{c.phone}</p>}
                     </div>
                   ))}
               </div>
             </div>
+
 
             {active.stages.map((stage) => {
               const cards = active.cards.filter((c) => c.stage_id === stage.id);
@@ -692,25 +739,22 @@ function NewFunnelModal({
     if (mode === "label") {
       if (!labels.length) return;
       onCreate(
-        {
-          name: name.trim() || "Etiquetas do WhatsApp",
-          mode: "label",
-          source_label_id: null,
-          stages: labels.map((l) => l.name),
-        },
+        { name: "Etiquetas", mode: "label", source_label_id: null, stages: labels.map((l) => l.name) },
         labels,
       );
       return;
     }
-    if (mode === "tab" && tabFunnel) {
+    if (mode === "tab") {
       if (!tabs.length) return;
-      onAddTabStages(tabFunnel, tabs);
+      if (tabFunnel) {
+        onAddTabStages(tabFunnel, tabs);
+        return;
+      }
+      onCreate({ name: "Funil principal", mode: "tab", source_label_id: null, stages: tabs });
       return;
     }
-    if (!name.trim()) return;
-    const cols = mode === "tab" ? tabs : stages;
-    if (!cols.length) return;
-    onCreate({ name: name.trim(), mode, source_label_id: null, stages: cols });
+    if (!name.trim() || !stages.length) return;
+    onCreate({ name: name.trim(), mode, source_label_id: null, stages });
   }
 
   return (
@@ -733,26 +777,22 @@ function NewFunnelModal({
           ))}
         </div>
 
-        {mode !== "label" && !(mode === "tab" && tabFunnel) && (
+        {mode === "manual" && (
           <div>
             <label className="mb-1 block text-xs font-medium text-neutral-600">Nome</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               className={inputCls}
-              placeholder={mode === "tab" ? "Funil principal" : "Ex.: Recuperação"}
+              placeholder="Ex.: Recuperação"
             />
           </div>
         )}
 
         {mode === "tab" && (
-          <StageListEditor
-            label={tabFunnel ? `Novas etapas em ${tabFunnel.name}` : "Etapas"}
-            placeholder="Ex.: Leads"
-            items={tabs}
-            onChange={setTabs}
-          />
+          <StageListEditor label="Etapas" placeholder="Ex.: Leads" items={tabs} onChange={setTabs} />
         )}
+
 
         {mode === "manual" && (
           <StageListEditor label="Etapas" placeholder="Ex.: Negociando" items={stages} onChange={setStages} />
