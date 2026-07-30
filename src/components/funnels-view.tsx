@@ -153,10 +153,25 @@ export function FunnelsView({ api }: { api: ApiFn }) {
           f.id !== funnelId ? f : { ...f, cards: f.cards.map((c) => (c.id === tempId ? created : c)) },
         ),
       );
-      return;
+      return created;
     }
     setErr((r?.error as string) || "Erro ao criar card");
     void reload();
+    return null;
+  }
+
+  /** Contato do Inbox vira lead na primeira etapa para ganhar pipeline. */
+  async function promoteContact(c: WaContact, tab: "notes" | "schedule") {
+    const stageId = active?.stages[0]?.id;
+    if (!stageId) return;
+    const created = await addCard(stageId, {
+      title: c.name || c.phone || c.wa_id,
+      phone: c.phone ?? undefined,
+      wa_contact_id: c.id,
+    });
+    if (!created) return;
+    setDetailTab(tab);
+    setDetail(created);
   }
 
 
@@ -242,7 +257,27 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                       className="cursor-grab rounded-lg border border-neutral-200 bg-white p-3 shadow-sm active:cursor-grabbing"
                     >
                       <p className="truncate text-sm font-medium text-neutral-900">{c.name || c.phone || c.wa_id}</p>
-                      {c.phone && <p className="mt-0.5 truncate text-[11px] text-neutral-500">{c.phone}</p>}
+                      {isRealPhone(c.phone) && (
+                        <p className="mt-0.5 truncate text-[11px] text-neutral-500">{c.phone}</p>
+                      )}
+                      <div className="mt-2 flex items-center gap-1">
+                        <CardAction
+                          title="Abrir conversa no WhatsApp"
+                          disabled={!isRealPhone(c.phone)}
+                          onClick={() => void openWhatsappChat(c.phone!, c.name || undefined)}
+                        >
+                          <IconWhatsapp />
+                        </CardAction>
+                        <CardAction title="Anotações" onClick={() => void promoteContact(c, "notes")}>
+                          <IconNote />
+                        </CardAction>
+                        <CardAction
+                          title="Mensagem agendada / disparo"
+                          onClick={() => void promoteContact(c, "schedule")}
+                        >
+                          <IconClock />
+                        </CardAction>
+                      </div>
                     </div>
                   ))}
               </div>
