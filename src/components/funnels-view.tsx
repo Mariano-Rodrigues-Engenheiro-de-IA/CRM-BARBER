@@ -631,6 +631,72 @@ function InboxPicker({
   );
 }
 
+/** Lista de etapas/abas adicionadas uma a uma (sem vírgulas). */
+function StageListEditor({
+  label,
+  placeholder,
+  items,
+  onChange,
+}: {
+  label: string;
+  placeholder: string;
+  items: string[];
+  onChange: (items: string[]) => void;
+}) {
+  const [draft, setDraft] = useState("");
+
+  function add() {
+    const v = draft.trim();
+    if (!v || items.includes(v)) return;
+    onChange([...items, v]);
+    setDraft("");
+  }
+
+  return (
+    <div>
+      <label className="mb-1 block text-xs font-medium text-neutral-600">{label}</label>
+      <div className="flex gap-2">
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              add();
+            }
+          }}
+          placeholder={placeholder}
+          className={inputCls}
+        />
+        <button
+          onClick={add}
+          className="shrink-0 rounded-lg bg-neutral-900 px-3 py-2 text-sm font-semibold text-yellow-400"
+        >
+          + adicionar
+        </button>
+      </div>
+      {items.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {items.map((s, i) => (
+            <span
+              key={s}
+              className="inline-flex items-center gap-1 rounded-full border border-neutral-300 bg-neutral-50 px-2.5 py-1 text-xs text-neutral-800"
+            >
+              {s}
+              <button
+                onClick={() => onChange(items.filter((_, idx) => idx !== i))}
+                className="text-neutral-400 hover:text-red-600"
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function NewFunnelModal({
   labels,
   onClose,
@@ -638,26 +704,49 @@ function NewFunnelModal({
 }: {
   labels: WaLabel[];
   onClose: () => void;
-  onCreate: (body: {
-    name: string;
-    mode: FunnelMode;
-    source_label_id?: string | null;
-    stages?: string[];
-  }) => void;
+  onCreate: (
+    body: {
+      name: string;
+      mode: FunnelMode;
+      source_label_id?: string | null;
+      stages?: string[];
+    },
+    labelStages?: WaLabel[],
+  ) => void;
 }) {
   const [name, setName] = useState("");
   const [mode, setMode] = useState<FunnelMode>("tab");
-  const [labelId, setLabelId] = useState("");
-  const [stages, setStages] = useState("Novo lead, Em conversa, Negociando, Fechado");
+  const [tabs, setTabs] = useState<string[]>([]);
+  const [stages, setStages] = useState<string[]>(["Novo lead", "Em conversa", "Negociando", "Fechado"]);
 
   const options: Array<{ key: FunnelMode; title: string; desc: string }> = [
     { key: "tab", title: "Aba", desc: "Aparece no topo do WhatsApp Web" },
-    { key: "label", title: "Etiqueta", desc: "Usa uma etiqueta nativa" },
+    { key: "label", title: "Etiquetas", desc: "Cada etiqueta vira uma etapa" },
     { key: "manual", title: "Novo funil", desc: "Colunas e leads manuais" },
   ];
 
+  function submit() {
+    if (mode === "label") {
+      if (!labels.length) return;
+      onCreate(
+        {
+          name: name.trim() || "Etiquetas do WhatsApp",
+          mode: "label",
+          source_label_id: null,
+          stages: labels.map((l) => l.name),
+        },
+        labels,
+      );
+      return;
+    }
+    if (!name.trim()) return;
+    const cols = mode === "tab" ? tabs : stages;
+    if (!cols.length) return;
+    onCreate({ name: name.trim(), mode, source_label_id: null, stages: cols });
+  }
+
   return (
-    <Overlay title="Criar CRM" onClose={onClose}>
+    <Overlay title="Criar funil" onClose={onClose}>
       <div className="space-y-4">
         <div className="grid grid-cols-3 gap-2">
           {options.map((o) => (
@@ -677,57 +766,65 @@ function NewFunnelModal({
           ))}
         </div>
 
-        <div>
-          <label className="mb-1 block text-xs font-medium text-neutral-600">Nome</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className={inputCls}
-            placeholder={mode === "tab" ? "Ex.: Orçamentos" : "Ex.: Recuperação de inadimplentes"}
+        {mode !== "label" && (
+          <div>
+            <label className="mb-1 block text-xs font-medium text-neutral-600">Nome</label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={inputCls}
+              placeholder={mode === "tab" ? "Ex.: Orçamentos" : "Ex.: Recuperação de inadimplentes"}
+            />
+          </div>
+        )}
+
+        {mode === "tab" && (
+          <StageListEditor
+            label="Abas (adicione uma por vez)"
+            placeholder="Ex.: Leads"
+            items={tabs}
+            onChange={setTabs}
           />
-        </div>
+        )}
+
+        {mode === "manual" && (
+          <StageListEditor
+            label="Colunas do funil (adicione uma por vez)"
+            placeholder="Ex.: Negociando"
+            items={stages}
+            onChange={setStages}
+          />
+        )}
 
         {mode === "label" && (
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600">Etiqueta do WhatsApp</label>
-            <select value={labelId} onChange={(e) => setLabelId(e.target.value)} className={inputCls}>
-              <option value="">Selecione…</option>
+          <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+            <p className="text-xs text-neutral-600">
+              Todas as etiquetas do WhatsApp viram etapas automaticamente, já com os contatos de cada uma.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
               {labels.map((l) => (
-                <option key={l.id} value={l.wa_label_id}>
-                  {l.name} ({l.conversation_count})
-                </option>
+                <span
+                  key={l.id}
+                  className="rounded-full border border-neutral-300 bg-white px-2.5 py-1 text-xs text-neutral-800"
+                >
+                  {l.name} · {l.conversation_count}
+                </span>
               ))}
-            </select>
+            </div>
             {labels.length === 0 && (
-              <p className="mt-1 text-[11px] text-neutral-500">
+              <p className="mt-2 text-[11px] text-neutral-500">
                 Nenhuma etiqueta sincronizada ainda — abra o WhatsApp Web com a extensão ativa.
               </p>
             )}
           </div>
         )}
 
-        <div>
-          <label className="mb-1 block text-xs font-medium text-neutral-600">Colunas (separadas por vírgula)</label>
-          <input value={stages} onChange={(e) => setStages(e.target.value)} className={inputCls} />
-        </div>
-
         <div className="flex justify-end gap-2">
           <button onClick={onClose} className="rounded-lg border border-neutral-300 px-4 py-2 text-sm">
             Cancelar
           </button>
           <button
-            onClick={() => {
-              if (!name.trim()) return;
-              onCreate({
-                name: name.trim(),
-                mode,
-                source_label_id: mode === "label" ? labelId || null : null,
-                stages: stages
-                  .split(",")
-                  .map((s) => s.trim())
-                  .filter(Boolean),
-              });
-            }}
+            onClick={submit}
             className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400"
           >
             Criar
@@ -737,6 +834,7 @@ function NewFunnelModal({
     </Overlay>
   );
 }
+
 
 function AddCardForm({
   onAdd,
