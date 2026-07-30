@@ -33,7 +33,7 @@ function PlanBanner({ billing, shopId }: { billing: BillingStatus | null; shopId
       <div>
         <p className="font-semibold text-yellow-400">Plano grátis</p>
         <p className="text-xs text-neutral-300">
-          Restam {restCustomers} assinantes e {restMessages} mensagens. Depois disso o disparo trava.
+          Restam {restCustomers} assinantes e {restMessages} mensagens.
         </p>
       </div>
       <a
@@ -1573,9 +1573,6 @@ function DisparoView({
           <input type="number" min={5} max={600} value={paceMax} onChange={(e) => setPaceMax(Number(e.target.value))} className={inputCls} />
         </Field>
       </div>
-      <p className="-mt-3 text-xs text-neutral-500">
-        Cada mensagem sai com espaçamento aleatório dentro dessa faixa.
-      </p>
 
       <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
         <p className="text-sm font-semibold text-neutral-900">Termo de uso</p>
@@ -1880,17 +1877,11 @@ function SettingsView({
       <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-4">
         <div>
           <h2 className="text-sm font-semibold text-neutral-900">Planos e valores</h2>
-          <p className="mt-1 text-xs text-neutral-500">
-            Cadastre o valor de cada plano. O CRM usa o plano que vem na planilha para
-            somar o faturamento de cada coluna do Kanban.
-          </p>
         </div>
 
         <div className="space-y-2">
           {plans.length === 0 && (
-            <p className="text-xs text-neutral-400">
-              Nenhum plano ainda. Importe a planilha (os planos são detectados sozinhos) ou cadastre abaixo.
-            </p>
+            <p className="text-xs text-neutral-400">Nenhum plano ainda.</p>
           )}
           {plans.map((p, i) => (
             <div key={p.name + i} className="flex items-center gap-2">
@@ -1954,9 +1945,6 @@ function SettingsView({
       <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-3">
         <div>
           <h2 className="text-sm font-semibold text-neutral-900">Meta do mês</h2>
-          <p className="mt-1 text-xs text-neutral-500">
-            Quantos assinantes ativos você quer fechar o mês. Vira a barra de progresso no Kanban.
-          </p>
         </div>
         <input
           type="number"
