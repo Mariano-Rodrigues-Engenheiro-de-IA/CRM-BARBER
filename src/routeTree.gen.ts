@@ -40,6 +40,7 @@ import { Route as ApiPublicExtensionQuickRepliesIdRouteImport } from './routes/a
 import { Route as ApiPublicExtensionJobsNextRouteImport } from './routes/api/public/extension/jobs.next'
 import { Route as ApiPublicExtensionJobsIdRouteImport } from './routes/api/public/extension/jobs.$id'
 import { Route as ApiPublicExtensionFunnelsIdRouteImport } from './routes/api/public/extension/funnels.$id'
+import { Route as ApiPublicExtensionFunnelCardsScheduleRouteImport } from './routes/api/public/extension/funnel-cards.schedule'
 import { Route as ApiPublicExtensionCustomersImportRouteImport } from './routes/api/public/extension/customers.import'
 import { Route as ApiPublicExtensionCustomersIdRouteImport } from './routes/api/public/extension/customers.$id'
 import { Route as ApiPublicExtensionCampaignsIdRouteImport } from './routes/api/public/extension/campaigns.$id'
@@ -219,6 +220,12 @@ const ApiPublicExtensionFunnelsIdRoute =
     path: '/$id',
     getParentRoute: () => ApiPublicExtensionFunnelsRoute,
   } as any)
+const ApiPublicExtensionFunnelCardsScheduleRoute =
+  ApiPublicExtensionFunnelCardsScheduleRouteImport.update({
+    id: '/schedule',
+    path: '/schedule',
+    getParentRoute: () => ApiPublicExtensionFunnelCardsRoute,
+  } as any)
 const ApiPublicExtensionCustomersImportRoute =
   ApiPublicExtensionCustomersImportRouteImport.update({
     id: '/import',
@@ -251,7 +258,7 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
-  '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRoute
+  '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRouteWithChildren
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
@@ -262,6 +269,7 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
+  '/api/public/extension/funnel-cards/schedule': typeof ApiPublicExtensionFunnelCardsScheduleRoute
   '/api/public/extension/funnels/$id': typeof ApiPublicExtensionFunnelsIdRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
@@ -287,7 +295,7 @@ export interface FileRoutesByTo {
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
-  '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRoute
+  '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRouteWithChildren
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
@@ -298,6 +306,7 @@ export interface FileRoutesByTo {
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
+  '/api/public/extension/funnel-cards/schedule': typeof ApiPublicExtensionFunnelCardsScheduleRoute
   '/api/public/extension/funnels/$id': typeof ApiPublicExtensionFunnelsIdRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
@@ -324,7 +333,7 @@ export interface FileRoutesById {
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
-  '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRoute
+  '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRouteWithChildren
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
@@ -335,6 +344,7 @@ export interface FileRoutesById {
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
+  '/api/public/extension/funnel-cards/schedule': typeof ApiPublicExtensionFunnelCardsScheduleRoute
   '/api/public/extension/funnels/$id': typeof ApiPublicExtensionFunnelsIdRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
@@ -373,6 +383,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
+    | '/api/public/extension/funnel-cards/schedule'
     | '/api/public/extension/funnels/$id'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
@@ -409,6 +420,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
+    | '/api/public/extension/funnel-cards/schedule'
     | '/api/public/extension/funnels/$id'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
@@ -445,6 +457,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
+    | '/api/public/extension/funnel-cards/schedule'
     | '/api/public/extension/funnels/$id'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
@@ -470,7 +483,7 @@ export interface RootRouteChildren {
   ApiPublicExtensionBillingRoute: typeof ApiPublicExtensionBillingRoute
   ApiPublicExtensionCampaignsRoute: typeof ApiPublicExtensionCampaignsRouteWithChildren
   ApiPublicExtensionCustomersRoute: typeof ApiPublicExtensionCustomersRouteWithChildren
-  ApiPublicExtensionFunnelCardsRoute: typeof ApiPublicExtensionFunnelCardsRoute
+  ApiPublicExtensionFunnelCardsRoute: typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   ApiPublicExtensionFunnelsRoute: typeof ApiPublicExtensionFunnelsRouteWithChildren
   ApiPublicExtensionMetaRoute: typeof ApiPublicExtensionMetaRoute
   ApiPublicExtensionPairRoute: typeof ApiPublicExtensionPairRoute
@@ -707,6 +720,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensionFunnelsIdRouteImport
       parentRoute: typeof ApiPublicExtensionFunnelsRoute
     }
+    '/api/public/extension/funnel-cards/schedule': {
+      id: '/api/public/extension/funnel-cards/schedule'
+      path: '/schedule'
+      fullPath: '/api/public/extension/funnel-cards/schedule'
+      preLoaderRoute: typeof ApiPublicExtensionFunnelCardsScheduleRouteImport
+      parentRoute: typeof ApiPublicExtensionFunnelCardsRoute
+    }
     '/api/public/extension/customers/import': {
       id: '/api/public/extension/customers/import'
       path: '/import'
@@ -773,6 +793,21 @@ const ApiPublicExtensionCustomersRouteWithChildren =
     ApiPublicExtensionCustomersRouteChildren,
   )
 
+interface ApiPublicExtensionFunnelCardsRouteChildren {
+  ApiPublicExtensionFunnelCardsScheduleRoute: typeof ApiPublicExtensionFunnelCardsScheduleRoute
+}
+
+const ApiPublicExtensionFunnelCardsRouteChildren: ApiPublicExtensionFunnelCardsRouteChildren =
+  {
+    ApiPublicExtensionFunnelCardsScheduleRoute:
+      ApiPublicExtensionFunnelCardsScheduleRoute,
+  }
+
+const ApiPublicExtensionFunnelCardsRouteWithChildren =
+  ApiPublicExtensionFunnelCardsRoute._addFileChildren(
+    ApiPublicExtensionFunnelCardsRouteChildren,
+  )
+
 interface ApiPublicExtensionFunnelsRouteChildren {
   ApiPublicExtensionFunnelsIdRoute: typeof ApiPublicExtensionFunnelsIdRoute
 }
@@ -819,7 +854,8 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicExtensionCampaignsRouteWithChildren,
   ApiPublicExtensionCustomersRoute:
     ApiPublicExtensionCustomersRouteWithChildren,
-  ApiPublicExtensionFunnelCardsRoute: ApiPublicExtensionFunnelCardsRoute,
+  ApiPublicExtensionFunnelCardsRoute:
+    ApiPublicExtensionFunnelCardsRouteWithChildren,
   ApiPublicExtensionFunnelsRoute: ApiPublicExtensionFunnelsRouteWithChildren,
   ApiPublicExtensionMetaRoute: ApiPublicExtensionMetaRoute,
   ApiPublicExtensionPairRoute: ApiPublicExtensionPairRoute,

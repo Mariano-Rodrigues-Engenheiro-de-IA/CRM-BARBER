@@ -1,15 +1,18 @@
-// Content script v0.20.0 — ponte minimalista: CRM BARBER, Assinantes, Equipe e Conexão.
+// Content script v0.21.0 — abas do CRM no topo do WhatsApp Web + trilho de
+// ícones minimalista à esquerda (nada de painel ocupando espaço).
 
 (function () {
-  const CRM_VERSION = "0.20.0";
+  const CRM_VERSION = "0.21.0";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
-  const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
-  const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
+  const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
   window.__crmAssinaturasInjectedVersion = CRM_VERSION;
   document.getElementById("crm-assinaturas-panel")?.remove();
-  document.body?.classList.remove(BODY_DOCKED_CLASS, BODY_COLLAPSED_CLASS);
+  document.getElementById("crm-rail")?.remove();
+  document.getElementById("crm-topbar")?.remove();
+  document.body?.classList.remove("crm-assinaturas-docked", "crm-assinaturas-docked-collapsed");
   console.info(`[CRM ct v${CRM_VERSION}] carregado`, location.href);
+
 
   // Injetar wa-js + bridge no MAIN world, mas SÓ depois que o WhatsApp
   // registrar seus módulos internos (workaround upstream issue #3419:
