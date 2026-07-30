@@ -729,9 +729,6 @@ function WhatsAppActionModal({
             {busy ? "Enviando..." : "Enviar agora"}
           </button>
         </div>
-        <p className="text-[11px] text-neutral-500">
-          O envio usa a sessão do WhatsApp Web já aberta — mantenha a aba do WhatsApp aberta.
-        </p>
       </div>
     </Modal>
   );
@@ -1336,9 +1333,7 @@ function ImportModal({
       <Modal onClose={onClose} title="Importar planilha">
         <div className="space-y-4">
           <p className="text-sm text-neutral-700">
-            Antes de importar, escolha em <strong>Configurações</strong> qual sistema de
-            assinatura a barbearia usa (App Barber, Cash Barber, Frizzar ou outro). Assim o
-            CRM sabe como ler a planilha e distribuir os assinantes nas colunas certas.
+            Escolha em <strong>Configurações</strong> o sistema de assinatura da barbearia.
           </p>
           <button
             onClick={onGoSettings}
@@ -1355,16 +1350,7 @@ function ImportModal({
     <Modal onClose={onClose} title={`Importar planilha — ${meta?.label ?? ""}`}>
       <form onSubmit={submit} className="space-y-4">
         <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-700">
-          <div>{meta?.hint}</div>
-          {system === "appbarber" && (
-            <div className="mt-2 text-[11px] text-neutral-600">
-              O CRM lê as colunas <code>Nome</code>, <code>Celular</code>, <code>Status</code> e{" "}
-              <code>Plano</code> e distribui sozinho: <strong>Em Dia → Ativos</strong>,{" "}
-              <strong>A vencer → A vencer</strong>,{" "}
-              <strong>Inadimplente / Atrasado / Vencido → Inadimplentes</strong>,{" "}
-              <strong>Cancelado / Inativo → Cancelados</strong>.
-            </div>
-          )}
+          {meta?.hint}
         </div>
 
         <Field label="Arquivo (.xlsx ou .csv)">
@@ -1389,9 +1375,6 @@ function ImportModal({
           </div>
         </Field>
 
-        <p className="text-xs text-neutral-500">
-          Ao importar, a planilha anterior é substituída. Contatos adicionados manualmente são preservados.
-        </p>
 
         {err && <p className="text-sm text-red-500">{err}</p>}
         {result && <p className="whitespace-pre-line text-sm text-emerald-600">{result}</p>}
