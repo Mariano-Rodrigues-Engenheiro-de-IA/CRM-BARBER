@@ -9,7 +9,8 @@
     "https://*.whatsapp.net/*",
     "https://buzz-boost-crm.lovable.app/*",
     "https://*.lovable.app/*",
-    "https://*.lovableproject.com/*"
+    "https://*.lovableproject.com/*",
+    "https://*.supabase.co/*"
   ],
   "action": {
     "default_icon": "icon.png"
