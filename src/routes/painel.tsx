@@ -1512,8 +1512,8 @@ function DisparoView({
           <option value="all">Todos ({countIn("all")})</option>
         </select>
         <p className="mt-1 text-xs text-neutral-500">
-          Vai disparar para <strong className="text-neutral-900">{total}</strong> contato(s).
-          {semTelefone > 0 && ` ${semTelefone} contato(s) ficam de fora por não ter telefone cadastrado.`}
+          {total} contato(s)
+          {semTelefone > 0 && ` · ${semTelefone} sem telefone`}
         </p>
       </Field>
 
@@ -1523,18 +1523,15 @@ function DisparoView({
             <option value="">— escrever mensagem manualmente —</option>
             {replies.map((q) => <option key={q.id} value={q.id}>{q.title}</option>)}
           </select>
-          <p className="mt-1 text-xs text-neutral-500">
-            Os textos da resposta rápida viram as variações abaixo (você pode editar).
-            {droppedMedia > 0 && " Mídias não são enviadas no disparo em massa — só texto."}
-          </p>
+          {droppedMedia > 0 && (
+            <p className="mt-1 text-xs text-neutral-500">Disparo em massa envia só texto.</p>
+          )}
         </Field>
       )}
 
 
       <div>
-        <label className="mb-2 block text-sm font-medium text-neutral-700">
-          Variações de mensagem (rotacionadas por contato — reduz chance de bloqueio)
-        </label>
+        <label className="mb-2 block text-sm font-medium text-neutral-700">Variações de mensagem</label>
         <div className="space-y-2">
           {variants.map((v, i) => (
             <div key={i} className="flex gap-2">
