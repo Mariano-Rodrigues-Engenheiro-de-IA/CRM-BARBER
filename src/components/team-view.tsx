@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import confetti from "canvas-confetti";
+import { useConfirm } from "@/components/confirm-dialog";
 
 type Member = { id: string; name: string; photo?: string; emoji?: string };
 
@@ -157,6 +158,7 @@ function fireConfetti() {
 }
 
 export function TeamView({ shopId }: { shopId: string }) {
+  const { confirm, dialog } = useConfirm();
   const [state, setState] = useState<TeamState>(DEFAULT_STATE);
   const [ready, setReady] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
@@ -221,8 +223,13 @@ export function TeamView({ shopId }: { shopId: string }) {
 
   if (!ready) return null;
 
-  function deleteEntry(id: string) {
-    if (!confirm("Excluir esse lançamento?")) return;
+  async function deleteEntry(id: string) {
+    const ok = await confirm({
+      title: "Excluir esse lançamento?",
+      confirmLabel: "Excluir",
+      destructive: true,
+    });
+    if (!ok) return;
     setState((s) => ({ ...s, entries: s.entries.filter((e) => e.id !== id) }));
   }
 
@@ -236,6 +243,7 @@ export function TeamView({ shopId }: { shopId: string }) {
 
   return (
     <div className="space-y-6">
+      {dialog}
       {/* Header + KPIs */}
       <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -437,8 +445,14 @@ export function TeamView({ shopId }: { shopId: string }) {
           state={state}
           onClose={() => setShowConfig(false)}
           onChange={(next) => setState(next)}
-          onResetMonth={() => {
-            if (!confirm("Zerar todos os lançamentos deste mês? Não dá pra desfazer.")) return;
+          onResetMonth={async () => {
+            const ok = await confirm({
+              title: "Zerar todos os lançamentos deste mês?",
+              description: "Não dá pra desfazer.",
+              confirmLabel: "Zerar",
+              destructive: true,
+            });
+            if (!ok) return;
             const r = startOfPeriod("month");
             setState((s) => ({ ...s, entries: s.entries.filter((e) => !inRange(e.createdAt, r.from, r.to)) }));
             celebratedRef.current.clear();
@@ -733,6 +747,7 @@ function MembersTab({
   onAdd: (m: Member) => void;
   onRemove: (id: string) => void;
 }) {
+  const { confirm, dialog } = useConfirm();
   const [name, setName] = useState("");
   const [photo, setPhoto] = useState<string | undefined>(undefined);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -804,8 +819,14 @@ function MembersTab({
                 <Avatar member={m} size={36} />
                 <span className="flex-1 truncate text-sm font-medium text-neutral-900">{m.name}</span>
                 <button
-                  onClick={() => {
-                    if (!confirm(`Remover ${m.name}? Os lançamentos ficam no histórico.`)) return;
+                  onClick={async () => {
+                    const ok = await confirm({
+                      title: `Remover ${m.name}?`,
+                      description: "Os lançamentos ficam no histórico.",
+                      confirmLabel: "Remover",
+                      destructive: true,
+                    });
+                    if (!ok) return;
                     onRemove(m.id);
                   }}
                   className="rounded-md border border-neutral-200 px-2.5 py-1 text-xs text-neutral-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600"

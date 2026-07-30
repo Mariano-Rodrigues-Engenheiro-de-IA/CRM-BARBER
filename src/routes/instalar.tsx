@@ -52,7 +52,7 @@ function downloadZip() {
       a.click();
       URL.revokeObjectURL(a.href);
     })
-    .catch((err) => alert(err.message));
+    .catch((err) => toast.error(err.message));
 }
 
 function Install() {
