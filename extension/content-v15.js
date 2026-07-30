@@ -1,8 +1,9 @@
-// Content script v0.22.0 — abas do CRM no topo do WhatsApp Web + trilho de
-// ícones minimalista à esquerda (nada de painel ocupando espaço).
+// Content script v0.23.0 — abas do CRM no topo do WhatsApp Web + trilho de
+// ícones minimalista à esquerda. Clicar numa aba/etiqueta filtra a própria
+// lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.22.0";
+  const CRM_VERSION = "0.23.0";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -224,7 +225,7 @@
       const gear = e.target.closest(".crm-pill-gear");
       if (gear) {
         e.stopPropagation();
-        return openTabMenu(gear, gear.getAttribute("data-funnel"));
+        return openStageMenu(gear, gear.getAttribute("data-funnel"), gear.getAttribute("data-stage"));
       }
 
       const addBtn = e.target.closest(".crm-pill-add");
@@ -232,10 +233,10 @@
 
       const pill = e.target.closest(".crm-pill");
       if (!pill) return;
-      const id = pill.getAttribute("data-funnel");
-      const label = pill.getAttribute("data-label-id");
-      if (label) return openPainel("funis");
-      openPainel("funis", id ? `&funnel=${encodeURIComponent(id)}` : "");
+      const labelId = pill.getAttribute("data-label-id");
+      if (labelId) return filterByLabel(labelId, pill.getAttribute("data-name") || "");
+      const stageId = pill.getAttribute("data-stage");
+      if (stageId) return filterByStage(pill.getAttribute("data-funnel"), stageId);
     });
 
     renderTopbar();
@@ -279,7 +280,7 @@
   function openFilterMenu(anchor) {
     openMenu(anchor, [
       {
-        label: "Abas",
+        label: "Funil principal",
         onClick: () => {
           topbarFilter = "tabs";
           try { localStorage.setItem("crm-topbar-filter", "tabs"); } catch {}
@@ -287,7 +288,7 @@
         },
       },
       {
-        label: "Listas / Etiquetas",
+        label: "Etiquetas",
         onClick: () => {
           topbarFilter = "labels";
           try { localStorage.setItem("crm-topbar-filter", "labels"); } catch {}
@@ -297,36 +298,128 @@
     ]);
   }
 
-  function openTabMenu(anchor, funnelId) {
+  // ---------------------------------------------------------------------
+  // Filtro da própria lista de conversas do WhatsApp (não abre o CRM).
+  // ---------------------------------------------------------------------
+  let activeFilter = null; // { key, terms: string[] }
+  let filterObserver = null;
+
+  function chatRows() {
+    const pane = document.querySelector("#pane-side");
+    return pane ? Array.from(pane.querySelectorAll('[role="listitem"]')) : [];
+  }
+
+  function rowText(row) {
+    const t = row.querySelector("span[title]");
+    return String(t?.getAttribute("title") || row.innerText || "").toLowerCase();
+  }
+
+  function applyChatFilter() {
+    if (!activeFilter) return;
+    for (const row of chatRows()) {
+      const text = rowText(row);
+      row.style.display = activeFilter.terms.some((t) => t && text.includes(t)) ? "" : "none";
+    }
+  }
+
+  function clearChatFilter() {
+    for (const row of chatRows()) row.style.display = "";
+    filterObserver?.disconnect();
+    filterObserver = null;
+    activeFilter = null;
+    renderTopbar();
+  }
+
+  function setChatFilter(key, terms) {
+    if (activeFilter?.key === key) return clearChatFilter();
+    const clean = terms.map((t) => String(t || "").trim().toLowerCase()).filter(Boolean);
+    activeFilter = { key, terms: clean };
+    const pane = document.querySelector("#pane-side");
+    filterObserver?.disconnect();
+    filterObserver = new MutationObserver(() => applyChatFilter());
+    if (pane) filterObserver.observe(pane, { childList: true, subtree: true });
+    applyChatFilter();
+    renderTopbar();
+  }
+
+  /** Etiqueta: tenta o filtro nativo do WhatsApp; se não achar, filtra a lista. */
+  function filterByLabel(labelId, labelName) {
+    const key = `label:${labelId}`;
+    if (activeFilter?.key !== key) {
+      const name = String(labelName || "").trim().toLowerCase();
+      const native = Array.from(document.querySelectorAll('button, [role="button"], [role="tab"]')).find(
+        (el) =>
+          !el.closest("#crm-topbar") &&
+          !el.closest("#crm-rail") &&
+          String(el.getAttribute("aria-label") || el.textContent || "").trim().toLowerCase() === name,
+      );
+      if (native) {
+        native.click();
+        return;
+      }
+    }
+    const terms = (waData.contacts || [])
+      .filter((c) => (c.label_ids || []).includes(labelId))
+      .map((c) => c.name || c.phone || c.wa_id);
+    setChatFilter(key, terms);
+  }
+
+  /** Aba/etapa do funil principal: filtra a lista pelos leads daquela etapa. */
+  function filterByStage(funnelId, stageId) {
     const funnel = funnels.find((f) => f.id === funnelId);
     if (!funnel) return;
+    const terms = (funnel.cards || [])
+      .filter((c) => c.stage_id === stageId)
+      .map((c) => c.title || c.phone);
+    setChatFilter(`stage:${stageId}`, terms);
+  }
+
+  function tabFunnel() {
+    return funnels.find((f) => f.mode === "tab") || null;
+  }
+
+  async function patchStages(funnel, stages) {
+    await chrome.runtime
+      .sendMessage({
+        type: "api",
+        path: `/api/public/extension/funnels/${funnel.id}`,
+        opts: { method: "PATCH", body: JSON.stringify({ stages }) },
+      })
+      .catch(() => null);
+    loadFunnels();
+  }
+
+  function openStageMenu(anchor, funnelId, stageId) {
+    const funnel = funnels.find((f) => f.id === funnelId);
+    const stage = funnel?.stages?.find((s) => s.id === stageId);
+    if (!funnel || !stage) return;
     openMenu(anchor, [
       {
         label: "Adicionar / remover contatos",
         onClick: () => openPainel("funis", `&funnel=${encodeURIComponent(funnel.id)}`),
       },
       {
-        label: "Renomear aba",
+        label: "Renomear",
         onClick: async () => {
-          const name = await crmPrompt({ title: "Renomear aba", value: funnel.name });
+          const name = await crmPrompt({ title: "Renomear", value: stage.name });
           if (!name) return;
-          await chrome.runtime
-            .sendMessage({
-              type: "api",
-              path: `/api/public/extension/funnels/${funnel.id}`,
-              opts: { method: "PATCH", body: JSON.stringify({ name }) },
-            })
-            .catch(() => null);
-          loadFunnels();
+          await patchStages(
+            funnel,
+            funnel.stages.map((s) => ({
+              id: s.id,
+              name: s.id === stage.id ? name : s.name,
+              sort_order: s.sort_order,
+            })),
+          );
         },
       },
       {
-        label: "Remover aba",
+        label: "Remover",
         danger: true,
         onClick: async () => {
           const ok = await crmConfirm({
-            title: `Remover a aba “${funnel.name}”?`,
-            body: "Os leads dessa aba serão excluídos.",
+            title: `Remover “${stage.name}”?`,
+            body: "Os leads dessa etapa serão excluídos.",
             confirmLabel: "Remover",
           });
           if (!ok) return;
@@ -334,7 +427,7 @@
             .sendMessage({
               type: "api",
               path: `/api/public/extension/funnels/${funnel.id}`,
-              opts: { method: "DELETE" },
+              opts: { method: "PATCH", body: JSON.stringify({ removed_stage_ids: [stage.id] }) },
             })
             .catch(() => null);
           loadFunnels();
@@ -344,13 +437,24 @@
   }
 
   async function createTab() {
-    const name = await crmPrompt({ title: "Nova aba", value: "" });
+    const name = await crmPrompt({ title: "Nova etapa", value: "" });
     if (!name) return;
+    const funnel = tabFunnel();
+    if (funnel) {
+      await patchStages(funnel, [
+        ...funnel.stages.map((s) => ({ id: s.id, name: s.name, sort_order: s.sort_order })),
+        { name, sort_order: funnel.stages.length },
+      ]);
+      return;
+    }
     await chrome.runtime
       .sendMessage({
         type: "api",
         path: "/api/public/extension/funnels",
-        opts: { method: "POST", body: JSON.stringify({ name, mode: "tab" }) },
+        opts: {
+          method: "POST",
+          body: JSON.stringify({ name: "Funil principal", mode: "tab", stages: [name] }),
+        },
       })
       .catch(() => null);
     loadFunnels();
@@ -365,18 +469,19 @@
     }
 
     const filter = `<button class="crm-filter">${FILTER_SVG}${
-      topbarFilter === "labels" ? "Etiquetas" : "Abas"
+      topbarFilter === "labels" ? "Etiquetas" : "Funil principal"
     }</button>`;
 
     if (topbarFilter === "labels") {
       const pills = (waData.labels || [])
-        .map(
-          (l) =>
-            `<button class="crm-pill" data-label-id="${escapeHtml(l.id || l.wa_label_id)}">
+        .map((l) => {
+          const id = l.id || l.wa_label_id;
+          const on = activeFilter?.key === `label:${id}`;
+          return `<button class="crm-pill${on ? " crm-pill-on" : ""}" data-label-id="${escapeHtml(id)}" data-name="${escapeHtml(l.name)}">
               ${escapeHtml(l.name)}
               <span class="crm-pill-count">${Number(l.count ?? l.conversation_count ?? 0)}</span>
-            </button>`,
-        )
+            </button>`;
+        })
         .join("");
       topbarRef.innerHTML = `${filter}${
         pills ||
@@ -387,19 +492,24 @@
       return;
     }
 
-    const tabs = funnels.filter((f) => f.mode === "tab");
-    const pills = tabs
-      .map((f) => {
-        const total = (f.cards || []).reduce((s, c) => s + (c.value_cents || 0), 0);
-        return `<span class="crm-pill" data-funnel="${escapeHtml(f.id)}">
-          ${escapeHtml(f.name)}
-          <span class="crm-pill-value">${escapeHtml(formatBRL(total))}</span>
-          <button class="crm-pill-gear" data-funnel="${escapeHtml(f.id)}" title="Opções da aba">${GEAR_SVG}</button>
-        </span>`;
-      })
+    const pills = funnels
+      .filter((f) => f.mode === "tab")
+      .flatMap((f) =>
+        (f.stages || []).map((s) => {
+          const cards = (f.cards || []).filter((c) => c.stage_id === s.id);
+          const total = cards.reduce((sum, c) => sum + (c.value_cents || 0), 0);
+          const on = activeFilter?.key === `stage:${s.id}`;
+          return `<span class="crm-pill${on ? " crm-pill-on" : ""}" data-funnel="${escapeHtml(f.id)}" data-stage="${escapeHtml(s.id)}">
+            ${escapeHtml(s.name)}
+            <span class="crm-pill-count">${cards.length}</span>
+            <span class="crm-pill-value">${escapeHtml(formatBRL(total))}</span>
+            <button class="crm-pill-gear" data-funnel="${escapeHtml(f.id)}" data-stage="${escapeHtml(s.id)}" title="Opções">${GEAR_SVG}</button>
+          </span>`;
+        }),
+      )
       .join("");
 
-    topbarRef.innerHTML = `${filter}${pills}<button class="crm-pill crm-pill-add">+ aba</button>`;
+    topbarRef.innerHTML = `${filter}${pills}<button class="crm-pill crm-pill-add">+ etapa</button>`;
   }
 
 

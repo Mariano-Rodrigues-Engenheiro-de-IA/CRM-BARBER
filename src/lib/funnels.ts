@@ -34,9 +34,9 @@ export const funnelPatchSchema = z.object({
         sort_order: z.number().int().min(0).max(999),
       }),
     )
-    .max(12)
+    .max(40)
     .optional(),
-  removed_stage_ids: z.array(z.string().uuid()).max(12).optional(),
+  removed_stage_ids: z.array(z.string().uuid()).max(40).optional(),
 });
 
 export const cardCreateSchema = z.object({

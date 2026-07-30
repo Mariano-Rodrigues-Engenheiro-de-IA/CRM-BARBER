@@ -33,7 +33,7 @@ function PlanBanner({ billing, shopId }: { billing: BillingStatus | null; shopId
       <div>
         <p className="font-semibold text-yellow-400">Plano grátis</p>
         <p className="text-xs text-neutral-300">
-          Restam {restCustomers} assinantes e {restMessages} mensagens. Depois disso o disparo trava.
+          Restam {restCustomers} assinantes e {restMessages} mensagens.
         </p>
       </div>
       <a
@@ -729,9 +729,6 @@ function WhatsAppActionModal({
             {busy ? "Enviando..." : "Enviar agora"}
           </button>
         </div>
-        <p className="text-[11px] text-neutral-500">
-          O envio usa a sessão do WhatsApp Web já aberta — mantenha a aba do WhatsApp aberta.
-        </p>
       </div>
     </Modal>
   );
@@ -1336,9 +1333,7 @@ function ImportModal({
       <Modal onClose={onClose} title="Importar planilha">
         <div className="space-y-4">
           <p className="text-sm text-neutral-700">
-            Antes de importar, escolha em <strong>Configurações</strong> qual sistema de
-            assinatura a barbearia usa (App Barber, Cash Barber, Frizzar ou outro). Assim o
-            CRM sabe como ler a planilha e distribuir os assinantes nas colunas certas.
+            Escolha em <strong>Configurações</strong> o sistema de assinatura da barbearia.
           </p>
           <button
             onClick={onGoSettings}
@@ -1355,16 +1350,7 @@ function ImportModal({
     <Modal onClose={onClose} title={`Importar planilha — ${meta?.label ?? ""}`}>
       <form onSubmit={submit} className="space-y-4">
         <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-700">
-          <div>{meta?.hint}</div>
-          {system === "appbarber" && (
-            <div className="mt-2 text-[11px] text-neutral-600">
-              O CRM lê as colunas <code>Nome</code>, <code>Celular</code>, <code>Status</code> e{" "}
-              <code>Plano</code> e distribui sozinho: <strong>Em Dia → Ativos</strong>,{" "}
-              <strong>A vencer → A vencer</strong>,{" "}
-              <strong>Inadimplente / Atrasado / Vencido → Inadimplentes</strong>,{" "}
-              <strong>Cancelado / Inativo → Cancelados</strong>.
-            </div>
-          )}
+          {meta?.hint}
         </div>
 
         <Field label="Arquivo (.xlsx ou .csv)">
@@ -1389,9 +1375,6 @@ function ImportModal({
           </div>
         </Field>
 
-        <p className="text-xs text-neutral-500">
-          Ao importar, a planilha anterior é substituída. Contatos adicionados manualmente são preservados.
-        </p>
 
         {err && <p className="text-sm text-red-500">{err}</p>}
         {result && <p className="whitespace-pre-line text-sm text-emerald-600">{result}</p>}
@@ -1529,8 +1512,8 @@ function DisparoView({
           <option value="all">Todos ({countIn("all")})</option>
         </select>
         <p className="mt-1 text-xs text-neutral-500">
-          Vai disparar para <strong className="text-neutral-900">{total}</strong> contato(s).
-          {semTelefone > 0 && ` ${semTelefone} contato(s) ficam de fora por não ter telefone cadastrado.`}
+          {total} contato(s)
+          {semTelefone > 0 && ` · ${semTelefone} sem telefone`}
         </p>
       </Field>
 
@@ -1540,18 +1523,15 @@ function DisparoView({
             <option value="">— escrever mensagem manualmente —</option>
             {replies.map((q) => <option key={q.id} value={q.id}>{q.title}</option>)}
           </select>
-          <p className="mt-1 text-xs text-neutral-500">
-            Os textos da resposta rápida viram as variações abaixo (você pode editar).
-            {droppedMedia > 0 && " Mídias não são enviadas no disparo em massa — só texto."}
-          </p>
+          {droppedMedia > 0 && (
+            <p className="mt-1 text-xs text-neutral-500">Disparo em massa envia só texto.</p>
+          )}
         </Field>
       )}
 
 
       <div>
-        <label className="mb-2 block text-sm font-medium text-neutral-700">
-          Variações de mensagem (rotacionadas por contato — reduz chance de bloqueio)
-        </label>
+        <label className="mb-2 block text-sm font-medium text-neutral-700">Variações de mensagem</label>
         <div className="space-y-2">
           {variants.map((v, i) => (
             <div key={i} className="flex gap-2">
@@ -1593,9 +1573,6 @@ function DisparoView({
           <input type="number" min={5} max={600} value={paceMax} onChange={(e) => setPaceMax(Number(e.target.value))} className={inputCls} />
         </Field>
       </div>
-      <p className="-mt-3 text-xs text-neutral-500">
-        Cada mensagem sai com espaçamento aleatório dentro dessa faixa.
-      </p>
 
       <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
         <p className="text-sm font-semibold text-neutral-900">Termo de uso</p>
@@ -1900,17 +1877,11 @@ function SettingsView({
       <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-4">
         <div>
           <h2 className="text-sm font-semibold text-neutral-900">Planos e valores</h2>
-          <p className="mt-1 text-xs text-neutral-500">
-            Cadastre o valor de cada plano. O CRM usa o plano que vem na planilha para
-            somar o faturamento de cada coluna do Kanban.
-          </p>
         </div>
 
         <div className="space-y-2">
           {plans.length === 0 && (
-            <p className="text-xs text-neutral-400">
-              Nenhum plano ainda. Importe a planilha (os planos são detectados sozinhos) ou cadastre abaixo.
-            </p>
+            <p className="text-xs text-neutral-400">Nenhum plano ainda.</p>
           )}
           {plans.map((p, i) => (
             <div key={p.name + i} className="flex items-center gap-2">
@@ -1974,9 +1945,6 @@ function SettingsView({
       <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-3">
         <div>
           <h2 className="text-sm font-semibold text-neutral-900">Meta do mês</h2>
-          <p className="mt-1 text-xs text-neutral-500">
-            Quantos assinantes ativos você quer fechar o mês. Vira a barra de progresso no Kanban.
-          </p>
         </div>
         <input
           type="number"

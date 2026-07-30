@@ -23,7 +23,7 @@ const inputCls =
   "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-900";
 
 const MODE_LABEL: Record<FunnelMode, string> = {
-  tab: "aba",
+  tab: "principal",
   label: "etiqueta",
   manual: "funil",
 };
@@ -38,8 +38,9 @@ export function FunnelsView({ api }: { api: ApiFn }) {
   const [creating, setCreating] = useState(false);
   const [detail, setDetail] = useState<FunnelCard | null>(null);
   const [detailTab, setDetailTab] = useState<"notes" | "schedule">("notes");
-  const [inboxOpen, setInboxOpen] = useState<string | null>(null);
+  const [inboxQuery, setInboxQuery] = useState("");
   const dragged = useRef<FunnelCard | null>(null);
+  const draggedContact = useRef<WaContact | null>(null);
 
   async function reload() {
     const [f, w] = await Promise.all([
@@ -67,9 +68,12 @@ export function FunnelsView({ api }: { api: ApiFn }) {
 
   const active = funnels.find((f) => f.id === activeId) || null;
 
-  const labelContacts = useMemo(() => {
-    if (!active || active.mode !== "label" || !active.source_label_id) return [];
-    return contacts.filter((c) => (c.label_ids || []).includes(active.source_label_id!));
+  const inboxContacts = useMemo(() => {
+    if (!active) return [];
+    return contacts
+      .filter((c) => !c.is_group)
+      .filter((c) => !active.cards.some((card) => card.wa_contact_id === c.id))
+      .slice(0, 200);
   }, [active, contacts]);
 
   async function moveCard(card: FunnelCard, stageId: string) {
@@ -120,12 +124,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 sm:flex sm:flex-wrap sm:justify-between">
-        <div className="min-w-0">
-          <h2 className="truncate text-lg font-semibold text-neutral-900">Funis de vendas</h2>
-          <p className="text-sm text-neutral-500">
-            Crie abas, use etiquetas do WhatsApp ou monte um funil do zero — e arraste os leads entre as etapas.
-          </p>
-        </div>
+        <h2 className="truncate text-lg font-semibold text-neutral-900">Funis de vendas</h2>
         <button
           onClick={() => setCreating(true)}
           className="shrink-0 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
@@ -137,12 +136,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
       {err && <p className="text-sm text-red-500">{err}</p>}
       {loading && <p className="text-sm text-neutral-500">Carregando...</p>}
 
-      {!loading && funnels.length === 0 && (
-        <p className="text-sm text-neutral-500">
-          Nenhum funil ainda. Crie o primeiro — as etiquetas e conversas do WhatsApp aparecem aqui depois da
-          sincronização feita pela extensão.
-        </p>
-      )}
+      {!loading && funnels.length === 0 && <p className="text-sm text-neutral-500">Nenhum funil ainda.</p>}
 
       {funnels.length > 0 && (
         <nav className="flex flex-wrap gap-1 rounded-lg bg-neutral-100 p-1">
@@ -164,27 +158,49 @@ export function FunnelsView({ api }: { api: ApiFn }) {
 
       {active && (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-500">
-            <span>
-              {active.cards.length} lead(s)
-              {active.mode === "label" && ` · ${labelContacts.length} contato(s) nessa etiqueta`}
-              {active.mode === "tab" && " · aparece como aba no topo do WhatsApp"}
-            </span>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setInboxOpen(active.stages[0]?.id ?? null)}
-                disabled={!active.stages[0]}
-                className="rounded-md border border-neutral-300 px-2 py-1 font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
-              >
-                + Puxar do inbox
-              </button>
-              <button onClick={() => removeFunnel(active.id)} className="text-red-600 hover:underline">
-                excluir
-              </button>
-            </div>
+          <div className="flex items-center justify-between gap-2 text-xs text-neutral-500">
+            <span>{active.cards.length} lead(s)</span>
+            <button onClick={() => removeFunnel(active.id)} className="text-red-600 hover:underline">
+              excluir
+            </button>
           </div>
 
           <div className="flex gap-3 overflow-x-auto pb-4">
+            <div className="flex w-72 shrink-0 flex-col rounded-xl border border-dashed border-neutral-300 bg-white p-3">
+              <div className="flex items-baseline justify-between">
+                <h3 className="text-sm font-semibold text-neutral-900">Inbox</h3>
+                <span className="text-[11px] text-neutral-500">{inboxContacts.length}</span>
+              </div>
+              <input
+                value={inboxQuery}
+                onChange={(e) => setInboxQuery(e.target.value)}
+                placeholder="Buscar"
+                className="mt-2 w-full rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs outline-none focus:border-neutral-900"
+              />
+              <div className="mt-2 max-h-[520px] space-y-1.5 overflow-y-auto">
+                {inboxContacts
+                  .filter((c) => {
+                    const t = inboxQuery.trim().toLowerCase();
+                    if (!t) return true;
+                    return (c.name || "").toLowerCase().includes(t) || (c.phone || "").includes(t);
+                  })
+                  .map((c) => (
+                    <div
+                      key={c.id}
+                      draggable
+                      onDragStart={() => {
+                        draggedContact.current = c;
+                        dragged.current = null;
+                      }}
+                      className="cursor-grab rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-2 text-xs active:cursor-grabbing"
+                    >
+                      <p className="truncate font-medium text-neutral-900">{c.name || c.phone || c.wa_id}</p>
+                      {c.phone && <p className="truncate text-[11px] text-neutral-500">{c.phone}</p>}
+                    </div>
+                  ))}
+              </div>
+            </div>
+
             {active.stages.map((stage) => {
               const cards = active.cards.filter((c) => c.stage_id === stage.id);
               const total = cards.reduce((sum, c) => sum + (c.value_cents ?? 0), 0);
@@ -193,8 +209,18 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                   key={stage.id}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={() => {
+                    const contact = draggedContact.current;
                     const card = dragged.current;
+                    draggedContact.current = null;
                     dragged.current = null;
+                    if (contact) {
+                      void addCard(stage.id, {
+                        title: contact.name || contact.phone || contact.wa_id,
+                        phone: contact.phone ?? undefined,
+                        wa_contact_id: contact.id,
+                      });
+                      return;
+                    }
                     if (card) void moveCard(card, stage.id);
                   }}
                   className="flex w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-3"
@@ -212,6 +238,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                         draggable
                         onDragStart={() => {
                           dragged.current = card;
+                          draggedContact.current = null;
                         }}
                         className="cursor-grab rounded-lg border border-neutral-200 bg-white p-3 shadow-sm active:cursor-grabbing"
                       >
@@ -274,51 +301,10 @@ export function FunnelsView({ api }: { api: ApiFn }) {
               );
             })}
           </div>
-
-          {active.mode === "label" && labelContacts.length > 0 && (
-            <div className="rounded-xl border border-neutral-200 bg-white p-4">
-              <h3 className="text-sm font-semibold text-neutral-900">
-                Contatos da etiqueta ainda fora do funil
-              </h3>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {labelContacts
-                  .filter((c) => !active.cards.some((card) => card.wa_contact_id === c.id))
-                  .slice(0, 60)
-                  .map((c) => (
-                    <button
-                      key={c.id}
-                      onClick={() =>
-                        addCard(active.stages[0]?.id, {
-                          title: c.name || c.phone || c.wa_id,
-                          phone: c.phone ?? undefined,
-                          wa_contact_id: c.id,
-                        })
-                      }
-                      disabled={!active.stages[0]}
-                      className="rounded-lg border border-neutral-300 px-2.5 py-1 text-xs hover:bg-neutral-100 disabled:opacity-50"
-                    >
-                      + {c.name || c.phone || c.wa_id}
-                    </button>
-                  ))}
-              </div>
-            </div>
-          )}
         </>
       )}
 
-      {inboxOpen && active && (
-        <InboxPicker
-          contacts={contacts.filter((c) => !active.cards.some((card) => card.wa_contact_id === c.id))}
-          onClose={() => setInboxOpen(null)}
-          onPick={(c) => {
-            void addCard(inboxOpen, {
-              title: c.name || c.phone || c.wa_id,
-              phone: c.phone ?? undefined,
-              wa_contact_id: c.id,
-            });
-          }}
-        />
-      )}
+
 
       {detail && (
         <CardDrawer
@@ -335,7 +321,22 @@ export function FunnelsView({ api }: { api: ApiFn }) {
       {creating && (
         <NewFunnelModal
           labels={labels}
+          tabFunnel={funnels.find((f) => f.mode === "tab") ?? null}
           onClose={() => setCreating(false)}
+          onAddTabStages={async (funnel, names) => {
+            setCreating(false);
+            const stages = [
+              ...funnel.stages.map((s) => ({ id: s.id, name: s.name, sort_order: s.sort_order })),
+              ...names.map((n, i) => ({ name: n, sort_order: funnel.stages.length + i })),
+            ];
+            const r = await api(`/api/public/extension/funnels/${funnel.id}`, {
+              method: "PATCH",
+              body: JSON.stringify({ stages }),
+            });
+            if (!r?.ok) setErr((r?.error as string) || "Erro ao adicionar etapas");
+            await reload();
+            setActiveId(funnel.id);
+          }}
           onCreate={async (body, labelStages) => {
             const r = await api("/api/public/extension/funnels", {
               method: "POST",
@@ -589,48 +590,6 @@ function CardDrawer({
   );
 }
 
-function InboxPicker({
-  contacts,
-  onPick,
-  onClose,
-}: {
-  contacts: WaContact[];
-  onPick: (c: WaContact) => void;
-  onClose: () => void;
-}) {
-  const [q, setQ] = useState("");
-  const list = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    return contacts
-      .filter((c) => !c.is_group)
-      .filter((c) => !term || (c.name || "").toLowerCase().includes(term) || (c.phone || "").includes(term))
-      .slice(0, 100);
-  }, [contacts, q]);
-
-  return (
-    <Overlay title="Puxar leads do inbox" onClose={onClose}>
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar contato…" className={inputCls} />
-      <div className="mt-3 max-h-80 space-y-1 overflow-y-auto">
-        {list.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => onPick(c)}
-            className="flex w-full items-center justify-between rounded-lg border border-neutral-200 px-3 py-2 text-left text-sm hover:bg-neutral-50"
-          >
-            <span className="min-w-0 truncate">{c.name || c.phone || c.wa_id}</span>
-            <span className="ml-2 shrink-0 text-[11px] text-neutral-500">{c.phone}</span>
-          </button>
-        ))}
-        {list.length === 0 && (
-          <p className="py-6 text-center text-xs text-neutral-500">
-            Nenhuma conversa sincronizada ainda — abra o WhatsApp Web com a extensão ativa.
-          </p>
-        )}
-      </div>
-    </Overlay>
-  );
-}
-
 /** Lista de etapas/abas adicionadas uma a uma (sem vírgulas). */
 function StageListEditor({
   label,
@@ -699,10 +658,13 @@ function StageListEditor({
 
 function NewFunnelModal({
   labels,
+  tabFunnel,
   onClose,
   onCreate,
+  onAddTabStages,
 }: {
   labels: WaLabel[];
+  tabFunnel: Funnel | null;
   onClose: () => void;
   onCreate: (
     body: {
@@ -713,16 +675,17 @@ function NewFunnelModal({
     },
     labelStages?: WaLabel[],
   ) => void;
+  onAddTabStages: (funnel: Funnel, names: string[]) => void;
 }) {
   const [name, setName] = useState("");
   const [mode, setMode] = useState<FunnelMode>("tab");
   const [tabs, setTabs] = useState<string[]>([]);
   const [stages, setStages] = useState<string[]>(["Novo lead", "Em conversa", "Negociando", "Fechado"]);
 
-  const options: Array<{ key: FunnelMode; title: string; desc: string }> = [
-    { key: "tab", title: "Aba", desc: "Aparece no topo do WhatsApp Web" },
-    { key: "label", title: "Etiquetas", desc: "Cada etiqueta vira uma etapa" },
-    { key: "manual", title: "Novo funil", desc: "Colunas e leads manuais" },
+  const options: Array<{ key: FunnelMode; title: string }> = [
+    { key: "tab", title: "Funil principal" },
+    { key: "label", title: "Etiquetas" },
+    { key: "manual", title: "Novo funil" },
   ];
 
   function submit() {
@@ -737,6 +700,11 @@ function NewFunnelModal({
         },
         labels,
       );
+      return;
+    }
+    if (mode === "tab" && tabFunnel) {
+      if (!tabs.length) return;
+      onAddTabStages(tabFunnel, tabs);
       return;
     }
     if (!name.trim()) return;
@@ -754,33 +722,32 @@ function NewFunnelModal({
               key={o.key}
               onClick={() => setMode(o.key)}
               className={
-                "rounded-xl border p-3 text-left transition " +
-                (mode === o.key ? "border-neutral-900 bg-neutral-900 text-yellow-400" : "border-neutral-300 bg-white")
+                "rounded-xl border px-3 py-2.5 text-sm font-semibold transition " +
+                (mode === o.key
+                  ? "border-neutral-900 bg-neutral-900 text-yellow-400"
+                  : "border-neutral-300 bg-white text-neutral-800")
               }
             >
-              <span className="block text-sm font-semibold">{o.title}</span>
-              <span className={"mt-1 block text-[11px] " + (mode === o.key ? "text-yellow-200" : "text-neutral-500")}>
-                {o.desc}
-              </span>
+              {o.title}
             </button>
           ))}
         </div>
 
-        {mode !== "label" && (
+        {mode !== "label" && !(mode === "tab" && tabFunnel) && (
           <div>
             <label className="mb-1 block text-xs font-medium text-neutral-600">Nome</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               className={inputCls}
-              placeholder={mode === "tab" ? "Ex.: Orçamentos" : "Ex.: Recuperação de inadimplentes"}
+              placeholder={mode === "tab" ? "Funil principal" : "Ex.: Recuperação"}
             />
           </div>
         )}
 
         {mode === "tab" && (
           <StageListEditor
-            label="Abas (adicione uma por vez)"
+            label={tabFunnel ? `Novas etapas em ${tabFunnel.name}` : "Etapas"}
             placeholder="Ex.: Leads"
             items={tabs}
             onChange={setTabs}
@@ -788,34 +755,20 @@ function NewFunnelModal({
         )}
 
         {mode === "manual" && (
-          <StageListEditor
-            label="Colunas do funil (adicione uma por vez)"
-            placeholder="Ex.: Negociando"
-            items={stages}
-            onChange={setStages}
-          />
+          <StageListEditor label="Etapas" placeholder="Ex.: Negociando" items={stages} onChange={setStages} />
         )}
 
         {mode === "label" && (
-          <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
-            <p className="text-xs text-neutral-600">
-              Todas as etiquetas do WhatsApp viram etapas automaticamente, já com os contatos de cada uma.
-            </p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {labels.map((l) => (
-                <span
-                  key={l.id}
-                  className="rounded-full border border-neutral-300 bg-white px-2.5 py-1 text-xs text-neutral-800"
-                >
-                  {l.name} · {l.conversation_count}
-                </span>
-              ))}
-            </div>
-            {labels.length === 0 && (
-              <p className="mt-2 text-[11px] text-neutral-500">
-                Nenhuma etiqueta sincronizada ainda — abra o WhatsApp Web com a extensão ativa.
-              </p>
-            )}
+          <div className="flex flex-wrap gap-1.5">
+            {labels.map((l) => (
+              <span
+                key={l.id}
+                className="rounded-full border border-neutral-300 bg-white px-2.5 py-1 text-xs text-neutral-800"
+              >
+                {l.name} · {l.conversation_count}
+              </span>
+            ))}
+            {labels.length === 0 && <p className="text-xs text-neutral-500">Nenhuma etiqueta sincronizada.</p>}
           </div>
         )}
 
@@ -827,7 +780,7 @@ function NewFunnelModal({
             onClick={submit}
             className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400"
           >
-            Criar
+            {mode === "tab" && tabFunnel ? "Adicionar" : "Criar"}
           </button>
         </div>
       </div>

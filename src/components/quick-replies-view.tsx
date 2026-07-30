@@ -77,13 +77,7 @@ export function QuickRepliesView({ token, api }: { token: string; api: ApiFn }) 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-neutral-900">Respostas rápidas</h2>
-          <p className="text-sm text-neutral-500">
-            Monte mensagens prontas (texto, imagem, vídeo, áudio) e envie em um clique
-            dentro do WhatsApp ou pelo card do assinante.
-          </p>
-        </div>
+        <h2 className="text-lg font-semibold text-neutral-900">Respostas rápidas</h2>
         <button
           onClick={() => setEditing("new")}
           className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
@@ -117,11 +111,13 @@ export function QuickRepliesView({ token, api }: { token: string; api: ApiFn }) 
             </div>
             <ol className="mt-3 space-y-1 text-xs text-neutral-600">
               {qr.actions.map((a, i) => (
-                <li key={i} className="flex gap-2">
-                  <span className="rounded bg-yellow-100 px-1.5 py-0.5 font-medium text-yellow-800">
+                <li key={i} className="flex min-w-0 gap-2">
+                  <span className="shrink-0 rounded bg-yellow-100 px-1.5 py-0.5 font-medium text-yellow-800">
                     {actionLabel(a.type)}
                   </span>
-                  <span className="truncate">{a.type === "text" ? a.text : a.filename || a.caption || "arquivo"}</span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {a.type === "text" ? a.text : a.caption || ""}
+                  </span>
                 </li>
               ))}
             </ol>
@@ -300,7 +296,11 @@ function QuickReplyEditor({
                       >
                         {a.path ? "Trocar arquivo" : "Escolher arquivo"}
                       </button>
-                      <span className="truncate text-xs text-neutral-500">{a.filename || "nenhum arquivo"}</span>
+                      {a.path && (
+                        <span className="max-w-[160px] truncate text-xs text-neutral-500" title={a.filename ?? ""}>
+                          {a.filename}
+                        </span>
+                      )}
                     </div>
                     <input
                       value={a.caption ?? ""}
