@@ -47,3 +47,18 @@ export function sendWaAction(action: WaAction): Promise<{ ok: boolean; error?: s
     window.postMessage({ __crm: WA_ACTION_REQUEST, id, action }, window.location.origin);
   });
 }
+
+/**
+ * Abre a conversa no WhatsApp. Tenta pela extensão (mantém a sessão aberta);
+ * se ela não responder, cai no link wa.me para o botão nunca ficar "morto".
+ */
+export async function openWhatsappChat(phone: string, name?: string) {
+  const digits = String(phone || "").replace(/\D/g, "");
+  if (!isRealPhone(digits)) return { ok: false, error: "Telefone inválido" };
+  const r = await sendWaAction({ phone: digits, name, openOnly: true });
+  if (!r.ok && typeof window !== "undefined") {
+    window.open(`https://wa.me/${digits}`, "_blank", "noopener");
+    return { ok: true };
+  }
+  return r;
+}

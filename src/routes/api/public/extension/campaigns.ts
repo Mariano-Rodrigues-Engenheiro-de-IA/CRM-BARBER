@@ -305,8 +305,18 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
           }
         }
 
+        // Disparos avulsos (agendados a partir de um card/lead) não têm campanha.
+        const { data: loose } = await supabaseAdmin
+          .from("message_jobs")
+          .select("id, phone, rendered_body, status, scheduled_for, sent_at, last_error, created_at")
+          .eq("barbershop_id", auth.token.barbershop_id)
+          .is("campaign_id", null)
+          .order("created_at", { ascending: false })
+          .limit(100);
+
         return jsonResponse(request, {
           ok: true,
+          loose_jobs: loose ?? [],
           campaigns: (data ?? []).map((c) => ({
             ...c,
             stats: stats[c.id] ?? { pending: 0, sent: 0, failed: 0 },
