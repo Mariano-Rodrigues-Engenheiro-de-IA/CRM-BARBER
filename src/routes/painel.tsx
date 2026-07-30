@@ -1610,7 +1610,7 @@ function DisparoView({
 }
 
 // Cache module-scoped: sobrevive à troca de aba, evita "Carregando..." piscando.
-let campaignsCache: Campaign[] | null = null;
+const campaignsCache: Record<string, Campaign[] | undefined> = {};
 
 /** Disparo avulso: mensagem enfileirada direto de um lead, sem campanha. */
 type LooseJob = {
@@ -1631,19 +1631,19 @@ function jobStatusLabel(status: string) {
   return "Na fila";
 }
 
-function CampaignsView({ token }: { token: string }) {
+function CampaignsView({ token, scope = "assinaturas" }: { token: string; scope?: "assinaturas" | "funil" }) {
   const { confirm, dialog } = useConfirm();
-  const [campaigns, setCampaigns] = useState<Campaign[]>(campaignsCache ?? []);
-  const [loaded, setLoaded] = useState<boolean>(campaignsCache !== null);
+  const [campaigns, setCampaigns] = useState<Campaign[]>(campaignsCache[scope] ?? []);
+  const [loaded, setLoaded] = useState<boolean>(campaignsCache[scope] !== undefined);
   const [looseJobs, setLooseJobs] = useState<LooseJob[]>([]);
   const [historyTab, setHistoryTab] = useState<"campanhas" | "disparos">("campanhas");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function reload() {
-    const r = await api(token, "/api/public/extension/campaigns");
+    const r = await api(token, `/api/public/extension/campaigns?scope=${scope}`);
     if (r?.ok) {
       const list: Campaign[] = r.campaigns || [];
-      campaignsCache = list;
+      campaignsCache[scope] = list;
       setCampaigns(list);
       setLooseJobs((r.loose_jobs as LooseJob[]) || []);
     }
