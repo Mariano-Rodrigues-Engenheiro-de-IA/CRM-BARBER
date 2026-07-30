@@ -161,6 +161,8 @@ body.crm-shell ._ai_g {
   white-space: nowrap;
 }
 .crm-pill:hover { border-color: #facc15; color: #facc15; }
+.crm-pill-on { border-color: #facc15; background: #facc15; color: #111111; }
+.crm-pill-on .crm-pill-count, .crm-pill-on .crm-pill-value, .crm-pill-on .crm-pill-gear { color: #111111; }
 .crm-pill-value { font-weight: 500; color: #facc15; text-transform: none; }
 .crm-pill-count { font-weight: 500; color: #8a8a8a; text-transform: none; }
 .crm-pill-gear {

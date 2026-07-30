@@ -280,7 +280,7 @@
   function openFilterMenu(anchor) {
     openMenu(anchor, [
       {
-        label: "Abas",
+        label: "Funil principal",
         onClick: () => {
           topbarFilter = "tabs";
           try { localStorage.setItem("crm-topbar-filter", "tabs"); } catch {}
@@ -288,7 +288,7 @@
         },
       },
       {
-        label: "Listas / Etiquetas",
+        label: "Etiquetas",
         onClick: () => {
           topbarFilter = "labels";
           try { localStorage.setItem("crm-topbar-filter", "labels"); } catch {}
@@ -437,7 +437,7 @@
   }
 
   async function createTab() {
-    const name = await crmPrompt({ title: "Nova aba", value: "" });
+    const name = await crmPrompt({ title: "Nova etapa", value: "" });
     if (!name) return;
     const funnel = tabFunnel();
     if (funnel) {
@@ -469,7 +469,7 @@
     }
 
     const filter = `<button class="crm-filter">${FILTER_SVG}${
-      topbarFilter === "labels" ? "Etiquetas" : "Abas"
+      topbarFilter === "labels" ? "Etiquetas" : "Funil principal"
     }</button>`;
 
     if (topbarFilter === "labels") {
@@ -509,7 +509,7 @@
       )
       .join("");
 
-    topbarRef.innerHTML = `${filter}${pills}<button class="crm-pill crm-pill-add">+ aba</button>`;
+    topbarRef.innerHTML = `${filter}${pills}<button class="crm-pill crm-pill-add">+ etapa</button>`;
   }
 
 
