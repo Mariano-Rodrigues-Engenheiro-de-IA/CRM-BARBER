@@ -89,44 +89,31 @@ export function QuickRepliesView({ token, api }: { token: string; api: ApiFn }) 
       {err && <p className="text-sm text-red-500">{err}</p>}
       {loading && <p className="text-sm text-neutral-500">Carregando...</p>}
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="divide-y divide-neutral-200 rounded-xl border border-neutral-200 bg-white">
         {replies.map((qr) => (
-          <div key={qr.id} className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="font-semibold text-neutral-900">{qr.title}</h3>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setEditing(qr)}
-                  className="rounded px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-100"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={() => remove(qr.id)}
-                  className="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-                >
-                  Excluir
-                </button>
-              </div>
+          <div key={qr.id} className="flex items-center justify-between gap-3 px-4 py-3">
+            <span className="min-w-0 truncate text-sm font-medium text-neutral-900">{qr.title}</span>
+            <div className="flex shrink-0 gap-1">
+              <button
+                onClick={() => setEditing(qr)}
+                className="rounded px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-100"
+              >
+                Editar
+              </button>
+              <button
+                onClick={() => remove(qr.id)}
+                className="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+              >
+                Excluir
+              </button>
             </div>
-            <ol className="mt-3 space-y-1 text-xs text-neutral-600">
-              {qr.actions.map((a, i) => (
-                <li key={i} className="flex min-w-0 gap-2">
-                  <span className="shrink-0 rounded bg-yellow-100 px-1.5 py-0.5 font-medium text-yellow-800">
-                    {actionLabel(a.type)}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate">
-                    {a.type === "text" ? a.text : a.caption || ""}
-                  </span>
-                </li>
-              ))}
-            </ol>
           </div>
         ))}
         {!loading && replies.length === 0 && (
-          <p className="text-sm text-neutral-500">Nenhuma resposta rápida criada ainda.</p>
+          <p className="px-4 py-3 text-sm text-neutral-500">Nenhuma resposta rápida criada ainda.</p>
         )}
       </div>
+
 
       {editing && (
         <QuickReplyEditor
