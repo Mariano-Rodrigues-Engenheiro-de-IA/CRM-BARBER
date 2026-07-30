@@ -496,15 +496,14 @@
       .flatMap((f) =>
         (f.stages || []).map((s) => {
           const cards = (f.cards || []).filter((c) => c.stage_id === s.id);
-          const total = cards.reduce((sum, c) => sum + (c.value_cents || 0), 0);
           const on = activeFilter?.key === `stage:${s.id}`;
           return `<span class="crm-pill${on ? " crm-pill-on" : ""}" data-funnel="${escapeHtml(f.id)}" data-stage="${escapeHtml(s.id)}">
             ${escapeHtml(s.name)}
             <span class="crm-pill-count">${cards.length}</span>
-            <span class="crm-pill-value">${escapeHtml(formatBRL(total))}</span>
             <button class="crm-pill-gear" data-funnel="${escapeHtml(f.id)}" data-stage="${escapeHtml(s.id)}" title="Opções">${GEAR_SVG}</button>
           </span>`;
         }),
+
       )
       .join("");
 
