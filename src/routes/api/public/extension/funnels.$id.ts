@@ -40,7 +40,7 @@ export const Route = createFileRoute("/api/public/extension/funnels/$id")({
           return jsonResponse(request, { ok: false, error: "Funil não encontrado" }, { status: 404 });
         }
 
-        const patch: Record<string, unknown> = {};
+        const patch: { name?: string; source_label_id?: string | null; sort_order?: number } = {};
         if (parsed.data.name !== undefined) patch.name = parsed.data.name;
         if (parsed.data.source_label_id !== undefined) patch.source_label_id = parsed.data.source_label_id;
         if (parsed.data.sort_order !== undefined) patch.sort_order = parsed.data.sort_order;
