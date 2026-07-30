@@ -162,19 +162,27 @@
     exit: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>`,
   };
 
+  const GEAR_SVG = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9M4.6 9a1.7 1.7 0 0 0-.3-1.9"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>`;
+  const FILTER_SVG = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 8v7l-4 2v-9L3 4z"/></svg>`;
+
+  let topbarFilter = "tabs";
+  try {
+    topbarFilter = localStorage.getItem("crm-topbar-filter") === "labels" ? "labels" : "tabs";
+  } catch {}
+
   function buildShell() {
     const rail = document.createElement("div");
     rail.id = "crm-rail";
     rail.innerHTML = `
       <div class="crm-rail-mark">CB</div>
-      <button class="crm-rail-btn" data-go="assinantes" title="Gestão de Assinaturas">${ICONS.users}</button>
-      <button class="crm-rail-btn" data-go="funis" title="Funis de Vendas">${ICONS.funnel}</button>
-      <button class="crm-rail-btn" data-go="equipe" title="Equipe">${ICONS.trophy}</button>
-      <button class="crm-rail-btn" data-go="conexao" title="Conexão">${ICONS.phone}</button>
-      <button class="crm-rail-btn" data-act="sync" title="Sincronizar etiquetas e conversas">${ICONS.sync}</button>
+      <button class="crm-rail-btn" data-go="assinantes" data-label="Gestão de Assinaturas">${ICONS.users}</button>
+      <button class="crm-rail-btn" data-go="funis" data-label="Funis de Vendas">${ICONS.funnel}</button>
+      <button class="crm-rail-btn" data-go="equipe" data-label="Equipe">${ICONS.trophy}</button>
+      <button class="crm-rail-btn" data-go="conexao" data-label="Conexão">${ICONS.phone}</button>
+      <button class="crm-rail-btn" data-act="sync" data-label="Sincronizar etiquetas e conversas">${ICONS.sync}</button>
       <div class="crm-rail-spacer"></div>
-      <button class="crm-rail-btn" data-go="configuracoes" title="Configurações">${ICONS.gear}</button>
-      <button class="crm-rail-btn" data-act="unpair" title="Desvincular">${ICONS.exit}</button>
+      <button class="crm-rail-btn" data-go="configuracoes" data-label="Configurações">${ICONS.gear}</button>
+      <button class="crm-rail-btn" data-act="unpair" data-label="Desvincular">${ICONS.exit}</button>
     `;
     document.body.appendChild(rail);
     railRef = rail;
@@ -210,9 +218,23 @@
     });
 
     topbar.addEventListener("click", (e) => {
+      const filterBtn = e.target.closest(".crm-filter");
+      if (filterBtn) return openFilterMenu(filterBtn);
+
+      const gear = e.target.closest(".crm-pill-gear");
+      if (gear) {
+        e.stopPropagation();
+        return openTabMenu(gear, gear.getAttribute("data-funnel"));
+      }
+
+      const addBtn = e.target.closest(".crm-pill-add");
+      if (addBtn) return createTab();
+
       const pill = e.target.closest(".crm-pill");
       if (!pill) return;
       const id = pill.getAttribute("data-funnel");
+      const label = pill.getAttribute("data-label-id");
+      if (label) return openPainel("funis");
       openPainel("funis", id ? `&funnel=${encodeURIComponent(id)}` : "");
     });
 
@@ -223,6 +245,117 @@
     return ((cents || 0) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   }
 
+  /** Menu flutuante ancorado a um elemento (substitui menus nativos). */
+  function openMenu(anchor, items) {
+    document.querySelector(".crm-menu")?.remove();
+    const rect = anchor.getBoundingClientRect();
+    const menu = document.createElement("div");
+    menu.className = "crm-menu";
+    menu.style.top = `${rect.bottom + 6}px`;
+    menu.style.left = `${Math.max(8, rect.left)}px`;
+    menu.innerHTML = items
+      .map(
+        (i, idx) =>
+          `<button data-i="${idx}"${i.danger ? ' class="crm-menu-danger"' : ""}>${escapeHtml(i.label)}</button>`,
+      )
+      .join("");
+    document.body.appendChild(menu);
+    const close = () => {
+      menu.remove();
+      document.removeEventListener("mousedown", onDoc, true);
+    };
+    function onDoc(ev) {
+      if (!menu.contains(ev.target)) close();
+    }
+    setTimeout(() => document.addEventListener("mousedown", onDoc, true), 0);
+    menu.addEventListener("click", (ev) => {
+      const b = ev.target.closest("button[data-i]");
+      if (!b) return;
+      close();
+      items[Number(b.getAttribute("data-i"))].onClick();
+    });
+  }
+
+  function openFilterMenu(anchor) {
+    openMenu(anchor, [
+      {
+        label: "Abas",
+        onClick: () => {
+          topbarFilter = "tabs";
+          try { localStorage.setItem("crm-topbar-filter", "tabs"); } catch {}
+          renderTopbar();
+        },
+      },
+      {
+        label: "Listas / Etiquetas",
+        onClick: () => {
+          topbarFilter = "labels";
+          try { localStorage.setItem("crm-topbar-filter", "labels"); } catch {}
+          renderTopbar();
+        },
+      },
+    ]);
+  }
+
+  function openTabMenu(anchor, funnelId) {
+    const funnel = funnels.find((f) => f.id === funnelId);
+    if (!funnel) return;
+    openMenu(anchor, [
+      {
+        label: "Adicionar / remover contatos",
+        onClick: () => openPainel("funis", `&funnel=${encodeURIComponent(funnel.id)}`),
+      },
+      {
+        label: "Renomear aba",
+        onClick: async () => {
+          const name = await crmPrompt({ title: "Renomear aba", value: funnel.name });
+          if (!name) return;
+          await chrome.runtime
+            .sendMessage({
+              type: "api",
+              path: `/api/public/extension/funnels/${funnel.id}`,
+              opts: { method: "PATCH", body: JSON.stringify({ name }) },
+            })
+            .catch(() => null);
+          loadFunnels();
+        },
+      },
+      {
+        label: "Remover aba",
+        danger: true,
+        onClick: async () => {
+          const ok = await crmConfirm({
+            title: `Remover a aba “${funnel.name}”?`,
+            body: "Os leads dessa aba serão excluídos.",
+            confirmLabel: "Remover",
+          });
+          if (!ok) return;
+          await chrome.runtime
+            .sendMessage({
+              type: "api",
+              path: `/api/public/extension/funnels/${funnel.id}`,
+              opts: { method: "DELETE" },
+            })
+            .catch(() => null);
+          loadFunnels();
+        },
+      },
+    ]);
+  }
+
+  async function createTab() {
+    const name = await crmPrompt({ title: "Nova aba", value: "" });
+    if (!name) return;
+    await chrome.runtime
+      .sendMessage({
+        type: "api",
+        path: "/api/public/extension/funnels",
+        opts: { method: "POST", body: JSON.stringify({ name, mode: "tab" }) },
+      })
+      .catch(() => null);
+    loadFunnels();
+  }
+
   function renderTopbar() {
     if (!topbarRef) return;
 
@@ -231,28 +364,44 @@
       return;
     }
 
-    // Abas = funis (as abas criadas no CRM aparecem aqui em primeiro lugar).
-    const ordered = [...funnels].sort((a, b) => (a.mode === "tab" ? -1 : 0) - (b.mode === "tab" ? -1 : 0));
-    const pills = ordered
+    const filter = `<button class="crm-filter">${FILTER_SVG}${
+      topbarFilter === "labels" ? "Etiquetas" : "Abas"
+    }</button>`;
+
+    if (topbarFilter === "labels") {
+      const pills = (waData.labels || [])
+        .map(
+          (l) =>
+            `<button class="crm-pill" data-label-id="${escapeHtml(l.id || l.wa_label_id)}">
+              ${escapeHtml(l.name)}
+              <span class="crm-pill-count">${Number(l.count ?? l.conversation_count ?? 0)}</span>
+            </button>`,
+        )
+        .join("");
+      topbarRef.innerHTML = `${filter}${
+        pills ||
+        `<span class="crm-topbar-hint">${
+          syncing ? "sincronizando etiquetas…" : "Nenhuma etiqueta sincronizada ainda."
+        }</span>`
+      }`;
+      return;
+    }
+
+    const tabs = funnels.filter((f) => f.mode === "tab");
+    const pills = tabs
       .map((f) => {
         const total = (f.cards || []).reduce((s, c) => s + (c.value_cents || 0), 0);
-        return `<button class="crm-pill" data-funnel="${escapeHtml(f.id)}">
+        return `<span class="crm-pill" data-funnel="${escapeHtml(f.id)}">
           ${escapeHtml(f.name)}
           <span class="crm-pill-value">${escapeHtml(formatBRL(total))}</span>
-        </button>`;
+          <button class="crm-pill-gear" data-funnel="${escapeHtml(f.id)}" title="Opções da aba">${GEAR_SVG}</button>
+        </span>`;
       })
       .join("");
 
-    topbarRef.innerHTML = `
-      ${pills || `<span class="crm-topbar-hint">Nenhuma aba criada ainda.</span>`}
-      <button class="crm-pill crm-pill-add">+ nova aba</button>
-      <span class="crm-topbar-status">${
-        syncing
-          ? "sincronizando…"
-          : `${waData.labels.length} etiquetas · ${waData.contacts.length} conversas`
-      }</span>
-    `;
+    topbarRef.innerHTML = `${filter}${pills}<button class="crm-pill crm-pill-add">+ aba</button>`;
   }
+
 
   async function refresh() {
     const r = await chrome.runtime.sendMessage({ type: "get_status" }).catch(() => null);
