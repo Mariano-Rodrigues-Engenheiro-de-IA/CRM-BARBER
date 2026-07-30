@@ -616,6 +616,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_barbershop_id: { Args: never; Returns: string }
       has_barbershop_role: {
         Args: {
           _barbershop_id: string
