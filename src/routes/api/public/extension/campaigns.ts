@@ -111,27 +111,70 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
         const nextDelayMs = () => (paceLo + Math.floor(Math.random() * (paceHi - paceLo + 1))) * 1000;
 
         // Resolve alvo → lista de customers {id, phone}
-        let customersQ = supabaseAdmin
-          .from("customers")
-          .select("id, phone")
-          .eq("barbershop_id", barbershopId)
-          .is("archived_at", null);
+        let targets: Array<{ id: string; phone: string | null }> = [];
 
-        if (customer_ids && customer_ids.length > 0) {
-          customersQ = customersQ.in("id", customer_ids);
-        } else if (filter) {
-          if (filter.status) customersQ = customersQ.eq("status", filter.status);
-          if (filter.tags && filter.tags.length > 0) {
-            customersQ = customersQ.overlaps("tags", filter.tags);
+        if (phone_targets && phone_targets.length > 0) {
+          // Disparo vindo dos funis: cada telefone vira (ou reaproveita) um customer.
+          const wanted = new Map<string, string>();
+          for (const t of phone_targets) {
+            const digits = String(t.phone).replace(/\D/g, "");
+            if (!/^\d{10,15}$/.test(digits)) continue;
+            if (!wanted.has(digits)) wanted.set(digits, (t.name || digits).slice(0, 160));
           }
+          const phones = [...wanted.keys()];
+          if (phones.length > 0) {
+            const { data: existing } = await supabaseAdmin
+              .from("customers")
+              .select("id, phone")
+              .eq("barbershop_id", barbershopId)
+              .is("archived_at", null)
+              .in("phone", phones);
+            const byPhone = new Map((existing ?? []).map((c) => [String(c.phone), c]));
+            const missing = phones.filter((p) => !byPhone.has(p));
+            if (missing.length > 0) {
+              const { data: created, error: insErr } = await supabaseAdmin
+                .from("customers")
+                .insert(
+                  missing.map((p) => ({
+                    barbershop_id: barbershopId,
+                    name: wanted.get(p) as string,
+                    phone: p,
+                    status: "lead",
+                    source: "funnel",
+                  })),
+                )
+                .select("id, phone");
+              if (insErr) {
+                return jsonResponse(request, { ok: false, error: insErr.message }, { status: 500 });
+              }
+              for (const c of created ?? []) byPhone.set(String(c.phone), c);
+            }
+            targets = phones.map((p) => byPhone.get(p)).filter(Boolean) as typeof targets;
+          }
+        } else {
+          let customersQ = supabaseAdmin
+            .from("customers")
+            .select("id, phone")
+            .eq("barbershop_id", barbershopId)
+            .is("archived_at", null);
+
+          if (customer_ids && customer_ids.length > 0) {
+            customersQ = customersQ.in("id", customer_ids);
+          } else if (filter) {
+            if (filter.status) customersQ = customersQ.eq("status", filter.status);
+            if (filter.tags && filter.tags.length > 0) {
+              customersQ = customersQ.overlaps("tags", filter.tags);
+            }
+          }
+          const { data: allTargets, error: tErr } = await customersQ.limit(2000);
+          if (tErr) {
+            return jsonResponse(request, { ok: false, error: tErr.message }, { status: 500 });
+          }
+          // Planilhas sem coluna de telefone geram contatos com telefone placeholder
+          // ("sem-tel-..."). Eles ficam no CRM, mas nunca entram na fila de disparo.
+          targets = (allTargets ?? []).filter((t) => /^\d{10,15}$/.test(String(t.phone ?? "")));
         }
-        const { data: allTargets, error: tErr } = await customersQ.limit(2000);
-        if (tErr) {
-          return jsonResponse(request, { ok: false, error: tErr.message }, { status: 500 });
-        }
-        // Planilhas sem coluna de telefone geram contatos com telefone placeholder
-        // ("sem-tel-..."). Eles ficam no CRM, mas nunca entram na fila de disparo.
-        const targets = (allTargets ?? []).filter((t) => /^\d{10,15}$/.test(String(t.phone ?? "")));
+
         if (targets.length === 0) {
           return jsonResponse(
             request,
