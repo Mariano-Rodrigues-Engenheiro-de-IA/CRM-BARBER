@@ -93,7 +93,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
         }
 
         const barbershopId = auth.token.barbershop_id;
-        const { name, message, message_variants, pace_seconds, pace_seconds_min, pace_seconds_max, customer_ids, phone_targets, filter, scheduled_for } = parsed.data;
+        const { name, message, message_variants, pace_seconds, pace_seconds_min, pace_seconds_max, customer_ids, phone_targets, filter, scheduled_for, scope } = parsed.data;
 
         // Agendamento opcional: base do primeiro job. Datas no passado caem para agora.
         const scheduledBase = scheduled_for ? Date.parse(scheduled_for) : NaN;
@@ -145,7 +145,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
                     name: wanted.get(p) as string,
                     phone: p,
                     status: "lead",
-                    source: "funnel",
+                    source: "funil",
                   })),
                 )
                 .select("id, phone");
@@ -211,7 +211,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
             pace_seconds_min: paceLo,
             pace_seconds_max: paceHi,
             message_variants: variants,
-            audience_filter: filter ? filter : { customer_ids: customer_ids ?? [] },
+            audience_filter: { ...(filter ?? { customer_ids: customer_ids ?? [] }), scope: scope ?? "assinaturas" },
           })
           .select("id, name, status, pace_seconds, pace_seconds_min, pace_seconds_max, created_at")
           .single();
