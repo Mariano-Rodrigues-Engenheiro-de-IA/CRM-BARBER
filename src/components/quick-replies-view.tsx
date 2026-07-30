@@ -292,6 +292,7 @@ function QuickReplyEditor({
                       <button
                         onClick={() => {
                           uploadIndex.current = i;
+                          if (fileInput.current) fileInput.current.accept = acceptFor(a.type);
                           fileInput.current?.click();
                         }}
                         disabled={busy}
