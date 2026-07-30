@@ -5,9 +5,11 @@
 // dentro do WhatsApp Web para enviar tudo em sequência.
 
 import { useEffect, useRef, useState } from "react";
+import type { Funnel } from "@/lib/funnels";
 import {
   actionLabel,
   QUICK_REPLY_ACTION_TYPES,
+  QUICK_REPLY_FUNNEL_TYPES,
   type QuickReply,
   type QuickReplyAction,
   type QuickReplyActionType,
@@ -147,6 +149,14 @@ function QuickReplyEditor({
   const [err, setErr] = useState<string | null>(null);
   const uploadIndex = useRef<number | null>(null);
   const fileInput = useRef<HTMLInputElement | null>(null);
+  const [funnels, setFunnels] = useState<Funnel[]>([]);
+
+  useEffect(() => {
+    api("/api/public/extension/funnels").then((r) => {
+      if (r?.ok) setFunnels((r.funnels as Funnel[]) || []);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function update(i: number, patch: Partial<QuickReplyAction>) {
     setActions((list) => list.map((a, idx) => (idx === i ? { ...a, ...patch } : a)));
@@ -201,7 +211,15 @@ function QuickReplyEditor({
   async function save() {
     const clean = actions
       .map((a) => (a.type === "text" ? { type: a.type, text: (a.text || "").trim() } : a))
-      .filter((a) => (a.type === "text" ? !!a.text : !!a.path));
+      .filter((a) =>
+        a.type === "text"
+          ? !!a.text
+          : a.type === "funnel_add"
+            ? !!a.funnel_id && !!a.stage_id
+            : a.type === "funnel_remove"
+              ? !!a.funnel_id
+              : !!a.path,
+      );
     if (!title.trim() || clean.length === 0) {
       setErr("Informe um título e pelo menos uma ação preenchida.");
       return;
@@ -261,7 +279,32 @@ function QuickReplyEditor({
                   </div>
                 </div>
 
-                {a.type === "text" ? (
+                {a.type === "funnel_add" || a.type === "funnel_remove" ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <select
+                      value={a.funnel_id ?? ""}
+                      onChange={(e) => update(i, { funnel_id: e.target.value || undefined, stage_id: undefined })}
+                      className={inputCls + " max-w-[220px]"}
+                    >
+                      <option value="">Escolha o funil</option>
+                      {funnels.map((f) => (
+                        <option key={f.id} value={f.id}>{f.name}</option>
+                      ))}
+                    </select>
+                    {a.type === "funnel_add" && (
+                      <select
+                        value={a.stage_id ?? ""}
+                        onChange={(e) => update(i, { stage_id: e.target.value || undefined })}
+                        className={inputCls + " max-w-[220px]"}
+                      >
+                        <option value="">Escolha a etapa</option>
+                        {(funnels.find((f) => f.id === a.funnel_id)?.stages ?? []).map((st) => (
+                          <option key={st.id} value={st.id}>{st.name}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                ) : a.type === "text" ? (
                   <textarea
                     value={a.text ?? ""}
                     onChange={(e) => update(i, { text: e.target.value })}
@@ -313,7 +356,7 @@ function QuickReplyEditor({
           />
 
           <div className="flex flex-wrap gap-2">
-            {QUICK_REPLY_ACTION_TYPES.map((t) => (
+            {[...QUICK_REPLY_ACTION_TYPES, ...QUICK_REPLY_FUNNEL_TYPES].map((t) => (
               <button
                 key={t}
                 onClick={() => addAction(t)}
