@@ -139,7 +139,7 @@
       <div class="crm-tiles">
         <button class="crm-tile" data-section="assinantes">
           <span class="crm-tile-icon">${iconUsers}</span>
-          <span class="crm-tile-title">Assinantes</span>
+          <span class="crm-tile-title">Gestão de Assinaturas</span>
           <span class="crm-tile-arrow">${chev}</span>
         </button>
         <button class="crm-tile" data-section="equipe">

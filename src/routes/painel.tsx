@@ -375,7 +375,7 @@ function Painel() {
   }
 
   const NAV_TOP: Array<{ key: Section; label: string; icon: React.ReactNode }> = [
-    { key: "assinantes", label: "Assinantes", icon: <IconUsers /> },
+    { key: "assinantes", label: "Gestão de Assinaturas", icon: <IconUsers /> },
     { key: "respostas", label: "Respostas rápidas", icon: <IconChat /> },
     { key: "equipe", label: "Equipe", icon: <IconTrophy /> },
 
