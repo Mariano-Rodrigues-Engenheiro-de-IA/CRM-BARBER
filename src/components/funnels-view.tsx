@@ -199,8 +199,8 @@ export function FunnelsView({ api }: { api: ApiFn }) {
               }
             >
               {f.name}
-              <span className="ml-1 text-[10px] text-yellow-700">{MODE_LABEL[f.mode]}</span>
             </button>
+
           ))}
         </nav>
       )}
