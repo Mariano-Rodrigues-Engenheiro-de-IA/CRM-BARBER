@@ -14,7 +14,7 @@ import {
   type WaContact,
   type WaLabel,
 } from "@/lib/funnels";
-import { isRealPhone, openWhatsappChat } from "@/lib/wa-actions";
+import { applyFunnelActions, isRealPhone, openWhatsappChat } from "@/lib/wa-actions";
 import { sendableActions, type QuickReply } from "@/lib/quick-replies";
 
 type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
@@ -99,7 +99,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
 
   async function addCard(
     stageId: string | undefined,
-    payload: { title: string; phone?: string; value_cents?: number; wa_contact_id?: string },
+    payload: { title: string; phone?: string; wa_contact_id?: string },
   ) {
     if (!active || !stageId) return;
     // Guard: um mesmo contato só pode entrar uma vez no funil (constraint
@@ -129,7 +129,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                   stage_id: stageId,
                   title: payload.title,
                   phone: payload.phone ?? null,
-                  value_cents: payload.value_cents ?? null,
+                  value_cents: null,
                   notes: null,
                   sort_order: f.cards.length,
                   customer_id: null,
@@ -904,19 +904,17 @@ function AddCardForm({
 }
 
 
-/** Disparo em massa a partir de uma coluna do funil (ou do Inbox). */
-function StageDispatchModal({
-  api,
-  label,
-  targets,
-  onClose,
-}: {
-  api: ApiFn;
-  label: string;
-  targets: Array<{ phone: string; name: string }>;
-  onClose: () => void;
-}) {
-  const [name, setName] = useState(label);
+/**
+ * NOVO DISPARO dos Funis de Vendas — mesma estrutura da Gestão de Assinaturas,
+ * mas com público montado a partir de um funil + coluna (ou do Inbox).
+ * Independente do módulo de assinaturas (scope "funil").
+ */
+export function FunnelDispatchView({ api, onDone }: { api: ApiFn; onDone?: () => void }) {
+  const [funnels, setFunnels] = useState<Funnel[]>([]);
+  const [contacts, setContacts] = useState<WaContact[]>([]);
+  const [funnelId, setFunnelId] = useState("");
+  const [stageId, setStageId] = useState("");
+  const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [replies, setReplies] = useState<QuickReply[]>([]);
   const [replyId, setReplyId] = useState("");
@@ -928,11 +926,38 @@ function StageDispatchModal({
   const [done, setDone] = useState<string | null>(null);
 
   useEffect(() => {
-    api("/api/public/extension/quick-replies").then((r) => {
-      if (r?.ok) setReplies((r.quick_replies as QuickReply[]) || []);
-    });
+    void (async () => {
+      const [f, w, q] = await Promise.all([
+        api("/api/public/extension/funnels"),
+        api("/api/public/extension/wa/data"),
+        api("/api/public/extension/quick-replies"),
+      ]);
+      if (f?.ok) {
+        const list = (f.funnels as Funnel[]) || [];
+        setFunnels(list);
+        setFunnelId((cur) => cur || list[0]?.id || "");
+      }
+      if (w?.ok) setContacts((w.contacts as WaContact[]) || []);
+      if (q?.ok) setReplies((q.quick_replies as QuickReply[]) || []);
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const funnel = funnels.find((f) => f.id === funnelId) || null;
+
+  const targets = useMemo(() => {
+    if (!funnel) return [];
+    if (stageId === "inbox") {
+      const used = new Set(funnel.cards.map((c) => c.wa_contact_id).filter(Boolean) as string[]);
+      return contacts
+        .filter((c) => !c.is_group && !used.has(c.id) && isRealPhone(c.phone))
+        .map((c) => ({ phone: c.phone as string, name: c.name || (c.phone as string) }));
+    }
+    return funnel.cards
+      .filter((c) => (stageId ? c.stage_id === stageId : true))
+      .filter((c) => isRealPhone(c.phone))
+      .map((c) => ({ phone: c.phone as string, name: c.title }));
+  }, [funnel, stageId, contacts]);
 
   const selected = replies.find((q) => q.id === replyId);
   const mediaDropped = selected
@@ -959,7 +984,7 @@ function StageDispatchModal({
       return;
     }
     if (targets.length === 0) {
-      setErr("Nenhum contato com telefone válido nesta coluna.");
+      setErr("Nenhum contato com telefone válido no público escolhido.");
       return;
     }
     setBusy(true);
@@ -969,101 +994,122 @@ function StageDispatchModal({
       body: JSON.stringify({
         name: name.trim(),
         message: message.trim(),
+        scope: "funil",
         pace_seconds_min: Math.min(paceMin, paceMax),
         pace_seconds_max: Math.max(paceMin, paceMax),
         phone_targets: targets,
       }),
     });
-    setBusy(false);
     if (!r?.ok) {
+      setBusy(false);
       setErr((r?.error as string) || "Erro ao criar o disparo");
       return;
     }
+    // Ações de funil da resposta rápida (mover/remover) valem para todo o público.
+    if (selected) {
+      for (const t of targets) {
+        await applyFunnelActions(api, selected.actions, { title: t.name, phone: t.phone });
+      }
+    }
+    setBusy(false);
     setDone(`Disparo criado para ${targets.length} contato(s) ✔`);
+    onDone?.();
   }
 
   return (
-    <Overlay title={`Disparar — ${label}`} onClose={onClose}>
-      <div className="space-y-4">
-        <p className="text-xs text-neutral-500">{targets.length} contato(s) com telefone válido</p>
+    <div className="max-w-xl space-y-4">
+      <h2 className="text-lg font-semibold text-neutral-900">Novo disparo</h2>
 
-        <div>
-          <label className="mb-1 block text-xs font-medium text-neutral-600">Nome do disparo</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
-        </div>
-
-        {replies.length > 0 && (
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600">Resposta rápida</label>
-            <select value={replyId} onChange={(e) => pickReply(e.target.value)} className={inputCls}>
-              <option value="">— escrever mensagem —</option>
-              {replies.map((q) => (
-                <option key={q.id} value={q.id}>{q.title}</option>
-              ))}
-            </select>
-            {mediaDropped > 0 && (
-              <p className="mt-1 text-xs text-neutral-500">Disparo em massa envia só texto.</p>
-            )}
-          </div>
-        )}
-
-        <div>
-          <label className="mb-1 block text-xs font-medium text-neutral-600">Mensagem</label>
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            rows={4}
-            className={inputCls}
-            placeholder="Oi {nome}, tudo bem?"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600">Ritmo mín. (seg)</label>
-            <input
-              type="number"
-              min={5}
-              max={600}
-              value={paceMin}
-              onChange={(e) => setPaceMin(Number(e.target.value))}
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600">Ritmo máx. (seg)</label>
-            <input
-              type="number"
-              min={5}
-              max={600}
-              value={paceMax}
-              onChange={(e) => setPaceMax(Number(e.target.value))}
-              className={inputCls}
-            />
-          </div>
-        </div>
-
-        <label className="flex items-center gap-2 text-sm font-medium text-neutral-900">
-          <input
-            type="checkbox"
-            checked={accepted}
-            onChange={(e) => setAccepted(e.target.checked)}
-            className="h-4 w-4 rounded border-neutral-400"
-          />
-          Eu entendo e aceito os termos de uso.
-        </label>
-
-        {err && <p className="text-sm text-red-500">{err}</p>}
-        {done && <p className="text-sm text-emerald-600">{done}</p>}
-
-        <button
-          onClick={submit}
-          disabled={busy || !accepted}
-          className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
-        >
-          {busy ? "Criando..." : "Disparar"}
-        </button>
+      <div>
+        <label className="mb-1 block text-xs font-medium text-neutral-600">Nome do disparo</label>
+        <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="Ex.: Reativação julho" />
       </div>
-    </Overlay>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-neutral-600">Funil</label>
+          <select
+            value={funnelId}
+            onChange={(e) => {
+              setFunnelId(e.target.value);
+              setStageId("");
+            }}
+            className={inputCls}
+          >
+            {funnels.map((f) => (
+              <option key={f.id} value={f.id}>{f.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-neutral-600">Coluna</label>
+          <select value={stageId} onChange={(e) => setStageId(e.target.value)} className={inputCls}>
+            <option value="">Todas as colunas</option>
+            <option value="inbox">Inbox</option>
+            {(funnel?.stages ?? []).map((st) => (
+              <option key={st.id} value={st.id}>{st.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <p className="text-xs text-neutral-500">{targets.length} contato(s) com telefone válido</p>
+
+      {replies.length > 0 && (
+        <div>
+          <label className="mb-1 block text-xs font-medium text-neutral-600">Resposta rápida</label>
+          <select value={replyId} onChange={(e) => pickReply(e.target.value)} className={inputCls}>
+            <option value="">— escrever mensagem —</option>
+            {replies.map((q) => (
+              <option key={q.id} value={q.id}>{q.title}</option>
+            ))}
+          </select>
+          {mediaDropped > 0 && <p className="mt-1 text-xs text-neutral-500">Disparo em massa envia só texto.</p>}
+        </div>
+      )}
+
+      <div>
+        <label className="mb-1 block text-xs font-medium text-neutral-600">Mensagem</label>
+        <textarea
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          rows={4}
+          className={inputCls}
+          placeholder="Oi {nome}, tudo bem?"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-neutral-600">Ritmo mín. (seg)</label>
+          <input type="number" min={5} max={600} value={paceMin} onChange={(e) => setPaceMin(Number(e.target.value))} className={inputCls} />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-neutral-600">Ritmo máx. (seg)</label>
+          <input type="number" min={5} max={600} value={paceMax} onChange={(e) => setPaceMax(Number(e.target.value))} className={inputCls} />
+        </div>
+      </div>
+
+      <label className="flex items-center gap-2 text-sm font-medium text-neutral-900">
+        <input
+          type="checkbox"
+          checked={accepted}
+          onChange={(e) => setAccepted(e.target.checked)}
+          className="h-4 w-4 rounded border-neutral-400"
+        />
+        Eu entendo e aceito os termos de uso.
+      </label>
+
+      {err && <p className="text-sm text-red-500">{err}</p>}
+      {done && <p className="text-sm text-emerald-600">{done}</p>}
+
+      <button
+        onClick={submit}
+        disabled={busy || !accepted}
+        className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
+      >
+        {busy ? "Criando..." : "Disparar"}
+      </button>
+    </div>
   );
 }
