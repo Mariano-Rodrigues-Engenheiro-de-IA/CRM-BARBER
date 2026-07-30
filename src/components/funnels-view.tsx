@@ -157,27 +157,49 @@ export function FunnelsView({ api }: { api: ApiFn }) {
 
       {active && (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-500">
-            <span>
-              {active.cards.length} lead(s)
-              {active.mode === "label" && ` · ${labelContacts.length} contato(s) nessa etiqueta`}
-              {active.mode === "tab" && " · aparece como aba no topo do WhatsApp"}
-            </span>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setInboxOpen(active.stages[0]?.id ?? null)}
-                disabled={!active.stages[0]}
-                className="rounded-md border border-neutral-300 px-2 py-1 font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
-              >
-                + Puxar do inbox
-              </button>
-              <button onClick={() => removeFunnel(active.id)} className="text-red-600 hover:underline">
-                excluir
-              </button>
-            </div>
+          <div className="flex items-center justify-between gap-2 text-xs text-neutral-500">
+            <span>{active.cards.length} lead(s)</span>
+            <button onClick={() => removeFunnel(active.id)} className="text-red-600 hover:underline">
+              excluir
+            </button>
           </div>
 
           <div className="flex gap-3 overflow-x-auto pb-4">
+            <div className="flex w-72 shrink-0 flex-col rounded-xl border border-dashed border-neutral-300 bg-white p-3">
+              <div className="flex items-baseline justify-between">
+                <h3 className="text-sm font-semibold text-neutral-900">Inbox</h3>
+                <span className="text-[11px] text-neutral-500">{inboxContacts.length}</span>
+              </div>
+              <input
+                value={inboxQuery}
+                onChange={(e) => setInboxQuery(e.target.value)}
+                placeholder="Buscar"
+                className="mt-2 w-full rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs outline-none focus:border-neutral-900"
+              />
+              <div className="mt-2 max-h-[520px] space-y-1.5 overflow-y-auto">
+                {inboxContacts
+                  .filter((c) => {
+                    const t = inboxQuery.trim().toLowerCase();
+                    if (!t) return true;
+                    return (c.name || "").toLowerCase().includes(t) || (c.phone || "").includes(t);
+                  })
+                  .map((c) => (
+                    <div
+                      key={c.id}
+                      draggable
+                      onDragStart={() => {
+                        draggedContact.current = c;
+                        dragged.current = null;
+                      }}
+                      className="cursor-grab rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-2 text-xs active:cursor-grabbing"
+                    >
+                      <p className="truncate font-medium text-neutral-900">{c.name || c.phone || c.wa_id}</p>
+                      {c.phone && <p className="truncate text-[11px] text-neutral-500">{c.phone}</p>}
+                    </div>
+                  ))}
+              </div>
+            </div>
+
             {active.stages.map((stage) => {
               const cards = active.cards.filter((c) => c.stage_id === stage.id);
               const total = cards.reduce((sum, c) => sum + (c.value_cents ?? 0), 0);
@@ -186,8 +208,18 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                   key={stage.id}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={() => {
+                    const contact = draggedContact.current;
                     const card = dragged.current;
+                    draggedContact.current = null;
                     dragged.current = null;
+                    if (contact) {
+                      void addCard(stage.id, {
+                        title: contact.name || contact.phone || contact.wa_id,
+                        phone: contact.phone ?? undefined,
+                        wa_contact_id: contact.id,
+                      });
+                      return;
+                    }
                     if (card) void moveCard(card, stage.id);
                   }}
                   className="flex w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-3"
@@ -205,6 +237,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                         draggable
                         onDragStart={() => {
                           dragged.current = card;
+                          draggedContact.current = null;
                         }}
                         className="cursor-grab rounded-lg border border-neutral-200 bg-white p-3 shadow-sm active:cursor-grabbing"
                       >
@@ -267,51 +300,10 @@ export function FunnelsView({ api }: { api: ApiFn }) {
               );
             })}
           </div>
-
-          {active.mode === "label" && labelContacts.length > 0 && (
-            <div className="rounded-xl border border-neutral-200 bg-white p-4">
-              <h3 className="text-sm font-semibold text-neutral-900">
-                Contatos da etiqueta ainda fora do funil
-              </h3>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {labelContacts
-                  .filter((c) => !active.cards.some((card) => card.wa_contact_id === c.id))
-                  .slice(0, 60)
-                  .map((c) => (
-                    <button
-                      key={c.id}
-                      onClick={() =>
-                        addCard(active.stages[0]?.id, {
-                          title: c.name || c.phone || c.wa_id,
-                          phone: c.phone ?? undefined,
-                          wa_contact_id: c.id,
-                        })
-                      }
-                      disabled={!active.stages[0]}
-                      className="rounded-lg border border-neutral-300 px-2.5 py-1 text-xs hover:bg-neutral-100 disabled:opacity-50"
-                    >
-                      + {c.name || c.phone || c.wa_id}
-                    </button>
-                  ))}
-              </div>
-            </div>
-          )}
         </>
       )}
 
-      {inboxOpen && active && (
-        <InboxPicker
-          contacts={contacts.filter((c) => !active.cards.some((card) => card.wa_contact_id === c.id))}
-          onClose={() => setInboxOpen(null)}
-          onPick={(c) => {
-            void addCard(inboxOpen, {
-              title: c.name || c.phone || c.wa_id,
-              phone: c.phone ?? undefined,
-              wa_contact_id: c.id,
-            });
-          }}
-        />
-      )}
+
 
       {detail && (
         <CardDrawer
