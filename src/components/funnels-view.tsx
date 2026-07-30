@@ -106,13 +106,62 @@ export function FunnelsView({ api }: { api: ApiFn }) {
     payload: { title: string; phone?: string; value_cents?: number; wa_contact_id?: string },
   ) {
     if (!active || !stageId) return;
+    // Guard: um mesmo contato só pode entrar uma vez no funil (constraint
+    // funnel_cards_unique_contact). Sem isso, o drop repetido enquanto a
+    // requisição está em voo criava duas inserções.
+    const key = payload.wa_contact_id;
+    if (key) {
+      if (pendingContacts.current.has(key)) return;
+      if (active.cards.some((c) => c.wa_contact_id === key)) return;
+      pendingContacts.current.add(key);
+    }
+
+    const funnelId = active.id;
+    // Card otimista: some do Inbox e aparece na coluna na hora (sem delay).
+    const tempId = `tmp-${key ?? Math.random().toString(36).slice(2)}`;
+    setFunnels((list) =>
+      list.map((f) =>
+        f.id !== funnelId
+          ? f
+          : {
+              ...f,
+              cards: [
+                ...f.cards,
+                {
+                  id: tempId,
+                  funnel_id: funnelId,
+                  stage_id: stageId,
+                  title: payload.title,
+                  phone: payload.phone ?? null,
+                  value_cents: payload.value_cents ?? null,
+                  notes: null,
+                  sort_order: f.cards.length,
+                  customer_id: null,
+                  wa_contact_id: key ?? null,
+                } as FunnelCard,
+              ],
+            },
+      ),
+    );
+
     const r = await api("/api/public/extension/funnel-cards", {
       method: "POST",
-      body: JSON.stringify({ funnel_id: active.id, stage_id: stageId, ...payload }),
+      body: JSON.stringify({ funnel_id: funnelId, stage_id: stageId, ...payload }),
     });
-    if (r?.ok) void reload();
-    else setErr((r?.error as string) || "Erro ao criar card");
+    if (key) pendingContacts.current.delete(key);
+    if (r?.ok && r.card) {
+      const created = r.card as FunnelCard;
+      setFunnels((list) =>
+        list.map((f) =>
+          f.id !== funnelId ? f : { ...f, cards: f.cards.map((c) => (c.id === tempId ? created : c)) },
+        ),
+      );
+      return;
+    }
+    setErr((r?.error as string) || "Erro ao criar card");
+    void reload();
   }
+
 
   async function removeFunnel(id: string) {
     await api(`/api/public/extension/funnels/${id}`, { method: "DELETE" });
