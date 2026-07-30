@@ -434,9 +434,9 @@ function Painel() {
                   <button
                     onClick={() => setShowSubSettings(true)}
                     title="Configurações da assinatura"
-                    className="shrink-0 rounded-lg border border-neutral-200 p-1.5 text-neutral-500 hover:border-neutral-900 hover:text-neutral-900"
+                    className="shrink-0 rounded-md p-1 text-neutral-400 transition hover:text-neutral-900"
                   >
-                    <IconGear />
+                    <IconGear size={13} />
                   </button>
                 </div>
                 <nav className="flex shrink-0 gap-1 rounded-lg bg-neutral-100 p-1">
