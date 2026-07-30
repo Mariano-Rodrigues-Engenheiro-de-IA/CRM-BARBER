@@ -70,11 +70,10 @@ export function FunnelsView({ api }: { api: ApiFn }) {
 
   const inboxContacts = useMemo(() => {
     if (!active) return [];
-    return contacts
-      .filter((c) => !c.is_group)
-      .filter((c) => !active.cards.some((card) => card.wa_contact_id === c.id))
-      .slice(0, 200);
+    const used = new Set(active.cards.map((card) => card.wa_contact_id).filter(Boolean) as string[]);
+    return contacts.filter((c) => !c.is_group).filter((c) => !used.has(c.id));
   }, [active, contacts]);
+
 
   async function moveCard(card: FunnelCard, stageId: string) {
     if (card.stage_id === stageId) return;
