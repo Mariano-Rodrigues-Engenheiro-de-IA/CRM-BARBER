@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { TeamView } from "@/components/team-view";
 import { ConnectionView } from "@/components/connection-view";
 import { QuickRepliesView } from "@/components/quick-replies-view";
+import { FunnelsView } from "@/components/funnels-view";
 import { sendWaAction, isRealPhone } from "@/lib/wa-actions";
 import type { QuickReply } from "@/lib/quick-replies";
 import { PREMIUM_PRICE_LABEL, type BillingStatus } from "@/lib/billing";
@@ -212,7 +213,7 @@ function nudgeExtensionPoll() {
   window.postMessage({ __crm: "poll_now_v180" }, window.location.origin);
 }
 
-type Section = "assinantes" | "respostas" | "equipe" | "conexao" | "configuracoes";
+type Section = "assinantes" | "funis" | "respostas" | "equipe" | "conexao" | "configuracoes";
 
 function IconUsers() {
   return (
@@ -295,7 +296,7 @@ function Painel() {
   const initialSection: Section = (() => {
     if (typeof window === "undefined") return "assinantes";
     const s = new URLSearchParams(window.location.search).get("section");
-    if (s === "equipe" || s === "conexao" || s === "configuracoes" || s === "respostas") return s;
+    if (s === "equipe" || s === "conexao" || s === "configuracoes" || s === "respostas" || s === "funis") return s;
     return "assinantes";
   })();
   const [section, setSection] = useState<Section>(initialSection);
@@ -376,6 +377,7 @@ function Painel() {
 
   const NAV_TOP: Array<{ key: Section; label: string; icon: React.ReactNode }> = [
     { key: "assinantes", label: "Gestão de Assinaturas", icon: <IconUsers /> },
+    { key: "funis", label: "Funis de Vendas", icon: <IconChart /> },
     { key: "respostas", label: "Respostas rápidas", icon: <IconChat /> },
     { key: "equipe", label: "Equipe", icon: <IconTrophy /> },
 
@@ -483,6 +485,12 @@ function Painel() {
               {tab === "campanhas" && <CampaignsView token={token} />}
             </main>
           </>
+        )}
+
+        {section === "funis" && token && (
+          <main className="px-6 py-6 mt-14 md:mt-0">
+            <FunnelsView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+          </main>
         )}
 
         {section === "respostas" && token && (
