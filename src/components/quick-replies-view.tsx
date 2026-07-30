@@ -27,8 +27,27 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
+// Alguns sistemas (principalmente macOS) não casam `video/*` e `audio/*` com
+// extensões comuns, então listamos as extensões junto do mime.
 function acceptFor(type: QuickReplyActionType) {
-  return type === "image" ? "image/*" : type === "video" ? "video/*" : "audio/*";
+  if (type === "image") return "image/*,.jpg,.jpeg,.png,.webp,.gif";
+  if (type === "video") return "video/*,.mp4,.mov,.m4v,.3gp,.webm,.avi,.mkv";
+  return "audio/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.amr,.caf";
+}
+
+const MIME_BY_EXT: Record<string, string> = {
+  jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif",
+  mp4: "video/mp4", mov: "video/quicktime", m4v: "video/x-m4v", "3gp": "video/3gpp",
+  webm: "video/webm", avi: "video/x-msvideo", mkv: "video/x-matroska",
+  mp3: "audio/mpeg", m4a: "audio/mp4", aac: "audio/aac", ogg: "audio/ogg",
+  opus: "audio/ogg", wav: "audio/wav", amr: "audio/amr", caf: "audio/x-caf",
+};
+
+/** O navegador às vezes entrega file.type vazio; deduz pelo sufixo do arquivo. */
+function resolveMime(file: File, type: QuickReplyActionType) {
+  if (file.type && /^(image|video|audio)\//.test(file.type)) return file.type;
+  const ext = file.name.split(".").pop()?.toLowerCase() || "";
+  return MIME_BY_EXT[ext] || `${type}/octet-stream`;
 }
 
 export function QuickRepliesView({ token, api }: { token: string; api: ApiFn }) {
@@ -171,10 +190,14 @@ function QuickReplyEditor({
     setBusy(true);
     setErr(null);
     try {
+      const mime = resolveMime(file, actions[i]?.type ?? "image");
+      if (!/^(image|video|audio)\//.test(mime)) {
+        throw new Error("Formato não suportado. Use imagem, vídeo ou áudio.");
+      }
       const dataUrl = await fileToBase64(file);
       const r = await api("/api/public/extension/quick-replies/upload", {
         method: "POST",
-        body: JSON.stringify({ filename: file.name, mime: file.type, data_base64: dataUrl }),
+        body: JSON.stringify({ filename: file.name, mime, data_base64: dataUrl }),
       });
       if (!r?.ok) throw new Error((r?.error as string) || "Falha no upload");
       update(i, {
@@ -214,7 +237,7 @@ function QuickReplyEditor({
     onSaved();
   }
 
-  const currentType = uploadIndex.current !== null ? actions[uploadIndex.current]?.type : "image";
+  
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
@@ -269,6 +292,7 @@ function QuickReplyEditor({
                       <button
                         onClick={() => {
                           uploadIndex.current = i;
+                          if (fileInput.current) fileInput.current.accept = acceptFor(a.type);
                           fileInput.current?.click();
                         }}
                         disabled={busy}
@@ -293,7 +317,7 @@ function QuickReplyEditor({
           <input
             ref={fileInput}
             type="file"
-            accept={acceptFor((currentType as QuickReplyActionType) || "image")}
+            accept="image/*,video/*,audio/*"
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
