@@ -321,7 +321,22 @@ export function FunnelsView({ api }: { api: ApiFn }) {
       {creating && (
         <NewFunnelModal
           labels={labels}
+          tabFunnel={funnels.find((f) => f.mode === "tab") ?? null}
           onClose={() => setCreating(false)}
+          onAddTabStages={async (funnel, names) => {
+            setCreating(false);
+            const stages = [
+              ...funnel.stages.map((s) => ({ id: s.id, name: s.name, sort_order: s.sort_order })),
+              ...names.map((n, i) => ({ name: n, sort_order: funnel.stages.length + i })),
+            ];
+            const r = await api(`/api/public/extension/funnels/${funnel.id}`, {
+              method: "PATCH",
+              body: JSON.stringify({ stages }),
+            });
+            if (!r?.ok) setErr((r?.error as string) || "Erro ao adicionar etapas");
+            await reload();
+            setActiveId(funnel.id);
+          }}
           onCreate={async (body, labelStages) => {
             const r = await api("/api/public/extension/funnels", {
               method: "POST",
