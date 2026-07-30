@@ -1,9 +1,9 @@
-// Content script v0.23.1 — abas do CRM no topo do WhatsApp Web + trilho de
+// Content script v0.24.0 — abas do CRM no topo do WhatsApp Web + trilho de
 // ícones minimalista à esquerda. Clicar numa aba/etiqueta filtra a própria
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.23.1";
+  const CRM_VERSION = "0.24.0";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -280,7 +280,7 @@
   function openFilterMenu(anchor) {
     openMenu(anchor, [
       {
-        label: "Funil principal",
+        label: "FUNIL PRINCIPAL",
         onClick: () => {
           topbarFilter = "tabs";
           try { localStorage.setItem("crm-topbar-filter", "tabs"); } catch {}
@@ -288,7 +288,7 @@
         },
       },
       {
-        label: "Etiquetas",
+        label: "ETIQUETAS / LISTAS",
         onClick: () => {
           topbarFilter = "labels";
           try { localStorage.setItem("crm-topbar-filter", "labels"); } catch {}
@@ -452,7 +452,7 @@
         path: "/api/public/extension/funnels",
         opts: {
           method: "POST",
-          body: JSON.stringify({ name: "Funil principal", mode: "tab", stages: [name] }),
+          body: JSON.stringify({ name: "FUNIL PRINCIPAL", mode: "tab", stages: [name] }),
         },
       })
       .catch(() => null);
@@ -468,7 +468,7 @@
     }
 
     const filter = `<button class="crm-filter">${FILTER_SVG}${
-      topbarFilter === "labels" ? "Etiquetas" : "Funil principal"
+      topbarFilter === "labels" ? "ETIQUETAS / LISTAS" : "FUNIL PRINCIPAL"
     }</button>`;
 
     if (topbarFilter === "labels") {
