@@ -23,7 +23,7 @@ const inputCls =
   "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-900";
 
 const MODE_LABEL: Record<FunnelMode, string> = {
-  tab: "aba",
+  tab: "principal",
   label: "etiqueta",
   manual: "funil",
 };
@@ -67,9 +67,12 @@ export function FunnelsView({ api }: { api: ApiFn }) {
 
   const active = funnels.find((f) => f.id === activeId) || null;
 
-  const labelContacts = useMemo(() => {
-    if (!active || active.mode !== "label" || !active.source_label_id) return [];
-    return contacts.filter((c) => (c.label_ids || []).includes(active.source_label_id!));
+  const inboxContacts = useMemo(() => {
+    if (!active) return [];
+    return contacts
+      .filter((c) => !c.is_group)
+      .filter((c) => !active.cards.some((card) => card.wa_contact_id === c.id))
+      .slice(0, 200);
   }, [active, contacts]);
 
   async function moveCard(card: FunnelCard, stageId: string) {
@@ -120,12 +123,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 sm:flex sm:flex-wrap sm:justify-between">
-        <div className="min-w-0">
-          <h2 className="truncate text-lg font-semibold text-neutral-900">Funis de vendas</h2>
-          <p className="text-sm text-neutral-500">
-            Crie abas, use etiquetas do WhatsApp ou monte um funil do zero — e arraste os leads entre as etapas.
-          </p>
-        </div>
+        <h2 className="truncate text-lg font-semibold text-neutral-900">Funis de vendas</h2>
         <button
           onClick={() => setCreating(true)}
           className="shrink-0 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
@@ -137,12 +135,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
       {err && <p className="text-sm text-red-500">{err}</p>}
       {loading && <p className="text-sm text-neutral-500">Carregando...</p>}
 
-      {!loading && funnels.length === 0 && (
-        <p className="text-sm text-neutral-500">
-          Nenhum funil ainda. Crie o primeiro — as etiquetas e conversas do WhatsApp aparecem aqui depois da
-          sincronização feita pela extensão.
-        </p>
-      )}
+      {!loading && funnels.length === 0 && <p className="text-sm text-neutral-500">Nenhum funil ainda.</p>}
 
       {funnels.length > 0 && (
         <nav className="flex flex-wrap gap-1 rounded-lg bg-neutral-100 p-1">
