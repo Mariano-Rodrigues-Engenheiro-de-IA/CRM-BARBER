@@ -575,48 +575,6 @@ function CardDrawer({
   );
 }
 
-function InboxPicker({
-  contacts,
-  onPick,
-  onClose,
-}: {
-  contacts: WaContact[];
-  onPick: (c: WaContact) => void;
-  onClose: () => void;
-}) {
-  const [q, setQ] = useState("");
-  const list = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    return contacts
-      .filter((c) => !c.is_group)
-      .filter((c) => !term || (c.name || "").toLowerCase().includes(term) || (c.phone || "").includes(term))
-      .slice(0, 100);
-  }, [contacts, q]);
-
-  return (
-    <Overlay title="Puxar leads do inbox" onClose={onClose}>
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar contato…" className={inputCls} />
-      <div className="mt-3 max-h-80 space-y-1 overflow-y-auto">
-        {list.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => onPick(c)}
-            className="flex w-full items-center justify-between rounded-lg border border-neutral-200 px-3 py-2 text-left text-sm hover:bg-neutral-50"
-          >
-            <span className="min-w-0 truncate">{c.name || c.phone || c.wa_id}</span>
-            <span className="ml-2 shrink-0 text-[11px] text-neutral-500">{c.phone}</span>
-          </button>
-        ))}
-        {list.length === 0 && (
-          <p className="py-6 text-center text-xs text-neutral-500">
-            Nenhuma conversa sincronizada ainda — abra o WhatsApp Web com a extensão ativa.
-          </p>
-        )}
-      </div>
-    </Overlay>
-  );
-}
-
 /** Lista de etapas/abas adicionadas uma a uma (sem vírgulas). */
 function StageListEditor({
   label,
