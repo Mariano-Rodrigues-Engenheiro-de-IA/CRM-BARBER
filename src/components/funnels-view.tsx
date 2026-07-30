@@ -35,6 +35,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
   const [detail, setDetail] = useState<FunnelCard | null>(null);
   const [detailTab, setDetailTab] = useState<"notes" | "schedule">("notes");
   const [inboxQuery, setInboxQuery] = useState("");
+  const [renamingStage, setRenamingStage] = useState<string | null>(null);
   const dragged = useRef<FunnelCard | null>(null);
   const draggedContact = useRef<WaContact | null>(null);
   const pendingContacts = useRef<Set<string>>(new Set());
@@ -520,6 +521,158 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
         />
       )}
 
+    </div>
+  );
+}
+
+/** Título editável de uma coluna do funil. */
+function StageTitle({
+  name,
+  editing,
+  onRename,
+  onCancel,
+}: {
+  name: string;
+  editing: boolean;
+  onRename: (name: string) => void;
+  onCancel: () => void;
+}) {
+  if (!editing) {
+    return (
+      <h3 className="truncate text-sm font-semibold uppercase tracking-wide text-neutral-900">{name}</h3>
+    );
+  }
+  return (
+    <input
+      autoFocus
+      defaultValue={name}
+      onBlur={(e) => onRename(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") onRename((e.target as HTMLInputElement).value);
+        if (e.key === "Escape") onCancel();
+      }}
+      className="w-full min-w-0 rounded-md border border-neutral-300 px-2 py-1 text-sm font-semibold uppercase tracking-wide text-neutral-900 outline-none focus:border-neutral-900"
+    />
+  );
+}
+
+/** Menu de três pontos reutilizável (colunas e funis). */
+function DotsMenu({ items }: { items: { label: string; onClick: () => void; danger?: boolean }[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        onBlur={() => setTimeout(() => setOpen(false), 120)}
+        title="Opções"
+        className="rounded-md px-1 text-neutral-400 transition hover:text-neutral-900"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <circle cx="5" cy="12" r="1.8" />
+          <circle cx="12" cy="12" r="1.8" />
+          <circle cx="19" cy="12" r="1.8" />
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-6 z-20 w-36 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 shadow-lg">
+          {items.map((it) => (
+            <button
+              key={it.label}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setOpen(false);
+                it.onClick();
+              }}
+              className={
+                "block w-full px-3 py-1.5 text-left text-xs transition hover:bg-neutral-100 " +
+                (it.danger ? "text-red-600" : "text-neutral-700")
+              }
+            >
+              {it.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** "FUNIS DE VENDAS" vira o seletor de funil: só um funil por vez na tela. */
+function FunnelPicker({
+  funnels,
+  activeId,
+  onSelect,
+  onRename,
+  onRemove,
+}: {
+  funnels: Funnel[];
+  activeId: string | null;
+  onSelect: (id: string) => void;
+  onRename: (id: string, name: string) => void;
+  onRemove: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const active = funnels.find((f) => f.id === activeId) || null;
+
+  if (renaming && active) {
+    return (
+      <input
+        autoFocus
+        defaultValue={active.name}
+        onBlur={(e) => {
+          setRenaming(false);
+          onRename(active.id, e.target.value);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          if (e.key === "Escape") setRenaming(false);
+        }}
+        className="min-w-0 rounded-md border border-neutral-300 px-2 py-1 text-[13px] font-semibold uppercase tracking-widest text-neutral-900 outline-none focus:border-neutral-900"
+      />
+    );
+  }
+
+  return (
+    <div className="relative flex min-w-0 items-center gap-1">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        className="flex min-w-0 items-center gap-1.5 text-[13px] font-semibold uppercase tracking-widest text-neutral-900"
+      >
+        <span className="truncate">{active ? active.name : "Funis de vendas"}</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+      {active && (
+        <DotsMenu
+          items={[
+            { label: "Renomear", onClick: () => setRenaming(true) },
+            { label: "Excluir", danger: true, onClick: () => onRemove(active.id) },
+          ]}
+        />
+      )}
+      {open && funnels.length > 0 && (
+        <div className="absolute left-0 top-7 z-30 w-56 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 shadow-lg">
+          {funnels.map((f) => (
+            <button
+              key={f.id}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setOpen(false);
+                onSelect(f.id);
+              }}
+              className={
+                "block w-full truncate px-3 py-1.5 text-left text-xs transition hover:bg-neutral-100 " +
+                (f.id === activeId ? "font-semibold text-neutral-900" : "text-neutral-600")
+              }
+            >
+              {f.name}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
