@@ -319,15 +319,36 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
         // Disparos avulsos (agendados a partir de um card/lead) não têm campanha.
         const { data: loose } = await supabaseAdmin
           .from("message_jobs")
-          .select("id, phone, rendered_body, status, scheduled_for, sent_at, last_error, created_at")
+          .select("id, customer_id, phone, rendered_body, status, scheduled_for, sent_at, last_error, created_at")
           .eq("barbershop_id", auth.token.barbershop_id)
           .is("campaign_id", null)
           .order("created_at", { ascending: false })
-          .limit(100);
+          .limit(200);
+
+        // Separa por módulo: leads criados pelos funis têm source "funil".
+        let looseJobs = loose ?? [];
+        if (scope) {
+          const customerIds = [...new Set(looseJobs.map((j) => j.customer_id).filter(Boolean))] as string[];
+          const funnelCustomers = new Set<string>();
+          if (customerIds.length > 0) {
+            const { data: cs } = await supabaseAdmin
+              .from("customers")
+              .select("id, source")
+              .in("id", customerIds);
+            for (const c of cs ?? []) {
+              if (c.source === "funil" || c.source === "funnel") funnelCustomers.add(c.id);
+            }
+          }
+          looseJobs = looseJobs.filter((j) => {
+            const isFunnel = j.customer_id ? funnelCustomers.has(j.customer_id) : false;
+            return scope === "funil" ? isFunnel : !isFunnel;
+          });
+        }
 
         return jsonResponse(request, {
           ok: true,
-          loose_jobs: loose ?? [],
+          loose_jobs: looseJobs.slice(0, 100),
+
           campaigns: (data ?? []).map((c) => ({
             ...c,
             stats: stats[c.id] ?? { pending: 0, sent: 0, failed: 0 },
