@@ -4,7 +4,8 @@
 // extensão. Postamos uma mensagem que o `panel-nudge.js` encaminha ao
 // service worker, que ativa a aba do WhatsApp e executa a ação.
 
-import type { QuickReplyAction } from "@/lib/quick-replies";
+import { funnelActions, type QuickReplyAction } from "@/lib/quick-replies";
+import type { Funnel } from "@/lib/funnels";
 
 export const WA_ACTION_REQUEST = "crm_wa_action_v190";
 export const WA_ACTION_RESPONSE = "crm_wa_action_result_v190";
@@ -46,4 +47,66 @@ export function sendWaAction(action: WaAction): Promise<{ ok: boolean; error?: s
     window.addEventListener("message", onMessage);
     window.postMessage({ __crm: WA_ACTION_REQUEST, id, action }, window.location.origin);
   });
+}
+
+/**
+ * Abre a conversa no WhatsApp. Tenta pela extensão (mantém a sessão aberta);
+ * se ela não responder, cai no link wa.me para o botão nunca ficar "morto".
+ */
+export async function openWhatsappChat(phone: string, name?: string) {
+  const digits = String(phone || "").replace(/\D/g, "");
+  if (!isRealPhone(digits)) return { ok: false, error: "Telefone inválido" };
+  const r = await sendWaAction({ phone: digits, name, openOnly: true });
+  if (!r.ok && typeof window !== "undefined") {
+    window.open(`https://wa.me/${digits}`, "_blank", "noopener");
+    return { ok: true };
+  }
+  return r;
+}
+
+/**
+ * Aplica as ações de funil de uma resposta rápida depois do envio:
+ * adiciona o contato numa etapa e/ou remove ele de outro funil.
+ */
+export async function applyFunnelActions(
+  api: (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>,
+  actions: QuickReplyAction[],
+  target: { title: string; phone: string },
+) {
+  const list = funnelActions(actions);
+  if (list.length === 0) return;
+  const digits = String(target.phone || "").replace(/\D/g, "");
+
+  const r = await api("/api/public/extension/funnels");
+  const funnels = (r?.ok ? (r.funnels as Funnel[]) : []) || [];
+
+  for (const a of list) {
+    if (a.type === "funnel_add" && a.funnel_id && a.stage_id) {
+      const already = funnels
+        .find((f) => f.id === a.funnel_id)
+        ?.cards.some((c) => String(c.phone || "").replace(/\D/g, "") === digits);
+      if (already) continue;
+      await api("/api/public/extension/funnel-cards", {
+        method: "POST",
+        body: JSON.stringify({
+          funnel_id: a.funnel_id,
+          stage_id: a.stage_id,
+          title: target.title,
+          phone: digits,
+        }),
+      });
+      continue;
+    }
+    if (a.type === "funnel_remove" && a.funnel_id) {
+      const cards = (funnels.find((f) => f.id === a.funnel_id)?.cards ?? []).filter(
+        (c) => String(c.phone || "").replace(/\D/g, "") === digits,
+      );
+      for (const c of cards) {
+        await api("/api/public/extension/funnel-cards", {
+          method: "DELETE",
+          body: JSON.stringify({ id: c.id }),
+        });
+      }
+    }
+  }
 }

@@ -10,8 +10,8 @@ import { TeamView } from "@/components/team-view";
 import { ConnectionView } from "@/components/connection-view";
 import { QuickRepliesView } from "@/components/quick-replies-view";
 import { FunnelsView } from "@/components/funnels-view";
-import { sendWaAction, isRealPhone } from "@/lib/wa-actions";
-import type { QuickReply } from "@/lib/quick-replies";
+import { sendWaAction, isRealPhone, openWhatsappChat, applyFunnelActions } from "@/lib/wa-actions";
+import { sendableActions, type QuickReply } from "@/lib/quick-replies";
 import { PREMIUM_PRICE_LABEL, type BillingStatus } from "@/lib/billing";
 import { useConfirm } from "@/components/confirm-dialog";
 import { toast } from "sonner";
@@ -646,15 +646,22 @@ function WhatsAppActionModal({
     setErr(null);
     setFeedback(null);
     const qr = replies.find((q) => q.id === selected);
-    const r = await sendWaAction({
-      phone,
-      name: customer.name,
-      openOnly,
-      text: openOnly ? undefined : text.trim() || undefined,
-      actions: openOnly ? undefined : qr?.actions,
-    });
+    const r = openOnly
+      ? await openWhatsappChat(phone, customer.name)
+      : await sendWaAction({
+          phone,
+          name: customer.name,
+          text: text.trim() || undefined,
+          actions: qr ? sendableActions(qr.actions) : undefined,
+        });
     setBusy(false);
     if (!r.ok) { setErr(r.error || "Falha ao falar com a extensão"); return; }
+    if (!openOnly && qr) {
+      await applyFunnelActions((path, opts) => api(token, path, opts), qr.actions, {
+        title: customer.name,
+        phone,
+      });
+    }
     setFeedback(openOnly ? "Conversa aberta no WhatsApp ✔" : "Mensagem enviada ✔");
   }
 
@@ -1605,10 +1612,31 @@ function DisparoView({
 // Cache module-scoped: sobrevive à troca de aba, evita "Carregando..." piscando.
 let campaignsCache: Campaign[] | null = null;
 
+/** Disparo avulso: mensagem enfileirada direto de um lead, sem campanha. */
+type LooseJob = {
+  id: string;
+  phone: string;
+  rendered_body: string;
+  status: string;
+  scheduled_for: string;
+  sent_at: string | null;
+  last_error: string | null;
+};
+
+function jobStatusLabel(status: string) {
+  if (status === "sent") return "Enviado";
+  if (status === "failed") return "Falhou";
+  if (status === "expired") return "Expirado";
+  if (status === "in_flight") return "Enviando";
+  return "Na fila";
+}
+
 function CampaignsView({ token }: { token: string }) {
   const { confirm, dialog } = useConfirm();
   const [campaigns, setCampaigns] = useState<Campaign[]>(campaignsCache ?? []);
   const [loaded, setLoaded] = useState<boolean>(campaignsCache !== null);
+  const [looseJobs, setLooseJobs] = useState<LooseJob[]>([]);
+  const [historyTab, setHistoryTab] = useState<"campanhas" | "disparos">("campanhas");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function reload() {
@@ -1617,6 +1645,7 @@ function CampaignsView({ token }: { token: string }) {
       const list: Campaign[] = r.campaigns || [];
       campaignsCache = list;
       setCampaigns(list);
+      setLooseJobs((r.loose_jobs as LooseJob[]) || []);
     }
     setLoaded(true);
   }
@@ -1665,14 +1694,57 @@ function CampaignsView({ token }: { token: string }) {
     reload();
   }
 
-  if (!loaded && campaigns.length === 0) return null;
-  if (loaded && !campaigns.length) {
-    return <p className="text-neutral-400">Nenhuma campanha criada ainda.</p>;
+  if (!loaded && campaigns.length === 0 && looseJobs.length === 0) return null;
+
+  const tabs = (
+    <div className="flex gap-1 rounded-lg bg-neutral-100 p-1">
+      {(["campanhas", "disparos"] as const).map((t) => (
+        <button
+          key={t}
+          onClick={() => setHistoryTab(t)}
+          className={
+            "rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition " +
+            (historyTab === t ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
+          }
+        >
+          {t === "campanhas" ? `Campanhas (${campaigns.length})` : `Disparos (${looseJobs.length})`}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (historyTab === "disparos") {
+    return (
+      <div className="space-y-3">
+        {dialog}
+        {tabs}
+        {looseJobs.length === 0 && <p className="text-sm text-neutral-500">Nenhum disparo avulso ainda.</p>}
+        {looseJobs.map((j) => (
+          <div key={j.id} className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-neutral-900">{j.phone}</span>
+              <span className="text-xs uppercase tracking-wide text-neutral-500">{jobStatusLabel(j.status)}</span>
+            </div>
+            <p className="mt-1 line-clamp-2 text-xs text-neutral-600">{j.rendered_body}</p>
+            <p className="mt-1 text-[11px] text-neutral-400">
+              {new Date(j.sent_at || j.scheduled_for).toLocaleString("pt-BR", {
+                day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+              })}
+              {j.last_error ? ` · ${j.last_error}` : ""}
+            </p>
+          </div>
+        ))}
+      </div>
+    );
   }
 
   return (
     <div className="space-y-3">
       {dialog}
+      {tabs}
+      {loaded && campaigns.length === 0 && (
+        <p className="text-sm text-neutral-500">Nenhuma campanha criada ainda.</p>
+      )}
       {campaigns.map((c) => {
         const total = c.stats.pending + c.stats.sent + c.stats.failed;
         const done = c.stats.sent + c.stats.failed;

@@ -5,9 +5,11 @@
 // dentro do WhatsApp Web para enviar tudo em sequência.
 
 import { useEffect, useRef, useState } from "react";
+import type { Funnel } from "@/lib/funnels";
 import {
   actionLabel,
   QUICK_REPLY_ACTION_TYPES,
+  QUICK_REPLY_FUNNEL_TYPES,
   type QuickReply,
   type QuickReplyAction,
   type QuickReplyActionType,
@@ -89,44 +91,31 @@ export function QuickRepliesView({ token, api }: { token: string; api: ApiFn }) 
       {err && <p className="text-sm text-red-500">{err}</p>}
       {loading && <p className="text-sm text-neutral-500">Carregando...</p>}
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="divide-y divide-neutral-200 rounded-xl border border-neutral-200 bg-white">
         {replies.map((qr) => (
-          <div key={qr.id} className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="font-semibold text-neutral-900">{qr.title}</h3>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setEditing(qr)}
-                  className="rounded px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-100"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={() => remove(qr.id)}
-                  className="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-                >
-                  Excluir
-                </button>
-              </div>
+          <div key={qr.id} className="flex items-center justify-between gap-3 px-4 py-3">
+            <span className="min-w-0 truncate text-sm font-medium text-neutral-900">{qr.title}</span>
+            <div className="flex shrink-0 gap-1">
+              <button
+                onClick={() => setEditing(qr)}
+                className="rounded px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-100"
+              >
+                Editar
+              </button>
+              <button
+                onClick={() => remove(qr.id)}
+                className="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+              >
+                Excluir
+              </button>
             </div>
-            <ol className="mt-3 space-y-1 text-xs text-neutral-600">
-              {qr.actions.map((a, i) => (
-                <li key={i} className="flex min-w-0 gap-2">
-                  <span className="shrink-0 rounded bg-yellow-100 px-1.5 py-0.5 font-medium text-yellow-800">
-                    {actionLabel(a.type)}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate">
-                    {a.type === "text" ? a.text : a.caption || ""}
-                  </span>
-                </li>
-              ))}
-            </ol>
           </div>
         ))}
         {!loading && replies.length === 0 && (
-          <p className="text-sm text-neutral-500">Nenhuma resposta rápida criada ainda.</p>
+          <p className="px-4 py-3 text-sm text-neutral-500">Nenhuma resposta rápida criada ainda.</p>
         )}
       </div>
+
 
       {editing && (
         <QuickReplyEditor
@@ -160,6 +149,14 @@ function QuickReplyEditor({
   const [err, setErr] = useState<string | null>(null);
   const uploadIndex = useRef<number | null>(null);
   const fileInput = useRef<HTMLInputElement | null>(null);
+  const [funnels, setFunnels] = useState<Funnel[]>([]);
+
+  useEffect(() => {
+    api("/api/public/extension/funnels").then((r) => {
+      if (r?.ok) setFunnels((r.funnels as Funnel[]) || []);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function update(i: number, patch: Partial<QuickReplyAction>) {
     setActions((list) => list.map((a, idx) => (idx === i ? { ...a, ...patch } : a)));
@@ -214,7 +211,15 @@ function QuickReplyEditor({
   async function save() {
     const clean = actions
       .map((a) => (a.type === "text" ? { type: a.type, text: (a.text || "").trim() } : a))
-      .filter((a) => (a.type === "text" ? !!a.text : !!a.path));
+      .filter((a) =>
+        a.type === "text"
+          ? !!a.text
+          : a.type === "funnel_add"
+            ? !!a.funnel_id && !!a.stage_id
+            : a.type === "funnel_remove"
+              ? !!a.funnel_id
+              : !!a.path,
+      );
     if (!title.trim() || clean.length === 0) {
       setErr("Informe um título e pelo menos uma ação preenchida.");
       return;
@@ -274,7 +279,32 @@ function QuickReplyEditor({
                   </div>
                 </div>
 
-                {a.type === "text" ? (
+                {a.type === "funnel_add" || a.type === "funnel_remove" ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <select
+                      value={a.funnel_id ?? ""}
+                      onChange={(e) => update(i, { funnel_id: e.target.value || undefined, stage_id: undefined })}
+                      className={inputCls + " max-w-[220px]"}
+                    >
+                      <option value="">Escolha o funil</option>
+                      {funnels.map((f) => (
+                        <option key={f.id} value={f.id}>{f.name}</option>
+                      ))}
+                    </select>
+                    {a.type === "funnel_add" && (
+                      <select
+                        value={a.stage_id ?? ""}
+                        onChange={(e) => update(i, { stage_id: e.target.value || undefined })}
+                        className={inputCls + " max-w-[220px]"}
+                      >
+                        <option value="">Escolha a etapa</option>
+                        {(funnels.find((f) => f.id === a.funnel_id)?.stages ?? []).map((st) => (
+                          <option key={st.id} value={st.id}>{st.name}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                ) : a.type === "text" ? (
                   <textarea
                     value={a.text ?? ""}
                     onChange={(e) => update(i, { text: e.target.value })}
@@ -326,7 +356,7 @@ function QuickReplyEditor({
           />
 
           <div className="flex flex-wrap gap-2">
-            {QUICK_REPLY_ACTION_TYPES.map((t) => (
+            {[...QUICK_REPLY_ACTION_TYPES, ...QUICK_REPLY_FUNNEL_TYPES].map((t) => (
               <button
                 key={t}
                 onClick={() => addAction(t)}

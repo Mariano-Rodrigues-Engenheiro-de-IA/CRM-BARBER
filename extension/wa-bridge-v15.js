@@ -228,6 +228,37 @@
     return window.WPP?.whatsapp?.ChatStore?.getModelsArray?.() || [];
   }
 
+  /**
+   * Telefone real da conversa. Conversas novas do WhatsApp usam @lid (id
+   * interno) — nesse caso o número precisa ser buscado no ContactStore,
+   * senão o CRM mostraria o LID no lugar do telefone.
+   */
+  function resolvePhoneDigits(chat, waId) {
+    const clean = (v) => {
+      const d = String(v || "").split("@")[0].replace(/\D/g, "");
+      return /^\d{10,15}$/.test(d) ? d : null;
+    };
+    if (waId.endsWith("@g.us")) return null;
+    if (waId.endsWith("@c.us")) return clean(waId);
+
+    const tries = [
+      () => chat?.contact?.phoneNumber,
+      () => chat?.contact?.id,
+      () => chat?.contact?.__x_id,
+      () => window.WPP?.whatsapp?.ContactStore?.get?.(waId)?.phoneNumber,
+      () => window.WPP?.whatsapp?.ContactStore?.get?.(waId)?.id,
+      () => window.WPP?.whatsapp?.LidUtils?.getPhoneNumber?.(waId),
+      () => window.WPP?.whatsapp?.functions?.getPhoneNumber?.(waId),
+    ];
+    for (const get of tries) {
+      let v;
+      try { v = get(); } catch { continue; }
+      const d = clean(typeof v === "object" ? (v?._serialized ?? v?.user ?? "") : v);
+      if (d) return d;
+    }
+    return null;
+  }
+
   /** Etiquetas: a API pública mudou de nome entre builds — tentamos todas. */
   function readLabels() {
     const sources = [
@@ -291,7 +322,7 @@
         const waId = serialized(chat?.id);
         if (!waId) continue;
         const isGroup = waId.endsWith("@g.us");
-        const digits = waId.split("@")[0].replace(/\D/g, "");
+        const digits = resolvePhoneDigits(chat, waId);
         const ts = Number(chat?.t ?? chat?.__x_t ?? 0);
         contacts.push({
           wa_id: waId,

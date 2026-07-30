@@ -15,7 +15,8 @@ import {
   type WaContact,
   type WaLabel,
 } from "@/lib/funnels";
-import { isRealPhone, sendWaAction } from "@/lib/wa-actions";
+import { isRealPhone, openWhatsappChat } from "@/lib/wa-actions";
+import { sendableActions, type QuickReply } from "@/lib/quick-replies";
 
 type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
 
@@ -34,6 +35,9 @@ export function FunnelsView({ api }: { api: ApiFn }) {
   const [detail, setDetail] = useState<FunnelCard | null>(null);
   const [detailTab, setDetailTab] = useState<"notes" | "schedule">("notes");
   const [inboxQuery, setInboxQuery] = useState("");
+  const [dispatch, setDispatch] = useState<{ label: string; targets: Array<{ phone: string; name: string }> } | null>(
+    null,
+  );
   const dragged = useRef<FunnelCard | null>(null);
   const draggedContact = useRef<WaContact | null>(null);
   const pendingContacts = useRef<Set<string>>(new Set());
@@ -152,10 +156,25 @@ export function FunnelsView({ api }: { api: ApiFn }) {
           f.id !== funnelId ? f : { ...f, cards: f.cards.map((c) => (c.id === tempId ? created : c)) },
         ),
       );
-      return;
+      return created;
     }
     setErr((r?.error as string) || "Erro ao criar card");
     void reload();
+    return null;
+  }
+
+  /** Contato do Inbox vira lead na primeira etapa para ganhar pipeline. */
+  async function promoteContact(c: WaContact, tab: "notes" | "schedule") {
+    const stageId = active?.stages[0]?.id;
+    if (!stageId) return;
+    const created = await addCard(stageId, {
+      title: c.name || c.phone || c.wa_id,
+      phone: c.phone ?? undefined,
+      wa_contact_id: c.id,
+    });
+    if (!created) return;
+    setDetailTab(tab);
+    setDetail(created);
   }
 
 
@@ -189,7 +208,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
               key={f.id}
               onClick={() => setActiveId(f.id)}
               className={
-                "rounded-md px-3 py-1.5 text-xs font-medium transition " +
+                "rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition " +
                 (f.id === activeId ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
               }
             >
@@ -211,11 +230,26 @@ export function FunnelsView({ api }: { api: ApiFn }) {
 
           <div className="flex gap-3 overflow-x-auto pb-4">
             <div className="flex w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-3">
-              <div className="flex items-baseline justify-between">
-                <h3 className="text-sm font-semibold text-neutral-900">Inbox</h3>
-                <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-[11px] font-semibold text-neutral-700">
-                  {inboxContacts.length}
-                </span>
+              <div className="flex items-baseline justify-between gap-2">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-900">Inbox</h3>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-[11px] font-semibold text-neutral-700">
+                    {inboxContacts.length}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setDispatch({
+                        label: "Inbox",
+                        targets: inboxContacts
+                          .filter((c) => isRealPhone(c.phone))
+                          .map((c) => ({ phone: c.phone as string, name: c.name || (c.phone as string) })),
+                      })
+                    }
+                    className="rounded-md border border-neutral-300 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-700 hover:border-neutral-900"
+                  >
+                    Disparar
+                  </button>
+                </div>
               </div>
               <input
                 value={inboxQuery}
@@ -241,7 +275,27 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                       className="cursor-grab rounded-lg border border-neutral-200 bg-white p-3 shadow-sm active:cursor-grabbing"
                     >
                       <p className="truncate text-sm font-medium text-neutral-900">{c.name || c.phone || c.wa_id}</p>
-                      {c.phone && <p className="mt-0.5 truncate text-[11px] text-neutral-500">{c.phone}</p>}
+                      {isRealPhone(c.phone) && (
+                        <p className="mt-0.5 truncate text-[11px] text-neutral-500">{c.phone}</p>
+                      )}
+                      <div className="mt-2 flex items-center gap-1">
+                        <CardAction
+                          title="Abrir conversa no WhatsApp"
+                          disabled={!isRealPhone(c.phone)}
+                          onClick={() => void openWhatsappChat(c.phone!, c.name || undefined)}
+                        >
+                          <IconWhatsapp />
+                        </CardAction>
+                        <CardAction title="Anotações" onClick={() => void promoteContact(c, "notes")}>
+                          <IconNote />
+                        </CardAction>
+                        <CardAction
+                          title="Mensagem agendada / disparo"
+                          onClick={() => void promoteContact(c, "schedule")}
+                        >
+                          <IconClock />
+                        </CardAction>
+                      </div>
                     </div>
                   ))}
               </div>
@@ -272,9 +326,24 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                   }}
                   className="flex w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-3"
                 >
-                  <div className="flex items-baseline justify-between">
-                    <h3 className="text-sm font-semibold text-neutral-900">{stage.name}</h3>
-                    <span className="text-[11px] text-neutral-500">{cards.length}</span>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <h3 className="truncate text-sm font-semibold uppercase tracking-wide text-neutral-900">{stage.name}</h3>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="text-[11px] text-neutral-500">{cards.length}</span>
+                      <button
+                        onClick={() =>
+                          setDispatch({
+                            label: stage.name,
+                            targets: cards
+                              .filter((c) => isRealPhone(c.phone))
+                              .map((c) => ({ phone: c.phone as string, name: c.title })),
+                          })
+                        }
+                        className="rounded-md border border-neutral-300 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-700 hover:border-neutral-900"
+                      >
+                        Disparar
+                      </button>
+                    </div>
                   </div>
                   <p className="mt-0.5 text-[11px] font-medium text-neutral-500">{formatBRL(total)}</p>
 
@@ -315,7 +384,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                             title="Abrir conversa no WhatsApp"
                             disabled={!isRealPhone(card.phone)}
                             onClick={() =>
-                              void sendWaAction({ phone: card.phone!, name: card.title, openOnly: true })
+                              void openWhatsappChat(card.phone!, card.title)
                             }
                           >
                             <IconWhatsapp />
@@ -352,6 +421,15 @@ export function FunnelsView({ api }: { api: ApiFn }) {
       )}
 
 
+
+      {dispatch && (
+        <StageDispatchModal
+          api={api}
+          label={dispatch.label}
+          targets={dispatch.targets}
+          onClose={() => setDispatch(null)}
+        />
+      )}
 
       {detail && (
         <CardDrawer
@@ -563,7 +641,7 @@ function CardDrawer({
                 key={t}
                 onClick={() => setTab(t)}
                 className={
-                  "rounded-md px-3 py-1.5 text-xs font-medium transition " +
+                  "rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition " +
                   (tab === t ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
                 }
               >
@@ -573,7 +651,7 @@ function CardDrawer({
           </div>
           {isRealPhone(card.phone) && (
             <button
-              onClick={() => void sendWaAction({ phone: card.phone!, name: card.title, openOnly: true })}
+              onClick={() => void openWhatsappChat(card.phone!, card.title)}
               className="ml-auto flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
             >
               <IconWhatsapp /> WhatsApp
@@ -884,5 +962,170 @@ function AddCardForm({
         </button>
       </div>
     </div>
+  );
+}
+
+
+/** Disparo em massa a partir de uma coluna do funil (ou do Inbox). */
+function StageDispatchModal({
+  api,
+  label,
+  targets,
+  onClose,
+}: {
+  api: ApiFn;
+  label: string;
+  targets: Array<{ phone: string; name: string }>;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState(label);
+  const [message, setMessage] = useState("");
+  const [replies, setReplies] = useState<QuickReply[]>([]);
+  const [replyId, setReplyId] = useState("");
+  const [paceMin, setPaceMin] = useState(20);
+  const [paceMax, setPaceMax] = useState(60);
+  const [accepted, setAccepted] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+
+  useEffect(() => {
+    api("/api/public/extension/quick-replies").then((r) => {
+      if (r?.ok) setReplies((r.quick_replies as QuickReply[]) || []);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const selected = replies.find((q) => q.id === replyId);
+  const mediaDropped = selected
+    ? sendableActions(selected.actions).filter((a) => a.type !== "text").length
+    : 0;
+
+  function pickReply(id: string) {
+    setReplyId(id);
+    const qr = replies.find((q) => q.id === id);
+    if (!qr) return;
+    const texts = sendableActions(qr.actions)
+      .filter((a) => a.type === "text" && a.text?.trim())
+      .map((a) => (a.text as string).trim());
+    if (texts.length) setMessage(texts.join("\n\n"));
+  }
+
+  async function submit() {
+    if (!name.trim() || !message.trim()) {
+      setErr("Informe o nome do disparo e a mensagem.");
+      return;
+    }
+    if (!accepted) {
+      setErr("Aceite o termo de uso para disparar.");
+      return;
+    }
+    if (targets.length === 0) {
+      setErr("Nenhum contato com telefone válido nesta coluna.");
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    const r = await api("/api/public/extension/campaigns", {
+      method: "POST",
+      body: JSON.stringify({
+        name: name.trim(),
+        message: message.trim(),
+        pace_seconds_min: Math.min(paceMin, paceMax),
+        pace_seconds_max: Math.max(paceMin, paceMax),
+        phone_targets: targets,
+      }),
+    });
+    setBusy(false);
+    if (!r?.ok) {
+      setErr((r?.error as string) || "Erro ao criar o disparo");
+      return;
+    }
+    setDone(`Disparo criado para ${targets.length} contato(s) ✔`);
+  }
+
+  return (
+    <Overlay title={`Disparar — ${label}`} onClose={onClose}>
+      <div className="space-y-4">
+        <p className="text-xs text-neutral-500">{targets.length} contato(s) com telefone válido</p>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-neutral-600">Nome do disparo</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
+        </div>
+
+        {replies.length > 0 && (
+          <div>
+            <label className="mb-1 block text-xs font-medium text-neutral-600">Resposta rápida</label>
+            <select value={replyId} onChange={(e) => pickReply(e.target.value)} className={inputCls}>
+              <option value="">— escrever mensagem —</option>
+              {replies.map((q) => (
+                <option key={q.id} value={q.id}>{q.title}</option>
+              ))}
+            </select>
+            {mediaDropped > 0 && (
+              <p className="mt-1 text-xs text-neutral-500">Disparo em massa envia só texto.</p>
+            )}
+          </div>
+        )}
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-neutral-600">Mensagem</label>
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={4}
+            className={inputCls}
+            placeholder="Oi {nome}, tudo bem?"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-neutral-600">Ritmo mín. (seg)</label>
+            <input
+              type="number"
+              min={5}
+              max={600}
+              value={paceMin}
+              onChange={(e) => setPaceMin(Number(e.target.value))}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-neutral-600">Ritmo máx. (seg)</label>
+            <input
+              type="number"
+              min={5}
+              max={600}
+              value={paceMax}
+              onChange={(e) => setPaceMax(Number(e.target.value))}
+              className={inputCls}
+            />
+          </div>
+        </div>
+
+        <label className="flex items-center gap-2 text-sm font-medium text-neutral-900">
+          <input
+            type="checkbox"
+            checked={accepted}
+            onChange={(e) => setAccepted(e.target.checked)}
+            className="h-4 w-4 rounded border-neutral-400"
+          />
+          Eu entendo e aceito os termos de uso.
+        </label>
+
+        {err && <p className="text-sm text-red-500">{err}</p>}
+        {done && <p className="text-sm text-emerald-600">{done}</p>}
+
+        <button
+          onClick={submit}
+          disabled={busy || !accepted}
+          className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
+        >
+          {busy ? "Criando..." : "Disparar"}
+        </button>
+      </div>
+    </Overlay>
   );
 }

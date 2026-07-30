@@ -1,9 +1,9 @@
-// Content script v0.23.1 — abas do CRM no topo do WhatsApp Web + trilho de
+// Content script v0.24.0 — abas do CRM no topo do WhatsApp Web + trilho de
 // ícones minimalista à esquerda. Clicar numa aba/etiqueta filtra a própria
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.23.1";
+  const CRM_VERSION = "0.24.0";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -166,6 +166,7 @@
   const GEAR_SVG = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
   const FILTER_SVG = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 8v7l-4 2v-9L3 4z"/></svg>`;
 
+  let autoSyncTried = false;
   let topbarFilter = "tabs";
   try {
     topbarFilter = localStorage.getItem("crm-topbar-filter") === "labels" ? "labels" : "tabs";
@@ -280,7 +281,7 @@
   function openFilterMenu(anchor) {
     openMenu(anchor, [
       {
-        label: "Funil principal",
+        label: "FUNIL PRINCIPAL",
         onClick: () => {
           topbarFilter = "tabs";
           try { localStorage.setItem("crm-topbar-filter", "tabs"); } catch {}
@@ -288,7 +289,7 @@
         },
       },
       {
-        label: "Etiquetas",
+        label: "ETIQUETAS / LISTAS",
         onClick: () => {
           topbarFilter = "labels";
           try { localStorage.setItem("crm-topbar-filter", "labels"); } catch {}
@@ -348,7 +349,12 @@
   }
 
   /** Etiqueta: filtra a lista de conversas pelos contatos daquela etiqueta. */
-  function filterByLabel(labelId, _labelName) {
+  async function filterByLabel(labelId, _labelName) {
+    // Etiqueta clicada antes da sincronização terminar: sincroniza na hora.
+    if (!(waData.contacts || []).length) {
+      syncing = false;
+      await syncWaData();
+    }
     const terms = [];
     for (const c of waData.contacts || []) {
       if (!(c.label_ids || []).includes(labelId)) continue;
@@ -452,7 +458,7 @@
         path: "/api/public/extension/funnels",
         opts: {
           method: "POST",
-          body: JSON.stringify({ name: "Funil principal", mode: "tab", stages: [name] }),
+          body: JSON.stringify({ name: "FUNIL PRINCIPAL", mode: "tab", stages: [name] }),
         },
       })
       .catch(() => null);
@@ -468,7 +474,7 @@
     }
 
     const filter = `<button class="crm-filter">${FILTER_SVG}${
-      topbarFilter === "labels" ? "Etiquetas" : "Funil principal"
+      topbarFilter === "labels" ? "ETIQUETAS / LISTAS" : "FUNIL PRINCIPAL"
     }</button>`;
 
     if (topbarFilter === "labels") {
@@ -482,6 +488,10 @@
             </button>`;
         })
         .join("");
+      if (!pills && !syncing && !autoSyncTried) {
+        autoSyncTried = true;
+        setTimeout(() => syncWaData(), 0);
+      }
       topbarRef.innerHTML = `${filter}${
         pills ||
         `<span class="crm-topbar-hint">${

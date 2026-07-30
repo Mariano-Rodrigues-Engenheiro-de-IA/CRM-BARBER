@@ -6,21 +6,36 @@
 
 import { z } from "zod";
 
+// Além das ações de envio, uma resposta rápida pode mover o contato no funil
+// depois do envio (`funnel_add` / `funnel_remove`).
 export const QUICK_REPLY_ACTION_TYPES = ["text", "image", "video", "audio"] as const;
-export type QuickReplyActionType = (typeof QUICK_REPLY_ACTION_TYPES)[number];
+export const QUICK_REPLY_FUNNEL_TYPES = ["funnel_add", "funnel_remove"] as const;
+export type QuickReplyActionType =
+  | (typeof QUICK_REPLY_ACTION_TYPES)[number]
+  | (typeof QUICK_REPLY_FUNNEL_TYPES)[number];
 
 export const quickReplyActionSchema = z
   .object({
-    type: z.enum(QUICK_REPLY_ACTION_TYPES),
+    type: z.enum([...QUICK_REPLY_ACTION_TYPES, ...QUICK_REPLY_FUNNEL_TYPES]),
     text: z.string().max(4000).optional(),
     caption: z.string().max(1000).optional(),
     path: z.string().max(400).optional(),
     mime: z.string().max(120).optional(),
     filename: z.string().max(200).optional(),
+    funnel_id: z.string().uuid().optional(),
+    stage_id: z.string().uuid().optional(),
   })
-  .refine((a) => (a.type === "text" ? !!a.text?.trim() : !!a.path), {
-    message: "Ação de texto exige texto; mídia exige arquivo.",
-  });
+  .refine(
+    (a) =>
+      a.type === "text"
+        ? !!a.text?.trim()
+        : a.type === "funnel_add"
+          ? !!a.funnel_id && !!a.stage_id
+          : a.type === "funnel_remove"
+            ? !!a.funnel_id
+            : !!a.path,
+    { message: "Ação de texto exige texto; mídia exige arquivo; ação de funil exige funil." },
+  );
 
 export const quickReplySchema = z.object({
   title: z.string().trim().min(1).max(120),
@@ -29,6 +44,17 @@ export const quickReplySchema = z.object({
 });
 
 export type QuickReplyAction = z.infer<typeof quickReplyActionSchema> & { url?: string | null };
+
+/** Ações que a extensão realmente envia no WhatsApp (as de funil ficam no CRM). */
+export function sendableActions(actions: QuickReplyAction[]) {
+  return actions.filter((a) => (QUICK_REPLY_ACTION_TYPES as readonly string[]).includes(a.type));
+}
+
+/** Ações de funil aplicadas pelo CRM depois do envio. */
+export function funnelActions(actions: QuickReplyAction[]) {
+  return actions.filter((a) => (QUICK_REPLY_FUNNEL_TYPES as readonly string[]).includes(a.type));
+}
+
 
 export type QuickReply = {
   id: string;
@@ -45,5 +71,11 @@ export function renderQuickReplyText(text: string, vars: Record<string, string>)
 }
 
 export function actionLabel(type: QuickReplyActionType) {
-  return type === "text" ? "Texto" : type === "image" ? "Imagem" : type === "video" ? "Vídeo" : "Áudio";
+  if (type === "text") return "Texto";
+  if (type === "image") return "Imagem";
+  if (type === "video") return "Vídeo";
+  if (type === "audio") return "Áudio";
+  if (type === "funnel_add") return "Adicionar ao funil";
+  return "Remover do funil";
 }
+

@@ -29,6 +29,17 @@ const bodySchema = z
     pace_seconds_min: z.number().int().min(5).max(600).optional(),
     pace_seconds_max: z.number().int().min(5).max(600).optional(),
     customer_ids: z.array(z.string().uuid()).max(2000).optional(),
+    // Disparo a partir dos funis: lista de telefones (contatos do Inbox,
+    // etiquetas ou colunas do kanban). Vira/reaproveita customers.
+    phone_targets: z
+      .array(
+        z.object({
+          phone: z.string().trim().min(8).max(30),
+          name: z.string().trim().max(160).optional(),
+        }),
+      )
+      .max(2000)
+      .optional(),
     scheduled_for: z.string().min(4).max(40).optional(),
     filter: z
       .object({
@@ -40,9 +51,14 @@ const bodySchema = z
   .refine((v) => v.message || (v.message_variants && v.message_variants.length > 0), {
     message: "Informe message ou message_variants",
   })
-  .refine((v) => (v.customer_ids && v.customer_ids.length > 0) || v.filter, {
-    message: "Informe customer_ids ou filter",
-  });
+  .refine(
+    (v) =>
+      (v.customer_ids && v.customer_ids.length > 0) ||
+      (v.phone_targets && v.phone_targets.length > 0) ||
+      v.filter,
+    { message: "Informe customer_ids, phone_targets ou filter" },
+  );
+
 
 const TTL_HOURS = 48;
 
@@ -74,7 +90,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
         }
 
         const barbershopId = auth.token.barbershop_id;
-        const { name, message, message_variants, pace_seconds, pace_seconds_min, pace_seconds_max, customer_ids, filter, scheduled_for } = parsed.data;
+        const { name, message, message_variants, pace_seconds, pace_seconds_min, pace_seconds_max, customer_ids, phone_targets, filter, scheduled_for } = parsed.data;
 
         // Agendamento opcional: base do primeiro job. Datas no passado caem para agora.
         const scheduledBase = scheduled_for ? Date.parse(scheduled_for) : NaN;
@@ -95,27 +111,74 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
         const nextDelayMs = () => (paceLo + Math.floor(Math.random() * (paceHi - paceLo + 1))) * 1000;
 
         // Resolve alvo → lista de customers {id, phone}
-        let customersQ = supabaseAdmin
-          .from("customers")
-          .select("id, phone")
-          .eq("barbershop_id", barbershopId)
-          .is("archived_at", null);
+        let targets: Array<{ id: string; phone: string }> = [];
 
-        if (customer_ids && customer_ids.length > 0) {
-          customersQ = customersQ.in("id", customer_ids);
-        } else if (filter) {
-          if (filter.status) customersQ = customersQ.eq("status", filter.status);
-          if (filter.tags && filter.tags.length > 0) {
-            customersQ = customersQ.overlaps("tags", filter.tags);
+        if (phone_targets && phone_targets.length > 0) {
+          // Disparo vindo dos funis: cada telefone vira (ou reaproveita) um customer.
+          const wanted = new Map<string, string>();
+          for (const t of phone_targets) {
+            const digits = String(t.phone).replace(/\D/g, "");
+            if (!/^\d{10,15}$/.test(digits)) continue;
+            if (!wanted.has(digits)) wanted.set(digits, (t.name || digits).slice(0, 160));
           }
+          const phones = [...wanted.keys()];
+          if (phones.length > 0) {
+            const { data: existing } = await supabaseAdmin
+              .from("customers")
+              .select("id, phone")
+              .eq("barbershop_id", barbershopId)
+              .is("archived_at", null)
+              .in("phone", phones);
+            const byPhone = new Map<string, { id: string; phone: string }>(
+              (existing ?? []).map((c) => [String(c.phone), { id: c.id, phone: String(c.phone) }]),
+            );
+            const missing = phones.filter((p) => !byPhone.has(p));
+            if (missing.length > 0) {
+              const { data: created, error: insErr } = await supabaseAdmin
+                .from("customers")
+                .insert(
+                  missing.map((p) => ({
+                    barbershop_id: barbershopId,
+                    name: wanted.get(p) as string,
+                    phone: p,
+                    status: "lead",
+                    source: "funnel",
+                  })),
+                )
+                .select("id, phone");
+              if (insErr) {
+                return jsonResponse(request, { ok: false, error: insErr.message }, { status: 500 });
+              }
+              for (const c of created ?? []) byPhone.set(String(c.phone), { id: c.id, phone: String(c.phone) });
+            }
+            targets = phones.map((p) => byPhone.get(p)).filter(Boolean) as typeof targets;
+          }
+        } else {
+          let customersQ = supabaseAdmin
+            .from("customers")
+            .select("id, phone")
+            .eq("barbershop_id", barbershopId)
+            .is("archived_at", null);
+
+          if (customer_ids && customer_ids.length > 0) {
+            customersQ = customersQ.in("id", customer_ids);
+          } else if (filter) {
+            if (filter.status) customersQ = customersQ.eq("status", filter.status);
+            if (filter.tags && filter.tags.length > 0) {
+              customersQ = customersQ.overlaps("tags", filter.tags);
+            }
+          }
+          const { data: allTargets, error: tErr } = await customersQ.limit(2000);
+          if (tErr) {
+            return jsonResponse(request, { ok: false, error: tErr.message }, { status: 500 });
+          }
+          // Planilhas sem coluna de telefone geram contatos com telefone placeholder
+          // ("sem-tel-..."). Eles ficam no CRM, mas nunca entram na fila de disparo.
+          targets = (allTargets ?? [])
+            .filter((t) => /^\d{10,15}$/.test(String(t.phone ?? "")))
+            .map((t) => ({ id: t.id, phone: String(t.phone) }));
         }
-        const { data: allTargets, error: tErr } = await customersQ.limit(2000);
-        if (tErr) {
-          return jsonResponse(request, { ok: false, error: tErr.message }, { status: 500 });
-        }
-        // Planilhas sem coluna de telefone geram contatos com telefone placeholder
-        // ("sem-tel-..."). Eles ficam no CRM, mas nunca entram na fila de disparo.
-        const targets = (allTargets ?? []).filter((t) => /^\d{10,15}$/.test(String(t.phone ?? "")));
+
         if (targets.length === 0) {
           return jsonResponse(
             request,
@@ -242,8 +305,18 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
           }
         }
 
+        // Disparos avulsos (agendados a partir de um card/lead) não têm campanha.
+        const { data: loose } = await supabaseAdmin
+          .from("message_jobs")
+          .select("id, phone, rendered_body, status, scheduled_for, sent_at, last_error, created_at")
+          .eq("barbershop_id", auth.token.barbershop_id)
+          .is("campaign_id", null)
+          .order("created_at", { ascending: false })
+          .limit(100);
+
         return jsonResponse(request, {
           ok: true,
+          loose_jobs: loose ?? [],
           campaigns: (data ?? []).map((c) => ({
             ...c,
             stats: stats[c.id] ?? { pending: 0, sent: 0, failed: 0 },
