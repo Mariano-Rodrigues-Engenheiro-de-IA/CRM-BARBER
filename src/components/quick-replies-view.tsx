@@ -237,7 +237,7 @@ function QuickReplyEditor({
     onSaved();
   }
 
-  const currentType = uploadIndex.current !== null ? actions[uploadIndex.current]?.type : "image";
+  
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
