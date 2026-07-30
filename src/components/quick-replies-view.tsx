@@ -27,8 +27,27 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
+// Alguns sistemas (principalmente macOS) não casam `video/*` e `audio/*` com
+// extensões comuns, então listamos as extensões junto do mime.
 function acceptFor(type: QuickReplyActionType) {
-  return type === "image" ? "image/*" : type === "video" ? "video/*" : "audio/*";
+  if (type === "image") return "image/*,.jpg,.jpeg,.png,.webp,.gif";
+  if (type === "video") return "video/*,.mp4,.mov,.m4v,.3gp,.webm,.avi,.mkv";
+  return "audio/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.amr,.caf";
+}
+
+const MIME_BY_EXT: Record<string, string> = {
+  jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif",
+  mp4: "video/mp4", mov: "video/quicktime", m4v: "video/x-m4v", "3gp": "video/3gpp",
+  webm: "video/webm", avi: "video/x-msvideo", mkv: "video/x-matroska",
+  mp3: "audio/mpeg", m4a: "audio/mp4", aac: "audio/aac", ogg: "audio/ogg",
+  opus: "audio/ogg", wav: "audio/wav", amr: "audio/amr", caf: "audio/x-caf",
+};
+
+/** O navegador às vezes entrega file.type vazio; deduz pelo sufixo do arquivo. */
+function resolveMime(file: File, type: QuickReplyActionType) {
+  if (file.type && /^(image|video|audio)\//.test(file.type)) return file.type;
+  const ext = file.name.split(".").pop()?.toLowerCase() || "";
+  return MIME_BY_EXT[ext] || `${type}/octet-stream`;
 }
 
 export function QuickRepliesView({ token, api }: { token: string; api: ApiFn }) {
