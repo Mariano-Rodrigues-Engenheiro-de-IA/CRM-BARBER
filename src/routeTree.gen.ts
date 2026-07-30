@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as PoliticasRouteImport } from './routes/politicas'
 import { Route as PainelRouteImport } from './routes/painel'
 import { Route as InstalarRouteImport } from './routes/instalar'
+import { Route as BaixarRouteImport } from './routes/baixar'
 import { Route as AssinarRouteImport } from './routes/assinar'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AssinarRetornoRouteImport } from './routes/assinar.retorno'
@@ -51,6 +52,11 @@ const PainelRoute = PainelRouteImport.update({
 const InstalarRoute = InstalarRouteImport.update({
   id: '/instalar',
   path: '/instalar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BaixarRoute = BaixarRouteImport.update({
+  id: '/baixar',
+  path: '/baixar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AssinarRoute = AssinarRouteImport.update({
@@ -200,6 +206,7 @@ const ApiPublicExtensionCampaignsIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/assinar': typeof AssinarRouteWithChildren
+  '/baixar': typeof BaixarRoute
   '/instalar': typeof InstalarRoute
   '/painel': typeof PainelRoute
   '/politicas': typeof PoliticasRoute
@@ -230,6 +237,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/assinar': typeof AssinarRouteWithChildren
+  '/baixar': typeof BaixarRoute
   '/instalar': typeof InstalarRoute
   '/painel': typeof PainelRoute
   '/politicas': typeof PoliticasRoute
@@ -261,6 +269,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/assinar': typeof AssinarRouteWithChildren
+  '/baixar': typeof BaixarRoute
   '/instalar': typeof InstalarRoute
   '/painel': typeof PainelRoute
   '/politicas': typeof PoliticasRoute
@@ -293,6 +302,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/assinar'
+    | '/baixar'
     | '/instalar'
     | '/painel'
     | '/politicas'
@@ -323,6 +333,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/assinar'
+    | '/baixar'
     | '/instalar'
     | '/painel'
     | '/politicas'
@@ -353,6 +364,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/assinar'
+    | '/baixar'
     | '/instalar'
     | '/painel'
     | '/politicas'
@@ -384,6 +396,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AssinarRoute: typeof AssinarRouteWithChildren
+  BaixarRoute: typeof BaixarRoute
   InstalarRoute: typeof InstalarRoute
   PainelRoute: typeof PainelRoute
   PoliticasRoute: typeof PoliticasRoute
@@ -427,6 +440,13 @@ declare module '@tanstack/react-router' {
       path: '/instalar'
       fullPath: '/instalar'
       preLoaderRoute: typeof InstalarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/baixar': {
+      id: '/baixar'
+      path: '/baixar'
+      fullPath: '/baixar'
+      preLoaderRoute: typeof BaixarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/assinar': {
@@ -670,6 +690,7 @@ const ApiPublicExtensionQuickRepliesRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AssinarRoute: AssinarRouteWithChildren,
+  BaixarRoute: BaixarRoute,
   InstalarRoute: InstalarRoute,
   PainelRoute: PainelRoute,
   PoliticasRoute: PoliticasRoute,
