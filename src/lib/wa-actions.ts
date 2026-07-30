@@ -58,17 +58,25 @@ export function sendWaAction(action: WaAction): Promise<{ ok: boolean; error?: s
 
 /**
  * Abre a conversa no WhatsApp. Tenta pela extensão (mantém a sessão aberta);
- * se ela não responder, cai no link wa.me para o botão nunca ficar "morto".
+ * se ela não responder e houver telefone real, cai no link wa.me.
+ * Sem telefone formatado, usa o ID do WhatsApp (wa_id) — a extensão resolve.
  */
-export async function openWhatsappChat(phone: string, name?: string) {
+export async function openWhatsappChat(phone: string, name?: string, waId?: string | null) {
   const digits = String(phone || "").replace(/\D/g, "");
-  if (!isRealPhone(digits)) return { ok: false, error: "Telefone inválido" };
-  const r = await sendWaAction({ phone: digits, name, openOnly: true });
-  if (!r.ok && typeof window !== "undefined") {
+  const real = isRealPhone(digits);
+  const target = real ? digits : String(waId || "").replace(/\D/g, "");
+  if (!target) return { ok: false, error: "Contato sem telefone ou ID do WhatsApp" };
+  const r = await sendWaAction({ phone: target, name, openOnly: true });
+  if (!r.ok && real && typeof window !== "undefined") {
     window.open(`https://wa.me/${digits}`, "_blank", "noopener");
     return { ok: true };
   }
   return r;
+}
+
+/** Botão do WhatsApp fica ativo se houver telefone real OU ID do WhatsApp. */
+export function canOpenWhatsapp(phone: string | null | undefined, waId?: string | null) {
+  return isRealPhone(phone) || !!String(waId || "").replace(/\D/g, "");
 }
 
 /**

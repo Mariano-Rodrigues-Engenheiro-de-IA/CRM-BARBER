@@ -248,3 +248,13 @@ body.crm-shell ._ai_g {
 }
 .crm-modal-cancel { background: #262626; color: #e5e5e5; }
 .crm-modal-confirm { background: #facc15; color: #111111; }
+
+/* Aviso de plano: vive no topo do WhatsApp, não dentro do painel. */
+.crm-pill-premium {
+  margin-left: auto;
+  border-color: #facc15;
+  background: #facc15;
+  color: #111111;
+  font-weight: 700;
+}
+.crm-pill-premium:hover { background: #eab308; color: #111111; }
