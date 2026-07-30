@@ -761,6 +761,7 @@ function MembersTab({
 
   return (
     <div className="space-y-5">
+      {dialog}
       <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 space-y-3">
         <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Adicionar barbeiro</p>
         <div className="flex items-center gap-3">
