@@ -288,10 +288,6 @@ export function TeamView({ shopId }: { shopId: string }) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold text-neutral-900">Ranking da equipe</h2>
-            <p className="text-sm text-neutral-500">
-              {new Date(customFrom + "T00:00:00").toLocaleDateString("pt-BR")} até{" "}
-              {new Date(customTo + "T00:00:00").toLocaleDateString("pt-BR")}
-            </p>
           </div>
           <button
             onClick={() => setShowConfig(true)}
@@ -303,7 +299,7 @@ export function TeamView({ shopId }: { shopId: string }) {
 
         {/* Custom date range */}
         <div className="mt-5 flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium uppercase tracking-wide text-neutral-500">Período</span>
+          <span className="text-xs text-neutral-500">período</span>
           <input
             type="date"
             value={customFrom}
