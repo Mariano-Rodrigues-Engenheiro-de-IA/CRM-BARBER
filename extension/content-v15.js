@@ -1,7 +1,7 @@
-// Content script v0.19.3 — ponte minimalista: CRM BARBER, Assinantes, Equipe e Conexão.
+// Content script v0.20.0 — ponte minimalista: CRM BARBER, Assinantes, Equipe e Conexão.
 
 (function () {
-  const CRM_VERSION = "0.19.3";
+  const CRM_VERSION = "0.20.0";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
@@ -74,6 +74,58 @@
     } catch { return null; }
   }
 
+  let activeTab = "atalhos";
+  let waData = { labels: [], contacts: [] };
+  let syncTimer = null;
+  let syncing = false;
+
+  /** Pede etiquetas/conversas ao bridge (MAIN world) via postMessage. */
+  function askBridgeCollect() {
+    return new Promise((resolve) => {
+      const id = crypto.randomUUID();
+      const timeout = setTimeout(() => {
+        window.removeEventListener("message", onMessage);
+        resolve(null);
+      }, 20000);
+      function onMessage(ev) {
+        if (ev.source !== window) return;
+        const d = ev.data;
+        if (!d || d.__crm !== "collect_done_v200" || d.id !== id) return;
+        clearTimeout(timeout);
+        window.removeEventListener("message", onMessage);
+        resolve(d.ok ? d.data : null);
+      }
+      window.addEventListener("message", onMessage);
+      window.postMessage({ __crm: "collect_v200", id }, "*");
+    });
+  }
+
+  /** Coleta local + envio para o CRM. Silencioso: nunca quebra o painel. */
+  async function syncWaData(rerender) {
+    if (syncing) return;
+    syncing = true;
+    try {
+      await ensureWaScriptsInjected().catch(() => null);
+      const data = await askBridgeCollect();
+      if (!data) return;
+      waData = data;
+      await chrome.runtime.sendMessage({
+        type: "api",
+        path: "/api/public/extension/wa/sync",
+        opts: { method: "POST", body: JSON.stringify(data) },
+      }).catch(() => null);
+      if (rerender && activeTab === "etiquetas") render();
+    } finally {
+      syncing = false;
+    }
+  }
+
+  function startSync() {
+    if (syncTimer) return;
+    syncWaData(true);
+    syncTimer = setInterval(() => syncWaData(true), 10 * 60 * 1000);
+  }
+
   function buildPanel() {
     const panel = document.createElement("div");
     panel.id = "crm-assinaturas-panel";
@@ -124,6 +176,7 @@
     }
 
     startPollHeartbeat();
+    startSync();
 
     const apiBase = r.api_base || "";
     const panelToken = r.token || EXTENSION_BRIDGE_TOKEN;
@@ -133,13 +186,70 @@
     const iconUsers = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
     const iconTrophy = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v3a3 3 0 0 1-3 3"/><path d="M7 5H4v3a3 3 0 0 0 3 3"/></svg>`;
     const iconPhone = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.33 1.77.62 2.61a2 2 0 0 1-.45 2.11L8.09 9.63a16 16 0 0 0 6.28 6.28l1.19-1.19a2 2 0 0 1 2.11-.45c.84.29 1.71.5 2.61.62A2 2 0 0 1 22 16.92z"/></svg>`;
+    const iconFunnel = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 8v7l-4 2v-9L3 4z"/></svg>`;
     const chev = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>`;
 
+    const tabsHtml = `
+      <div class="crm-tabs">
+        <button class="crm-tab ${activeTab === "atalhos" ? "is-active" : ""}" data-tab="atalhos">Atalhos</button>
+        <button class="crm-tab ${activeTab === "etiquetas" ? "is-active" : ""}" data-tab="etiquetas">Etiquetas</button>
+      </div>
+    `;
+
+    if (activeTab === "etiquetas") {
+      const labels = waData.labels || [];
+      const rows = labels.length
+        ? labels
+            .map(
+              (l) => `
+              <button class="crm-label-row" data-label="${escapeHtml(String(l.id))}">
+                <span class="crm-label-dot" style="background:${escapeHtml(l.color || "#f5c518")}"></span>
+                <span class="crm-label-name">${escapeHtml(l.name)}</span>
+                <span class="crm-label-count">${
+                  (waData.contacts || []).filter((c) => (c.label_ids || []).includes(String(l.id))).length
+                }</span>
+              </button>`,
+            )
+            .join("")
+        : `<p class="crm-empty-sub">${syncing ? "Sincronizando…" : "Nenhuma etiqueta encontrada no WhatsApp."}</p>`;
+
+      body().innerHTML = `
+        ${tabsHtml}
+        <div class="crm-labels">${rows}</div>
+        <div class="crm-footer">
+          <button class="crm-sync">sincronizar agora</button>
+        </div>
+      `;
+      body().querySelectorAll(".crm-tab").forEach((el) =>
+        el.addEventListener("click", () => {
+          activeTab = el.getAttribute("data-tab");
+          render();
+        }),
+      );
+      body().querySelector(".crm-sync").addEventListener("click", () => {
+        syncing = false;
+        syncWaData(true);
+        render();
+      });
+      body().querySelectorAll(".crm-label-row").forEach((el) =>
+        el.addEventListener("click", () => {
+          window.open(painelUrl("funis"), "_blank", "noopener");
+        }),
+      );
+      return;
+    }
+
     body().innerHTML = `
+      ${tabsHtml}
       <div class="crm-tiles">
         <button class="crm-tile" data-section="assinantes">
           <span class="crm-tile-icon">${iconUsers}</span>
           <span class="crm-tile-title">Gestão de Assinaturas</span>
+          <span class="crm-tile-arrow">${chev}</span>
+        </button>
+        <button class="crm-tile" data-section="funis">
+          <span class="crm-tile-icon">${iconFunnel}</span>
+          <span class="crm-tile-title">Funis de Vendas</span>
           <span class="crm-tile-arrow">${chev}</span>
         </button>
         <button class="crm-tile" data-section="equipe">
@@ -160,6 +270,13 @@
         <button class="crm-unpair">desvincular</button>
       </div>
     `;
+
+    body().querySelectorAll(".crm-tab").forEach((el) =>
+      el.addEventListener("click", () => {
+        activeTab = el.getAttribute("data-tab");
+        render();
+      }),
+    );
 
     body().querySelectorAll(".crm-tile").forEach((el) => {
       el.addEventListener("click", () => {
