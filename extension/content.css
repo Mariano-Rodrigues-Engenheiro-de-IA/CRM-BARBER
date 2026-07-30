@@ -164,17 +164,27 @@ body.crm-shell ._ai_g {
 .crm-pill-on { border-color: #facc15; background: #facc15; color: #111111; }
 .crm-pill-on .crm-pill-count, .crm-pill-on .crm-pill-value, .crm-pill-on .crm-pill-gear { color: #111111; }
 .crm-pill-value { font-weight: 500; color: #facc15; text-transform: none; }
-.crm-pill-count { font-weight: 500; color: #8a8a8a; text-transform: none; }
+.crm-pill-count {
+  font-weight: 600;
+  color: inherit;
+  text-transform: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 1px 6px;
+  font-size: 10px;
+}
+.crm-pill-on .crm-pill-count { background: rgba(0, 0, 0, 0.15); }
 .crm-pill-gear {
   border: 0;
   background: transparent;
-  color: #8a8a8a;
+  color: #c9c9c9;
   cursor: pointer;
   padding: 0;
   display: inline-flex;
   align-items: center;
 }
 .crm-pill-gear:hover { color: #facc15; }
+
 .crm-pill-add {
   border-style: dashed;
   border-color: #3a3a3a;
