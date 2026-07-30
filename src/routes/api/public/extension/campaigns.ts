@@ -29,6 +29,17 @@ const bodySchema = z
     pace_seconds_min: z.number().int().min(5).max(600).optional(),
     pace_seconds_max: z.number().int().min(5).max(600).optional(),
     customer_ids: z.array(z.string().uuid()).max(2000).optional(),
+    // Disparo a partir dos funis: lista de telefones (contatos do Inbox,
+    // etiquetas ou colunas do kanban). Vira/reaproveita customers.
+    phone_targets: z
+      .array(
+        z.object({
+          phone: z.string().trim().min(8).max(30),
+          name: z.string().trim().max(160).optional(),
+        }),
+      )
+      .max(2000)
+      .optional(),
     scheduled_for: z.string().min(4).max(40).optional(),
     filter: z
       .object({
@@ -40,9 +51,14 @@ const bodySchema = z
   .refine((v) => v.message || (v.message_variants && v.message_variants.length > 0), {
     message: "Informe message ou message_variants",
   })
-  .refine((v) => (v.customer_ids && v.customer_ids.length > 0) || v.filter, {
-    message: "Informe customer_ids ou filter",
-  });
+  .refine(
+    (v) =>
+      (v.customer_ids && v.customer_ids.length > 0) ||
+      (v.phone_targets && v.phone_targets.length > 0) ||
+      v.filter,
+    { message: "Informe customer_ids, phone_targets ou filter" },
+  );
+
 
 const TTL_HOURS = 48;
 
