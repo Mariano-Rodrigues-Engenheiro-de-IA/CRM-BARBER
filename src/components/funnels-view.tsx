@@ -643,10 +643,13 @@ function StageListEditor({
 
 function NewFunnelModal({
   labels,
+  tabFunnel,
   onClose,
   onCreate,
+  onAddTabStages,
 }: {
   labels: WaLabel[];
+  tabFunnel: Funnel | null;
   onClose: () => void;
   onCreate: (
     body: {
@@ -657,16 +660,17 @@ function NewFunnelModal({
     },
     labelStages?: WaLabel[],
   ) => void;
+  onAddTabStages: (funnel: Funnel, names: string[]) => void;
 }) {
   const [name, setName] = useState("");
   const [mode, setMode] = useState<FunnelMode>("tab");
   const [tabs, setTabs] = useState<string[]>([]);
   const [stages, setStages] = useState<string[]>(["Novo lead", "Em conversa", "Negociando", "Fechado"]);
 
-  const options: Array<{ key: FunnelMode; title: string; desc: string }> = [
-    { key: "tab", title: "Aba", desc: "Aparece no topo do WhatsApp Web" },
-    { key: "label", title: "Etiquetas", desc: "Cada etiqueta vira uma etapa" },
-    { key: "manual", title: "Novo funil", desc: "Colunas e leads manuais" },
+  const options: Array<{ key: FunnelMode; title: string }> = [
+    { key: "tab", title: "Funil principal" },
+    { key: "label", title: "Etiquetas" },
+    { key: "manual", title: "Novo funil" },
   ];
 
   function submit() {
@@ -681,6 +685,11 @@ function NewFunnelModal({
         },
         labels,
       );
+      return;
+    }
+    if (mode === "tab" && tabFunnel) {
+      if (!tabs.length) return;
+      onAddTabStages(tabFunnel, tabs);
       return;
     }
     if (!name.trim()) return;
@@ -698,33 +707,32 @@ function NewFunnelModal({
               key={o.key}
               onClick={() => setMode(o.key)}
               className={
-                "rounded-xl border p-3 text-left transition " +
-                (mode === o.key ? "border-neutral-900 bg-neutral-900 text-yellow-400" : "border-neutral-300 bg-white")
+                "rounded-xl border px-3 py-2.5 text-sm font-semibold transition " +
+                (mode === o.key
+                  ? "border-neutral-900 bg-neutral-900 text-yellow-400"
+                  : "border-neutral-300 bg-white text-neutral-800")
               }
             >
-              <span className="block text-sm font-semibold">{o.title}</span>
-              <span className={"mt-1 block text-[11px] " + (mode === o.key ? "text-yellow-200" : "text-neutral-500")}>
-                {o.desc}
-              </span>
+              {o.title}
             </button>
           ))}
         </div>
 
-        {mode !== "label" && (
+        {mode !== "label" && !(mode === "tab" && tabFunnel) && (
           <div>
             <label className="mb-1 block text-xs font-medium text-neutral-600">Nome</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               className={inputCls}
-              placeholder={mode === "tab" ? "Ex.: Orçamentos" : "Ex.: Recuperação de inadimplentes"}
+              placeholder={mode === "tab" ? "Funil principal" : "Ex.: Recuperação"}
             />
           </div>
         )}
 
         {mode === "tab" && (
           <StageListEditor
-            label="Abas (adicione uma por vez)"
+            label={tabFunnel ? `Novas etapas em ${tabFunnel.name}` : "Etapas"}
             placeholder="Ex.: Leads"
             items={tabs}
             onChange={setTabs}
@@ -732,34 +740,20 @@ function NewFunnelModal({
         )}
 
         {mode === "manual" && (
-          <StageListEditor
-            label="Colunas do funil (adicione uma por vez)"
-            placeholder="Ex.: Negociando"
-            items={stages}
-            onChange={setStages}
-          />
+          <StageListEditor label="Etapas" placeholder="Ex.: Negociando" items={stages} onChange={setStages} />
         )}
 
         {mode === "label" && (
-          <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
-            <p className="text-xs text-neutral-600">
-              Todas as etiquetas do WhatsApp viram etapas automaticamente, já com os contatos de cada uma.
-            </p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {labels.map((l) => (
-                <span
-                  key={l.id}
-                  className="rounded-full border border-neutral-300 bg-white px-2.5 py-1 text-xs text-neutral-800"
-                >
-                  {l.name} · {l.conversation_count}
-                </span>
-              ))}
-            </div>
-            {labels.length === 0 && (
-              <p className="mt-2 text-[11px] text-neutral-500">
-                Nenhuma etiqueta sincronizada ainda — abra o WhatsApp Web com a extensão ativa.
-              </p>
-            )}
+          <div className="flex flex-wrap gap-1.5">
+            {labels.map((l) => (
+              <span
+                key={l.id}
+                className="rounded-full border border-neutral-300 bg-white px-2.5 py-1 text-xs text-neutral-800"
+              >
+                {l.name} · {l.conversation_count}
+              </span>
+            ))}
+            {labels.length === 0 && <p className="text-xs text-neutral-500">Nenhuma etiqueta sincronizada.</p>}
           </div>
         )}
 
@@ -771,7 +765,7 @@ function NewFunnelModal({
             onClick={submit}
             className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400"
           >
-            Criar
+            {mode === "tab" && tabFunnel ? "Adicionar" : "Criar"}
           </button>
         </div>
       </div>
