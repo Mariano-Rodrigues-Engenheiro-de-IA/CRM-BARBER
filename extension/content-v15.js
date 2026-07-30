@@ -342,37 +342,31 @@
     renderTopbar();
   }
 
-  /** Etiqueta: tenta o filtro nativo do WhatsApp; se não achar, filtra a lista. */
-  function filterByLabel(labelId, labelName) {
-    const key = `label:${labelId}`;
-    if (activeFilter?.key !== key) {
-      const name = String(labelName || "").trim().toLowerCase();
-      const native = Array.from(document.querySelectorAll('button, [role="button"], [role="tab"]')).find(
-        (el) =>
-          !el.closest("#crm-topbar") &&
-          !el.closest("#crm-rail") &&
-          String(el.getAttribute("aria-label") || el.textContent || "").trim().toLowerCase() === name,
-      );
-      if (native) {
-        native.click();
-        return;
-      }
+  /** Etiqueta: filtra a lista de conversas pelos contatos daquela etiqueta. */
+  function filterByLabel(labelId, _labelName) {
+    const terms = [];
+    for (const c of waData.contacts || []) {
+      if (!(c.label_ids || []).includes(labelId)) continue;
+      if (c.name) terms.push(c.name);
+      if (c.phone) terms.push(c.phone);
+      if (!c.name && !c.phone && c.wa_id) terms.push(String(c.wa_id).split("@")[0]);
     }
-    const terms = (waData.contacts || [])
-      .filter((c) => (c.label_ids || []).includes(labelId))
-      .map((c) => c.name || c.phone || c.wa_id);
-    setChatFilter(key, terms);
+    setChatFilter(`label:${labelId}`, terms);
   }
 
   /** Aba/etapa do funil principal: filtra a lista pelos leads daquela etapa. */
   function filterByStage(funnelId, stageId) {
     const funnel = funnels.find((f) => f.id === funnelId);
     if (!funnel) return;
-    const terms = (funnel.cards || [])
-      .filter((c) => c.stage_id === stageId)
-      .map((c) => c.title || c.phone);
+    const terms = [];
+    for (const c of funnel.cards || []) {
+      if (c.stage_id !== stageId) continue;
+      if (c.title) terms.push(c.title);
+      if (c.phone) terms.push(c.phone);
+    }
     setChatFilter(`stage:${stageId}`, terms);
   }
+
 
   function tabFunnel() {
     return funnels.find((f) => f.mode === "tab") || null;
