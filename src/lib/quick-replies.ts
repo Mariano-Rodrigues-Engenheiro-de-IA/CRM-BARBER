@@ -71,5 +71,11 @@ export function renderQuickReplyText(text: string, vars: Record<string, string>)
 }
 
 export function actionLabel(type: QuickReplyActionType) {
-  return type === "text" ? "Texto" : type === "image" ? "Imagem" : type === "video" ? "Vídeo" : "Áudio";
+  if (type === "text") return "Texto";
+  if (type === "image") return "Imagem";
+  if (type === "video") return "Vídeo";
+  if (type === "audio") return "Áudio";
+  if (type === "funnel_add") return "Adicionar ao funil";
+  return "Remover do funil";
 }
+
