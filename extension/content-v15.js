@@ -1,9 +1,9 @@
-// Content script v0.23.0 — abas do CRM no topo do WhatsApp Web + trilho de
+// Content script v0.23.1 — abas do CRM no topo do WhatsApp Web + trilho de
 // ícones minimalista à esquerda. Clicar numa aba/etiqueta filtra a própria
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.23.0";
+  const CRM_VERSION = "0.23.1";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
