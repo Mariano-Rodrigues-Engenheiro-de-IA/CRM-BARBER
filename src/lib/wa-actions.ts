@@ -23,10 +23,17 @@ export type WaAction = {
   actions?: QuickReplyAction[];
 };
 
+/**
+ * Telefone de verdade. IDs internos do WhatsApp (@lid) chegam como sequências
+ * de 15+ dígitos — não são telefone e nunca podem aparecer/serem discados.
+ */
 export function isRealPhone(phone: string | null | undefined) {
-  const digits = String(phone || "").replace(/\D/g, "");
-  return digits.length >= 10 && !String(phone || "").startsWith("sem-tel");
+  const raw = String(phone || "");
+  if (raw.startsWith("sem-tel")) return false;
+  const digits = raw.replace(/\D/g, "");
+  return digits.length >= 10 && digits.length <= 13;
 }
+
 
 export function sendWaAction(action: WaAction): Promise<{ ok: boolean; error?: string }> {
   if (typeof window === "undefined") return Promise.resolve({ ok: false, error: "Sem window" });
