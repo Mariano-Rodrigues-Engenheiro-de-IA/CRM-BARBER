@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.19.3";
+  const BRIDGE_VERSION = "0.20.0";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -269,6 +269,16 @@
   window.addEventListener("message", async (ev) => {
     if (ev.source !== window || !ev.data?.__crm) return;
     const d = ev.data;
+
+    if (d.__crm === "collect_v200") {
+      try {
+        const data = await collectWaData();
+        window.postMessage({ __crm: "collect_done_v200", id: d.id, ok: true, data }, "*");
+      } catch (e) {
+        window.postMessage({ __crm: "collect_done_v200", id: d.id, ok: false, error: e?.message || String(e) }, "*");
+      }
+      return;
+    }
 
     if (d.__crm === "action_v190") {
       try {
