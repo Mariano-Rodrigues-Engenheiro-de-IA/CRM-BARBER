@@ -77,13 +77,7 @@ export function QuickRepliesView({ token, api }: { token: string; api: ApiFn }) 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-neutral-900">Respostas rápidas</h2>
-          <p className="text-sm text-neutral-500">
-            Monte mensagens prontas (texto, imagem, vídeo, áudio) e envie em um clique
-            dentro do WhatsApp ou pelo card do assinante.
-          </p>
-        </div>
+        <h2 className="text-lg font-semibold text-neutral-900">Respostas rápidas</h2>
         <button
           onClick={() => setEditing("new")}
           className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
