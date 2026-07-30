@@ -190,10 +190,14 @@ function QuickReplyEditor({
     setBusy(true);
     setErr(null);
     try {
+      const mime = resolveMime(file, actions[i]?.type ?? "image");
+      if (!/^(image|video|audio)\//.test(mime)) {
+        throw new Error("Formato não suportado. Use imagem, vídeo ou áudio.");
+      }
       const dataUrl = await fileToBase64(file);
       const r = await api("/api/public/extension/quick-replies/upload", {
         method: "POST",
-        body: JSON.stringify({ filename: file.name, mime: file.type, data_base64: dataUrl }),
+        body: JSON.stringify({ filename: file.name, mime, data_base64: dataUrl }),
       });
       if (!r?.ok) throw new Error((r?.error as string) || "Falha no upload");
       update(i, {
