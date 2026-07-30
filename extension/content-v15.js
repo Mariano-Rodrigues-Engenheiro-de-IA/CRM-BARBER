@@ -495,7 +495,34 @@
     });
   }
 
+  /** Prompt próprio do CRM (nome de aba etc.). */
+  function crmPrompt({ title, value = "", confirmLabel = "Salvar" }) {
+    return new Promise((resolve) => {
+      const overlay = document.createElement("div");
+      overlay.className = "crm-modal-overlay";
+      overlay.innerHTML = `
+        <div class="crm-modal" role="dialog" aria-modal="true">
+          <p class="crm-modal-title">${escapeHtml(title)}</p>
+          <input class="crm-modal-input" value="${escapeHtml(value)}" style="width:100%;margin-bottom:16px;padding:9px 10px;border-radius:8px;border:1px solid #2a2a2a;background:#1a1a1a;color:#f5f5f5;font-size:13px;outline:none" />
+          <div class="crm-modal-actions">
+            <button class="crm-modal-cancel">Cancelar</button>
+            <button class="crm-modal-confirm">${escapeHtml(confirmLabel)}</button>
+          </div>
+        </div>
+      `;
+      const input = overlay.querySelector(".crm-modal-input");
+      const close = (v) => { overlay.remove(); resolve(v); };
+      overlay.addEventListener("click", (e) => { if (e.target === overlay) close(null); });
+      overlay.querySelector(".crm-modal-cancel").addEventListener("click", () => close(null));
+      overlay.querySelector(".crm-modal-confirm").addEventListener("click", () => close(input.value.trim() || null));
+      input.addEventListener("keydown", (e) => { if (e.key === "Enter") close(input.value.trim() || null); });
+      document.body.appendChild(overlay);
+      setTimeout(() => input.focus(), 30);
+    });
+  }
+
   function escapeHtml(value) {
+
     return String(value || "")
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
