@@ -8,7 +8,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  formatBRL,
   type Funnel,
   type FunnelCard,
   type FunnelMode,
@@ -35,9 +34,6 @@ export function FunnelsView({ api }: { api: ApiFn }) {
   const [detail, setDetail] = useState<FunnelCard | null>(null);
   const [detailTab, setDetailTab] = useState<"notes" | "schedule">("notes");
   const [inboxQuery, setInboxQuery] = useState("");
-  const [dispatch, setDispatch] = useState<{ label: string; targets: Array<{ phone: string; name: string }> } | null>(
-    null,
-  );
   const dragged = useRef<FunnelCard | null>(null);
   const draggedContact = useRef<WaContact | null>(null);
   const pendingContacts = useRef<Set<string>>(new Set());
@@ -232,24 +228,9 @@ export function FunnelsView({ api }: { api: ApiFn }) {
             <div className="flex w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-3">
               <div className="flex items-baseline justify-between gap-2">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-900">Inbox</h3>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-[11px] font-semibold text-neutral-700">
-                    {inboxContacts.length}
-                  </span>
-                  <button
-                    onClick={() =>
-                      setDispatch({
-                        label: "Inbox",
-                        targets: inboxContacts
-                          .filter((c) => isRealPhone(c.phone))
-                          .map((c) => ({ phone: c.phone as string, name: c.name || (c.phone as string) })),
-                      })
-                    }
-                    className="rounded-md border border-neutral-300 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-700 hover:border-neutral-900"
-                  >
-                    Disparar
-                  </button>
-                </div>
+                <span className="shrink-0 rounded-full bg-neutral-200 px-2 py-0.5 text-[11px] font-semibold text-neutral-700">
+                  {inboxContacts.length}
+                </span>
               </div>
               <input
                 value={inboxQuery}
@@ -257,7 +238,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                 placeholder="Buscar"
                 className="mt-2 w-full rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs outline-none focus:border-neutral-900"
               />
-              <div className="mt-3 space-y-2">
+              <div className="mt-3 max-h-[calc(100vh-320px)] space-y-2 overflow-y-auto pr-1">
                 {inboxContacts
                   .filter((c) => {
                     const t = inboxQuery.trim().toLowerCase();
@@ -304,7 +285,6 @@ export function FunnelsView({ api }: { api: ApiFn }) {
 
             {active.stages.map((stage) => {
               const cards = active.cards.filter((c) => c.stage_id === stage.id);
-              const total = cards.reduce((sum, c) => sum + (c.value_cents ?? 0), 0);
               return (
                 <div
                   key={stage.id}
@@ -328,26 +308,10 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                 >
                   <div className="flex items-baseline justify-between gap-2">
                     <h3 className="truncate text-sm font-semibold uppercase tracking-wide text-neutral-900">{stage.name}</h3>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <span className="text-[11px] text-neutral-500">{cards.length}</span>
-                      <button
-                        onClick={() =>
-                          setDispatch({
-                            label: stage.name,
-                            targets: cards
-                              .filter((c) => isRealPhone(c.phone))
-                              .map((c) => ({ phone: c.phone as string, name: c.title })),
-                          })
-                        }
-                        className="rounded-md border border-neutral-300 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-700 hover:border-neutral-900"
-                      >
-                        Disparar
-                      </button>
-                    </div>
+                    <span className="shrink-0 text-[11px] text-neutral-500">{cards.length}</span>
                   </div>
-                  <p className="mt-0.5 text-[11px] font-medium text-neutral-500">{formatBRL(total)}</p>
 
-                  <div className="mt-3 space-y-2">
+                  <div className="mt-3 max-h-[calc(100vh-320px)] space-y-2 overflow-y-auto pr-1">
                     {cards.map((card) => (
                       <div
                         key={card.id}
@@ -367,12 +331,9 @@ export function FunnelsView({ api }: { api: ApiFn }) {
                             ✕
                           </button>
                         </div>
-                        {card.phone && <p className="mt-0.5 text-[11px] text-neutral-500">{card.phone}</p>}
-                        {card.value_cents ? (
-                          <p className="mt-1 text-[11px] font-semibold text-neutral-700">
-                            {formatBRL(card.value_cents)}
-                          </p>
-                        ) : null}
+                        {isRealPhone(card.phone) && (
+                          <p className="mt-0.5 text-[11px] text-neutral-500">{card.phone}</p>
+                        )}
                         {card.notes && (
                           <span className="mt-1 inline-block rounded bg-neutral-200 px-1.5 py-0.5 text-[10px] text-neutral-700">
                             anotação
@@ -421,15 +382,6 @@ export function FunnelsView({ api }: { api: ApiFn }) {
       )}
 
 
-
-      {dispatch && (
-        <StageDispatchModal
-          api={api}
-          label={dispatch.label}
-          targets={dispatch.targets}
-          onClose={() => setDispatch(null)}
-        />
-      )}
 
       {detail && (
         <CardDrawer
@@ -630,8 +582,7 @@ function CardDrawer({
     <Overlay title={card.title} onClose={onClose}>
       <div className="space-y-4">
         <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-700">
-          {card.phone || "sem telefone"}
-          {card.value_cents ? ` · ${formatBRL(card.value_cents)}` : ""}
+          {isRealPhone(card.phone) ? card.phone : "sem telefone"}
         </div>
 
         <div className="flex items-center gap-2">
@@ -809,7 +760,7 @@ function NewFunnelModal({
 
   const options: Array<{ key: FunnelMode; title: string }> = [
     { key: "tab", title: "Funil principal" },
-    { key: "label", title: "Etiquetas" },
+    { key: "label", title: "Etiqueta / Listas" },
     { key: "manual", title: "Novo funil" },
   ];
 
@@ -817,7 +768,7 @@ function NewFunnelModal({
     if (mode === "label") {
       if (!labels.length) return;
       onCreate(
-        { name: "Etiquetas", mode: "label", source_label_id: null, stages: labels.map((l) => l.name) },
+        { name: "Etiqueta / Listas", mode: "label", source_label_id: null, stages: labels.map((l) => l.name) },
         labels,
       );
       return;
@@ -910,12 +861,11 @@ function NewFunnelModal({
 function AddCardForm({
   onAdd,
 }: {
-  onAdd: (payload: { title: string; phone?: string; value_cents?: number }) => void;
+  onAdd: (payload: { title: string; phone?: string }) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [phone, setPhone] = useState("");
-  const [value, setValue] = useState("");
 
   if (!open) {
     return (
@@ -932,12 +882,6 @@ function AddCardForm({
     <div className="mt-2 space-y-2 rounded-lg border border-neutral-200 bg-white p-2">
       <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nome" className={inputCls} />
       <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Telefone" className={inputCls} />
-      <input
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder="Valor (ex: 97,00)"
-        className={inputCls}
-      />
       <div className="flex justify-end gap-2">
         <button onClick={() => setOpen(false)} className="rounded px-2 py-1 text-xs text-neutral-500">
           cancelar
@@ -945,15 +889,9 @@ function AddCardForm({
         <button
           onClick={() => {
             if (!title.trim()) return;
-            const cents = Math.round(Number(value.replace(/\./g, "").replace(",", ".")) * 100);
-            onAdd({
-              title: title.trim(),
-              phone: phone.trim() || undefined,
-              value_cents: Number.isFinite(cents) && cents > 0 ? cents : undefined,
-            });
+            onAdd({ title: title.trim(), phone: phone.trim() || undefined });
             setTitle("");
             setPhone("");
-            setValue("");
             setOpen(false);
           }}
           className="rounded bg-neutral-900 px-3 py-1 text-xs font-semibold text-yellow-400"
