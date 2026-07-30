@@ -111,7 +111,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
         const nextDelayMs = () => (paceLo + Math.floor(Math.random() * (paceHi - paceLo + 1))) * 1000;
 
         // Resolve alvo → lista de customers {id, phone}
-        let targets: Array<{ id: string; phone: string | null }> = [];
+        let targets: Array<{ id: string; phone: string }> = [];
 
         if (phone_targets && phone_targets.length > 0) {
           // Disparo vindo dos funis: cada telefone vira (ou reaproveita) um customer.
