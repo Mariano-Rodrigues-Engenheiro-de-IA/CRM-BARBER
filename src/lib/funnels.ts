@@ -18,7 +18,7 @@ export const funnelSchema = z.object({
   name: z.string().trim().min(1).max(80),
   mode: z.enum(FUNNEL_MODES).default("manual"),
   source_label_id: z.string().trim().max(120).nullable().optional(),
-  stages: z.array(z.string().trim().min(1).max(60)).max(12).optional(),
+  stages: z.array(z.string().trim().min(1).max(60)).max(40).optional(),
 });
 
 export const funnelPatchSchema = z.object({

@@ -31,7 +31,7 @@ export const Route = createFileRoute("/instalar")({
 function downloadZip() {
   const version = Date.now();
   const urls = [
-    `/crm-assinaturas-extension-v1930.zip?v=${version}`,
+    `/crm-assinaturas-extension-v2200.zip?v=${version}`,
     `/crm-assinaturas-extension.zip?v=${version}`,
   ];
   urls
@@ -49,7 +49,7 @@ function downloadZip() {
     .then((blob) => {
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = "crm-assinaturas-extension-v1930.zip";
+      a.download = "crm-assinaturas-extension-v2200.zip";
       a.click();
       URL.revokeObjectURL(a.href);
     })
@@ -95,12 +95,12 @@ function Install() {
                 className="w-full bg-yellow-400 font-bold text-neutral-950 hover:bg-yellow-300"
                 onClick={downloadZip}
               >
-                Baixar extensão v0.21.0 (.zip)
+                Baixar extensão v0.22.0 (.zip)
               </Button>
               <p className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
                 Importante: remova a versão anterior em{" "}
                 <code className="rounded bg-neutral-800 px-1">chrome://extensions</code> antes de instalar.
-                A versão precisa aparecer como <strong>0.21.0</strong>.
+                A versão precisa aparecer como <strong>0.22.0</strong>.
               </p>
               <ol className="list-decimal space-y-2 pl-5 text-sm text-neutral-400">
                 <li>Descompacte o arquivo baixado em uma pasta.</li>
