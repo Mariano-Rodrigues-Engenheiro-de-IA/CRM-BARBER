@@ -10,6 +10,12 @@ import { cardCreateSchema, cardPatchSchema } from "@/lib/funnels";
 
 const deleteSchema = z.object({ id: z.string().uuid() });
 
+/** Telefone real tem 10–13 dígitos; IDs internos (@lid) têm 15+ e são descartados. */
+function normalizePhone(raw: string | null | undefined) {
+  const digits = String(raw ?? "").replace(/\D/g, "");
+  return digits.length >= 10 && digits.length <= 13 ? digits : null;
+}
+
 export const Route = createFileRoute("/api/public/extension/funnel-cards")({
   server: {
     handlers: {
@@ -86,7 +92,7 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
             funnel_id: parsed.data.funnel_id,
             stage_id: parsed.data.stage_id,
             title: parsed.data.title,
-            phone: parsed.data.phone ?? null,
+            phone: normalizePhone(parsed.data.phone),
             value_cents: parsed.data.value_cents ?? null,
             notes: parsed.data.notes ?? null,
             customer_id: parsed.data.customer_id ?? null,
@@ -127,7 +133,7 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
         if (rest.stage_id !== undefined) patch.stage_id = rest.stage_id;
         if (rest.sort_order !== undefined) patch.sort_order = rest.sort_order;
         if (rest.title !== undefined) patch.title = rest.title;
-        if (rest.phone !== undefined) patch.phone = rest.phone;
+        if (rest.phone !== undefined) patch.phone = normalizePhone(rest.phone);
         if (rest.value_cents !== undefined) patch.value_cents = rest.value_cents;
         if (rest.notes !== undefined) patch.notes = rest.notes;
 

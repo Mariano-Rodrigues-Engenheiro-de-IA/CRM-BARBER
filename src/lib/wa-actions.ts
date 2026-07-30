@@ -23,10 +23,17 @@ export type WaAction = {
   actions?: QuickReplyAction[];
 };
 
+/**
+ * Telefone de verdade. IDs internos do WhatsApp (@lid) chegam como sequências
+ * de 15+ dígitos — não são telefone e nunca podem aparecer/serem discados.
+ */
 export function isRealPhone(phone: string | null | undefined) {
-  const digits = String(phone || "").replace(/\D/g, "");
-  return digits.length >= 10 && !String(phone || "").startsWith("sem-tel");
+  const raw = String(phone || "");
+  if (raw.startsWith("sem-tel")) return false;
+  const digits = raw.replace(/\D/g, "");
+  return digits.length >= 10 && digits.length <= 13;
 }
+
 
 export function sendWaAction(action: WaAction): Promise<{ ok: boolean; error?: string }> {
   if (typeof window === "undefined") return Promise.resolve({ ok: false, error: "Sem window" });
@@ -82,10 +89,19 @@ export async function applyFunnelActions(
 
   for (const a of list) {
     if (a.type === "funnel_add" && a.funnel_id && a.stage_id) {
-      const already = funnels
+      const existing = funnels
         .find((f) => f.id === a.funnel_id)
-        ?.cards.some((c) => String(c.phone || "").replace(/\D/g, "") === digits);
-      if (already) continue;
+        ?.cards.find((c) => String(c.phone || "").replace(/\D/g, "") === digits);
+      if (existing) {
+        // Já está no funil: move para a etapa configurada (antes ficava parado).
+        if (existing.stage_id !== a.stage_id) {
+          await api("/api/public/extension/funnel-cards", {
+            method: "PATCH",
+            body: JSON.stringify({ id: existing.id, stage_id: a.stage_id }),
+          });
+        }
+        continue;
+      }
       await api("/api/public/extension/funnel-cards", {
         method: "POST",
         body: JSON.stringify({
@@ -96,6 +112,7 @@ export async function applyFunnelActions(
         }),
       });
       continue;
+
     }
     if (a.type === "funnel_remove" && a.funnel_id) {
       const cards = (funnels.find((f) => f.id === a.funnel_id)?.cards ?? []).filter(

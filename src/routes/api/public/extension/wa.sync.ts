@@ -7,6 +7,12 @@ import { jsonResponse, preflight } from "@/lib/extension-cors";
 import { authenticateExtension } from "@/lib/extension-auth";
 import { waSyncSchema } from "@/lib/funnels";
 
+/** Telefone real tem 10–13 dígitos; LIDs do WhatsApp têm 15+. */
+function normalizePhone(raw: string | null | undefined) {
+  const digits = String(raw ?? "").replace(/\D/g, "");
+  return digits.length >= 10 && digits.length <= 13 ? digits : null;
+}
+
 export const Route = createFileRoute("/api/public/extension/wa/sync")({
   server: {
     handlers: {
@@ -54,7 +60,8 @@ export const Route = createFileRoute("/api/public/extension/wa/sync")({
             const chunk = parsed.data.contacts.slice(i, i + 500).map((c) => ({
               barbershop_id: shop,
               wa_id: c.wa_id,
-              phone: c.phone ?? null,
+              // Nunca gravar ID interno (@lid) como telefone: só E.164 plausível.
+              phone: normalizePhone(c.phone),
               name: c.name ?? null,
               is_group: !!c.is_group,
               label_ids: c.label_ids ?? [],

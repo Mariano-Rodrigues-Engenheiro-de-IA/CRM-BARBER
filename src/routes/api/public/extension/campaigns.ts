@@ -41,12 +41,15 @@ const bodySchema = z
       .max(2000)
       .optional(),
     scheduled_for: z.string().min(4).max(40).optional(),
+    // Módulos independentes: "assinaturas" (Gestão de Assinaturas) x "funil".
+    scope: z.enum(["assinaturas", "funil"]).optional(),
     filter: z
       .object({
         status: z.enum(CUSTOMER_STATUS_VALUES).optional(),
         tags: z.array(z.string().min(1).max(40)).max(10).optional(),
       })
       .optional(),
+
   })
   .refine((v) => v.message || (v.message_variants && v.message_variants.length > 0), {
     message: "Informe message ou message_variants",
@@ -90,7 +93,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
         }
 
         const barbershopId = auth.token.barbershop_id;
-        const { name, message, message_variants, pace_seconds, pace_seconds_min, pace_seconds_max, customer_ids, phone_targets, filter, scheduled_for } = parsed.data;
+        const { name, message, message_variants, pace_seconds, pace_seconds_min, pace_seconds_max, customer_ids, phone_targets, filter, scheduled_for, scope } = parsed.data;
 
         // Agendamento opcional: base do primeiro job. Datas no passado caem para agora.
         const scheduledBase = scheduled_for ? Date.parse(scheduled_for) : NaN;
@@ -142,7 +145,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
                     name: wanted.get(p) as string,
                     phone: p,
                     status: "lead",
-                    source: "funnel",
+                    source: "funil",
                   })),
                 )
                 .select("id, phone");
@@ -208,7 +211,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
             pace_seconds_min: paceLo,
             pace_seconds_max: paceHi,
             message_variants: variants,
-            audience_filter: filter ? filter : { customer_ids: customer_ids ?? [] },
+            audience_filter: { ...(filter ?? { customer_ids: customer_ids ?? [] }), scope: scope ?? "assinaturas" },
           })
           .select("id, name, status, pace_seconds, pace_seconds_min, pace_seconds_max, created_at")
           .single();
@@ -271,17 +274,25 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
         if (!auth.ok) {
           return jsonResponse(request, { ok: false, error: auth.error }, { status: auth.status });
         }
-        const { data, error } = await supabaseAdmin
+        // Módulos independentes: cada tela vê só o seu histórico.
+        const scope = new URL(request.url).searchParams.get("scope");
+        const { data: allCampaigns, error } = await supabaseAdmin
           .from("campaigns")
-          .select("id, name, status, pace_seconds, pace_seconds_min, pace_seconds_max, message_variants, created_at")
+          .select("id, name, status, pace_seconds, pace_seconds_min, pace_seconds_max, message_variants, audience_filter, created_at")
           .eq("barbershop_id", auth.token.barbershop_id)
           .order("created_at", { ascending: false })
-          .limit(50);
+          .limit(100);
         if (error) {
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
         }
+        const campaignScope = (c: { audience_filter: unknown }) =>
+          (c.audience_filter as { scope?: string } | null)?.scope === "funil" ? "funil" : "assinaturas";
+        const data = (allCampaigns ?? [])
+          .filter((c) => (scope ? campaignScope(c) === scope : true))
+          .slice(0, 50);
 
         const ids = (data ?? []).map((c) => c.id);
+
         const stats: Record<string, { pending: number; sent: number; failed: number }> = {};
         const lastErrors: Record<string, string | null> = {};
         if (ids.length > 0) {
@@ -308,15 +319,36 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
         // Disparos avulsos (agendados a partir de um card/lead) não têm campanha.
         const { data: loose } = await supabaseAdmin
           .from("message_jobs")
-          .select("id, phone, rendered_body, status, scheduled_for, sent_at, last_error, created_at")
+          .select("id, customer_id, phone, rendered_body, status, scheduled_for, sent_at, last_error, created_at")
           .eq("barbershop_id", auth.token.barbershop_id)
           .is("campaign_id", null)
           .order("created_at", { ascending: false })
-          .limit(100);
+          .limit(200);
+
+        // Separa por módulo: leads criados pelos funis têm source "funil".
+        let looseJobs = loose ?? [];
+        if (scope) {
+          const customerIds = [...new Set(looseJobs.map((j) => j.customer_id).filter(Boolean))] as string[];
+          const funnelCustomers = new Set<string>();
+          if (customerIds.length > 0) {
+            const { data: cs } = await supabaseAdmin
+              .from("customers")
+              .select("id, source")
+              .in("id", customerIds);
+            for (const c of cs ?? []) {
+              if (c.source === "funil" || c.source === "funnel") funnelCustomers.add(c.id);
+            }
+          }
+          looseJobs = looseJobs.filter((j) => {
+            const isFunnel = j.customer_id ? funnelCustomers.has(j.customer_id) : false;
+            return scope === "funil" ? isFunnel : !isFunnel;
+          });
+        }
 
         return jsonResponse(request, {
           ok: true,
-          loose_jobs: loose ?? [],
+          loose_jobs: looseJobs.slice(0, 100),
+
           campaigns: (data ?? []).map((c) => ({
             ...c,
             stats: stats[c.id] ?? { pending: 0, sent: 0, failed: 0 },

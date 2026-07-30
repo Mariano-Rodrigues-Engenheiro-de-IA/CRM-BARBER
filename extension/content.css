@@ -1,19 +1,25 @@
 /* CRM Barber — barra de abas no topo do WhatsApp Web + trilho de ícones minimalista à esquerda. */
 
-/* Empurra a interface inteira do WhatsApp: nada do CRM fica por cima dos
-   ícones nativos (Conversas, Status, Canais, Comunidades…). */
+/* O WhatsApp usa layout fixo em viewport cheia e ignora padding no body.
+   Reposicionamos o app dele para dentro da área livre: o CRM ocupa o topo
+   (40px) e a lateral (46px), o WhatsApp ocupa o resto e se ajusta sozinho. */
 body.crm-shell {
-  padding-left: 46px !important;
-  padding-top: 40px !important;
-  box-sizing: border-box !important;
+  overflow: hidden !important;
 }
 body.crm-shell #app,
 body.crm-shell ._aigs,
 body.crm-shell ._ai_g {
-  width: 100% !important;
-  height: 100% !important;
+  position: fixed !important;
+  top: 40px !important;
+  left: 46px !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: none !important;
   margin: 0 !important;
 }
+
 
 
 /* Trilho lateral — só ícones */
