@@ -318,9 +318,14 @@
     if (!activeFilter) return;
     for (const row of chatRows()) {
       const text = rowText(row);
-      row.style.display = activeFilter.terms.some((t) => t && text.includes(t)) ? "" : "none";
+      const digits = text.replace(/\D/g, "");
+      const match = activeFilter.terms.some((t) =>
+        /^\d{8,}$/.test(t) ? digits.includes(t.slice(-8)) : text.includes(t),
+      );
+      row.style.display = match ? "" : "none";
     }
   }
+
 
   function clearChatFilter() {
     for (const row of chatRows()) row.style.display = "";
