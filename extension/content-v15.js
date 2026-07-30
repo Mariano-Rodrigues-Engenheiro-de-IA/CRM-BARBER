@@ -1,15 +1,18 @@
-// Content script v0.20.0 — ponte minimalista: CRM BARBER, Assinantes, Equipe e Conexão.
+// Content script v0.21.0 — abas do CRM no topo do WhatsApp Web + trilho de
+// ícones minimalista à esquerda (nada de painel ocupando espaço).
 
 (function () {
-  const CRM_VERSION = "0.20.0";
+  const CRM_VERSION = "0.21.0";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
-  const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
-  const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
+  const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
   window.__crmAssinaturasInjectedVersion = CRM_VERSION;
   document.getElementById("crm-assinaturas-panel")?.remove();
-  document.body?.classList.remove(BODY_DOCKED_CLASS, BODY_COLLAPSED_CLASS);
+  document.getElementById("crm-rail")?.remove();
+  document.getElementById("crm-topbar")?.remove();
+  document.body?.classList.remove("crm-assinaturas-docked", "crm-assinaturas-docked-collapsed");
   console.info(`[CRM ct v${CRM_VERSION}] carregado`, location.href);
+
 
   // Injetar wa-js + bridge no MAIN world, mas SÓ depois que o WhatsApp
   // registrar seus módulos internos (workaround upstream issue #3419:
@@ -63,8 +66,14 @@
   ensureWaScriptsInjected().catch(() => null);
 
 
-  let panelRef = null;
   let pollHeartbeat = null;
+  let railRef = null;
+  let topbarRef = null;
+  let status = { paired: false };
+  let funnels = [];
+  let waData = { labels: [], contacts: [] };
+  let syncTimer = null;
+  let syncing = false;
 
   function readLoggedPhone() {
     try {
@@ -74,11 +83,6 @@
     } catch { return null; }
   }
 
-  let activeTab = "atalhos";
-  let waData = { labels: [], contacts: [] };
-  let syncTimer = null;
-  let syncing = false;
-
   /** Pede etiquetas/conversas ao bridge (MAIN world) via postMessage. */
   function askBridgeCollect() {
     return new Promise((resolve) => {
@@ -86,7 +90,7 @@
       const timeout = setTimeout(() => {
         window.removeEventListener("message", onMessage);
         resolve(null);
-      }, 20000);
+      }, 60000);
       function onMessage(ev) {
         if (ev.source !== window) return;
         const d = ev.data;
@@ -100,10 +104,11 @@
     });
   }
 
-  /** Coleta local + envio para o CRM. Silencioso: nunca quebra o painel. */
-  async function syncWaData(rerender) {
+  /** Coleta local + envio para o CRM. Silencioso: nunca quebra a interface. */
+  async function syncWaData() {
     if (syncing) return;
     syncing = true;
+    renderTopbar();
     try {
       await ensureWaScriptsInjected().catch(() => null);
       const data = await askBridgeCollect();
@@ -114,190 +119,171 @@
         path: "/api/public/extension/wa/sync",
         opts: { method: "POST", body: JSON.stringify(data) },
       }).catch(() => null);
-      if (rerender && activeTab === "etiquetas") render();
+      console.info(`[CRM ct] sincronizado: ${data.labels.length} etiqueta(s), ${data.contacts.length} conversa(s)`);
     } finally {
       syncing = false;
+      renderTopbar();
     }
   }
 
   function startSync() {
     if (syncTimer) return;
-    syncWaData(true);
-    syncTimer = setInterval(() => syncWaData(true), 10 * 60 * 1000);
+    syncWaData();
+    syncTimer = setInterval(() => syncWaData(), 10 * 60 * 1000);
   }
 
-  function buildPanel() {
-    const panel = document.createElement("div");
-    panel.id = "crm-assinaturas-panel";
-    panel.className = "crm-theme-barber";
-    panel.innerHTML = `
-      <div class="crm-header">
-        <span class="crm-header-tag">CRM BARBER</span>
-        <button class="crm-toggle" title="Recolher">‹</button>
-      </div>
-      <div class="crm-body"></div>
-    `;
-    document.body.appendChild(panel);
-    document.body.classList.add(BODY_DOCKED_CLASS);
-    panelRef = panel;
+  async function loadFunnels() {
+    const r = await chrome.runtime
+      .sendMessage({ type: "api", path: "/api/public/extension/funnels" })
+      .catch(() => null);
+    if (r?.ok) {
+      funnels = r.funnels || [];
+      renderTopbar();
+    }
+  }
 
-    panel.querySelector(".crm-toggle").addEventListener("click", () => {
-      const c = panel.classList.toggle("crm-collapsed");
-      document.body.classList.toggle(BODY_COLLAPSED_CLASS, c);
-      panel.querySelector(".crm-toggle").textContent = c ? "›" : "‹";
+  function painelUrl(section, extra) {
+    const base = status.api_base || "";
+    const token = status.token || EXTENSION_BRIDGE_TOKEN;
+    return `${base}/painel?token=${encodeURIComponent(token)}${section ? `&section=${section}` : ""}${extra || ""}`;
+  }
+
+  function openPainel(section, extra) {
+    window.open(painelUrl(section, extra), "_blank", "noopener");
+  }
+
+  const ICONS = {
+    users: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>`,
+    funnel: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 8v7l-4 2v-9L3 4z"/></svg>`,
+    trophy: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/></svg>`,
+    phone: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.4 2.1L8.1 9.6a16 16 0 0 0 6.3 6.3l1.2-1.2a2 2 0 0 1 2.1-.4c.8.3 1.7.5 2.6.6A2 2 0 0 1 22 16.9z"/></svg>`,
+    sync: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>`,
+    gear: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 7 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H1a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 2.6 7"/></svg>`,
+    exit: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>`,
+  };
+
+  function buildShell() {
+    const rail = document.createElement("div");
+    rail.id = "crm-rail";
+    rail.innerHTML = `
+      <div class="crm-rail-mark">CB</div>
+      <button class="crm-rail-btn" data-go="assinantes" title="Gestão de Assinaturas">${ICONS.users}</button>
+      <button class="crm-rail-btn" data-go="funis" title="Funis de Vendas">${ICONS.funnel}</button>
+      <button class="crm-rail-btn" data-go="equipe" title="Equipe">${ICONS.trophy}</button>
+      <button class="crm-rail-btn" data-go="conexao" title="Conexão">${ICONS.phone}</button>
+      <button class="crm-rail-btn" data-act="sync" title="Sincronizar etiquetas e conversas">${ICONS.sync}</button>
+      <div class="crm-rail-spacer"></div>
+      <button class="crm-rail-btn" data-go="configuracoes" title="Configurações">${ICONS.gear}</button>
+      <button class="crm-rail-btn" data-act="unpair" title="Desvincular">${ICONS.exit}</button>
+    `;
+    document.body.appendChild(rail);
+    railRef = rail;
+
+    const topbar = document.createElement("div");
+    topbar.id = "crm-topbar";
+    document.body.appendChild(topbar);
+    topbarRef = topbar;
+
+    document.body.classList.add(SHELL_CLASS);
+
+    rail.addEventListener("click", async (e) => {
+      const btn = e.target.closest(".crm-rail-btn");
+      if (!btn) return;
+      const go = btn.getAttribute("data-go");
+      if (go) return openPainel(go);
+      const act = btn.getAttribute("data-act");
+      if (act === "sync") {
+        syncing = false;
+        syncWaData();
+        return;
+      }
+      if (act === "unpair") {
+        const ok = await crmConfirm({
+          title: "Desvincular esta conta?",
+          body: "O CRM para de disparar por este WhatsApp até você vincular de novo.",
+          confirmLabel: "Desvincular",
+        });
+        if (!ok) return;
+        await chrome.runtime.sendMessage({ type: "unpair" });
+        refresh();
+      }
     });
 
-    render();
-    return panel;
+    topbar.addEventListener("click", (e) => {
+      const pill = e.target.closest(".crm-pill");
+      if (!pill) return;
+      const id = pill.getAttribute("data-funnel");
+      openPainel("funis", id ? `&funnel=${encodeURIComponent(id)}` : "");
+    });
+
+    renderTopbar();
   }
 
-  function body() { return panelRef.querySelector(".crm-body"); }
+  function formatBRL(cents) {
+    return ((cents || 0) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
 
-  async function render() {
-    const r = await chrome.runtime.sendMessage({ type: "get_status" });
-    const paired = !!r?.paired;
+  function renderTopbar() {
+    if (!topbarRef) return;
 
-    if (!paired) {
+    if (!status.paired) {
+      topbarRef.innerHTML = `<span class="crm-topbar-hint">CRM Barber · conectando ao seu WhatsApp…</span>`;
+      return;
+    }
+
+    // Abas = funis (as abas criadas no CRM aparecem aqui em primeiro lugar).
+    const ordered = [...funnels].sort((a, b) => (a.mode === "tab" ? -1 : 0) - (b.mode === "tab" ? -1 : 0));
+    const pills = ordered
+      .map((f) => {
+        const total = (f.cards || []).reduce((s, c) => s + (c.value_cents || 0), 0);
+        return `<button class="crm-pill" data-funnel="${escapeHtml(f.id)}">
+          ${escapeHtml(f.name)}
+          <span class="crm-pill-value">${escapeHtml(formatBRL(total))}</span>
+        </button>`;
+      })
+      .join("");
+
+    topbarRef.innerHTML = `
+      ${pills || `<span class="crm-topbar-hint">Nenhuma aba criada ainda.</span>`}
+      <button class="crm-pill crm-pill-add">+ nova aba</button>
+      <span class="crm-topbar-status">${
+        syncing
+          ? "sincronizando…"
+          : `${waData.labels.length} etiquetas · ${waData.contacts.length} conversas`
+      }</span>
+    `;
+  }
+
+  async function refresh() {
+    const r = await chrome.runtime.sendMessage({ type: "get_status" }).catch(() => null);
+    status = r || { paired: false };
+
+    if (!status.paired) {
       stopPollHeartbeat();
+      renderTopbar();
       const phone = readLoggedPhone();
       if (phone) {
         chrome.runtime.sendMessage({ type: "pair", phone }).then((res) => {
-          if (res?.ok) render();
+          if (res?.ok) refresh();
         });
       }
-      body().innerHTML = `
-        <div class="crm-empty-state">
-          <div class="crm-empty-dot"></div>
-          <p class="crm-empty-title">Conectando…</p>
-          <p class="crm-empty-sub">Vinculando ao seu WhatsApp. Se demorar, atualize a página.</p>
-        </div>
-      `;
       return;
     }
 
+    renderTopbar();
     startPollHeartbeat();
     startSync();
-
-    const apiBase = r.api_base || "";
-    const panelToken = r.token || EXTENSION_BRIDGE_TOKEN;
-    const painelUrl = (section) =>
-      `${apiBase}/painel?token=${encodeURIComponent(panelToken)}${section ? `&section=${section}` : ""}`;
-
-    const iconUsers = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
-    const iconTrophy = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v3a3 3 0 0 1-3 3"/><path d="M7 5H4v3a3 3 0 0 0 3 3"/></svg>`;
-    const iconPhone = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.33 1.77.62 2.61a2 2 0 0 1-.45 2.11L8.09 9.63a16 16 0 0 0 6.28 6.28l1.19-1.19a2 2 0 0 1 2.11-.45c.84.29 1.71.5 2.61.62A2 2 0 0 1 22 16.92z"/></svg>`;
-    const iconFunnel = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 8v7l-4 2v-9L3 4z"/></svg>`;
-    const chev = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>`;
-
-    const tabsHtml = `
-      <div class="crm-tabs">
-        <button class="crm-tab ${activeTab === "atalhos" ? "is-active" : ""}" data-tab="atalhos">Atalhos</button>
-        <button class="crm-tab ${activeTab === "etiquetas" ? "is-active" : ""}" data-tab="etiquetas">Etiquetas</button>
-      </div>
-    `;
-
-    if (activeTab === "etiquetas") {
-      const labels = waData.labels || [];
-      const rows = labels.length
-        ? labels
-            .map(
-              (l) => `
-              <button class="crm-label-row" data-label="${escapeHtml(String(l.id))}">
-                <span class="crm-label-dot" style="background:${escapeHtml(l.color || "#f5c518")}"></span>
-                <span class="crm-label-name">${escapeHtml(l.name)}</span>
-                <span class="crm-label-count">${
-                  (waData.contacts || []).filter((c) => (c.label_ids || []).includes(String(l.id))).length
-                }</span>
-              </button>`,
-            )
-            .join("")
-        : `<p class="crm-empty-sub">${syncing ? "Sincronizando…" : "Nenhuma etiqueta encontrada no WhatsApp."}</p>`;
-
-      body().innerHTML = `
-        ${tabsHtml}
-        <div class="crm-labels">${rows}</div>
-        <div class="crm-footer">
-          <button class="crm-sync">sincronizar agora</button>
-        </div>
-      `;
-      body().querySelectorAll(".crm-tab").forEach((el) =>
-        el.addEventListener("click", () => {
-          activeTab = el.getAttribute("data-tab");
-          render();
-        }),
-      );
-      body().querySelector(".crm-sync").addEventListener("click", () => {
-        syncing = false;
-        syncWaData(true);
-        render();
-      });
-      body().querySelectorAll(".crm-label-row").forEach((el) =>
-        el.addEventListener("click", () => {
-          window.open(painelUrl("funis"), "_blank", "noopener");
-        }),
-      );
-      return;
-    }
-
-    body().innerHTML = `
-      ${tabsHtml}
-      <div class="crm-tiles">
-        <button class="crm-tile" data-section="assinantes">
-          <span class="crm-tile-icon">${iconUsers}</span>
-          <span class="crm-tile-title">Gestão de Assinaturas</span>
-          <span class="crm-tile-arrow">${chev}</span>
-        </button>
-        <button class="crm-tile" data-section="funis">
-          <span class="crm-tile-icon">${iconFunnel}</span>
-          <span class="crm-tile-title">Funis de Vendas</span>
-          <span class="crm-tile-arrow">${chev}</span>
-        </button>
-        <button class="crm-tile" data-section="equipe">
-          <span class="crm-tile-icon">${iconTrophy}</span>
-          <span class="crm-tile-title">Equipe</span>
-          <span class="crm-tile-arrow">${chev}</span>
-        </button>
-        <button class="crm-tile" data-section="conexao">
-          <span class="crm-tile-icon">${iconPhone}</span>
-          <span class="crm-tile-title">Conexão</span>
-          <span class="crm-tile-arrow">${chev}</span>
-        </button>
-      </div>
-
-      ${r.last_error ? `<div class="crm-status-error">${escapeHtml(r.last_error)}</div>` : ""}
-
-      <div class="crm-footer">
-        <button class="crm-unpair">desvincular</button>
-      </div>
-    `;
-
-    body().querySelectorAll(".crm-tab").forEach((el) =>
-      el.addEventListener("click", () => {
-        activeTab = el.getAttribute("data-tab");
-        render();
-      }),
-    );
-
-    body().querySelectorAll(".crm-tile").forEach((el) => {
-      el.addEventListener("click", () => {
-        window.open(painelUrl(el.getAttribute("data-section")), "_blank", "noopener");
-      });
-    });
-
-    body().querySelector(".crm-unpair").addEventListener("click", async () => {
-      const ok = await crmConfirm({
-        title: "Desvincular esta conta?",
-        body: "O CRM para de disparar por este WhatsApp até você vincular de novo.",
-        confirmLabel: "Desvincular",
-      });
-      if (!ok) return;
-      await chrome.runtime.sendMessage({ type: "unpair" });
-      render();
-    });
+    loadFunnels();
   }
 
-  function ensurePanel() {
-    if (!document.getElementById("crm-assinaturas-panel")) buildPanel();
+  function ensureShell() {
+    if (!document.getElementById("crm-rail") || !document.getElementById("crm-topbar")) {
+      document.getElementById("crm-rail")?.remove();
+      document.getElementById("crm-topbar")?.remove();
+      buildShell();
+      refresh();
+    }
+    document.body.classList.add(SHELL_CLASS);
   }
 
   function startPollHeartbeat() {
@@ -313,9 +299,11 @@
     pollHeartbeat = null;
   }
 
-  ensurePanel();
-  const mo = new MutationObserver(() => ensurePanel());
+  ensureShell();
+  setInterval(() => loadFunnels(), 60000);
+  const mo = new MutationObserver(() => ensureShell());
   if (document.body) mo.observe(document.body, { childList: true });
+
 
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
     if (msg?.type === "send_message_v180" || msg?.type === "send_message_v170" || msg?.type === "send_message_v161") {
@@ -330,7 +318,7 @@
         .catch((e) => sendResponse({ ok: false, error: String(e?.message || e) }));
       return true;
     }
-    if (msg?.type === "show_panel") { ensurePanel(); sendResponse({ ok: true }); return true; }
+    if (msg?.type === "show_panel") { ensureShell(); sendResponse({ ok: true }); return true; }
     return false;
   });
 

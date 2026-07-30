@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.20.0";
+  const BRIDGE_VERSION = "0.21.0";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -218,44 +218,95 @@
     }
   }
 
+  /** Espera os stores internos terem dados (logo após o load ficam vazios). */
+  async function waitForStores() {
+    for (let i = 0; i < 40; i += 1) {
+      const chats = window.WPP?.whatsapp?.ChatStore?.getModelsArray?.() || [];
+      if (chats.length > 0) return chats;
+      await sleep(750);
+    }
+    return window.WPP?.whatsapp?.ChatStore?.getModelsArray?.() || [];
+  }
+
+  /** Etiquetas: a API pública mudou de nome entre builds — tentamos todas. */
+  function readLabels() {
+    const sources = [
+      () => window.WPP?.labels?.getAllLabels?.(),
+      () => window.WPP?.labels?.getAll?.(),
+      () => window.WPP?.whatsapp?.LabelStore?.getModelsArray?.(),
+      () => window.WPP?.whatsapp?.LabelStore?.models,
+    ];
+    for (const get of sources) {
+      let list;
+      try {
+        list = get();
+      } catch {
+        continue;
+      }
+      if (!Array.isArray(list) || list.length === 0) continue;
+      const out = [];
+      for (const l of list) {
+        const id = String(l?.id ?? l?.labelId ?? l?.__x_id ?? "");
+        if (!id || id === "undefined") continue;
+        out.push({
+          id,
+          name: String(l?.name ?? l?.__x_name ?? `Etiqueta ${id}`).slice(0, 120),
+          color: l?.hexColor ? String(l.hexColor).slice(0, 20) : null,
+          count: Number(l?.count ?? l?.labelItemCount ?? l?.__x_count ?? 0) || 0,
+        });
+      }
+      if (out.length) return out;
+    }
+    return [];
+  }
+
+  /** Etiquetas de uma conversa: também mudou de forma entre builds. */
+  function chatLabelIds(chat) {
+    const raw = chat?.labels ?? chat?.__x_labels ?? chat?.labelIds ?? [];
+    const arr = Array.isArray(raw) ? raw : Array.isArray(raw?.getModelsArray?.()) ? raw.getModelsArray() : [];
+    return arr
+      .map((x) => String(typeof x === "object" ? (x?.id ?? x?.labelId ?? "") : x))
+      .filter((x) => x && x !== "undefined")
+      .slice(0, 50);
+  }
+
   /**
    * Lê etiquetas e conversas direto dos stores do WhatsApp Web.
    * Só leitura — nada é enviado daqui; o content script decide o que faz.
    */
   async function collectWaData() {
     await waitForWpp();
-    const labels = [];
+    const chats = await waitForStores();
+
+    let labels = [];
     try {
-      const list = window.WPP.labels?.getAllLabels?.() || [];
-      for (const l of list) {
-        const id = String(l?.id ?? l?.labelId ?? "");
-        if (!id) continue;
-        labels.push({
-          id,
-          name: String(l?.name ?? `Etiqueta ${id}`).slice(0, 120),
-          color: l?.hexColor ? String(l.hexColor).slice(0, 20) : null,
-          count: Number(l?.count ?? l?.labelItemCount ?? 0) || 0,
-        });
-      }
+      labels = readLabels();
     } catch (e) {
       console.warn("[CRM] etiquetas indisponíveis:", e?.message || e);
     }
 
     const contacts = [];
     try {
-      const chats = window.WPP.whatsapp?.ChatStore?.getModelsArray?.() || [];
       for (const chat of chats.slice(0, 3000)) {
         const waId = serialized(chat?.id);
         if (!waId) continue;
         const isGroup = waId.endsWith("@g.us");
         const digits = waId.split("@")[0].replace(/\D/g, "");
-        const ts = Number(chat?.t ?? 0);
+        const ts = Number(chat?.t ?? chat?.__x_t ?? 0);
         contacts.push({
           wa_id: waId,
           phone: isGroup || !digits ? null : digits,
-          name: String(chat?.formattedTitle || chat?.name || chat?.contact?.name || "").slice(0, 160) || null,
+          name:
+            String(
+              chat?.formattedTitle ||
+                chat?.__x_formattedTitle ||
+                chat?.name ||
+                chat?.contact?.name ||
+                chat?.contact?.pushname ||
+                "",
+            ).slice(0, 160) || null,
           is_group: isGroup,
-          label_ids: (chat?.labels || []).map((x) => String(x)).slice(0, 50),
+          label_ids: chatLabelIds(chat),
           last_message_at: ts > 0 ? new Date(ts * 1000).toISOString() : null,
         });
       }
@@ -263,8 +314,17 @@
       console.warn("[CRM] conversas indisponíveis:", e?.message || e);
     }
 
+    // Se as etiquetas não vieram do store, deduzimos pelos ids usados nas conversas.
+    if (!labels.length) {
+      const seen = new Map();
+      for (const c of contacts) for (const id of c.label_ids) seen.set(id, (seen.get(id) || 0) + 1);
+      labels = [...seen.entries()].map(([id, count]) => ({ id, name: `Etiqueta ${id}`, color: null, count }));
+    }
+
+    console.info(`[CRM] coletado: ${labels.length} etiqueta(s), ${contacts.length} conversa(s)`);
     return { labels, contacts };
   }
+
 
   window.addEventListener("message", async (ev) => {
     if (ev.source !== window || !ev.data?.__crm) return;
