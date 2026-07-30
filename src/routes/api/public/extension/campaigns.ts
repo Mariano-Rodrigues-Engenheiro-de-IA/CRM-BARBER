@@ -274,17 +274,25 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
         if (!auth.ok) {
           return jsonResponse(request, { ok: false, error: auth.error }, { status: auth.status });
         }
-        const { data, error } = await supabaseAdmin
+        // Módulos independentes: cada tela vê só o seu histórico.
+        const scope = new URL(request.url).searchParams.get("scope");
+        const { data: allCampaigns, error } = await supabaseAdmin
           .from("campaigns")
-          .select("id, name, status, pace_seconds, pace_seconds_min, pace_seconds_max, message_variants, created_at")
+          .select("id, name, status, pace_seconds, pace_seconds_min, pace_seconds_max, message_variants, audience_filter, created_at")
           .eq("barbershop_id", auth.token.barbershop_id)
           .order("created_at", { ascending: false })
-          .limit(50);
+          .limit(100);
         if (error) {
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
         }
+        const campaignScope = (c: { audience_filter: unknown }) =>
+          (c.audience_filter as { scope?: string } | null)?.scope === "funil" ? "funil" : "assinaturas";
+        const data = (allCampaigns ?? [])
+          .filter((c) => (scope ? campaignScope(c) === scope : true))
+          .slice(0, 50);
 
         const ids = (data ?? []).map((c) => c.id);
+
         const stats: Record<string, { pending: number; sent: number; failed: number }> = {};
         const lastErrors: Record<string, string | null> = {};
         if (ids.length > 0) {
