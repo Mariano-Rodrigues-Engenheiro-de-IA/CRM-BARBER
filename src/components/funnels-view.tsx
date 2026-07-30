@@ -336,7 +336,7 @@ export function FunnelsView({ api }: { api: ApiFn }) {
         <NewFunnelModal
           labels={labels}
           onClose={() => setCreating(false)}
-          onCreate={async (body) => {
+          onCreate={async (body, labelStages) => {
             const r = await api("/api/public/extension/funnels", {
               method: "POST",
               body: JSON.stringify(body),
@@ -347,11 +347,37 @@ export function FunnelsView({ api }: { api: ApiFn }) {
             }
             setCreating(false);
             const created = r.funnel as Funnel;
+
+            // Etiquetas: cada etiqueta vira uma etapa já preenchida com seus contatos.
+            if (labelStages?.length && created?.stages?.length) {
+              for (let i = 0; i < labelStages.length; i++) {
+                const stage = created.stages[i];
+                const label = labelStages[i];
+                if (!stage || !label) continue;
+                const list = contacts
+                  .filter((c) => (c.label_ids || []).includes(label.wa_label_id))
+                  .slice(0, 100);
+                for (const c of list) {
+                  await api("/api/public/extension/funnel-cards", {
+                    method: "POST",
+                    body: JSON.stringify({
+                      funnel_id: created.id,
+                      stage_id: stage.id,
+                      title: c.name || c.phone || c.wa_id,
+                      phone: c.phone ?? undefined,
+                      wa_contact_id: c.id,
+                    }),
+                  });
+                }
+              }
+            }
+
             await reload();
             setActiveId(created?.id ?? null);
           }}
         />
       )}
+
     </div>
   );
 }
