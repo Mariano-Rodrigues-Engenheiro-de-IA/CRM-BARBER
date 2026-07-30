@@ -318,7 +318,7 @@
         .catch((e) => sendResponse({ ok: false, error: String(e?.message || e) }));
       return true;
     }
-    if (msg?.type === "show_panel") { ensurePanel(); sendResponse({ ok: true }); return true; }
+    if (msg?.type === "show_panel") { ensureShell(); sendResponse({ ok: true }); return true; }
     return false;
   });
 
