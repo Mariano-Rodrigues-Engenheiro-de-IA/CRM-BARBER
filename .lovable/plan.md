@@ -1,90 +1,74 @@
-# Plano — CRM Assinaturas v0.10
+## Contexto
 
-Boa, disparo funcionando destrava a próxima fase. Antes de mexer, quero alinhar o escopo — é mudança grande e prefiro confirmar antes de sair codando.
-
-## 1. Painel do CRM sai da sidebar do WhatsApp
-
-Hoje o CRM mora num painel colado no WhatsApp Web. Vai virar:
-
-- **Botão "Assinaturas" na sidebar do WhatsApp** → abre nova aba do navegador (`window.open`) no painel completo.
-- **Painel completo** = nova rota web do próprio CRM (ex: `/painel`), hospedada no mesmo domínio Lovable, autenticada pelo token da extensão (passado via query string / storage).
-- A sidebar dentro do WhatsApp fica minimalista: só status de pareamento + botão "Abrir painel" + fila de disparo em andamento (com botão pausar).
-
-## 2. Kanban de assinantes
-
-Dentro do painel, tela principal = Kanban com colunas configuráveis. MVP:
-
-- Colunas fixas iniciais: **Ativos**, **Inadimplentes**, **Reativar**, **Cancelados**.
-- Cada card = 1 contato (nome + telefone + tags).
-- **Drag-and-drop** entre colunas muda o `status` do customer.
-- **Lixeira no card** remove o contato (com confirm).
-- Botão **+ Adicionar** em cada coluna: abre modal com 2 abas
-  - "Escolher dos contatos do WhatsApp" (lista puxada via bridge, com busca e checkbox)
-  - "Digitar manualmente" (nome + telefone)
-
-## 3. Importação de planilha com substituição inteligente
-
-- Botão **Importar planilha** no topo do Kanban.
-- Formato aceito: CSV simples `nome;telefone` (já implementado).
-- Comportamento **novo**: cada barbearia tem UMA "planilha ativa" por vez. Ao importar nova planilha:
-  - Contatos que **estavam** na planilha anterior e **não estão** na nova → removidos do CRM (marcados como `archived`, não deletados de fato, pra preservar histórico).
-  - Contatos **novos** → inseridos.
-  - Contatos que continuam → atualizados (nome, tags mescladas).
-- Contatos adicionados manualmente (fora de planilha) **não são afetados** pela substituição.
-
-Requer coluna nova `source` em `customers` (`spreadsheet` | `manual` | `whatsapp_contacts`) e coluna `spreadsheet_batch_id` para agrupar.
-
-## 4. Campanhas com controle real
-
-- **Pausar/Retomar** campanha em andamento (botão na tela de progresso). Backend: novo endpoint `PATCH /campaigns/:id` com `status: 'paused' | 'running'`; o worker (extensão) só puxa jobs de campanhas `running`.
-- **Ritmo configurável** com faixa (ex: entre 20 e 60 segundos, aleatório dentro da faixa) — reduz padrão de bot.
-- **Variação de mensagens**: usuário informa até 3 variações; ao enfileirar jobs, cada job recebe uma variação aleatória (round-robin ou random). Backend: `campaigns.message_variants text[]` em vez de `message` único.
-
-## 5. Layout — tema barbearia
-
-- Paleta preto + amarelo (dourado), tipografia com peso, cantos levemente arredondados.
-- Aplica no painel novo (rota `/painel`) e na sidebar reduzida da extensão.
+O pedido tem 13 frentes e muda a base do produto: o WhatsApp passa a ser a fonte principal de dados (hoje é planilha). Isso não cabe em uma entrega só — proponho 4 fases, cada uma entregando algo utilizável. Você aprova a ordem (ou muda) e eu toco fase por fase.
 
 ---
 
-## Escopo técnico resumido
+## Fase 1 — Correções e base (rápida, sem risco)
 
-**Backend (Supabase + rotas API):**
-- Migração: `customers.source`, `customers.spreadsheet_batch_id`, `customers.archived_at`; `campaigns.message_variants text[]`, `campaigns.pace_seconds_min`, `campaigns.pace_seconds_max`.
-- Nova rota `PATCH /api/public/extension/campaigns/:id` (pausar/retomar).
-- Ajuste em `/customers/import` pra receber `mode: 'replace_spreadsheet'` e arquivar contatos ausentes.
-- Ajuste em `/jobs/next` pra filtrar campanhas pausadas.
-- Ajuste em `/campaigns` (POST) pra aceitar `message_variants` e faixa de pace.
+**13. Envio de mídias (áudio/imagem/vídeo)** — varredura completa do fluxo: upload → bucket → URL assinada → painel → `panel-nudge` → background → bridge → `WPP.chat.sendFileMessage`. Suspeitas principais já mapeadas:
+- a URL assinada expira em 1h, e a bridge baixa a mídia no momento do envio (campanha agendada = link morto);
+- o `fetch` da mídia acontece dentro do contexto do web.whatsapp.com, que não tem o domínio do Storage liberado (CSP/CORS) — a correção provável é baixar a mídia no background da extensão e passar como base64/blob para a página;
+- áudio como PTT exige `opus/ogg`, e o arquivo enviado pelo usuário normalmente é `mp3/m4a`.
+Só depois de confirmar a causa real por log aplico a correção, sem mexer na arquitetura.
 
-**Painel web novo (rota `/painel`):**
-- Autenticação via token da extensão (mesma tabela `extension_tokens`), passado via `?token=…` na primeira abertura, salvo em `localStorage` do domínio Lovable.
-- Kanban (dnd-kit), modal de adicionar contatos, importador de planilha, tela de campanha.
+**5. Fim dos pop-ups nativos** — substituir os 9 `confirm()/alert()` restantes (painel, equipe, extensão, instalar) por modal/AlertDialog e toasts do próprio sistema.
 
-**Extensão v0.10:**
-- Sidebar simplificada: status + "Abrir painel de assinaturas" (abre nova aba) + campanhas em andamento com pausar.
-- Bridge continua responsável só pelo envio silencioso e leitura de contatos.
+**12. Renomear "Assinantes" → "Gestão de Assinaturas"** e mover para dentro dela: planos, valores, metas de assinatura. Configurações fica só com o que é geral (logo, sistema de origem, importação, integrações).
 
 ---
 
-## O que **não** vai entrar nesta rodada
+## Fase 2 — Sincronização com o WhatsApp (o coração da mudança)
 
-- Envio de áudio/imagem (só texto por enquanto).
-- Colunas de kanban criadas pelo usuário (fica com as 4 fixas).
-- Templates salvos reutilizáveis (só variações dentro da campanha).
-- Health checks / alertas por e-mail (fase seguinte, como combinado).
+**1. Sync de contatos, conversas, grupos e etiquetas.**
+- A extensão lê da sessão logada (contatos, chats, grupos, labels do WhatsApp Business) e envia em lotes para o CRM.
+- Novas tabelas: `wa_contacts`, `wa_labels`, `wa_contact_labels`, `wa_chats` (todas isoladas por barbearia, com RLS).
+- Sync incremental (só o que mudou) + botão "sincronizar agora" e sync automática periódica.
+- Planilha continua existindo como complemento; contatos ganham `source` (whatsapp | planilha | manual) e são deduplicados por telefone.
+
+Sem esta fase, os itens 2, 7 e 9 não têm base de dados real.
 
 ---
 
-## Esforço estimado
+## Fase 3 — Funis de Vendas + Abas
 
-Mudança grande — painel novo + kanban + refatoração de import/campanha. Estimativa: **1 a 2 dias** de trabalho meu de ponta a ponta, testando cada bloco.
+**2/3/4.** Nova seção **Funis de Vendas** no painel, com duas visões separadas e o mesmo Kanban já existente:
+- **Funis por Abas** — abas próprias do CRM (Clientes Novos, Orçamentos, Agendamentos, Pós-venda, VIP, Perdidos), criáveis pelo usuário, com arrastar entre colunas.
+- **Funis por Etiquetas** — colunas geradas a partir das etiquetas reais do WhatsApp sincronizadas.
 
-Ordem que vou seguir se aprovar:
+**Abas visíveis dentro do WhatsApp Web**: a extensão injeta uma barra de abas logo acima da lista de conversas (não na lateral), sempre visível, com botão "+ nova aba". Clicar numa aba filtra a lista de conversas por aquele funil.
 
-1. Migração de schema (customers + campaigns).
-2. Ajustes nas rotas de API (import replace, pausar campanha, variações, pace range).
-3. Painel web `/painel` com Kanban + import + adicionar contatos.
-4. Refatoração da extensão v0.10 (sidebar reduzida + botão abrir painel + pausar campanha).
-5. Skin preto/amarelo no painel e na sidebar.
+---
 
-Confirma que faz sentido assim, ou quer que eu ajuste alguma parte antes de começar?
+## Fase 4 — Clientes: vendas, histórico e ranking
+
+**6/7.** No lançamento de venda da equipe, campo obrigatório de **cliente**, com busca por nome ou telefone na base sincronizada; se não achar, cadastro rápido inline (nome + telefone).
+
+**8.** Perfil completo do cliente: total gasto, nº de compras, produtos, serviços, primeira e última compra, tempo de relacionamento (LTV), frequência, jornada.
+
+**9.** **Ranking de clientes** nos mesmos moldes do ranking de barbeiros, com filtro Hoje / Semana / Mês / 90 dias / período personalizado.
+
+**10.** Gestão de equipe passa a cruzar barbeiro × cliente: quem cada barbeiro fidelizou, clientes com maior LTV, clientes ativos e clientes em risco de abandono.
+
+---
+
+## Fase 5 — Página de vendas
+
+**11.** Reescrita da landing para posicionar como **plataforma completa de gestão para barbearias** (assinaturas viram um módulo, não o produto). Só recursos que existirem de fato ao fim das fases acima. Feita por último, para não anunciar o que ainda não está pronto.
+
+---
+
+## Detalhes técnicos
+
+- Novas tabelas com GRANT + RLS por barbearia, seguindo o padrão atual (`is_barbershop_member`).
+- Sync roda na extensão (única com sessão do WhatsApp) e grava via rotas `/api/public/extension/*` autenticadas por token, como já é hoje.
+- Cada integração nova em módulo próprio; nada de lógica nova enfiada em `painel.tsx` (que já tem 2.011 linhas) — a seção de Funis vira componente separado.
+- Versão da extensão sobe para 0.20.x na Fase 2 e a atualização vai pela Chrome Web Store.
+
+---
+
+## O que preciso de você
+
+1. Confirma a ordem das fases? Sugiro começar pela Fase 1 (mídia quebrada é bug ativo).
+2. As abas do CRM dentro do WhatsApp devem filtrar a lista de conversas real, ou apenas ser atalhos que abrem o funil no painel?
+3. Um contato pode estar em mais de uma aba/funil ao mesmo tempo, ou é exclusivo (uma coluna só, como o Kanban atual)?

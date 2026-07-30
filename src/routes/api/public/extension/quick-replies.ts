@@ -9,7 +9,9 @@ import { authenticateExtension } from "@/lib/extension-auth";
 import { quickReplySchema, QUICK_REPLY_BUCKET, type QuickReplyAction } from "@/lib/quick-replies";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-const SIGNED_URL_TTL = 60 * 60; // 1h
+// 12h: o painel pode ficar aberto o dia inteiro e a mídia só é baixada na
+// hora do envio — 1h fazia o link expirar antes do disparo.
+const SIGNED_URL_TTL = 12 * 60 * 60;
 
 /** Troca `path` por URL assinada para o WhatsApp Web conseguir baixar a mídia. */
 export async function withSignedUrls(

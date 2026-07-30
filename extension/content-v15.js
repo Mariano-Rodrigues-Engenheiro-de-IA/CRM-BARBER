@@ -1,7 +1,7 @@
-// Content script v0.19.2 — ponte minimalista: CRM BARBER, Assinantes, Equipe e Conexão.
+// Content script v0.19.3 — ponte minimalista: CRM BARBER, Assinantes, Equipe e Conexão.
 
 (function () {
-  const CRM_VERSION = "0.19.2";
+  const CRM_VERSION = "0.19.3";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const BODY_DOCKED_CLASS = "crm-assinaturas-docked";
   const BODY_COLLAPSED_CLASS = "crm-assinaturas-docked-collapsed";
@@ -139,7 +139,7 @@
       <div class="crm-tiles">
         <button class="crm-tile" data-section="assinantes">
           <span class="crm-tile-icon">${iconUsers}</span>
-          <span class="crm-tile-title">Assinantes</span>
+          <span class="crm-tile-title">Gestão de Assinaturas</span>
           <span class="crm-tile-arrow">${chev}</span>
         </button>
         <button class="crm-tile" data-section="equipe">
@@ -168,7 +168,12 @@
     });
 
     body().querySelector(".crm-unpair").addEventListener("click", async () => {
-      if (!confirm("Desvincular esta conta?")) return;
+      const ok = await crmConfirm({
+        title: "Desvincular esta conta?",
+        body: "O CRM para de disparar por este WhatsApp até você vincular de novo.",
+        confirmLabel: "Desvincular",
+      });
+      if (!ok) return;
       await chrome.runtime.sendMessage({ type: "unpair" });
       render();
     });
@@ -212,6 +217,29 @@
     return false;
   });
 
+
+  // Modal próprio do CRM — nada de confirm()/alert() nativos do navegador.
+  function crmConfirm({ title, body: text, confirmLabel = "Confirmar", cancelLabel = "Cancelar" }) {
+    return new Promise((resolve) => {
+      const overlay = document.createElement("div");
+      overlay.className = "crm-modal-overlay";
+      overlay.innerHTML = `
+        <div class="crm-modal" role="dialog" aria-modal="true">
+          <p class="crm-modal-title">${escapeHtml(title)}</p>
+          ${text ? `<p class="crm-modal-body">${escapeHtml(text)}</p>` : ""}
+          <div class="crm-modal-actions">
+            <button class="crm-modal-cancel">${escapeHtml(cancelLabel)}</button>
+            <button class="crm-modal-confirm">${escapeHtml(confirmLabel)}</button>
+          </div>
+        </div>
+      `;
+      const close = (value) => { overlay.remove(); resolve(value); };
+      overlay.addEventListener("click", (e) => { if (e.target === overlay) close(false); });
+      overlay.querySelector(".crm-modal-cancel").addEventListener("click", () => close(false));
+      overlay.querySelector(".crm-modal-confirm").addEventListener("click", () => close(true));
+      document.body.appendChild(overlay);
+    });
+  }
 
   function escapeHtml(value) {
     return String(value || "")
@@ -270,6 +298,9 @@
             url: a.url || null,
             filename: a.filename || null,
             mime: a.mime || null,
+            // Mídia já baixada pelo service worker (a página do WhatsApp
+            // bloqueia fetch externo por CSP).
+            data_base64: a.data_base64 || null,
           });
         }
       } else if (action.text) {
