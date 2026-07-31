@@ -332,8 +332,11 @@
   }
 
   function openFilterMenu(anchor) {
+    // "LISTAS" aqui vem direto das etiquetas do WhatsApp. O funil espelho
+    // (mode "label") fica de fora para não duplicar a opção no menu.
     const items = [{ label: "LISTAS", onClick: () => setTopbarFilter("labels") }];
     for (const f of funnels) {
+      if (f.mode === "label") continue;
       items.push({ label: f.name.toUpperCase(), onClick: () => setTopbarFilter(`funnel:${f.id}`) });
     }
     openMenu(anchor, items);
