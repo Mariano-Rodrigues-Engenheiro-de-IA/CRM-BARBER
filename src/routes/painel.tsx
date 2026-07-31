@@ -558,7 +558,7 @@ function Painel() {
             <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
               <div className="flex items-center gap-3 px-5 py-2.5">
                 <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
-                  Assinaturas — {assinTab === "visao" ? "Visão geral" : "Assinantes"}
+                  {assinTab === "visao" ? "Visão geral" : "Assinantes"}
                 </h1>
               </div>
             </header>
