@@ -693,7 +693,8 @@ function FunnelPicker({
           <path d="m6 9 6 6 6-6" />
         </svg>
       </button>
-      {active && (
+      {/* Funis fixos (Funil principal e Etiquetas) não podem ser renomeados nem excluídos. */}
+      {active && active.mode === "manual" && (
         <DotsMenu
           items={[
             { label: "Renomear", onClick: () => setRenaming(true) },
@@ -701,6 +702,7 @@ function FunnelPicker({
           ]}
         />
       )}
+
       {open && funnels.length > 0 && (
         <div className="absolute left-0 top-7 z-30 w-56 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 shadow-lg">
           {funnels.map((f) => (
