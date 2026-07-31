@@ -289,8 +289,9 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
         onClick={() => setCreating(true)}
         className="shrink-0 rounded-lg bg-neutral-800 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-white transition hover:bg-neutral-700"
       >
-        Criar
+        Novo funil
       </button>
+
     </>
   );
 
