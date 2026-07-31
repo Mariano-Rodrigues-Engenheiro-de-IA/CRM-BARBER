@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.29.0";
+  const CRM_VERSION = "0.29.1";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -674,13 +674,37 @@
 
   const CHAT_BTN_ID = "crm-chat-action";
 
+  /**
+   * O cabeçalho da conversa é re-renderizado pelo React o tempo todo, e o
+   * <header> raiz não é flex container em todas as builds. Por isso o botão é
+   * colocado dentro da barra de ícones da direita (menu/busca) quando existe,
+   * com fallback para o próprio header.
+   */
+  function headerActionsSlot(header) {
+    const known =
+      header.querySelector('[data-testid="conversation-menu-button"]') ||
+      header.querySelector('[data-icon="menu"]') ||
+      header.querySelector('[data-icon="search"]') ||
+      header.querySelector('[aria-label="Menu"]');
+    let node = known;
+    while (node && node !== header) {
+      if (node.parentElement === header) return node;
+      node = node.parentElement;
+    }
+    return header.lastElementChild || header;
+  }
+
   function ensureChatButton() {
     const header = document.querySelector("#main header");
     if (!header) return;
-    if (header.querySelector(`#${CHAT_BTN_ID}`)) return;
+    const existing = document.getElementById(CHAT_BTN_ID);
+    if (existing && header.contains(existing)) return;
+    existing?.remove();
+
     const btn = document.createElement("button");
     btn.id = CHAT_BTN_ID;
     btn.className = "crm-chat-btn";
+    btn.type = "button";
     btn.title = "Ações do CRM neste contato";
     btn.innerHTML = `${ICONS.funnel}<span>CRM</span>`;
     btn.addEventListener("click", (e) => {
@@ -688,8 +712,12 @@
       e.stopPropagation();
       openChatActionMenu(btn);
     });
-    header.appendChild(btn);
+
+    const slot = headerActionsSlot(header);
+    if (slot === header) header.appendChild(btn);
+    else slot.insertAdjacentElement("beforebegin", btn);
   }
+
 
   async function openChatActionMenu(anchor) {
     const chat = await activeChat();
