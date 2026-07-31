@@ -328,7 +328,7 @@
       const found = funnels.find((f) => f.id === id);
       if (found) return found;
     }
-    return tabFunnel() || funnels[0] || null;
+    return tabFunnel() || funnels.find((f) => f.mode !== "label") || null;
   }
 
   function openFilterMenu(anchor) {
@@ -820,7 +820,7 @@
     if (!funnels.length) return crmToast("Nenhum funil criado ainda.", "err");
     openMenu(
       anchor,
-      funnels.map((f) => ({ label: f.name, onClick: () => chooseStage(anchor, chat, f) })),
+      funnels.filter((f) => f.mode !== "label").map((f) => ({ label: f.name, onClick: () => chooseStage(anchor, chat, f) })),
     );
   }
 
