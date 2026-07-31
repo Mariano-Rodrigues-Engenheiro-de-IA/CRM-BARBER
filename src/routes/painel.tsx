@@ -855,63 +855,11 @@ function KanbanView({
   return (
     <div className="space-y-4">
       {dialog}
-      {/* Card de meta — gamificação */}
-      <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500">
-              Assinantes ativos
-            </p>
-            <p className="text-3xl font-semibold text-neutral-900">{totalSubs}</p>
-            <p className="mt-1 text-xs text-neutral-500">
-              Receita recorrente estimada: <strong className="text-neutral-800">{formatBRL(mrr)}</strong>
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500">
-              Meta do mês
-            </p>
-            <p className="text-3xl font-semibold text-neutral-900">{goal || "—"}</p>
-            <p className="mt-1 text-xs text-neutral-500">
-              {goal === 0
-                ? "Defina a meta na engrenagem acima"
-                : missing === 0
-                  ? "Meta batida 🎉"
-                  : `Faltam ${missing} assinante(s)`}
-            </p>
-          </div>
-        </div>
-        <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-neutral-100">
-          <div
-            className="h-full rounded-full bg-yellow-400 transition-all"
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-        <p className="mt-1 text-right text-[11px] font-medium text-neutral-500">{pct}% da meta</p>
-        {plansMissingPrice > 0 && (
-          <button
-            onClick={onGoSettings}
-            className="mt-3 text-xs font-medium text-neutral-900 underline underline-offset-2"
-          >
-            {plansMissingPrice} plano(s) sem valor cadastrado — definir agora
-          </button>
-        )}
+
+      <div className="flex items-center justify-end">
+        <AddMenu onSheet={() => setShowImport(true)} onManual={() => setShowAdd(true)} />
       </div>
 
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <button
-          onClick={() => setShowImport(true)}
-          className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
-        >
-          Importar planilha
-        </button>
-        <button
-          onClick={() => setShowAdd(true)}
-          className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
-        >
-          + Adicionar contato
-        </button>
-      </div>
 
       {loading && <p className="text-sm text-neutral-500">Carregando...</p>}
 
