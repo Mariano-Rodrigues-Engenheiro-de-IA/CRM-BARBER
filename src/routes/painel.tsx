@@ -1571,11 +1571,21 @@ function Modal({
 }
 
 /** Configurações da assinatura (sistema, planos e meta) — abre pela engrenagem. */
-function SubscriptionSettingsModal({ shopId, onClose }: { shopId: string; onClose: () => void }) {
+/**
+ * Visão geral das assinaturas: gamificação da meta + configurações
+ * (sistema, planos e meta). Antes era um modal; virou sub-aba.
+ */
+function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: string }) {
   const [system, setSystem] = useState<SubscriptionSystemId | "">(() => readSystem(shopId) ?? "");
   const [plans, setPlans] = useState<Plan[]>(() => readPlans(shopId));
   const [newPlan, setNewPlan] = useState("");
   const [goal, setGoal] = useState<number>(() => readGoal(shopId));
+
+  const actives = customers.filter((c) => c.status === "active" || c.status === "due_soon");
+  const totalSubs = actives.length;
+  const missing = Math.max(0, goal - totalSubs);
+  const pct = goal > 0 ? Math.min(100, Math.round((totalSubs / goal) * 100)) : 0;
+  const mrr = actives.reduce((sum, c) => sum + priceOf(plans, planFromTags(c.tags)), 0);
 
   function saveSystem(id: SubscriptionSystemId) {
     setSystem(id);
@@ -1599,14 +1609,32 @@ function SubscriptionSettingsModal({ shopId, onClose }: { shopId: string; onClos
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-neutral-900/50 p-4 backdrop-blur-sm">
-      <div className="my-8 w-full max-w-lg space-y-5 rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-neutral-900">
-            Configurações da assinatura
-          </h2>
-          <button onClick={onClose} className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900">✕</button>
+    <div className="mx-auto w-full max-w-4xl space-y-5">
+      {/* Meta do mês — gamificação */}
+      <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-neutral-500">Assinantes ativos</p>
+            <p className="text-3xl font-bold text-neutral-950">{totalSubs}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-neutral-500">Receita recorrente</p>
+            <p className="text-3xl font-bold text-neutral-950">{formatBRL(mrr)}</p>
+          </div>
         </div>
+        <div className="mt-4">
+          <div className="mb-1.5 flex items-center justify-between text-xs text-neutral-500">
+            <span>Meta: {goal || "—"}</span>
+            <span>{goal > 0 ? (missing > 0 ? `Faltam ${missing}` : "Meta batida 🎉") : "Defina uma meta abaixo"}</span>
+          </div>
+          <div className="h-2.5 w-full overflow-hidden rounded-full bg-neutral-100">
+            <div className="h-full rounded-full bg-yellow-400 transition-all" style={{ width: `${pct}%` }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+
 
         <div className="space-y-2">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Sistema</h3>
