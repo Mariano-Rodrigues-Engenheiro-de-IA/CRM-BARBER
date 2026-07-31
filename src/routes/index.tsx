@@ -20,7 +20,7 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "Cobre inadimplentes, reative clientes e dispare campanhas direto do WhatsApp Web. Instale grátis e comece hoje.",
+          "Extensão de Chrome que transforma seu WhatsApp Web em um CRM de assinaturas: cobre inadimplentes, reative clientes e dispare campanhas sem trocar de ferramenta.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
