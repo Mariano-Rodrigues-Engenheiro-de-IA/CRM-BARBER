@@ -795,11 +795,9 @@ function KanbanView({
   // Move otimista: evita o card "voltar" enquanto o reload não chega.
   const [pending, setPending] = useState<Record<string, string>>({});
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [goal, setGoal] = useState(0);
 
   useEffect(() => {
     setPlans(readPlans(shopId));
-    setGoal(readGoal(shopId));
   }, [shopId]);
 
   const cols = useMemo(() => visibleColumns(shopId), [shopId, showImport]);
