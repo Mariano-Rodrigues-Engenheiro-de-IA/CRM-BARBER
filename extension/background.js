@@ -8,7 +8,7 @@
 //
 // Rate limit: espaçamento aleatório entre 8s e 20s entre jobs (ritmo humano).
 
-const EXTENSION_VERSION = "0.33.1";
+const EXTENSION_VERSION = "0.33.2";
 const DEFAULT_API_BASE = "https://crm.zayloia.com";
 const POLL_MIN_MS = 8000;
 const POLL_MAX_MS = 20000;
@@ -165,7 +165,6 @@ async function preventTabDiscard(tabId) {
 
 async function getWhatsappTabs() {
   const tabs = await chrome.tabs.query({ url: "https://web.whatsapp.com/*" });
-  await Promise.all(tabs.filter((tab) => tab.id).map((tab) => preventTabDiscard(tab.id)));
   return tabs;
 }
 
@@ -431,7 +430,7 @@ chrome.alarms?.onAlarm.addListener((alarm) => {
 });
 
 chrome.tabs.onUpdated?.addListener((tabId, changeInfo, tab) => {
-  if (isWhatsappUrl(changeInfo.url) || isWhatsappUrl(tab?.url)) {
+  if (changeInfo.status === "complete" && (isWhatsappUrl(changeInfo.url) || isWhatsappUrl(tab?.url))) {
     void preventTabDiscard(tabId);
   }
 });

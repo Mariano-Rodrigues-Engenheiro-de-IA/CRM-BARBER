@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.33.1";
+  const CRM_VERSION = "0.33.2";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -719,9 +719,37 @@
     });
   }
 
+  function activeChatFromDom() {
+    const header = document.querySelector("#main header");
+    if (!header) return null;
+
+    const candidates = Array.from(
+      header.querySelectorAll('[title], span[dir="auto"], h1, h2'),
+    )
+      .map((node) => String(node.getAttribute?.("title") || node.textContent || "").trim())
+      .filter((value) => value && value.length <= 160 && !/^(menu|pesquisar|buscar)$/i.test(value));
+    const name = candidates[0] || "Contato";
+    const digits = String(header.textContent || "").replace(/\D/g, "");
+    const visiblePhone = digits.length >= 10 && digits.length <= 13 ? digits : null;
+
+    const normalizedName = name.toLocaleLowerCase("pt-BR");
+    const matches = (waData.contacts || []).filter(
+      (contact) => String(contact.name || "").trim().toLocaleLowerCase("pt-BR") === normalizedName,
+    );
+    const cached = matches.length === 1 ? matches[0] : null;
+    return {
+      wa_id: cached?.wa_id || null,
+      phone: visiblePhone || cached?.phone || null,
+      name: cached?.name || name,
+      is_group: cached?.is_group || false,
+    };
+  }
+
   async function activeChat() {
-    await ensureWaScriptsInjected().catch(() => null);
-    return askBridge("active_chat_v290", "active_chat_done_v290");
+    // Ler o cabeçalho é instantâneo e não carrega o wa-js. O motor interno só
+    // é necessário para sincronizar e enviar mensagens; injetá-lo ao clicar no
+    // funil era a origem do atraso e dos erros de módulos vistos no console.
+    return activeChatFromDom();
   }
 
   function crmToast(text, kind = "ok") {
@@ -834,6 +862,7 @@
                   stage_id: st.id,
                   title: chat.name || chat.phone || "Contato",
                   phone: chat.phone || null,
+                  wa_contact_id: chat.wa_id || null,
                 }),
               },
             })
