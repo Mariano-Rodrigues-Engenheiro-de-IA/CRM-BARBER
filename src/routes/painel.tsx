@@ -342,6 +342,9 @@ function Painel() {
   // Host do cabeçalho dos funis: o seletor de funil + "novo funil" moram na
   // barra superior, mas o estado deles vive dentro do FunnelsView (portal).
   const [funisHeaderEl, setFunisHeaderEl] = useState<HTMLDivElement | null>(null);
+  // Host do cabeçalho de Assinantes: os botões de ação moram na barra do topo,
+  // ao lado do título, liberando altura pros kanbans.
+  const [assinHeaderEl, setAssinHeaderEl] = useState<HTMLDivElement | null>(null);
   const [shop, setShop] = useState<{ id: string; name: string } | null>(null);
   const [brand, setBrand] = useState<Brand>({});
 
