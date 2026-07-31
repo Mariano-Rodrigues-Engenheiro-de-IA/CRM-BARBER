@@ -501,30 +501,67 @@ function Painel() {
   return (
     <div className="flex min-h-screen bg-neutral-100 text-neutral-900">
       {/* Sidebar */}
-      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-neutral-200 bg-white text-neutral-900">
+      <aside
+        className={
+          "hidden md:flex shrink-0 flex-col border-r border-neutral-200 bg-white text-neutral-900 transition-[width] duration-200 " +
+          (collapsed ? "w-[68px]" : "w-64")
+        }
+      >
         {/* Brand card — emoldura o nome pra não parecer "solto na tela" */}
-        <div className="px-3 pt-4 pb-3">
-          <div className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-3 shadow-sm">
+        <div className={collapsed ? "px-2 pt-4 pb-3" : "px-3 pt-4 pb-3"}>
+          <div
+            className={
+              "flex items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 shadow-sm " +
+              (collapsed ? "justify-center px-1.5 py-2" : "px-3 py-3")
+            }
+          >
             <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-yellow-400 text-base font-bold text-neutral-900 ring-1 ring-black/10">
               {shopLogo ? <img src={shopLogo} alt="logo" className="h-full w-full object-cover" /> : shopInitial}
             </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold tracking-[0.22em] text-neutral-500">CRM BARBER</p>
-              <p className="truncate text-sm font-semibold text-neutral-950">{shopName}</p>
-            </div>
+            {!collapsed && (
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold tracking-[0.22em] text-neutral-500">CRM BARBER</p>
+                <p className="truncate text-sm font-semibold text-neutral-950">{shopName}</p>
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Recolher / expandir o menu */}
+        <div className={"pb-2 " + (collapsed ? "px-2" : "px-3")}>
+          <button
+            onClick={toggleSidebar}
+            title={collapsed ? "Expandir menu" : "Recolher menu"}
+            aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
+            className={
+              "flex items-center gap-2 rounded-lg border border-neutral-200 bg-white py-1.5 text-[11px] font-medium text-neutral-500 transition hover:border-neutral-400 hover:text-neutral-900 " +
+              (collapsed ? "w-full justify-center px-0" : "w-full px-2.5")
+            }
+          >
+            <IconChevron className={collapsed ? "" : "rotate-180"} />
+            {!collapsed && <span>Recolher menu</span>}
+          </button>
         </div>
 
         <div className="mx-3 mb-2 h-px bg-neutral-200" />
 
-        <nav className="flex-1 space-y-1 px-3">
+        <nav className={"flex-1 space-y-1 " + (collapsed ? "px-2" : "px-3")}>
           {NAV_TOP.map((n) => {
             const active = section === n.key;
-            const open = Boolean(n.children) && assinOpen;
+            const open = Boolean(n.children) && assinOpen && !collapsed;
             return (
               <div key={n.key}>
                 <button
+                  title={collapsed ? n.label : undefined}
                   onClick={() => {
+                    // Recolhido: o clique no ícone já expande o menu de volta.
+                    if (collapsed) {
+                      setCollapsed(false);
+                      localStorage.setItem(SIDEBAR_KEY, "0");
+                      setSection(n.key);
+                      if (n.children) setAssinOpen(true);
+                      return;
+                    }
                     // Sanfona: no item com sub-abas, o clique alterna a expansão
                     // (e leva pra seção quando ela ainda não está ativa).
                     if (n.children) {
@@ -534,16 +571,25 @@ function Painel() {
                     }
                     setSection(n.key);
                   }}
-                  className={navRowCls(active)}
+                  className={
+                    collapsed
+                      ? "group flex w-full items-center justify-center rounded-xl px-0 py-2.5 transition " +
+                        (active ? "bg-neutral-900 text-white" : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-950")
+                      : navRowCls(active)
+                  }
                 >
                   <span className="flex h-5 w-5 items-center justify-center">{n.icon}</span>
-                  <span className="flex-1 truncate">{n.label}</span>
-                  <IconChevron
-                    className={
-                      (open ? "rotate-90 " : "") +
-                      (active ? "text-white/70" : "text-neutral-400 group-hover:text-neutral-700")
-                    }
-                  />
+                  {!collapsed && (
+                    <>
+                      <span className="flex-1 truncate">{n.label}</span>
+                      <IconChevron
+                        className={
+                          (open ? "rotate-90 " : "") +
+                          (active ? "text-white/70" : "text-neutral-400 group-hover:text-neutral-700")
+                        }
+                      />
+                    </>
+                  )}
                 </button>
                 {open && n.children && (
                   <div className="mt-1 space-y-0.5 border-l border-neutral-200 pl-3 ml-4">
@@ -568,6 +614,7 @@ function Painel() {
 
           })}
         </nav>
+
 
 
       </aside>
