@@ -1639,17 +1639,18 @@ function DisparoView({
 const campaignsCache: Record<string, Campaign[] | undefined> = {};
 
 
-function CampaignsView({ token, scope = "assinaturas" }: { token: string; scope?: "assinaturas" | "funil" }) {
+function CampaignsView({ token, scope }: { token: string; scope?: "assinaturas" | "funil" }) {
   const { confirm, dialog } = useConfirm();
-  const [campaigns, setCampaigns] = useState<Campaign[]>(campaignsCache[scope] ?? []);
-  const [loaded, setLoaded] = useState<boolean>(campaignsCache[scope] !== undefined);
+  const cacheKey = scope ?? "todos";
+  const [campaigns, setCampaigns] = useState<Campaign[]>(campaignsCache[cacheKey] ?? []);
+  const [loaded, setLoaded] = useState<boolean>(campaignsCache[cacheKey] !== undefined);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function reload() {
-    const r = await api(token, `/api/public/extension/campaigns?scope=${scope}`);
+    const r = await api(token, `/api/public/extension/campaigns${scope ? `?scope=${scope}` : ""}`);
     if (r?.ok) {
       const list: Campaign[] = r.campaigns || [];
-      campaignsCache[scope] = list;
+      campaignsCache[cacheKey] = list;
       setCampaigns(list);
     }
     setLoaded(true);
