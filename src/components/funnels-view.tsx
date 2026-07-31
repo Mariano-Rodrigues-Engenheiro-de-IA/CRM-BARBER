@@ -99,7 +99,32 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
         }),
       });
       created = created || Boolean(r?.ok);
+      // Cada etiqueta vira uma coluna já preenchida com os contatos dela.
+      const funnel = r?.ok ? (r.funnel as Funnel) : null;
+      if (funnel?.stages?.length) {
+        for (let i = 0; i < ls.length; i++) {
+          const stage = funnel.stages[i];
+          const label = ls[i];
+          if (!stage || !label) continue;
+          const inLabel = (funnelsCache?.contacts ?? [])
+            .filter((c) => (c.label_ids || []).includes(label.wa_label_id))
+            .slice(0, 100);
+          for (const c of inLabel) {
+            await api("/api/public/extension/funnel-cards", {
+              method: "POST",
+              body: JSON.stringify({
+                funnel_id: funnel.id,
+                stage_id: stage.id,
+                title: c.name || c.phone || c.wa_id,
+                phone: c.phone ?? undefined,
+                wa_contact_id: c.id,
+              }),
+            });
+          }
+        }
+      }
     }
+
     if (created) await reload();
   }
 
