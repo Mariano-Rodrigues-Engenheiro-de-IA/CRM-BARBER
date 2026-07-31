@@ -301,37 +301,6 @@ function IconPlug() {
   );
 }
 
-/** Botão único "Adicionar" com as duas origens (manual e planilha). */
-function AddMenu({ onManual, onSheet }: { onManual: () => void; onSheet: () => void }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
-        className="rounded-lg bg-neutral-800 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white hover:bg-neutral-700"
-      >
-        Adicionar
-      </button>
-      {open && (
-        <div className="absolute right-0 z-20 mt-1 w-48 overflow-hidden rounded-xl border border-neutral-200 bg-white py-1 shadow-lg">
-          <button
-            onMouseDown={onManual}
-            className="block w-full px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"
-          >
-            Manualmente
-          </button>
-          <button
-            onMouseDown={onSheet}
-            className="block w-full px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"
-          >
-            Importar planilha
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
 
 
 type Brand = { name?: string; logo?: string };
