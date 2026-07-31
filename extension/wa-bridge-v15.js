@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.21.0";
+  const BRIDGE_VERSION = "0.29.0";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -291,6 +291,47 @@
     return [];
   }
 
+  /**
+   * Mapa etiqueta → conversas lido do LabelStore. Em builds recentes o chat
+   * não expõe mais `labels`, então essa é a fonte confiável da associação.
+   */
+  function labelChatMap() {
+    const map = new Map();
+    const add = (labelId, chatId) => {
+      const l = String(labelId || "");
+      const c = String(chatId || "");
+      if (!l || !c || l === "undefined" || c === "undefined") return;
+      if (!map.has(c)) map.set(c, new Set());
+      map.get(c).add(l);
+    };
+    try {
+      const models =
+        window.WPP?.whatsapp?.LabelStore?.getModelsArray?.() ||
+        window.WPP?.whatsapp?.LabelStore?.models ||
+        [];
+      for (const l of models) {
+        const labelId = String(l?.id ?? l?.labelId ?? "");
+        const coll = l?.labelItemCollection ?? l?.__x_labelItemCollection;
+        const items = coll?.getModelsArray?.() || coll?.models || (Array.isArray(coll) ? coll : []);
+        for (const it of items) {
+          add(labelId, serialized(it?.parentId) || serialized(it?.id) || it?.parentId);
+        }
+      }
+    } catch (e) {
+      console.warn("[CRM] LabelStore indisponível:", e?.message || e);
+    }
+    try {
+      const items =
+        window.WPP?.whatsapp?.LabelItemStore?.getModelsArray?.() ||
+        window.WPP?.whatsapp?.LabelItemStore?.models ||
+        [];
+      for (const it of items) {
+        add(it?.labelId ?? it?.parentId, serialized(it?.parentId) || it?.parentId);
+      }
+    } catch {}
+    return map;
+  }
+
   /** Etiquetas de uma conversa: também mudou de forma entre builds. */
   function chatLabelIds(chat) {
     const raw = chat?.labels ?? chat?.__x_labels ?? chat?.labelIds ?? [];
@@ -316,6 +357,7 @@
       console.warn("[CRM] etiquetas indisponíveis:", e?.message || e);
     }
 
+    const byChat = labelChatMap();
     const contacts = [];
     try {
       for (const chat of chats.slice(0, 3000)) {
@@ -337,7 +379,11 @@
                 "",
             ).slice(0, 160) || null,
           is_group: isGroup,
-          label_ids: chatLabelIds(chat),
+          label_ids: (() => {
+            const fromChat = chatLabelIds(chat);
+            const fromStore = [...(byChat.get(waId) || [])];
+            return [...new Set([...fromChat, ...fromStore])].slice(0, 50);
+          })(),
           last_message_at: ts > 0 ? new Date(ts * 1000).toISOString() : null,
         });
       }
@@ -367,6 +413,43 @@
         window.postMessage({ __crm: "collect_done_v200", id: d.id, ok: true, data }, "*");
       } catch (e) {
         window.postMessage({ __crm: "collect_done_v200", id: d.id, ok: false, error: e?.message || String(e) }, "*");
+      }
+      return;
+    }
+
+    if (d.__crm === "active_chat_v290") {
+      try {
+        await waitForWpp();
+        const chat =
+          (typeof window.WPP?.chat?.getActiveChat === "function" && window.WPP.chat.getActiveChat()) ||
+          null;
+        if (!chat) throw new Error("Nenhuma conversa aberta");
+        const waId = serialized(chat?.id);
+        const data = {
+          wa_id: waId,
+          phone: resolvePhoneDigits(chat, waId || ""),
+          name:
+            String(chat?.formattedTitle || chat?.name || chat?.contact?.name || chat?.contact?.pushname || "") ||
+            null,
+          is_group: String(waId || "").endsWith("@g.us"),
+        };
+        window.postMessage({ __crm: "active_chat_done_v290", id: d.id, ok: true, data }, "*");
+      } catch (e) {
+        window.postMessage({ __crm: "active_chat_done_v290", id: d.id, ok: false, error: e?.message || String(e) }, "*");
+      }
+      return;
+    }
+
+    if (d.__crm === "apply_label_v290") {
+      try {
+        await waitForWpp();
+        if (typeof window.WPP?.labels?.addOrRemoveLabels !== "function") {
+          throw new Error("Listas indisponíveis nesta versão do WhatsApp");
+        }
+        await window.WPP.labels.addOrRemoveLabels([d.waId], [{ labelId: String(d.labelId), type: "add" }]);
+        window.postMessage({ __crm: "apply_label_done_v290", id: d.id, ok: true, data: true }, "*");
+      } catch (e) {
+        window.postMessage({ __crm: "apply_label_done_v290", id: d.id, ok: false, error: e?.message || String(e) }, "*");
       }
       return;
     }
