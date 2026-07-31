@@ -475,29 +475,41 @@ function Painel() {
         <nav className="flex-1 space-y-1 px-3">
           {NAV_TOP.map((n) => {
             const active = section === n.key;
+            const open = Boolean(n.children) && assinOpen;
             return (
               <div key={n.key}>
-                <button onClick={() => setSection(n.key)} className={navRowCls(active)}>
+                <button
+                  onClick={() => {
+                    // Sanfona: no item com sub-abas, o clique alterna a expansão
+                    // (e leva pra seção quando ela ainda não está ativa).
+                    if (n.children) {
+                      setAssinOpen((v) => (active ? !v : true));
+                      if (!active) setSection(n.key);
+                      return;
+                    }
+                    setSection(n.key);
+                  }}
+                  className={navRowCls(active)}
+                >
                   <span className="flex h-5 w-5 items-center justify-center">{n.icon}</span>
                   <span className="flex-1 truncate">{n.label}</span>
                   <IconChevron
                     className={
-                      (active && n.children ? "rotate-90 " : "") +
-                      (active ? "text-neutral-900" : "text-neutral-400 group-hover:text-neutral-700")
+                      (open ? "rotate-90 " : "") +
+                      (active ? "text-white/70" : "text-neutral-400 group-hover:text-neutral-700")
                     }
                   />
                 </button>
-                {/* Sanfona: sub-abas só aparecem com a seção aberta */}
-                {active && n.children && (
+                {open && n.children && (
                   <div className="mt-1 space-y-0.5 border-l border-neutral-200 pl-3 ml-4">
                     {n.children.map((sub) => (
                       <button
                         key={sub.key}
-                        onClick={() => setAssinTab(sub.key)}
+                        onClick={() => { setSection(n.key); setAssinTab(sub.key); }}
                         className={
                           "block w-full rounded-lg px-3 py-1.5 text-left text-[13px] transition " +
-                          (assinTab === sub.key
-                            ? "bg-neutral-800 font-semibold text-white"
+                          (active && assinTab === sub.key
+                            ? "bg-neutral-100 font-semibold text-neutral-900"
                             : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900")
                         }
                       >
@@ -508,6 +520,7 @@ function Painel() {
                 )}
               </div>
             );
+
           })}
         </nav>
 
