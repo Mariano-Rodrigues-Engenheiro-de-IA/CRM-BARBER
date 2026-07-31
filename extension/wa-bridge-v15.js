@@ -241,25 +241,66 @@
     if (waId.endsWith("@g.us")) return null;
     if (waId.endsWith("@c.us")) return clean(waId);
 
+    const contact = (() => {
+      try {
+        return chat?.contact || window.WPP?.whatsapp?.ContactStore?.get?.(waId) || null;
+      } catch { return null; }
+    })();
+
     const tries = [
-      () => chat?.contact?.phoneNumber,
-      () => chat?.contact?.id,
-      () => chat?.contact?.__x_id,
-      () => window.WPP?.whatsapp?.ContactStore?.get?.(waId)?.phoneNumber,
-      () => window.WPP?.whatsapp?.ContactStore?.get?.(waId)?.id,
+      () => contact?.phoneNumber,
+      () => contact?.id,
+      () => contact?.userid,
+      () => contact?.__x_id,
+      // Mapeamento LID → telefone (builds novas do WhatsApp).
       () => window.WPP?.whatsapp?.LidUtils?.getPhoneNumber?.(waId),
       () => window.WPP?.whatsapp?.functions?.getPhoneNumber?.(waId),
+      () => window.WPP?.whatsapp?.LidStore?.get?.(waId)?.pn,
+      () => window.WPP?.whatsapp?.LidPnCacheStore?.get?.(waId)?.pn,
+      () => chat?.contact?.displayName,
+      () => chat?.formattedTitle,
     ];
     for (const get of tries) {
       let v;
       try { v = get(); } catch { continue; }
-      const d = clean(typeof v === "object" ? (v?._serialized ?? v?.user ?? "") : v);
+      const d = clean(typeof v === "object" ? (v?._serialized ?? v?.user ?? v?.pn ?? "") : v);
       if (d) return d;
     }
     return null;
   }
 
-  /** Etiquetas: a API pública mudou de nome entre builds — tentamos todas. */
+  /** Nome exibível: passa por todas as fontes antes de desistir. */
+  function resolveName(chat, waId) {
+    let contact = null;
+    try {
+      contact = chat?.contact || window.WPP?.whatsapp?.ContactStore?.get?.(waId) || null;
+    } catch {}
+    const candidates = [
+      chat?.formattedTitle,
+      chat?.__x_formattedTitle,
+      chat?.name,
+      contact?.name,
+      contact?.verifiedName,
+      contact?.pushname,
+      contact?.notifyName,
+      contact?.formattedName,
+      contact?.displayName,
+      contact?.formattedUser,
+      contact?.shortName,
+    ];
+    for (const c of candidates) {
+      const v = String(c || "").trim();
+      if (v && !/^\d{15,}$/.test(v.replace(/\D/g, ""))) return v.slice(0, 160);
+    }
+    const digits = resolvePhoneDigits(chat, waId || "");
+    return digits ? `+${digits}` : null;
+  }
+
+  /**
+   * Etiquetas reais do WhatsApp. Só aceitamos o que vem do LabelStore com
+   * nome de verdade — listas "deduzidas" davam entradas fantasma no CRM que
+   * nunca sincronizavam de volta.
+   */
   function readLabels() {
     const sources = [
       () => window.WPP?.labels?.getAllLabels?.(),
@@ -278,10 +319,11 @@
       const out = [];
       for (const l of list) {
         const id = String(l?.id ?? l?.labelId ?? l?.__x_id ?? "");
-        if (!id || id === "undefined") continue;
+        const name = String(l?.name ?? l?.__x_name ?? "").trim();
+        if (!id || id === "undefined" || !name) continue;
         out.push({
           id,
-          name: String(l?.name ?? l?.__x_name ?? `Etiqueta ${id}`).slice(0, 120),
+          name: name.slice(0, 120),
           color: l?.hexColor ? String(l.hexColor).slice(0, 20) : null,
           count: Number(l?.count ?? l?.labelItemCount ?? l?.__x_count ?? 0) || 0,
         });
@@ -290,6 +332,7 @@
     }
     return [];
   }
+
 
   /**
    * Mapa etiqueta → conversas lido do LabelStore. Em builds recentes o chat
