@@ -909,7 +909,41 @@ function KanbanView({
     setPlans(readPlans(shopId));
   }, [shopId]);
 
-  const cols = useMemo(() => visibleColumns(shopId), [shopId, showImport]);
+  // Kanbans são flexíveis: o usuário cria e exclui colunas à vontade.
+  const [cols, setCols] = useState<Col[]>(() => visibleColumns(shopId));
+  const [newCol, setNewCol] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCols(visibleColumns(shopId));
+  }, [shopId, showImport]);
+
+  function persistCols(next: Col[]) {
+    setCols(next);
+    writeColumns(shopId, next);
+  }
+
+  function addColumn(label: string) {
+    const name = label.trim();
+    if (!name) return;
+    const key = `custom_${name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`;
+    if (cols.some((c) => c.key === key)) return;
+    persistCols([...cols, { key, label: name }]);
+  }
+
+  async function removeColumn(col: Col) {
+    if ((byStatus[col.key]?.length ?? 0) > 0) {
+      toast.error("Mova os contatos desta coluna antes de excluí-la.");
+      return;
+    }
+    const ok = await confirm({
+      title: `Excluir o kanban "${col.label}"?`,
+      confirmLabel: "Excluir",
+      destructive: true,
+    });
+    if (!ok) return;
+    persistCols(cols.filter((c) => c.key !== col.key));
+  }
+
 
   const effective = useMemo(
     () => customers.map((c) => (pending[c.id] ? { ...c, status: pending[c.id] } : c)),
