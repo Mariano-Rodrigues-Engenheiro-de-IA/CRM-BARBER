@@ -999,114 +999,36 @@ function StageListEditor({
   );
 }
 
+/** Só cria funis personalizados: os fixos nascem automaticamente. */
 function NewFunnelModal({
-  labels,
-  tabFunnel,
   onClose,
   onCreate,
-  onAddTabStages,
 }: {
-  labels: WaLabel[];
-  tabFunnel: Funnel | null;
   onClose: () => void;
-  onCreate: (
-    body: {
-      name: string;
-      mode: FunnelMode;
-      source_label_id?: string | null;
-      stages?: string[];
-    },
-    labelStages?: WaLabel[],
-  ) => void;
-  onAddTabStages: (funnel: Funnel, names: string[]) => void;
+  onCreate: (body: { name: string; mode: FunnelMode; source_label_id?: string | null; stages?: string[] }) => void;
 }) {
   const [name, setName] = useState("");
-  const [mode, setMode] = useState<FunnelMode>("tab");
-  const [tabs, setTabs] = useState<string[]>([]);
   const [stages, setStages] = useState<string[]>(["Novo lead", "Em conversa", "Negociando", "Fechado"]);
 
-  const options: Array<{ key: FunnelMode; title: string }> = [
-    { key: "tab", title: "Funil principal" },
-    { key: "label", title: "Etiqueta / Listas" },
-    { key: "manual", title: "Novo funil" },
-  ];
-
   function submit() {
-    if (mode === "label") {
-      if (!labels.length) return;
-      onCreate(
-        { name: "Etiqueta / Listas", mode: "label", source_label_id: null, stages: labels.map((l) => l.name) },
-        labels,
-      );
-      return;
-    }
-    if (mode === "tab") {
-      if (!tabs.length) return;
-      if (tabFunnel) {
-        onAddTabStages(tabFunnel, tabs);
-        return;
-      }
-      onCreate({ name: "Funil principal", mode: "tab", source_label_id: null, stages: tabs });
-      return;
-    }
     if (!name.trim() || !stages.length) return;
-    onCreate({ name: name.trim(), mode, source_label_id: null, stages });
+    onCreate({ name: name.trim(), mode: "manual", source_label_id: null, stages });
   }
 
   return (
-    <Overlay title="Criar funil" onClose={onClose}>
+    <Overlay title="Novo funil" onClose={onClose}>
       <div className="space-y-4">
-        <div className="grid grid-cols-3 gap-2">
-          {options.map((o) => (
-            <button
-              key={o.key}
-              onClick={() => setMode(o.key)}
-              className={
-                "rounded-xl border px-3 py-2.5 text-sm font-semibold transition " +
-                (mode === o.key
-                  ? "border-neutral-800 bg-neutral-800 text-white"
-                  : "border-neutral-300 bg-white text-neutral-800")
-              }
-            >
-              {o.title}
-            </button>
-          ))}
+        <div>
+          <label className="mb-1 block text-xs font-medium text-neutral-600">Nome</label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className={inputCls}
+            placeholder="Ex.: Recuperação"
+          />
         </div>
 
-        {mode === "manual" && (
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600">Nome</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className={inputCls}
-              placeholder="Ex.: Recuperação"
-            />
-          </div>
-        )}
-
-        {mode === "tab" && (
-          <StageListEditor label="Etapas" placeholder="Ex.: Leads" items={tabs} onChange={setTabs} />
-        )}
-
-
-        {mode === "manual" && (
-          <StageListEditor label="Etapas" placeholder="Ex.: Negociando" items={stages} onChange={setStages} />
-        )}
-
-        {mode === "label" && (
-          <div className="flex flex-wrap gap-1.5">
-            {labels.map((l) => (
-              <span
-                key={l.id}
-                className="rounded-full border border-neutral-300 bg-white px-2.5 py-1 text-xs text-neutral-800"
-              >
-                {l.name} · {l.conversation_count}
-              </span>
-            ))}
-            {labels.length === 0 && <p className="text-xs text-neutral-500">Nenhuma etiqueta sincronizada.</p>}
-          </div>
-        )}
+        <StageListEditor label="Etapas" placeholder="Ex.: Negociando" items={stages} onChange={setStages} />
 
         <div className="flex justify-end gap-2">
           <button onClick={onClose} className="rounded-lg border border-neutral-300 px-4 py-2 text-sm">
@@ -1114,9 +1036,9 @@ function NewFunnelModal({
           </button>
           <button
             onClick={submit}
-            className="rounded-lg bg-neutral-800 px-4 py-2 text-sm font-semibold text-white"
+            className="rounded-lg bg-neutral-800 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-700"
           >
-            {mode === "tab" && tabFunnel ? "Adicionar" : "Criar"}
+            Criar
           </button>
         </div>
       </div>
