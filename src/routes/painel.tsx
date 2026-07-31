@@ -323,7 +323,7 @@ function Painel() {
   const initialSection: Section = (() => {
     if (typeof window === "undefined") return "assinantes";
     const s = new URLSearchParams(window.location.search).get("section");
-    if (s === "equipe" || s === "conexao" || s === "configuracoes" || s === "respostas" || s === "funis") return s;
+    if (s === "equipe" || s === "conexao" || s === "configuracoes" || s === "respostas" || s === "funis" || s === "disparo") return s;
     return "assinantes";
   })();
   const [section, setSection] = useState<Section>(initialSection);
