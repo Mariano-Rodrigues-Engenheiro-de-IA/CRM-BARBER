@@ -279,14 +279,13 @@ function Painel() {
     return "assinantes";
   })();
   const [section, setSection] = useState<Section>(initialSection);
-  const [tab, setTab] = useState<AssinantesTab>("kanban");
-  const [funisTab, setFunisTab] = useState<"kanban" | "disparo" | "campanhas">("kanban");
-  // Host do cabeçalho dos funis: o seletor de funil + "criar" moram na barra
-  // superior, mas o estado deles vive dentro do FunnelsView (portal).
+  const [assinTab, setAssinTab] = useState<AssinTab>("assinantes");
+  const [disparoTab, setDisparoTab] = useState<"novo" | "campanhas">("novo");
+  // Host do cabeçalho dos funis: o seletor de funil + "novo funil" moram na
+  // barra superior, mas o estado deles vive dentro do FunnelsView (portal).
   const [funisHeaderEl, setFunisHeaderEl] = useState<HTMLDivElement | null>(null);
   const [shop, setShop] = useState<{ id: string; name: string } | null>(null);
   const [brand, setBrand] = useState<Brand>({});
-  const [showSubSettings, setShowSubSettings] = useState(false);
 
 
   useEffect(() => {
