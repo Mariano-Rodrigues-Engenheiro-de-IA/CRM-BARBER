@@ -89,21 +89,27 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
           return jsonResponse(request, { ok: false, error: error?.message || "Erro" }, { status: 500 });
         }
 
-        const names = parsed.data.stages?.length ? parsed.data.stages : [...DEFAULT_STAGES];
-        const { data: stages, error: stagesError } = await supabaseAdmin
-          .from("funnel_stages")
-          .insert(
-            names.map((name, i) => ({
-              barbershop_id: shop,
-              funnel_id: funnel.id,
-              name,
-              sort_order: i,
-            })),
-          )
-          .select("id, funnel_id, name, color, sort_order");
-        if (stagesError) {
-          return jsonResponse(request, { ok: false, error: stagesError.message }, { status: 500 });
+        // Funil novo nasce sem etapas: o usuário monta as colunas depois.
+        const names = parsed.data.stages ?? [];
+        let stages: Array<Record<string, unknown>> = [];
+        if (names.length) {
+          const { data, error: stagesError } = await supabaseAdmin
+            .from("funnel_stages")
+            .insert(
+              names.map((name, i) => ({
+                barbershop_id: shop,
+                funnel_id: funnel.id,
+                name,
+                sort_order: i,
+              })),
+            )
+            .select("id, funnel_id, name, color, sort_order");
+          if (stagesError) {
+            return jsonResponse(request, { ok: false, error: stagesError.message }, { status: 500 });
+          }
+          stages = data ?? [];
         }
+
 
         return jsonResponse(request, {
           ok: true,
