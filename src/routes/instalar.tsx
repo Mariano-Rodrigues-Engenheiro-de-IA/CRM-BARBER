@@ -31,7 +31,7 @@ export const Route = createFileRoute("/instalar")({
 function downloadZip() {
   const version = Date.now();
   const urls = [
-    `/crm-assinaturas-extension-v2301.zip?v=${version}`,
+    `/crm-assinaturas-extension-v2900.zip?v=${version}`,
     `/crm-assinaturas-extension.zip?v=${version}`,
   ];
   urls
@@ -49,7 +49,7 @@ function downloadZip() {
     .then((blob) => {
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = "crm-assinaturas-extension-v2301.zip";
+      a.download = "crm-assinaturas-extension-v2900.zip";
       a.click();
       URL.revokeObjectURL(a.href);
     })
@@ -95,7 +95,7 @@ function Install() {
                 className="w-full bg-yellow-400 font-bold text-neutral-950 hover:bg-yellow-300"
                 onClick={downloadZip}
               >
-                Baixar extensão v0.23.1 (.zip)
+                Baixar extensão v0.29.0 (.zip)
               </Button>
               <p className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
                 Importante: remova a versão anterior em{" "}

@@ -521,7 +521,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                     ))}
                   </div>
 
-                  <AddCardForm onAdd={(payload) => addCard(stage.id, payload)} />
+                  
                 </div>
               );
             })}
@@ -1020,51 +1020,3 @@ function NewFunnelModal({
     </Overlay>
   );
 }
-
-
-
-function AddCardForm({
-  onAdd,
-}: {
-  onAdd: (payload: { title: string; phone?: string }) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [phone, setPhone] = useState("");
-
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="mt-2 rounded-lg border border-dashed border-neutral-300 py-2 text-xs text-neutral-500 hover:bg-neutral-100"
-      >
-        + adicionar lead
-      </button>
-    );
-  }
-
-  return (
-    <div className="mt-2 space-y-2 rounded-lg border border-neutral-200 bg-white p-2">
-      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nome" className={inputCls} />
-      <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Telefone" className={inputCls} />
-      <div className="flex justify-end gap-2">
-        <button onClick={() => setOpen(false)} className="rounded px-2 py-1 text-xs text-neutral-500">
-          cancelar
-        </button>
-        <button
-          onClick={() => {
-            if (!title.trim()) return;
-            onAdd({ title: title.trim(), phone: phone.trim() || undefined });
-            setTitle("");
-            setPhone("");
-            setOpen(false);
-          }}
-          className="rounded bg-neutral-800 px-3 py-1 text-xs font-semibold text-white"
-        >
-          adicionar
-        </button>
-      </div>
-    </div>
-  );
-}
-

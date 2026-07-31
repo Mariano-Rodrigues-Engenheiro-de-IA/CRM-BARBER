@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.25.0";
+  const CRM_VERSION = "0.29.0";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -74,6 +74,7 @@
   let funnels = [];
   let billing = null;
   let waData = { labels: [], contacts: [] };
+  let quickReplies = [];
   let syncTimer = null;
   let syncing = false;
 
@@ -144,6 +145,13 @@
     }
   }
 
+  async function loadQuickReplies() {
+    const r = await chrome.runtime
+      .sendMessage({ type: "api", path: "/api/public/extension/quick-replies" })
+      .catch(() => null);
+    if (r?.ok) quickReplies = r.quick_replies || [];
+  }
+
   function painelUrl(section, extra) {
     const base = status.api_base || "";
     const token = status.token || EXTENSION_BRIDGE_TOKEN;
@@ -170,7 +178,7 @@
   let autoSyncTried = false;
   let topbarFilter = "tabs";
   try {
-    topbarFilter = localStorage.getItem("crm-topbar-filter") === "labels" ? "labels" : "tabs";
+    topbarFilter = localStorage.getItem("crm-topbar-filter") || "tabs";
   } catch {}
 
   function buildShell() {
@@ -285,25 +293,35 @@
     });
   }
 
+  function setTopbarFilter(value) {
+    topbarFilter = value;
+    try { localStorage.setItem("crm-topbar-filter", value); } catch {}
+    renderTopbar();
+  }
+
+  /** Nome do filtro ativo (usado no botão da barra). */
+  function currentFilterLabel() {
+    if (topbarFilter === "labels") return "LISTAS";
+    const f = currentFunnel();
+    return (f?.name || "FUNIL PRINCIPAL").toUpperCase();
+  }
+
+  /** Funil selecionado no topo (qualquer funil, não só o "tab"). */
+  function currentFunnel() {
+    if (topbarFilter.startsWith("funnel:")) {
+      const id = topbarFilter.slice(7);
+      const found = funnels.find((f) => f.id === id);
+      if (found) return found;
+    }
+    return tabFunnel() || funnels[0] || null;
+  }
+
   function openFilterMenu(anchor) {
-    openMenu(anchor, [
-      {
-        label: "FUNIL PRINCIPAL",
-        onClick: () => {
-          topbarFilter = "tabs";
-          try { localStorage.setItem("crm-topbar-filter", "tabs"); } catch {}
-          renderTopbar();
-        },
-      },
-      {
-        label: "LISTAS",
-        onClick: () => {
-          topbarFilter = "labels";
-          try { localStorage.setItem("crm-topbar-filter", "labels"); } catch {}
-          renderTopbar();
-        },
-      },
-    ]);
+    const items = [{ label: "LISTAS", onClick: () => setTopbarFilter("labels") }];
+    for (const f of funnels) {
+      items.push({ label: f.name.toUpperCase(), onClick: () => setTopbarFilter(`funnel:${f.id}`) });
+    }
+    openMenu(anchor, items);
   }
 
   // ---------------------------------------------------------------------
@@ -451,7 +469,7 @@
   async function createTab() {
     const name = await crmPrompt({ title: "Nova etapa", value: "" });
     if (!name) return;
-    const funnel = tabFunnel();
+    const funnel = currentFunnel();
     if (funnel) {
       await patchStages(funnel, [
         ...funnel.stages.map((s) => ({ id: s.id, name: s.name, sort_order: s.sort_order })),
@@ -480,9 +498,7 @@
       return;
     }
 
-    const filter = `<button class="crm-filter">${FILTER_SVG}${
-      topbarFilter === "labels" ? "LISTAS" : "FUNIL PRINCIPAL"
-    }</button>`;
+    const filter = `<button class="crm-filter">${FILTER_SVG}${escapeHtml(currentFilterLabel())}</button>`;
 
     if (topbarFilter === "labels") {
       const pills = (waData.labels || [])
@@ -508,23 +524,22 @@
       return;
     }
 
-    const pills = funnels
-      .filter((f) => f.mode === "tab")
-      .flatMap((f) =>
-        (f.stages || []).map((s) => {
-          const cards = (f.cards || []).filter((c) => c.stage_id === s.id);
-          const on = activeFilter?.key === `stage:${s.id}`;
-          return `<span class="crm-pill${on ? " crm-pill-on" : ""}" data-funnel="${escapeHtml(f.id)}" data-stage="${escapeHtml(s.id)}">
+    const f = currentFunnel();
+    const pills = ((f?.stages) || [])
+      .map((s) => {
+        const cards = (f.cards || []).filter((c) => c.stage_id === s.id);
+        const on = activeFilter?.key === `stage:${s.id}`;
+        return `<span class="crm-pill${on ? " crm-pill-on" : ""}" data-funnel="${escapeHtml(f.id)}" data-stage="${escapeHtml(s.id)}">
             ${escapeHtml(s.name)}
             <span class="crm-pill-count">${cards.length}</span>
             <button class="crm-pill-gear" data-funnel="${escapeHtml(f.id)}" data-stage="${escapeHtml(s.id)}" title="Opções">${GEAR_SVG}</button>
           </span>`;
-        }),
-
-      )
+      })
       .join("");
 
-    topbarRef.innerHTML = `${filter}${pills}<button class="crm-pill crm-pill-add">+ etapa</button>${premiumPill()}`;
+    topbarRef.innerHTML = `${filter}${
+      pills || `<span class="crm-topbar-hint">Nenhuma etapa nesse funil ainda.</span>`
+    }<button class="crm-pill crm-pill-add">+ etapa</button>${premiumPill()}`;
   }
 
   /** Aviso de plano vive aqui (no WhatsApp), não mais dentro do painel do CRM. */
@@ -565,6 +580,7 @@
     startPollHeartbeat();
     startSync();
     loadFunnels();
+    loadQuickReplies();
     loadBilling();
   }
 
@@ -593,7 +609,9 @@
 
   ensureShell();
   setInterval(() => loadFunnels(), 60000);
-  const mo = new MutationObserver(() => ensureShell());
+  ensureChatButton();
+  setInterval(() => ensureChatButton(), 1500);
+  const mo = new MutationObserver(() => { ensureShell(); ensureChatButton(); });
   if (document.body) mo.observe(document.body, { childList: true });
 
 
@@ -614,6 +632,213 @@
     return false;
   });
 
+
+  // ---------------------------------------------------------------------
+  // Ações dentro da própria conversa do WhatsApp (sem abrir o CRM).
+  // Botão "CRM" no cabeçalho da conversa → funis, listas e respostas rápidas.
+  // ---------------------------------------------------------------------
+
+  /** Pergunta genérica ao bridge (MAIN world) e espera a resposta. */
+  function askBridge(type, doneType, payload = {}, timeoutMs = 30000) {
+    return new Promise((resolve) => {
+      const id = crypto.randomUUID();
+      const timeout = setTimeout(() => {
+        window.removeEventListener("message", onMessage);
+        resolve(null);
+      }, timeoutMs);
+      function onMessage(ev) {
+        if (ev.source !== window) return;
+        const d = ev.data;
+        if (!d || d.__crm !== doneType || d.id !== id) return;
+        clearTimeout(timeout);
+        window.removeEventListener("message", onMessage);
+        resolve(d.ok ? d.data ?? true : null);
+      }
+      window.addEventListener("message", onMessage);
+      window.postMessage({ __crm: type, id, ...payload }, "*");
+    });
+  }
+
+  async function activeChat() {
+    await ensureWaScriptsInjected().catch(() => null);
+    return askBridge("active_chat_v290", "active_chat_done_v290");
+  }
+
+  function crmToast(text, kind = "ok") {
+    const el = document.createElement("div");
+    el.className = `crm-toast${kind === "err" ? " crm-toast-err" : ""}`;
+    el.textContent = text;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 3200);
+  }
+
+  const CHAT_BTN_ID = "crm-chat-action";
+
+  function ensureChatButton() {
+    const header = document.querySelector("#main header");
+    if (!header) return;
+    if (header.querySelector(`#${CHAT_BTN_ID}`)) return;
+    const btn = document.createElement("button");
+    btn.id = CHAT_BTN_ID;
+    btn.className = "crm-chat-btn";
+    btn.title = "Ações do CRM neste contato";
+    btn.innerHTML = `${ICONS.funnel}<span>CRM</span>`;
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openChatActionMenu(btn);
+    });
+    header.appendChild(btn);
+  }
+
+  async function openChatActionMenu(anchor) {
+    const chat = await activeChat();
+    if (!chat) return crmToast("Não consegui ler a conversa aberta.", "err");
+    openMenu(anchor, [
+      { label: "Adicionar a um funil", onClick: () => chooseFunnel(anchor, chat) },
+      { label: "Adicionar a uma lista", onClick: () => chooseLabel(anchor, chat) },
+      { label: "Respostas rápidas", onClick: () => chooseQuickReply(anchor, chat) },
+    ]);
+  }
+
+  async function chooseFunnel(anchor, chat) {
+    if (!funnels.length) await loadFunnels();
+    if (!funnels.length) return crmToast("Nenhum funil criado ainda.", "err");
+    openMenu(
+      anchor,
+      funnels.map((f) => ({ label: f.name, onClick: () => chooseStage(anchor, chat, f) })),
+    );
+  }
+
+  function chooseStage(anchor, chat, funnel) {
+    const stages = funnel.stages || [];
+    if (!stages.length) return crmToast(`"${funnel.name}" ainda não tem etapas.`, "err");
+    openMenu(
+      anchor,
+      stages.map((st) => ({
+        label: st.name,
+        onClick: async () => {
+          const r = await chrome.runtime
+            .sendMessage({
+              type: "api",
+              path: "/api/public/extension/funnel-cards",
+              opts: {
+                method: "POST",
+                body: JSON.stringify({
+                  funnel_id: funnel.id,
+                  stage_id: st.id,
+                  title: chat.name || chat.phone || "Contato",
+                  phone: chat.phone || null,
+                }),
+              },
+            })
+            .catch(() => null);
+          if (r?.ok) {
+            crmToast(`Adicionado em ${funnel.name} · ${st.name}`);
+            loadFunnels();
+          } else {
+            crmToast(r?.error || "Não consegui adicionar ao funil.", "err");
+          }
+        },
+      })),
+    );
+  }
+
+  async function chooseLabel(anchor, chat) {
+    if (!(waData.labels || []).length) await syncWaData();
+    const labels = waData.labels || [];
+    if (!labels.length) return crmToast("Nenhuma lista encontrada no WhatsApp.", "err");
+    openMenu(
+      anchor,
+      labels.map((l) => ({
+        label: l.name,
+        onClick: async () => {
+          const ok = await askBridge("apply_label_v290", "apply_label_done_v290", {
+            waId: chat.wa_id,
+            labelId: String(l.id || l.wa_label_id),
+          });
+          if (!ok) return crmToast("Não consegui aplicar a lista.", "err");
+          crmToast(`Adicionado à lista ${l.name}`);
+          syncing = false;
+          syncWaData();
+        },
+      })),
+    );
+  }
+
+  async function chooseQuickReply(anchor, chat) {
+    if (!quickReplies.length) await loadQuickReplies();
+    const items = quickReplies.map((q) => ({
+      label: q.title,
+      onClick: () => sendQuickReply(q, chat),
+    }));
+    items.push({ label: "＋ Nova resposta rápida", onClick: () => editQuickReply(null) });
+    if (quickReplies.length) {
+      items.push({ label: "✎ Editar respostas", onClick: () => pickQuickReplyToEdit(anchor) });
+    }
+    openMenu(anchor, items);
+  }
+
+  function pickQuickReplyToEdit(anchor) {
+    openMenu(
+      anchor,
+      quickReplies.map((q) => ({ label: q.title, onClick: () => editQuickReply(q) })),
+    );
+  }
+
+  /** Cria/edita uma resposta rápida de texto direto do WhatsApp. */
+  async function editQuickReply(reply) {
+    const title = await crmPrompt({
+      title: reply ? "Renomear resposta" : "Título da resposta",
+      value: reply?.title || "",
+    });
+    if (!title) return;
+    const firstText = (reply?.actions || []).find((a) => a.type === "text");
+    const text = await crmPrompt({
+      title: "Mensagem (use {nome})",
+      value: firstText?.text || "",
+    });
+    if (!text) return;
+    const actions = reply
+      ? (reply.actions || []).map((a) => (a === firstText ? { ...a, text } : a))
+      : [{ type: "text", text }];
+    if (reply && !firstText) actions.unshift({ type: "text", text });
+    const clean = actions.map(({ url: _url, ...rest }) => rest);
+    const r = await chrome.runtime
+      .sendMessage({
+        type: "api",
+        path: reply
+          ? `/api/public/extension/quick-replies/${reply.id}`
+          : "/api/public/extension/quick-replies",
+        opts: { method: reply ? "PATCH" : "POST", body: JSON.stringify({ title, actions: clean }) },
+      })
+      .catch(() => null);
+    if (r?.ok) {
+      crmToast(reply ? "Resposta atualizada" : "Resposta criada");
+      loadQuickReplies();
+    } else {
+      crmToast(r?.error || "Não consegui salvar a resposta.", "err");
+    }
+  }
+
+  async function sendQuickReply(reply, chat) {
+    const target = chat.phone || String(chat.wa_id || "").split("@")[0];
+    if (!target) return crmToast("Contato sem telefone.", "err");
+    crmToast(`Enviando "${reply.title}"…`);
+    const sendable = (reply.actions || []).filter((a) =>
+      ["text", "image", "video", "audio"].includes(a.type),
+    );
+    const prefetched = await chrome.runtime
+      .sendMessage({ type: "prefetch_media", actions: sendable })
+      .catch(() => null);
+    const res = await handleWaAction({
+      phone: target,
+      name: chat.name || "",
+      actions: prefetched?.ok ? prefetched.actions : sendable,
+    });
+    if (res?.ok) crmToast("Resposta enviada");
+    else crmToast(res?.error || "Falha ao enviar", "err");
+  }
 
   // Modal próprio do CRM — nada de confirm()/alert() nativos do navegador.
   function crmConfirm({ title, body: text, confirmLabel = "Confirmar", cancelLabel = "Cancelar" }) {

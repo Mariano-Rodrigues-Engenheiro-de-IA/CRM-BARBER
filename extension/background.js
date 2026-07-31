@@ -380,6 +380,13 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       sendResponse(await showPanel());
     } else if (msg?.type === "wa_action") {
       sendResponse(await runWaAction(msg.action || {}));
+    } else if (msg?.type === "prefetch_media") {
+      // Envio de resposta rápida disparado de dentro do WhatsApp Web: a página
+      // não pode baixar a mídia (CSP), então baixamos aqui e devolvemos base64.
+      const actions = await prefetchMedia(msg.actions || []);
+      const broken = actions.find((a) => a?.media_error);
+      sendResponse(broken ? { ok: false, error: broken.media_error } : { ok: true, actions });
+
     } else if (msg?.type === "poll_now") {
 
       await pollNow();
