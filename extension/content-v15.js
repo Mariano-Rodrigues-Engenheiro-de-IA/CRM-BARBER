@@ -1081,8 +1081,44 @@
     const phone = action?.phone;
     const waId = action?.waId || null;
     if (!phone && !waId) return { ok: false, error: "Contato inválido" };
+    try {
+      await ensureWaScriptsInjected();
+    } catch (e) {
+      return { ok: false, error: `Falha ao carregar wa-js/bridge: ${String(e?.message || e)}` };
+    }
+    const vars = { nome: action?.name || "" };
+    const fill = (t) => String(t || "").replace(/\{(\w+)\}/g, (m, k) => (vars[k] !== undefined ? vars[k] : m));
 
+    const actions = [];
+    if (!action.openOnly) {
+      if (Array.isArray(action.actions) && action.actions.length) {
+        for (const a of action.actions) {
+          actions.push({
+            type: a.type,
+            text: fill(a.text),
+            caption: fill(a.caption),
+            url: a.url || null,
+            filename: a.filename || null,
+            mime: a.mime || null,
+            // Mídia já baixada pelo service worker (a página do WhatsApp
+            // bloqueia fetch externo por CSP).
+            data_base64: a.data_base64 || null,
+          });
+        }
+      } else if (action.text) {
+        actions.push({ type: "text", text: fill(action.text) });
+      }
+    }
+
+    return bridgeRequest({
+      __crm: "action_v190",
+      phone,
+      waId,
+      openOnly: !!action.openOnly,
+      actions,
+    });
   }
+
 
   async function handleSend(job) {
     const phone = job?.customer?.phone;
