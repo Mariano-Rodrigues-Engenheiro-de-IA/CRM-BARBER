@@ -383,7 +383,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
           {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-[calc(100vh-170px)] w-72 shrink-0 animate-pulse rounded-xl border border-neutral-200 bg-neutral-50"
+              className="h-[calc(100vh-140px)] w-72 shrink-0 animate-pulse rounded-xl border border-neutral-200 bg-neutral-50"
             />
           ))}
         </div>
@@ -398,8 +398,8 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
 
 
 
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            <div className="flex w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+          <div className="flex h-[calc(100vh-140px)] gap-3 overflow-x-auto pb-1">
+            <div className="flex h-full w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-2">
               <div className="flex items-baseline justify-between gap-2">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-900">Inbox</h3>
                 <span className="shrink-0 rounded-full bg-neutral-200 px-2 py-0.5 text-[11px] font-semibold text-neutral-700">
@@ -410,9 +410,9 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                 value={inboxQuery}
                 onChange={(e) => setInboxQuery(e.target.value)}
                 placeholder="Buscar"
-                className="mt-2 w-full rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs outline-none focus:border-neutral-900"
+                className="mt-1.5 w-full rounded-lg border border-neutral-200 px-2.5 py-1 text-xs outline-none focus:border-neutral-900"
               />
-              <div className="mt-3 max-h-[calc(100vh-215px)] space-y-2 overflow-y-auto pr-1">
+              <div className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                 {inboxContacts
                   .filter((c) => {
                     const t = inboxQuery.trim().toLowerCase();
@@ -478,7 +478,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                     }
                     if (card) void moveCard(card, stage.id);
                   }}
-                  className="flex w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-3"
+                  className="flex h-full w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-2"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <StageTitle
@@ -501,7 +501,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                     </div>
                   </div>
 
-                  <div className="mt-3 max-h-[calc(100vh-215px)] space-y-2 overflow-y-auto pr-1">
+                  <div className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                     {cards.map((card) => (
                       <div
                         key={card.id}
