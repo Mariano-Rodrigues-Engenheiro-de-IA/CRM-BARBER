@@ -886,6 +886,7 @@ function KanbanView({
   token,
   reload,
   shopId,
+  headerHost,
   onGoSettings,
 }: {
   customers: Customer[];
@@ -893,6 +894,7 @@ function KanbanView({
   token: string;
   reload: () => void;
   shopId: string;
+  headerHost?: HTMLDivElement | null;
   onGoSettings: () => void;
 }) {
   const { confirm, dialog } = useConfirm();
