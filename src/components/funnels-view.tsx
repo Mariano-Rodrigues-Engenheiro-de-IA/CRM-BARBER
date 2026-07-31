@@ -24,12 +24,15 @@ const inputCls =
   "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-900";
 
 
+/** Cache entre navegações: voltar pra aba Funis não deve piscar esqueleto. */
+let funnelsCache: { funnels: Funnel[]; labels: WaLabel[]; contacts: WaContact[] } | null = null;
+
 export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTMLElement | null }) {
-  const [funnels, setFunnels] = useState<Funnel[]>([]);
-  const [labels, setLabels] = useState<WaLabel[]>([]);
-  const [contacts, setContacts] = useState<WaContact[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [funnels, setFunnels] = useState<Funnel[]>(() => funnelsCache?.funnels ?? []);
+  const [labels, setLabels] = useState<WaLabel[]>(() => funnelsCache?.labels ?? []);
+  const [contacts, setContacts] = useState<WaContact[]>(() => funnelsCache?.contacts ?? []);
+  const [activeId, setActiveId] = useState<string | null>(() => funnelsCache?.funnels[0]?.id ?? null);
+  const [loading, setLoading] = useState(!funnelsCache);
   const [err, setErr] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [detail, setDetail] = useState<FunnelCard | null>(null);
@@ -39,30 +42,74 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
   const dragged = useRef<FunnelCard | null>(null);
   const draggedContact = useRef<WaContact | null>(null);
   const pendingContacts = useRef<Set<string>>(new Set());
+  const ensuredDefaults = useRef(false);
 
   async function reload() {
     const [f, w] = await Promise.all([
       api("/api/public/extension/funnels"),
       api("/api/public/extension/wa/data"),
     ]);
+    let list: Funnel[] = funnelsCache?.funnels ?? [];
     if (f?.ok) {
-      const list = (f.funnels as Funnel[]) || [];
+      list = (f.funnels as Funnel[]) || [];
       setFunnels(list);
       setActiveId((cur) => (cur && list.some((x) => x.id === cur) ? cur : list[0]?.id ?? null));
     } else {
       setErr((f?.error as string) || "Erro ao carregar funis");
     }
+    let ls = funnelsCache?.labels ?? [];
+    let cs = funnelsCache?.contacts ?? [];
     if (w?.ok) {
-      setLabels((w.labels as WaLabel[]) || []);
-      setContacts((w.contacts as WaContact[]) || []);
+      ls = (w.labels as WaLabel[]) || [];
+      cs = (w.contacts as WaContact[]) || [];
+      setLabels(ls);
+      setContacts(cs);
     }
+    funnelsCache = { funnels: list, labels: ls, contacts: cs };
     setLoading(false);
+    return { list, labels: ls };
+  }
+
+  /**
+   * "Funil principal" e "Etiquetas / Listas" são fixos: nascem sozinhos e
+   * não podem ser excluídos. O botão do cabeçalho só cria funis personalizados.
+   */
+  async function ensureDefaults(list: Funnel[], ls: WaLabel[]) {
+    if (ensuredDefaults.current) return;
+    ensuredDefaults.current = true;
+    let created = false;
+    if (!list.some((f) => f.mode === "tab")) {
+      const r = await api("/api/public/extension/funnels", {
+        method: "POST",
+        body: JSON.stringify({
+          name: "Funil principal",
+          mode: "tab",
+          stages: ["Novo lead", "Em conversa", "Negociando", "Fechado"],
+        }),
+      });
+      created = created || Boolean(r?.ok);
+    }
+    if (!list.some((f) => f.mode === "label") && ls.length) {
+      const r = await api("/api/public/extension/funnels", {
+        method: "POST",
+        body: JSON.stringify({
+          name: "Etiquetas / Listas",
+          mode: "label",
+          stages: ls.map((l) => l.name),
+        }),
+      });
+      created = created || Boolean(r?.ok);
+    }
+    if (created) await reload();
   }
 
   useEffect(() => {
-    void reload();
+    void reload().then((r) => {
+      if (r) void ensureDefaults(r.list, r.labels);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   const active = funnels.find((f) => f.id === activeId) || null;
 
