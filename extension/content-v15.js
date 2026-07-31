@@ -64,7 +64,16 @@
       });
     return waScriptsPromise;
   }
-  ensureWaScriptsInjected().catch(() => null);
+  // Injeção adiada: o wa-js engancha nos módulos internos do WhatsApp e, se
+  // isso acontece durante o boot, as conversas demoram muito mais pra abrir.
+  // Esperamos o navegador ficar ocioso (ou 20s) antes de injetar.
+  function scheduleWaScripts() {
+    const run = () => ensureWaScriptsInjected().catch(() => null);
+    if (typeof requestIdleCallback === "function") requestIdleCallback(run, { timeout: 20000 });
+    else setTimeout(run, 20000);
+  }
+  if (document.readyState === "complete") scheduleWaScripts();
+  else window.addEventListener("load", scheduleWaScripts, { once: true });
 
 
   let pollHeartbeat = null;
