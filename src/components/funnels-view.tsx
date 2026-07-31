@@ -240,7 +240,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       />
       <button
         onClick={() => setCreating(true)}
-        className="shrink-0 rounded-lg bg-neutral-900 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-yellow-400 transition hover:bg-neutral-800"
+        className="shrink-0 rounded-lg bg-neutral-800 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-white transition hover:bg-neutral-700"
       >
         Criar
       </button>
@@ -869,7 +869,7 @@ function CardDrawer({
             <button
               onClick={schedule}
               disabled={busy || !msg.trim()}
-              className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
+              className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
             >
               {busy ? "Enviando..." : when ? "Agendar mensagem" : "Enviar mensagem"}
             </button>
@@ -922,7 +922,7 @@ function StageListEditor({
         />
         <button
           onClick={add}
-          className="shrink-0 rounded-lg bg-neutral-900 px-3 py-2 text-sm font-semibold text-yellow-400"
+          className="shrink-0 rounded-lg bg-neutral-800 px-3 py-2 text-sm font-semibold text-white"
         >
           + adicionar
         </button>
@@ -1014,7 +1014,7 @@ function NewFunnelModal({
               className={
                 "rounded-xl border px-3 py-2.5 text-sm font-semibold transition " +
                 (mode === o.key
-                  ? "border-neutral-900 bg-neutral-900 text-yellow-400"
+                  ? "border-neutral-800 bg-neutral-800 text-white"
                   : "border-neutral-300 bg-white text-neutral-800")
               }
             >
@@ -1064,7 +1064,7 @@ function NewFunnelModal({
           </button>
           <button
             onClick={submit}
-            className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400"
+            className="rounded-lg bg-neutral-800 px-4 py-2 text-sm font-semibold text-white"
           >
             {mode === "tab" && tabFunnel ? "Adicionar" : "Criar"}
           </button>
@@ -1111,7 +1111,7 @@ function AddCardForm({
             setPhone("");
             setOpen(false);
           }}
-          className="rounded bg-neutral-900 px-3 py-1 text-xs font-semibold text-yellow-400"
+          className="rounded bg-neutral-800 px-3 py-1 text-xs font-semibold text-white"
         >
           adicionar
         </button>

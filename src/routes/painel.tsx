@@ -264,7 +264,7 @@ function AddMenu({ onManual, onSheet }: { onManual: () => void; onSheet: () => v
       <button
         onClick={() => setOpen((v) => !v)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
-        className="rounded-lg bg-neutral-900 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-yellow-400 hover:bg-neutral-800"
+        className="rounded-lg bg-neutral-800 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white hover:bg-neutral-700"
       >
         Adicionar
       </button>
@@ -429,7 +429,7 @@ function Painel() {
   const navRowCls = (active: boolean) =>
     "group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition " +
     (active
-      ? "bg-yellow-400 text-neutral-900"
+      ? "bg-neutral-900 text-white"
       : "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950");
 
   return (
@@ -476,7 +476,7 @@ function Painel() {
                         className={
                           "block w-full rounded-lg px-3 py-1.5 text-left text-[13px] transition " +
                           (assinTab === sub.key
-                            ? "bg-neutral-900 font-semibold text-yellow-400"
+                            ? "bg-neutral-800 font-semibold text-white"
                             : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900")
                         }
                       >
@@ -503,7 +503,7 @@ function Painel() {
               onClick={() => setSection(n.key)}
               className={
                 "rounded-md px-2.5 py-1 text-[11px] font-medium " +
-                (section === n.key ? "bg-yellow-400 text-neutral-900" : "text-neutral-600")
+                (section === n.key ? "bg-neutral-900 text-white" : "text-neutral-600")
               }
             >
               {n.label}
@@ -785,7 +785,7 @@ function WhatsAppActionModal({
                 <button
                   onClick={savePhone}
                   disabled={busy || !phoneDraft.trim()}
-                  className="whitespace-nowrap rounded-lg bg-neutral-900 px-3 py-2 text-xs font-semibold text-yellow-400 disabled:opacity-50"
+                  className="whitespace-nowrap rounded-lg bg-neutral-800 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
                 >
                   Salvar
                 </button>
@@ -830,7 +830,7 @@ function WhatsAppActionModal({
           <button
             onClick={() => run(false)}
             disabled={busy || (!selected && !text.trim())}
-            className="flex-1 rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
+            className="flex-1 rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
           >
             {busy ? "Enviando..." : "Enviar agora"}
           </button>
@@ -1225,7 +1225,7 @@ function CustomerDrawer({
             <button
               onClick={schedule}
               disabled={busy || !msg.trim()}
-              className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
+              className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
             >
               {busy ? "Enviando..." : when ? "Agendar mensagem" : "Enviar mensagem"}
             </button>
@@ -1279,7 +1279,7 @@ function AddModal({ token, cols, onClose }: { token: string; cols: Array<{ key: 
         {err && <p className="text-sm text-red-500">{err}</p>}
         <button
           disabled={busy}
-          className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
+          className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
         >
           {busy ? "Salvando..." : "Adicionar"}
         </button>
@@ -1382,7 +1382,7 @@ function ImportModal({
           </p>
           <button
             onClick={onGoSettings}
-            className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
+            className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700"
           >
             Ir para Configurações
           </button>
@@ -1425,7 +1425,7 @@ function ImportModal({
         {result && <p className="whitespace-pre-line text-sm text-emerald-600">{result}</p>}
         <button
           disabled={busy || !file}
-          className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
+          className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
         >
           {busy ? "Importando..." : "Importar e organizar"}
         </button>
@@ -1542,7 +1542,7 @@ function CampaignsView({ token, scope }: { token: string; scope?: "assinaturas" 
                       "rounded-lg px-3 py-1.5 text-sm font-semibold " +
                       (isRunning
                         ? "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
-                        : "bg-neutral-900 text-yellow-400 hover:bg-neutral-800")
+                        : "bg-neutral-800 text-white hover:bg-neutral-700")
                     }
                   >
                     {isRunning ? "Pausar" : "Retomar"}
@@ -1695,7 +1695,7 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
                 className={
                   "rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition " +
                   (system === s.id
-                    ? "border-neutral-900 bg-neutral-900 text-yellow-400"
+                    ? "border-neutral-800 bg-neutral-800 text-white"
                     : "border-neutral-200 bg-white text-neutral-800 hover:border-neutral-400")
                 }
               >
@@ -1754,7 +1754,7 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
             <button
               type="button"
               onClick={addPlan}
-              className="shrink-0 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
+              className="shrink-0 rounded-lg bg-neutral-800 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-700"
             >
               Adicionar
             </button>
@@ -1776,7 +1776,7 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
 
         <button
           onClick={() => { writeGoal(shopId, goal); persistPlans(plans); }}
-          className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
+          className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700"
         >
           Salvar
         </button>
@@ -1827,7 +1827,7 @@ function SettingsView({
 
       <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-6">
         <div className="flex items-center gap-4">
-          <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl bg-neutral-900 text-2xl font-semibold text-yellow-400 shadow-sm">
+          <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl bg-neutral-800 text-2xl font-semibold text-white shadow-sm">
             {logo ? <img src={logo} alt="logo" className="h-full w-full object-cover" /> : initial}
           </div>
           <div className="flex flex-col gap-2">
@@ -1874,7 +1874,7 @@ function SettingsView({
         <div className="flex items-center gap-3">
           <button
             onClick={save}
-            className="rounded-lg bg-neutral-900 px-5 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
+            className="rounded-lg bg-neutral-800 px-5 py-2 text-sm font-semibold text-white hover:bg-neutral-700"
           >
             Salvar
           </button>
