@@ -641,9 +641,18 @@ function Painel() {
         )}
 
         {section === "respostas" && token && (
-          <main className="px-6 py-6 mt-14 md:mt-0">
-            <QuickRepliesView token={token} api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
-          </main>
+          <>
+            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
+              <div className="flex items-center gap-3 px-5 py-2">
+                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
+                  Respostas rápidas
+                </h1>
+              </div>
+            </header>
+            <main className="px-4 py-4">
+              <QuickRepliesView token={token} api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+            </main>
+          </>
         )}
 
         {section === "equipe" && (
@@ -663,20 +672,38 @@ function Painel() {
         )}
 
         {section === "conexao" && token && (
-          <main className="px-6 py-6 mt-14 md:mt-0 max-w-3xl">
-            <ConnectionView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
-          </main>
+          <>
+            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
+              <div className="flex items-center gap-3 px-5 py-2">
+                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
+                  Conexão
+                </h1>
+              </div>
+            </header>
+            <main className="max-w-3xl px-4 py-4">
+              <ConnectionView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+            </main>
+          </>
         )}
 
         {section === "configuracoes" && (
-          <main className="px-6 py-6 mt-14 md:mt-0">
-            <SettingsView
-              brand={brand}
-              fallbackName={shop?.name || ""}
-              onSave={saveBrand}
-              shopId={shop?.id ?? "default"}
-            />
-          </main>
+          <>
+            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
+              <div className="flex items-center gap-3 px-5 py-2">
+                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
+                  Configurações
+                </h1>
+              </div>
+            </header>
+            <main className="px-4 py-4">
+              <SettingsView
+                brand={brand}
+                fallbackName={shop?.name || ""}
+                onSave={saveBrand}
+                shopId={shop?.id ?? "default"}
+              />
+            </main>
+          </>
         )}
 
       </div>
