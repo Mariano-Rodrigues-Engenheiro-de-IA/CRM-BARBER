@@ -1139,14 +1139,14 @@ function KanbanView({
                     onDragEnd={() => { setDragId(null); setOverCol(null); }}
                     onClick={() => setDetail(c)}
                     className={
-                      "cursor-grab rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-sm transition hover:border-neutral-900 hover:shadow-sm active:cursor-grabbing " +
+                      "cursor-grab rounded-lg border border-neutral-200 bg-neutral-50 p-2.5 text-[13px] transition hover:border-neutral-900 hover:shadow-sm active:cursor-grabbing " +
                       (dragId === c.id ? "opacity-50" : "")
                     }
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="truncate font-semibold text-neutral-900">{c.name}</div>
-                        <div className="text-xs text-neutral-500">{phoneLabel(c.phone)}</div>
+                        <div className="text-[11px] text-neutral-500">{phoneLabel(c.phone)}</div>
                         <div className="mt-1 flex flex-wrap items-center gap-1">
                           {plan && (
                             <span className="rounded bg-yellow-100 px-1.5 py-0.5 text-[10px] font-medium text-yellow-800">
