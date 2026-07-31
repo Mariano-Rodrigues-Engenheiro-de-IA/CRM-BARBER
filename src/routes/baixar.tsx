@@ -4,13 +4,13 @@ import { useState } from "react";
 export const Route = createFileRoute("/baixar")({
   head: () => ({
     meta: [
-      { title: "Baixar pacote da extensão v0.29.2 | CRM Assinaturas" },
+      { title: "Baixar pacote da extensão v0.30.0 | CRM Assinaturas" },
       {
         name: "description",
         content:
-          "Download direto do pacote .zip da extensão CRM Assinaturas v0.29.2, pronto para upload no Chrome Web Store Developer Dashboard.",
+          "Download direto do pacote .zip da extensão CRM Assinaturas v0.30.0, pronto para upload no Chrome Web Store Developer Dashboard.",
       },
-      { property: "og:title", content: "Baixar pacote da extensão v0.29.2" },
+      { property: "og:title", content: "Baixar pacote da extensão v0.30.0" },
       {
         property: "og:description",
         content:
@@ -23,8 +23,8 @@ export const Route = createFileRoute("/baixar")({
   component: BaixarPage,
 });
 
-const VERSION = "0.29.2";
-const FILE = "/crm-assinaturas-extension-v2902.zip";
+const VERSION = "0.30.0";
+const FILE = "/crm-assinaturas-extension-v3000.zip";
 
 function BaixarPage() {
   const [status, setStatus] = useState<string | null>(null);
