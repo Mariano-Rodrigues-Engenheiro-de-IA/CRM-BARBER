@@ -137,6 +137,11 @@ async function reportJob(id, status, error) {
 }
 
 async function ensureScripts(tabId) {
+  const alive = await chrome.tabs
+    .sendMessage(tabId, { type: "crm_content_ping" })
+    .then((response) => response?.ok === true)
+    .catch(() => false);
+  if (alive) return;
   await chrome.scripting.insertCSS({ target: { tabId }, files: ["content.css"] }).catch(() => null);
   await chrome.scripting.executeScript({ target: { tabId }, files: ["content-v15.js"] }).catch(() => null);
 }

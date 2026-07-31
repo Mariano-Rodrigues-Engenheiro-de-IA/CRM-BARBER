@@ -672,6 +672,10 @@
 
 
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
+    if (msg?.type === "crm_content_ping") {
+      sendResponse({ ok: true, version: CRM_VERSION });
+      return true;
+    }
     if (msg?.type === "send_message_v180" || msg?.type === "send_message_v170" || msg?.type === "send_message_v161") {
       handleSend(msg.job)
         .then(sendResponse)
