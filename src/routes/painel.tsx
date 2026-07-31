@@ -990,7 +990,38 @@ function KanbanView({
     <div className="space-y-4">
       {dialog}
 
-      <div className="flex items-center justify-end">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {newCol === null ? (
+          <button
+            onClick={() => setNewCol("")}
+            className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-wide text-neutral-700 transition hover:border-neutral-500"
+          >
+            Adicionar kanban
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <input
+              autoFocus
+              value={newCol}
+              onChange={(e) => setNewCol(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { addColumn(newCol); setNewCol(null); }
+                if (e.key === "Escape") setNewCol(null);
+              }}
+              placeholder="Nome do kanban"
+              className={inputCls + " w-48"}
+            />
+            <button
+              onClick={() => { addColumn(newCol); setNewCol(null); }}
+              className="rounded-lg bg-neutral-800 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white hover:bg-neutral-700"
+            >
+              Criar
+            </button>
+            <button onClick={() => setNewCol(null)} className="text-xs text-neutral-500 hover:text-neutral-900">
+              cancelar
+            </button>
+          </div>
+        )}
         <AddMenu onSheet={() => setShowImport(true)} onManual={() => setShowAdd(true)} />
       </div>
 
@@ -1012,14 +1043,24 @@ function KanbanView({
             }}
             className={
               "rounded-xl border bg-white shadow-sm transition " +
-              (overCol === col.key ? "border-yellow-400 ring-2 ring-yellow-300/60" : "border-neutral-200")
+              (overCol === col.key ? "border-neutral-400 ring-2 ring-neutral-300/60" : "border-neutral-200")
             }
           >
             <div className="border-b border-neutral-200 px-4 py-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-700">{col.label}</h3>
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="truncate text-xs font-semibold uppercase tracking-wider text-neutral-700">{col.label}</h3>
+                <button
+                  onClick={() => void removeColumn(col)}
+                  title="Excluir kanban"
+                  className="shrink-0 rounded p-0.5 text-neutral-300 transition hover:text-red-600"
+                >
+                  ✕
+                </button>
+              </div>
               <p className="text-xs text-neutral-500">{byStatus[col.key]?.length ?? 0} contato(s)</p>
               <p className="mt-1 text-sm font-semibold text-neutral-900">{formatBRL(colTotal(col.key))}</p>
             </div>
+
             <div className="max-h-[calc(100vh-330px)] min-h-40 space-y-2 overflow-y-auto p-3">
               {(byStatus[col.key] ?? []).map((c) => {
                 const plan = planFromTags(c.tags);
