@@ -349,6 +349,8 @@ function Painel() {
   })();
   const [section, setSection] = useState<Section>(initialSection);
   const [assinTab, setAssinTab] = useState<AssinTab>("assinantes");
+  const [assinOpen, setAssinOpen] = useState(true);
+
   const [disparoTab, setDisparoTab] = useState<"novo" | "campanhas">("novo");
   // Host do cabeçalho dos funis: o seletor de funil + "novo funil" moram na
   // barra superior, mas o estado deles vive dentro do FunnelsView (portal).
