@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { isRealPhone } from "@/lib/wa-actions";
 import { sendableActions, type QuickReply } from "@/lib/quick-replies";
-import type { Funnel, WaContact, WaLabel } from "@/lib/funnels";
+import type { Funnel } from "@/lib/funnels";
 
 type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
 
@@ -48,14 +48,11 @@ export function DispatchCenter({
 
   // Assinantes
   const [status, setStatus] = useState<string>(cols[0]?.key ?? "all");
-  // Etiquetas
-  const [labels, setLabels] = useState<WaLabel[]>([]);
-  const [contacts, setContacts] = useState<WaContact[]>([]);
-  const [labelId, setLabelId] = useState("");
   // Funis
   const [funnels, setFunnels] = useState<Funnel[]>([]);
   const [funnelId, setFunnelId] = useState("");
   const [stageId, setStageId] = useState("");
+
 
   const [name, setName] = useState("");
   const [variants, setVariants] = useState<string[]>([""]);
@@ -69,15 +66,10 @@ export function DispatchCenter({
 
   useEffect(() => {
     void (async () => {
-      const [w, f, q] = await Promise.all([
-        api("/api/public/extension/wa/data"),
+      const [f, q] = await Promise.all([
         api("/api/public/extension/funnels"),
         api("/api/public/extension/quick-replies"),
       ]);
-      if (w?.ok) {
-        setLabels((w.labels as WaLabel[]) || []);
-        setContacts((w.contacts as WaContact[]) || []);
-      }
       if (f?.ok) {
         const list = (f.funnels as Funnel[]) || [];
         setFunnels(list);
@@ -88,19 +80,15 @@ export function DispatchCenter({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+
   const funnel = funnels.find((f) => f.id === funnelId) || null;
 
   const sendableSubs = useMemo(() => customers.filter((c) => isRealPhone(c.phone)), [customers]);
   const subsCount = (key: string) =>
     key === "all" ? sendableSubs.length : sendableSubs.filter((c) => c.status === key).length;
 
-  const labelTargets = useMemo(() => {
-    const lb = labels.find((l) => l.id === labelId);
-    if (!lb) return [];
-    return contacts
-      .filter((c) => !c.is_group && (c.label_ids || []).includes(lb.wa_label_id) && isRealPhone(c.phone))
-      .map((c) => ({ phone: c.phone as string, name: c.name || (c.phone as string) }));
-  }, [labels, labelId, contacts]);
+
+
 
   const funnelTargets = useMemo(() => {
     if (!funnel) return [];
@@ -110,12 +98,8 @@ export function DispatchCenter({
       .map((c) => ({ phone: c.phone as string, name: c.title }));
   }, [funnel, stageId]);
 
-  const total =
-    audience === "assinantes"
-      ? subsCount(status)
-      : audience === "etiquetas"
-        ? labelTargets.length
-        : funnelTargets.length;
+  const total = audience === "assinantes" ? subsCount(status) : funnelTargets.length;
+
 
   const selectedReply = replies.find((q) => q.id === replyId);
   const mediaDropped = selectedReply
@@ -154,11 +138,12 @@ export function DispatchCenter({
     const st = await api("/api/public/extension/whatsapp/status?sync=1");
     const conn = st?.connection as { status?: string } | undefined;
     if (!st?.ok || conn?.status !== "connected") {
+      // Sem conexão: leva direto pra aba Conexão, sem erro vermelho na tela.
       setBusy(false);
-      setErr("WhatsApp não está conectado. Redirecionando pra aba Conexão…");
-      setTimeout(() => onNeedConnection(), 800);
+      onNeedConnection();
       return;
     }
+
 
     const base = {
       name: name.trim(),
@@ -169,11 +154,8 @@ export function DispatchCenter({
     const body =
       audience === "assinantes"
         ? { ...base, scope: "assinaturas", filter: status === "all" ? {} : { status } }
-        : {
-            ...base,
-            scope: "funil",
-            phone_targets: audience === "etiquetas" ? labelTargets : funnelTargets,
-          };
+        : { ...base, scope: "funil", phone_targets: funnelTargets };
+
 
     const r = await api("/api/public/extension/campaigns", {
       method: "POST",
@@ -190,9 +172,9 @@ export function DispatchCenter({
 
   const audienceOptions: Array<{ key: Audience; label: string }> = [
     { key: "assinantes", label: "Assinantes" },
-    { key: "etiquetas", label: "Etiquetas" },
     { key: "funis", label: "Funis de vendas" },
   ];
+
 
   return (
     <form onSubmit={submit} className="mx-auto w-full max-w-xl space-y-5 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
@@ -231,41 +213,6 @@ export function DispatchCenter({
         </div>
       )}
 
-      {audience === "etiquetas" && (
-        <div>
-          <Label>Etiqueta do WhatsApp</Label>
-          {labels.length === 0 ? (
-            <p className="text-xs text-neutral-500">
-              Nenhuma etiqueta sincronizada. Crie etiquetas no WhatsApp e abra o WhatsApp Web com a
-              extensão para sincronizar.
-            </p>
-          ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {labels.map((l) => {
-                const count = contacts.filter(
-                  (c) => !c.is_group && (c.label_ids || []).includes(l.wa_label_id),
-                ).length;
-                const on = labelId === l.id;
-                return (
-                  <button
-                    key={l.id}
-                    type="button"
-                    onClick={() => setLabelId(l.id)}
-                    className={
-                      "rounded-full border px-3 py-1.5 text-xs font-medium transition " +
-                      (on
-                        ? "border-neutral-800 bg-neutral-800 text-white"
-                        : "border-neutral-300 bg-white text-neutral-800 hover:border-neutral-500")
-                    }
-                  >
-                    {l.name} · {count}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
 
       {audience === "funis" && (
         <div className="grid grid-cols-2 gap-3">
