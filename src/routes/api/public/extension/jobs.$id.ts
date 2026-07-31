@@ -73,7 +73,11 @@ export const Route = createFileRoute("/api/public/extension/jobs/$id")({
             if (!action || typeof action !== "object") return false;
             const type = (action as { type?: unknown }).type;
             return type === "funnel_add" || type === "funnel_remove";
-          }) as Array<{ type: "funnel_add" | "funnel_remove"; funnel_id?: string; stage_id?: string }>;
+          }) as Array<{
+            type: "funnel_add" | "funnel_remove";
+            funnel_id?: string;
+            stage_id?: string;
+          }>;
           if (job?.customer_id && funnelActions.length) {
             const { data: customer } = await supabaseAdmin
               .from("customers")
@@ -98,7 +102,10 @@ export const Route = createFileRoute("/api/public/extension/jobs/$id")({
               const existing = cards?.[0];
               if (existing) {
                 if (existing.stage_id !== action.stage_id) {
-                  await supabaseAdmin.from("funnel_cards").update({ stage_id: action.stage_id }).eq("id", existing.id);
+                  await supabaseAdmin
+                    .from("funnel_cards")
+                    .update({ stage_id: action.stage_id })
+                    .eq("id", existing.id);
                 }
               } else {
                 await supabaseAdmin.from("funnel_cards").insert({

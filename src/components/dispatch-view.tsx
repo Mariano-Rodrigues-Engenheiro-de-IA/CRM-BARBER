@@ -81,7 +81,6 @@ export function DispatchCenter({
   const [sheetName, setSheetName] = useState("");
   const [sheetErr, setSheetErr] = useState<string | null>(null);
 
-
   const [name, setName] = useState("");
   const [variants, setVariants] = useState<string[]>([""]);
   const [actions, setActions] = useState<QuickReplyAction[]>([{ type: "text", text: "" }]);
@@ -111,15 +110,11 @@ export function DispatchCenter({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-
   const funnel = funnels.find((f) => f.id === funnelId) || null;
 
   const sendableSubs = useMemo(() => customers.filter((c) => isRealPhone(c.phone)), [customers]);
   const subsCount = (key: string) =>
     key === "all" ? sendableSubs.length : sendableSubs.filter((c) => c.status === key).length;
-
-
-
 
   const funnelTargets = useMemo(() => {
     if (!funnel) return [];
@@ -135,7 +130,6 @@ export function DispatchCenter({
       : audience === "planilha"
         ? sheetContacts.length
         : funnelTargets.length;
-
 
   function pickReply(id: string) {
     setReplyId(id);
@@ -182,7 +176,6 @@ export function DispatchCenter({
       return;
     }
 
-
     const base = {
       name: name.trim(),
       message_variants: cleaned.length ? cleaned : undefined,
@@ -196,7 +189,6 @@ export function DispatchCenter({
         : audience === "planilha"
           ? { ...base, scope: "funil", phone_targets: sheetContacts }
           : { ...base, scope: "funil", phone_targets: funnelTargets };
-
 
     const r = await api("/api/public/extension/campaigns", {
       method: "POST",
@@ -217,9 +209,11 @@ export function DispatchCenter({
     { key: "planilha", label: "Importar planilha" },
   ];
 
-
   return (
-    <form onSubmit={submit} className="mx-auto w-full max-w-xl space-y-5 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+    <form
+      onSubmit={submit}
+      className="mx-auto w-full max-w-xl space-y-5 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm"
+    >
       <h2 className="text-center text-lg font-semibold text-neutral-900">Novo disparo</h2>
 
       <div>
@@ -248,13 +242,14 @@ export function DispatchCenter({
           <Label>Kanban de assinantes</Label>
           <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
             {cols.map((c) => (
-              <option key={c.key} value={c.key}>{c.label} ({subsCount(c.key)})</option>
+              <option key={c.key} value={c.key}>
+                {c.label} ({subsCount(c.key)})
+              </option>
             ))}
             <option value="all">Todos ({subsCount("all")})</option>
           </select>
         </div>
       )}
-
 
       {audience === "funis" && (
         <div className="grid grid-cols-2 gap-3">
@@ -262,20 +257,31 @@ export function DispatchCenter({
             <Label>Funil</Label>
             <select
               value={funnelId}
-              onChange={(e) => { setFunnelId(e.target.value); setStageId(""); }}
+              onChange={(e) => {
+                setFunnelId(e.target.value);
+                setStageId("");
+              }}
               className={inputCls}
             >
               {funnels.map((f) => (
-                <option key={f.id} value={f.id}>{f.name}</option>
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
               ))}
             </select>
           </div>
           <div>
             <Label>Coluna</Label>
-            <select value={stageId} onChange={(e) => setStageId(e.target.value)} className={inputCls}>
+            <select
+              value={stageId}
+              onChange={(e) => setStageId(e.target.value)}
+              className={inputCls}
+            >
               <option value="">Todas as colunas</option>
               {(funnel?.stages ?? []).map((st) => (
-                <option key={st.id} value={st.id}>{st.name}</option>
+                <option key={st.id} value={st.id}>
+                  {st.name}
+                </option>
               ))}
             </select>
           </div>
@@ -322,7 +328,12 @@ export function DispatchCenter({
 
       <div>
         <Label>Nome do disparo</Label>
-        <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="Ex.: Cobrança julho" />
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className={inputCls}
+          placeholder="Ex.: Cobrança julho"
+        />
       </div>
 
       <div>
@@ -335,30 +346,47 @@ export function DispatchCenter({
           <span className="min-w-0 truncate">
             {replyId
               ? replies.find((reply) => reply.id === replyId)?.title
-              : actions.some((action) => action.type !== "text") || variants.some((variant) => variant.trim())
+              : actions.some((action) => action.type !== "text") ||
+                  variants.some((variant) => variant.trim())
                 ? `${actions.length} ação(ões) definida(s)`
                 : "Definir mensagem"}
           </span>
-          <span aria-hidden="true" className="text-neutral-400">›</span>
+          <span aria-hidden="true" className="text-neutral-400">
+            ›
+          </span>
         </button>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Ritmo mínimo (seg)</Label>
-          <input type="number" min={5} max={600} value={paceMin} onChange={(e) => setPaceMin(Number(e.target.value))} className={inputCls} />
+          <input
+            type="number"
+            min={5}
+            max={600}
+            value={paceMin}
+            onChange={(e) => setPaceMin(Number(e.target.value))}
+            className={inputCls}
+          />
         </div>
         <div>
           <Label>Ritmo máximo (seg)</Label>
-          <input type="number" min={5} max={600} value={paceMax} onChange={(e) => setPaceMax(Number(e.target.value))} className={inputCls} />
+          <input
+            type="number"
+            min={5}
+            max={600}
+            value={paceMax}
+            onChange={(e) => setPaceMax(Number(e.target.value))}
+            className={inputCls}
+          />
         </div>
       </div>
 
       <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
         <p className="text-sm font-semibold text-neutral-900">Termo de uso</p>
         <p className="mt-2 text-sm leading-relaxed text-neutral-700">
-          A pratica de envios em massa ou spam podem ocasionar o banimento do seu número por parte do
-          WhatsApp. Envie mensagens apenas para pessoas que gostariam de receber sua mensagem.
+          A pratica de envios em massa ou spam podem ocasionar o banimento do seu número por parte
+          do WhatsApp. Envie mensagens apenas para pessoas que gostariam de receber sua mensagem.
         </p>
         <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-neutral-900">
           <input
@@ -436,7 +464,9 @@ function MessageComposer({
   const fileInput = useRef<HTMLInputElement | null>(null);
 
   function updateAction(index: number, patch: Partial<QuickReplyAction>) {
-    onActions((list) => list.map((action, current) => current === index ? { ...action, ...patch } : action));
+    onActions((list) =>
+      list.map((action, current) => (current === index ? { ...action, ...patch } : action)),
+    );
   }
 
   function addAction(type: QuickReplyActionType) {
@@ -473,69 +503,173 @@ function MessageComposer({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4" onMouseDown={(event) => {
-      if (event.target === event.currentTarget) onClose();
-    }}>
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
       <div className="mt-8 w-full max-w-2xl rounded-xl border border-neutral-200 bg-white p-5 shadow-xl">
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-base font-semibold text-neutral-900">Mensagem do disparo</h3>
-          <button type="button" onClick={onClose} className="rounded p-1 text-neutral-500 hover:bg-neutral-100">✕</button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded p-1 text-neutral-500 hover:bg-neutral-100"
+          >
+            ✕
+          </button>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => { onMode("custom"); onClearReply(); }} className={`rounded-lg border px-3 py-2 text-sm font-semibold ${mode === "custom" ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300 text-neutral-700"}`}>Criar mensagem</button>
-          <button type="button" onClick={() => onMode("quick")} className={`rounded-lg border px-3 py-2 text-sm font-semibold ${mode === "quick" ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300 text-neutral-700"}`}>Resposta rápida</button>
+          <button
+            type="button"
+            onClick={() => {
+              onMode("custom");
+              onClearReply();
+            }}
+            className={`rounded-lg border px-3 py-2 text-sm font-semibold ${mode === "custom" ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300 text-neutral-700"}`}
+          >
+            Criar mensagem
+          </button>
+          <button
+            type="button"
+            onClick={() => onMode("quick")}
+            className={`rounded-lg border px-3 py-2 text-sm font-semibold ${mode === "quick" ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300 text-neutral-700"}`}
+          >
+            Resposta rápida
+          </button>
         </div>
 
         {mode === "quick" ? (
           <div className="mt-4 space-y-2">
             {replies.map((reply) => (
-              <button key={reply.id} type="button" onClick={() => onPickReply(reply.id)} className={`flex w-full items-center justify-between rounded-lg border px-3 py-3 text-left text-sm ${replyId === reply.id ? "border-neutral-900 bg-neutral-50 font-semibold" : "border-neutral-200"}`}>
-                <span>{reply.title}</span><span>{reply.actions.length} ação(ões)</span>
+              <button
+                key={reply.id}
+                type="button"
+                onClick={() => onPickReply(reply.id)}
+                className={`flex w-full items-center justify-between rounded-lg border px-3 py-3 text-left text-sm ${replyId === reply.id ? "border-neutral-900 bg-neutral-50 font-semibold" : "border-neutral-200"}`}
+              >
+                <span>{reply.title}</span>
+                <span>{reply.actions.length} ação(ões)</span>
               </button>
             ))}
-            {!replies.length && <p className="text-sm text-neutral-500">Nenhuma resposta rápida cadastrada.</p>}
+            {!replies.length && (
+              <p className="text-sm text-neutral-500">Nenhuma resposta rápida cadastrada.</p>
+            )}
           </div>
         ) : (
           <div className="mt-4 space-y-3">
             {actions.map((action, index) => (
-              <div key={`${action.type}-${index}`} className="rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+              <div
+                key={`${action.type}-${index}`}
+                className="rounded-lg border border-neutral-200 bg-neutral-50 p-3"
+              >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-semibold text-neutral-700">{index + 1}. {actionLabel(action.type)}</span>
-                  <button type="button" onClick={() => onActions((list) => list.filter((_, current) => current !== index))} className="text-xs text-red-600">Remover</button>
+                  <span className="text-xs font-semibold text-neutral-700">
+                    {index + 1}. {actionLabel(action.type)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onActions((list) => list.filter((_, current) => current !== index))
+                    }
+                    className="text-xs text-red-600"
+                  >
+                    Remover
+                  </button>
                 </div>
                 {action.type === "text" ? (
                   <div className="mt-2 space-y-2">
                     {variants.map((variant, variantIndex) => (
-                      <textarea key={variantIndex} value={variant} onChange={(event) => {
-                        const value = event.target.value;
-                        onVariants((list) => list.map((item, current) => current === variantIndex ? value : item));
-                        if (variantIndex === 0) updateAction(index, { text: value });
-                      }} rows={3} placeholder={`Variação ${variantIndex + 1}`} className={inputCls} />
+                      <textarea
+                        key={variantIndex}
+                        value={variant}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          onVariants((list) =>
+                            list.map((item, current) => (current === variantIndex ? value : item)),
+                          );
+                          if (variantIndex === 0) updateAction(index, { text: value });
+                        }}
+                        rows={3}
+                        placeholder={`Variação ${variantIndex + 1}`}
+                        className={inputCls}
+                      />
                     ))}
-                    {variants.length < 3 && <button type="button" onClick={() => onVariants((list) => [...list, ""])} className="text-xs font-medium text-neutral-700">+ Adicionar variação</button>}
+                    {variants.length < 3 && (
+                      <button
+                        type="button"
+                        onClick={() => onVariants((list) => [...list, ""])}
+                        className="text-xs font-medium text-neutral-700"
+                      >
+                        + Adicionar variação
+                      </button>
+                    )}
                   </div>
                 ) : action.type === "funnel_add" || action.type === "funnel_remove" ? (
                   <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                    <select value={action.funnel_id ?? ""} onChange={(event) => updateAction(index, { funnel_id: event.target.value || undefined, stage_id: undefined })} className={inputCls}>
+                    <select
+                      value={action.funnel_id ?? ""}
+                      onChange={(event) =>
+                        updateAction(index, {
+                          funnel_id: event.target.value || undefined,
+                          stage_id: undefined,
+                        })
+                      }
+                      className={inputCls}
+                    >
                       <option value="">Escolha o funil</option>
-                      {funnels.filter((funnel) => funnel.mode !== "label").map((funnel) => <option key={funnel.id} value={funnel.id}>{funnel.name}</option>)}
+                      {funnels
+                        .filter((funnel) => funnel.mode !== "label")
+                        .map((funnel) => (
+                          <option key={funnel.id} value={funnel.id}>
+                            {funnel.name}
+                          </option>
+                        ))}
                     </select>
-                    {action.type === "funnel_add" && <select value={action.stage_id ?? ""} onChange={(event) => updateAction(index, { stage_id: event.target.value || undefined })} className={inputCls}>
-                      <option value="">Escolha a coluna</option>
-                      {(funnels.find((funnel) => funnel.id === action.funnel_id)?.stages ?? []).map((stage) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}
-                    </select>}
+                    {action.type === "funnel_add" && (
+                      <select
+                        value={action.stage_id ?? ""}
+                        onChange={(event) =>
+                          updateAction(index, { stage_id: event.target.value || undefined })
+                        }
+                        className={inputCls}
+                      >
+                        <option value="">Escolha a coluna</option>
+                        {(
+                          funnels.find((funnel) => funnel.id === action.funnel_id)?.stages ?? []
+                        ).map((stage) => (
+                          <option key={stage.id} value={stage.id}>
+                            {stage.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 ) : (
                   <div className="mt-2 space-y-2">
-                    <button type="button" disabled={busy} onClick={() => {
-                      uploadIndex.current = index;
-                      if (fileInput.current) fileInput.current.accept = acceptedFiles(action.type);
-                      fileInput.current?.click();
-                    }} className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold disabled:opacity-50">
-                      {action.path ? action.filename || "Trocar arquivo" : `Escolher ${actionLabel(action.type).toLowerCase()}`}
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        uploadIndex.current = index;
+                        if (fileInput.current)
+                          fileInput.current.accept = acceptedFiles(action.type);
+                        fileInput.current?.click();
+                      }}
+                      className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold disabled:opacity-50"
+                    >
+                      {action.path
+                        ? action.filename || "Trocar arquivo"
+                        : `Escolher ${actionLabel(action.type).toLowerCase()}`}
                     </button>
-                    <input value={action.caption ?? ""} onChange={(event) => updateAction(index, { caption: event.target.value })} placeholder="Legenda (opcional)" className={inputCls} />
+                    <input
+                      value={action.caption ?? ""}
+                      onChange={(event) => updateAction(index, { caption: event.target.value })}
+                      placeholder="Legenda (opcional)"
+                      className={inputCls}
+                    />
                   </div>
                 )}
               </div>
@@ -543,19 +677,37 @@ function MessageComposer({
 
             <div className="flex flex-wrap gap-2">
               {[...QUICK_REPLY_ACTION_TYPES, ...QUICK_REPLY_FUNNEL_TYPES].map((type) => (
-                <button key={type} type="button" onClick={() => addAction(type)} className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-100">+ {actionLabel(type)}</button>
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => addAction(type)}
+                  className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-100"
+                >
+                  + {actionLabel(type)}
+                </button>
               ))}
             </div>
           </div>
         )}
 
-        <input ref={fileInput} type="file" className="hidden" onChange={(event) => {
-          const file = event.target.files?.[0];
-          if (file) void upload(file);
-        }} />
+        <input
+          ref={fileInput}
+          type="file"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) void upload(file);
+          }}
+        />
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
         <div className="mt-5 flex justify-end">
-          <button type="button" onClick={onClose} className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">Concluir</button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-white"
+          >
+            Concluir
+          </button>
         </div>
       </div>
     </div>

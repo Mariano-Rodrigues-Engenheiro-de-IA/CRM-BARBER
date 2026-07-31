@@ -58,9 +58,12 @@ export const Route = createFileRoute("/api/public/extension/wa/sync")({
             .from("wa_labels")
             .delete()
             .eq("barbershop_id", shop)
-            .not("wa_label_id", "in", `(${parsed.data.labels.map((l) => `"${l.id.replace(/"/g, "")}"`).join(",")})`);
+            .not(
+              "wa_label_id",
+              "in",
+              `(${parsed.data.labels.map((l) => `"${l.id.replace(/"/g, "")}"`).join(",")})`,
+            );
         }
-
 
         if (parsed.data.contacts.length) {
           // Lotes de 500 para não estourar o limite do PostgREST.

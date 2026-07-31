@@ -78,7 +78,9 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
         // passed; jobs without expires_at are treated as non-expiring.
         let pickQ = supabaseAdmin
           .from("message_jobs")
-          .select("id, customer_id, rendered_body, message_actions, scheduled_for, attempts, expires_at, campaign_id")
+          .select(
+            "id, customer_id, rendered_body, message_actions, scheduled_for, attempts, expires_at, campaign_id",
+          )
           .eq("barbershop_id", auth.token.barbershop_id)
           .eq("status", "pending")
           .lte("scheduled_for", nowIso);
