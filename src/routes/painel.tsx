@@ -353,14 +353,28 @@ function Painel() {
     setBrand(next);
   }
 
-  const NAV_TOP: Array<{ key: Section; label: string; icon: React.ReactNode }> = [
-    { key: "assinantes", label: "Gestão de Assinaturas", icon: <IconUsers /> },
+  const NAV_TOP: Array<{
+    key: Section;
+    label: string;
+    icon: React.ReactNode;
+    children?: Array<{ key: AssinTab; label: string }>;
+  }> = [
+    {
+      key: "assinantes",
+      label: "Assinaturas",
+      icon: <IconUsers />,
+      children: [
+        { key: "visao", label: "Visão geral" },
+        { key: "assinantes", label: "Assinantes" },
+      ],
+    },
     { key: "funis", label: "Funis de Vendas", icon: <IconChart /> },
+    { key: "disparo", label: "Disparo", icon: <IconSend /> },
     { key: "respostas", label: "Respostas rápidas", icon: <IconChat /> },
     { key: "equipe", label: "Equipe", icon: <IconTrophy /> },
 
     { key: "configuracoes", label: "Configurações", icon: <IconGear /> },
-    { key: "conexao", label: "Conexão", icon: <IconUsers /> },
+    { key: "conexao", label: "Conexão", icon: <IconPlug /> },
   ];
 
   const navRowCls = (active: boolean) =>
@@ -392,14 +406,41 @@ function Painel() {
           {NAV_TOP.map((n) => {
             const active = section === n.key;
             return (
-              <button key={n.key} onClick={() => setSection(n.key)} className={navRowCls(active)}>
-                <span className="flex h-5 w-5 items-center justify-center">{n.icon}</span>
-                <span className="flex-1 truncate">{n.label}</span>
-                <IconChevron className={active ? "text-neutral-900" : "text-neutral-400 group-hover:text-neutral-700"} />
-              </button>
+              <div key={n.key}>
+                <button onClick={() => setSection(n.key)} className={navRowCls(active)}>
+                  <span className="flex h-5 w-5 items-center justify-center">{n.icon}</span>
+                  <span className="flex-1 truncate">{n.label}</span>
+                  <IconChevron
+                    className={
+                      (active && n.children ? "rotate-90 " : "") +
+                      (active ? "text-neutral-900" : "text-neutral-400 group-hover:text-neutral-700")
+                    }
+                  />
+                </button>
+                {/* Sanfona: sub-abas só aparecem com a seção aberta */}
+                {active && n.children && (
+                  <div className="mt-1 space-y-0.5 border-l border-neutral-200 pl-3 ml-4">
+                    {n.children.map((sub) => (
+                      <button
+                        key={sub.key}
+                        onClick={() => setAssinTab(sub.key)}
+                        className={
+                          "block w-full rounded-lg px-3 py-1.5 text-left text-[13px] transition " +
+                          (assinTab === sub.key
+                            ? "bg-neutral-900 font-semibold text-yellow-400"
+                            : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900")
+                        }
+                      >
+                        {sub.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>
+
 
       </aside>
 
