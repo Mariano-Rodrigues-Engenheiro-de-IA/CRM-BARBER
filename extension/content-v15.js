@@ -141,7 +141,9 @@
 
   function startSync() {
     if (syncTimer) return;
-    syncWaData();
+    // A primeira sincronização varre etiquetas e conversas — pesado logo no
+    // boot. Adiamos 25s para o WhatsApp abrir as conversas primeiro.
+    setTimeout(() => syncWaData(), 25000);
     syncTimer = setInterval(() => syncWaData(), 10 * 60 * 1000);
   }
 
