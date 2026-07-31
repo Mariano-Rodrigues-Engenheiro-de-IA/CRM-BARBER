@@ -506,7 +506,9 @@
     if (!topbarRef) return;
 
     if (!status.paired) {
-      topbarRef.innerHTML = `<span class="crm-topbar-hint">CRM Barber · conectando ao seu WhatsApp…</span>`;
+      topbarRef.innerHTML = `<span class="crm-topbar-hint">${escapeHtml(
+        pairHint || "CRM Barber · conectando ao seu WhatsApp…",
+      )}</span>`;
       return;
     }
 
