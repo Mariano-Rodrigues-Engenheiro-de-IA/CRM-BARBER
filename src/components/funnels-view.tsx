@@ -89,7 +89,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       });
       created = created || Boolean(r?.ok);
     }
-    if (!list.some((f) => f.mode === "label") && ls.length) {
+    if (!list.some((f) => f.mode === "label")) {
       const r = await api("/api/public/extension/funnels", {
         method: "POST",
         body: JSON.stringify({
@@ -99,6 +99,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
         }),
       });
       created = created || Boolean(r?.ok);
+
       // Cada etiqueta vira uma coluna já preenchida com os contatos dela.
       const funnel = r?.ok ? (r.funnel as Funnel) : null;
       if (funnel?.stages?.length) {
