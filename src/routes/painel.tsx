@@ -75,7 +75,9 @@ type Campaign = {
 };
 
 
-const COLUMNS: Array<{ key: string; label: string }> = [
+type Col = { key: string; label: string };
+
+const COLUMNS: Col[] = [
   { key: "active", label: "Ativos" },
   { key: "due_soon", label: "A vencer" },
   { key: "overdue", label: "Inadimplentes" },
@@ -83,11 +85,30 @@ const COLUMNS: Array<{ key: string; label: string }> = [
   { key: "canceled", label: "Cancelados" },
 ];
 
-/** Colunas visíveis conforme o sistema de assinatura escolhido. */
-function visibleColumns(shopId: string) {
+// Kanbans da barbearia: começam nos padrões do sistema escolhido e, a partir
+// do momento em que o usuário cria/exclui alguma coluna, passam a viver aqui.
+function colsKey(shopId: string) { return `crm_cols_${shopId || "default"}`; }
+
+function defaultColumns(shopId: string): Col[] {
   const allowed = statusesForSystem(readSystem(shopId));
   return allowed ? COLUMNS.filter((c) => allowed.includes(c.key)) : COLUMNS;
 }
+
+/** Colunas visíveis: customizadas pelo usuário ou padrão do sistema. */
+function visibleColumns(shopId: string): Col[] {
+  if (typeof window === "undefined") return defaultColumns(shopId);
+  try {
+    const raw = localStorage.getItem(colsKey(shopId));
+    const parsed = raw ? (JSON.parse(raw) as Col[]) : null;
+    if (Array.isArray(parsed) && parsed.length) return parsed;
+  } catch { /* ignora json inválido */ }
+  return defaultColumns(shopId);
+}
+
+function writeColumns(shopId: string, cols: Col[]) {
+  localStorage.setItem(colsKey(shopId), JSON.stringify(cols));
+}
+
 
 const TOKEN_KEY = "crm_ext_token_v1";
 const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
@@ -264,7 +285,7 @@ function AddMenu({ onManual, onSheet }: { onManual: () => void; onSheet: () => v
       <button
         onClick={() => setOpen((v) => !v)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
-        className="rounded-lg bg-neutral-900 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-yellow-400 hover:bg-neutral-800"
+        className="rounded-lg bg-neutral-800 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white hover:bg-neutral-700"
       >
         Adicionar
       </button>
@@ -328,6 +349,8 @@ function Painel() {
   })();
   const [section, setSection] = useState<Section>(initialSection);
   const [assinTab, setAssinTab] = useState<AssinTab>("assinantes");
+  const [assinOpen, setAssinOpen] = useState(true);
+
   const [disparoTab, setDisparoTab] = useState<"novo" | "campanhas">("novo");
   // Host do cabeçalho dos funis: o seletor de funil + "novo funil" moram na
   // barra superior, mas o estado deles vive dentro do FunnelsView (portal).
@@ -429,7 +452,7 @@ function Painel() {
   const navRowCls = (active: boolean) =>
     "group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition " +
     (active
-      ? "bg-yellow-400 text-neutral-900"
+      ? "bg-neutral-900 text-white"
       : "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950");
 
   return (
@@ -454,29 +477,41 @@ function Painel() {
         <nav className="flex-1 space-y-1 px-3">
           {NAV_TOP.map((n) => {
             const active = section === n.key;
+            const open = Boolean(n.children) && assinOpen;
             return (
               <div key={n.key}>
-                <button onClick={() => setSection(n.key)} className={navRowCls(active)}>
+                <button
+                  onClick={() => {
+                    // Sanfona: no item com sub-abas, o clique alterna a expansão
+                    // (e leva pra seção quando ela ainda não está ativa).
+                    if (n.children) {
+                      setAssinOpen((v) => (active ? !v : true));
+                      if (!active) setSection(n.key);
+                      return;
+                    }
+                    setSection(n.key);
+                  }}
+                  className={navRowCls(active)}
+                >
                   <span className="flex h-5 w-5 items-center justify-center">{n.icon}</span>
                   <span className="flex-1 truncate">{n.label}</span>
                   <IconChevron
                     className={
-                      (active && n.children ? "rotate-90 " : "") +
-                      (active ? "text-neutral-900" : "text-neutral-400 group-hover:text-neutral-700")
+                      (open ? "rotate-90 " : "") +
+                      (active ? "text-white/70" : "text-neutral-400 group-hover:text-neutral-700")
                     }
                   />
                 </button>
-                {/* Sanfona: sub-abas só aparecem com a seção aberta */}
-                {active && n.children && (
+                {open && n.children && (
                   <div className="mt-1 space-y-0.5 border-l border-neutral-200 pl-3 ml-4">
                     {n.children.map((sub) => (
                       <button
                         key={sub.key}
-                        onClick={() => setAssinTab(sub.key)}
+                        onClick={() => { setSection(n.key); setAssinTab(sub.key); }}
                         className={
                           "block w-full rounded-lg px-3 py-1.5 text-left text-[13px] transition " +
-                          (assinTab === sub.key
-                            ? "bg-neutral-900 font-semibold text-yellow-400"
+                          (active && assinTab === sub.key
+                            ? "bg-neutral-100 font-semibold text-neutral-900"
                             : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900")
                         }
                       >
@@ -487,6 +522,7 @@ function Painel() {
                 )}
               </div>
             );
+
           })}
         </nav>
 
@@ -503,7 +539,7 @@ function Painel() {
               onClick={() => setSection(n.key)}
               className={
                 "rounded-md px-2.5 py-1 text-[11px] font-medium " +
-                (section === n.key ? "bg-yellow-400 text-neutral-900" : "text-neutral-600")
+                (section === n.key ? "bg-neutral-900 text-white" : "text-neutral-600")
               }
             >
               {n.label}
@@ -522,7 +558,7 @@ function Painel() {
             <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
               <div className="flex items-center gap-3 px-5 py-2.5">
                 <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
-                  Assinaturas — {assinTab === "visao" ? "Visão geral" : "Assinantes"}
+                  {assinTab === "visao" ? "Visão geral" : "Assinantes"}
                 </h1>
               </div>
             </header>
@@ -785,7 +821,7 @@ function WhatsAppActionModal({
                 <button
                   onClick={savePhone}
                   disabled={busy || !phoneDraft.trim()}
-                  className="whitespace-nowrap rounded-lg bg-neutral-900 px-3 py-2 text-xs font-semibold text-yellow-400 disabled:opacity-50"
+                  className="whitespace-nowrap rounded-lg bg-neutral-800 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
                 >
                   Salvar
                 </button>
@@ -830,7 +866,7 @@ function WhatsAppActionModal({
           <button
             onClick={() => run(false)}
             disabled={busy || (!selected && !text.trim())}
-            className="flex-1 rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
+            className="flex-1 rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
           >
             {busy ? "Enviando..." : "Enviar agora"}
           </button>
@@ -873,7 +909,41 @@ function KanbanView({
     setPlans(readPlans(shopId));
   }, [shopId]);
 
-  const cols = useMemo(() => visibleColumns(shopId), [shopId, showImport]);
+  // Kanbans são flexíveis: o usuário cria e exclui colunas à vontade.
+  const [cols, setCols] = useState<Col[]>(() => visibleColumns(shopId));
+  const [newCol, setNewCol] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCols(visibleColumns(shopId));
+  }, [shopId, showImport]);
+
+  function persistCols(next: Col[]) {
+    setCols(next);
+    writeColumns(shopId, next);
+  }
+
+  function addColumn(label: string) {
+    const name = label.trim();
+    if (!name) return;
+    const key = `custom_${name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`;
+    if (cols.some((c) => c.key === key)) return;
+    persistCols([...cols, { key, label: name }]);
+  }
+
+  async function removeColumn(col: Col) {
+    if ((byStatus[col.key]?.length ?? 0) > 0) {
+      toast.error("Mova os contatos desta coluna antes de excluí-la.");
+      return;
+    }
+    const ok = await confirm({
+      title: `Excluir o kanban "${col.label}"?`,
+      confirmLabel: "Excluir",
+      destructive: true,
+    });
+    if (!ok) return;
+    persistCols(cols.filter((c) => c.key !== col.key));
+  }
+
 
   const effective = useMemo(
     () => customers.map((c) => (pending[c.id] ? { ...c, status: pending[c.id] } : c)),
@@ -920,7 +990,38 @@ function KanbanView({
     <div className="space-y-4">
       {dialog}
 
-      <div className="flex items-center justify-end">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {newCol === null ? (
+          <button
+            onClick={() => setNewCol("")}
+            className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-wide text-neutral-700 transition hover:border-neutral-500"
+          >
+            Adicionar kanban
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <input
+              autoFocus
+              value={newCol}
+              onChange={(e) => setNewCol(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { addColumn(newCol); setNewCol(null); }
+                if (e.key === "Escape") setNewCol(null);
+              }}
+              placeholder="Nome do kanban"
+              className={inputCls + " w-48"}
+            />
+            <button
+              onClick={() => { addColumn(newCol); setNewCol(null); }}
+              className="rounded-lg bg-neutral-800 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white hover:bg-neutral-700"
+            >
+              Criar
+            </button>
+            <button onClick={() => setNewCol(null)} className="text-xs text-neutral-500 hover:text-neutral-900">
+              cancelar
+            </button>
+          </div>
+        )}
         <AddMenu onSheet={() => setShowImport(true)} onManual={() => setShowAdd(true)} />
       </div>
 
@@ -942,14 +1043,24 @@ function KanbanView({
             }}
             className={
               "rounded-xl border bg-white shadow-sm transition " +
-              (overCol === col.key ? "border-yellow-400 ring-2 ring-yellow-300/60" : "border-neutral-200")
+              (overCol === col.key ? "border-neutral-400 ring-2 ring-neutral-300/60" : "border-neutral-200")
             }
           >
             <div className="border-b border-neutral-200 px-4 py-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-700">{col.label}</h3>
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="truncate text-xs font-semibold uppercase tracking-wider text-neutral-700">{col.label}</h3>
+                <button
+                  onClick={() => void removeColumn(col)}
+                  title="Excluir kanban"
+                  className="shrink-0 rounded p-0.5 text-neutral-300 transition hover:text-red-600"
+                >
+                  ✕
+                </button>
+              </div>
               <p className="text-xs text-neutral-500">{byStatus[col.key]?.length ?? 0} contato(s)</p>
               <p className="mt-1 text-sm font-semibold text-neutral-900">{formatBRL(colTotal(col.key))}</p>
             </div>
+
             <div className="max-h-[calc(100vh-330px)] min-h-40 space-y-2 overflow-y-auto p-3">
               {(byStatus[col.key] ?? []).map((c) => {
                 const plan = planFromTags(c.tags);
@@ -1225,7 +1336,7 @@ function CustomerDrawer({
             <button
               onClick={schedule}
               disabled={busy || !msg.trim()}
-              className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
+              className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
             >
               {busy ? "Enviando..." : when ? "Agendar mensagem" : "Enviar mensagem"}
             </button>
@@ -1279,7 +1390,7 @@ function AddModal({ token, cols, onClose }: { token: string; cols: Array<{ key: 
         {err && <p className="text-sm text-red-500">{err}</p>}
         <button
           disabled={busy}
-          className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
+          className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
         >
           {busy ? "Salvando..." : "Adicionar"}
         </button>
@@ -1382,7 +1493,7 @@ function ImportModal({
           </p>
           <button
             onClick={onGoSettings}
-            className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
+            className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700"
           >
             Ir para Configurações
           </button>
@@ -1425,7 +1536,7 @@ function ImportModal({
         {result && <p className="whitespace-pre-line text-sm text-emerald-600">{result}</p>}
         <button
           disabled={busy || !file}
-          className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
+          className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
         >
           {busy ? "Importando..." : "Importar e organizar"}
         </button>
@@ -1542,7 +1653,7 @@ function CampaignsView({ token, scope }: { token: string; scope?: "assinaturas" 
                       "rounded-lg px-3 py-1.5 text-sm font-semibold " +
                       (isRunning
                         ? "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
-                        : "bg-neutral-900 text-yellow-400 hover:bg-neutral-800")
+                        : "bg-neutral-800 text-white hover:bg-neutral-700")
                     }
                   >
                     {isRunning ? "Pausar" : "Retomar"}
@@ -1658,28 +1769,40 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-5">
-      {/* Meta do mês — gamificação */}
-      <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-neutral-500">Assinantes ativos</p>
-            <p className="text-3xl font-bold text-neutral-950">{totalSubs}</p>
+      {/* Meta do mês — o número de assinantes é o herói do card */}
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+        <div className="flex items-start justify-between gap-6">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
+              Assinantes ativos
+            </p>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-6xl font-bold leading-none tracking-tight text-neutral-950">{totalSubs}</span>
+              {goal > 0 && <span className="text-xl font-medium text-neutral-400">/ {goal}</span>}
+            </div>
+            <p className="mt-2 text-sm font-medium text-neutral-600">
+              {goal > 0
+                ? missing > 0
+                  ? `Faltam ${missing} para bater a meta`
+                  : "Meta do mês batida 🎉"
+                : "Defina uma meta do mês abaixo"}
+            </p>
           </div>
-          <div className="text-right">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-neutral-500">Receita recorrente</p>
-            <p className="text-3xl font-bold text-neutral-950">{formatBRL(mrr)}</p>
+          <div className="shrink-0 text-right">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-neutral-400">
+              Receita recorrente
+            </p>
+            <p className="text-base font-semibold text-neutral-600">{formatBRL(mrr)}</p>
           </div>
         </div>
-        <div className="mt-4">
-          <div className="mb-1.5 flex items-center justify-between text-xs text-neutral-500">
-            <span>Meta: {goal || "—"}</span>
-            <span>{goal > 0 ? (missing > 0 ? `Faltam ${missing}` : "Meta batida 🎉") : "Defina uma meta abaixo"}</span>
+        <div className="mt-5">
+          <div className="h-3 w-full overflow-hidden rounded-full bg-neutral-100">
+            <div className="h-full rounded-full bg-yellow-400 transition-all duration-500" style={{ width: `${pct}%` }} />
           </div>
-          <div className="h-2.5 w-full overflow-hidden rounded-full bg-neutral-100">
-            <div className="h-full rounded-full bg-yellow-400 transition-all" style={{ width: `${pct}%` }} />
-          </div>
+          <p className="mt-1.5 text-right text-xs font-semibold text-neutral-500">{pct}%</p>
         </div>
       </div>
+
 
       <div className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
 
@@ -1695,7 +1818,7 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
                 className={
                   "rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition " +
                   (system === s.id
-                    ? "border-neutral-900 bg-neutral-900 text-yellow-400"
+                    ? "border-neutral-800 bg-neutral-800 text-white"
                     : "border-neutral-200 bg-white text-neutral-800 hover:border-neutral-400")
                 }
               >
@@ -1754,7 +1877,7 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
             <button
               type="button"
               onClick={addPlan}
-              className="shrink-0 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
+              className="shrink-0 rounded-lg bg-neutral-800 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-700"
             >
               Adicionar
             </button>
@@ -1776,7 +1899,7 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
 
         <button
           onClick={() => { writeGoal(shopId, goal); persistPlans(plans); }}
-          className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
+          className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700"
         >
           Salvar
         </button>
@@ -1827,7 +1950,7 @@ function SettingsView({
 
       <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-6">
         <div className="flex items-center gap-4">
-          <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl bg-neutral-900 text-2xl font-semibold text-yellow-400 shadow-sm">
+          <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl bg-neutral-800 text-2xl font-semibold text-white shadow-sm">
             {logo ? <img src={logo} alt="logo" className="h-full w-full object-cover" /> : initial}
           </div>
           <div className="flex flex-col gap-2">
@@ -1874,7 +1997,7 @@ function SettingsView({
         <div className="flex items-center gap-3">
           <button
             onClick={save}
-            className="rounded-lg bg-neutral-900 px-5 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
+            className="rounded-lg bg-neutral-800 px-5 py-2 text-sm font-semibold text-white hover:bg-neutral-700"
           >
             Salvar
           </button>

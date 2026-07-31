@@ -209,7 +209,7 @@ export function DispatchCenter({
               className={
                 "rounded-xl border px-3 py-2.5 text-sm font-semibold transition " +
                 (audience === o.key
-                  ? "border-neutral-900 bg-neutral-900 text-yellow-400"
+                  ? "border-neutral-800 bg-neutral-800 text-white"
                   : "border-neutral-300 bg-white text-neutral-800 hover:border-neutral-500")
               }
             >
@@ -254,7 +254,7 @@ export function DispatchCenter({
                     className={
                       "rounded-full border px-3 py-1.5 text-xs font-medium transition " +
                       (on
-                        ? "border-neutral-900 bg-neutral-900 text-yellow-400"
+                        ? "border-neutral-800 bg-neutral-800 text-white"
                         : "border-neutral-300 bg-white text-neutral-800 hover:border-neutral-500")
                     }
                   >
@@ -380,7 +380,7 @@ export function DispatchCenter({
 
       <button
         disabled={busy || !accepted}
-        className="w-full rounded-lg bg-neutral-900 px-4 py-3 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
+        className="w-full rounded-lg bg-neutral-800 px-4 py-3 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
       >
         {busy ? "Criando..." : "Disparar"}
       </button>

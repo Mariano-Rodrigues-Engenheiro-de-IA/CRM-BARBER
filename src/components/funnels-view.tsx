@@ -24,12 +24,15 @@ const inputCls =
   "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-900";
 
 
+/** Cache entre navegações: voltar pra aba Funis não deve piscar esqueleto. */
+let funnelsCache: { funnels: Funnel[]; labels: WaLabel[]; contacts: WaContact[] } | null = null;
+
 export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTMLElement | null }) {
-  const [funnels, setFunnels] = useState<Funnel[]>([]);
-  const [labels, setLabels] = useState<WaLabel[]>([]);
-  const [contacts, setContacts] = useState<WaContact[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [funnels, setFunnels] = useState<Funnel[]>(() => funnelsCache?.funnels ?? []);
+  const [labels, setLabels] = useState<WaLabel[]>(() => funnelsCache?.labels ?? []);
+  const [contacts, setContacts] = useState<WaContact[]>(() => funnelsCache?.contacts ?? []);
+  const [activeId, setActiveId] = useState<string | null>(() => funnelsCache?.funnels[0]?.id ?? null);
+  const [loading, setLoading] = useState(!funnelsCache);
   const [err, setErr] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [detail, setDetail] = useState<FunnelCard | null>(null);
@@ -39,30 +42,99 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
   const dragged = useRef<FunnelCard | null>(null);
   const draggedContact = useRef<WaContact | null>(null);
   const pendingContacts = useRef<Set<string>>(new Set());
+  const ensuredDefaults = useRef(false);
 
   async function reload() {
     const [f, w] = await Promise.all([
       api("/api/public/extension/funnels"),
       api("/api/public/extension/wa/data"),
     ]);
+    let list: Funnel[] = funnelsCache?.funnels ?? [];
     if (f?.ok) {
-      const list = (f.funnels as Funnel[]) || [];
+      list = (f.funnels as Funnel[]) || [];
       setFunnels(list);
       setActiveId((cur) => (cur && list.some((x) => x.id === cur) ? cur : list[0]?.id ?? null));
     } else {
       setErr((f?.error as string) || "Erro ao carregar funis");
     }
+    let ls = funnelsCache?.labels ?? [];
+    let cs = funnelsCache?.contacts ?? [];
     if (w?.ok) {
-      setLabels((w.labels as WaLabel[]) || []);
-      setContacts((w.contacts as WaContact[]) || []);
+      ls = (w.labels as WaLabel[]) || [];
+      cs = (w.contacts as WaContact[]) || [];
+      setLabels(ls);
+      setContacts(cs);
     }
+    funnelsCache = { funnels: list, labels: ls, contacts: cs };
     setLoading(false);
+    return { list, labels: ls };
+  }
+
+  /**
+   * "Funil principal" e "Etiquetas / Listas" são fixos: nascem sozinhos e
+   * não podem ser excluídos. O botão do cabeçalho só cria funis personalizados.
+   */
+  async function ensureDefaults(list: Funnel[], ls: WaLabel[]) {
+    if (ensuredDefaults.current) return;
+    ensuredDefaults.current = true;
+    let created = false;
+    if (!list.some((f) => f.mode === "tab")) {
+      const r = await api("/api/public/extension/funnels", {
+        method: "POST",
+        body: JSON.stringify({
+          name: "Funil principal",
+          mode: "tab",
+          stages: ["Novo lead", "Em conversa", "Negociando", "Fechado"],
+        }),
+      });
+      created = created || Boolean(r?.ok);
+    }
+    if (!list.some((f) => f.mode === "label") && ls.length) {
+      const r = await api("/api/public/extension/funnels", {
+        method: "POST",
+        body: JSON.stringify({
+          name: "Etiquetas / Listas",
+          mode: "label",
+          stages: ls.map((l) => l.name),
+        }),
+      });
+      created = created || Boolean(r?.ok);
+      // Cada etiqueta vira uma coluna já preenchida com os contatos dela.
+      const funnel = r?.ok ? (r.funnel as Funnel) : null;
+      if (funnel?.stages?.length) {
+        for (let i = 0; i < ls.length; i++) {
+          const stage = funnel.stages[i];
+          const label = ls[i];
+          if (!stage || !label) continue;
+          const inLabel = (funnelsCache?.contacts ?? [])
+            .filter((c) => (c.label_ids || []).includes(label.wa_label_id))
+            .slice(0, 100);
+          for (const c of inLabel) {
+            await api("/api/public/extension/funnel-cards", {
+              method: "POST",
+              body: JSON.stringify({
+                funnel_id: funnel.id,
+                stage_id: stage.id,
+                title: c.name || c.phone || c.wa_id,
+                phone: c.phone ?? undefined,
+                wa_contact_id: c.id,
+              }),
+            });
+          }
+        }
+      }
+    }
+
+    if (created) await reload();
   }
 
   useEffect(() => {
-    void reload();
+    void reload().then((r) => {
+      if (r) void ensureDefaults(r.list, r.labels);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   const active = funnels.find((f) => f.id === activeId) || null;
 
@@ -240,10 +312,11 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       />
       <button
         onClick={() => setCreating(true)}
-        className="shrink-0 rounded-lg bg-neutral-900 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-yellow-400 transition hover:bg-neutral-800"
+        className="shrink-0 rounded-lg bg-neutral-800 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-white transition hover:bg-neutral-700"
       >
-        Criar
+        Novo funil
       </button>
+
     </>
   );
 
@@ -462,24 +535,8 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
 
       {creating && (
         <NewFunnelModal
-          labels={labels}
-          tabFunnel={funnels.find((f) => f.mode === "tab") ?? null}
           onClose={() => setCreating(false)}
-          onAddTabStages={async (funnel, names) => {
-            setCreating(false);
-            const stages = [
-              ...funnel.stages.map((s) => ({ id: s.id, name: s.name, sort_order: s.sort_order })),
-              ...names.map((n, i) => ({ name: n, sort_order: funnel.stages.length + i })),
-            ];
-            const r = await api(`/api/public/extension/funnels/${funnel.id}`, {
-              method: "PATCH",
-              body: JSON.stringify({ stages }),
-            });
-            if (!r?.ok) setErr((r?.error as string) || "Erro ao adicionar etapas");
-            await reload();
-            setActiveId(funnel.id);
-          }}
-          onCreate={async (body, labelStages) => {
+          onCreate={async (body) => {
             const r = await api("/api/public/extension/funnels", {
               method: "POST",
               body: JSON.stringify(body),
@@ -490,36 +547,12 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
             }
             setCreating(false);
             const created = r.funnel as Funnel;
-
-            // Etiquetas: cada etiqueta vira uma etapa já preenchida com seus contatos.
-            if (labelStages?.length && created?.stages?.length) {
-              for (let i = 0; i < labelStages.length; i++) {
-                const stage = created.stages[i];
-                const label = labelStages[i];
-                if (!stage || !label) continue;
-                const list = contacts
-                  .filter((c) => (c.label_ids || []).includes(label.wa_label_id))
-                  .slice(0, 100);
-                for (const c of list) {
-                  await api("/api/public/extension/funnel-cards", {
-                    method: "POST",
-                    body: JSON.stringify({
-                      funnel_id: created.id,
-                      stage_id: stage.id,
-                      title: c.name || c.phone || c.wa_id,
-                      phone: c.phone ?? undefined,
-                      wa_contact_id: c.id,
-                    }),
-                  });
-                }
-              }
-            }
-
             await reload();
             setActiveId(created?.id ?? null);
           }}
         />
       )}
+
 
     </div>
   );
@@ -645,7 +678,8 @@ function FunnelPicker({
           <path d="m6 9 6 6 6-6" />
         </svg>
       </button>
-      {active && (
+      {/* Funis fixos (Funil principal e Etiquetas) não podem ser renomeados nem excluídos. */}
+      {active && active.mode === "manual" && (
         <DotsMenu
           items={[
             { label: "Renomear", onClick: () => setRenaming(true) },
@@ -653,6 +687,7 @@ function FunnelPicker({
           ]}
         />
       )}
+
       {open && funnels.length > 0 && (
         <div className="absolute left-0 top-7 z-30 w-56 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 shadow-lg">
           {funnels.map((f) => (
@@ -869,7 +904,7 @@ function CardDrawer({
             <button
               onClick={schedule}
               disabled={busy || !msg.trim()}
-              className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
+              className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
             >
               {busy ? "Enviando..." : when ? "Agendar mensagem" : "Enviar mensagem"}
             </button>
@@ -922,7 +957,7 @@ function StageListEditor({
         />
         <button
           onClick={add}
-          className="shrink-0 rounded-lg bg-neutral-900 px-3 py-2 text-sm font-semibold text-yellow-400"
+          className="shrink-0 rounded-lg bg-neutral-800 px-3 py-2 text-sm font-semibold text-white"
         >
           + adicionar
         </button>
@@ -949,114 +984,36 @@ function StageListEditor({
   );
 }
 
+/** Só cria funis personalizados: os fixos nascem automaticamente. */
 function NewFunnelModal({
-  labels,
-  tabFunnel,
   onClose,
   onCreate,
-  onAddTabStages,
 }: {
-  labels: WaLabel[];
-  tabFunnel: Funnel | null;
   onClose: () => void;
-  onCreate: (
-    body: {
-      name: string;
-      mode: FunnelMode;
-      source_label_id?: string | null;
-      stages?: string[];
-    },
-    labelStages?: WaLabel[],
-  ) => void;
-  onAddTabStages: (funnel: Funnel, names: string[]) => void;
+  onCreate: (body: { name: string; mode: FunnelMode; source_label_id?: string | null; stages?: string[] }) => void;
 }) {
   const [name, setName] = useState("");
-  const [mode, setMode] = useState<FunnelMode>("tab");
-  const [tabs, setTabs] = useState<string[]>([]);
   const [stages, setStages] = useState<string[]>(["Novo lead", "Em conversa", "Negociando", "Fechado"]);
 
-  const options: Array<{ key: FunnelMode; title: string }> = [
-    { key: "tab", title: "Funil principal" },
-    { key: "label", title: "Etiqueta / Listas" },
-    { key: "manual", title: "Novo funil" },
-  ];
-
   function submit() {
-    if (mode === "label") {
-      if (!labels.length) return;
-      onCreate(
-        { name: "Etiqueta / Listas", mode: "label", source_label_id: null, stages: labels.map((l) => l.name) },
-        labels,
-      );
-      return;
-    }
-    if (mode === "tab") {
-      if (!tabs.length) return;
-      if (tabFunnel) {
-        onAddTabStages(tabFunnel, tabs);
-        return;
-      }
-      onCreate({ name: "Funil principal", mode: "tab", source_label_id: null, stages: tabs });
-      return;
-    }
     if (!name.trim() || !stages.length) return;
-    onCreate({ name: name.trim(), mode, source_label_id: null, stages });
+    onCreate({ name: name.trim(), mode: "manual", source_label_id: null, stages });
   }
 
   return (
-    <Overlay title="Criar funil" onClose={onClose}>
+    <Overlay title="Novo funil" onClose={onClose}>
       <div className="space-y-4">
-        <div className="grid grid-cols-3 gap-2">
-          {options.map((o) => (
-            <button
-              key={o.key}
-              onClick={() => setMode(o.key)}
-              className={
-                "rounded-xl border px-3 py-2.5 text-sm font-semibold transition " +
-                (mode === o.key
-                  ? "border-neutral-900 bg-neutral-900 text-yellow-400"
-                  : "border-neutral-300 bg-white text-neutral-800")
-              }
-            >
-              {o.title}
-            </button>
-          ))}
+        <div>
+          <label className="mb-1 block text-xs font-medium text-neutral-600">Nome</label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className={inputCls}
+            placeholder="Ex.: Recuperação"
+          />
         </div>
 
-        {mode === "manual" && (
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600">Nome</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className={inputCls}
-              placeholder="Ex.: Recuperação"
-            />
-          </div>
-        )}
-
-        {mode === "tab" && (
-          <StageListEditor label="Etapas" placeholder="Ex.: Leads" items={tabs} onChange={setTabs} />
-        )}
-
-
-        {mode === "manual" && (
-          <StageListEditor label="Etapas" placeholder="Ex.: Negociando" items={stages} onChange={setStages} />
-        )}
-
-        {mode === "label" && (
-          <div className="flex flex-wrap gap-1.5">
-            {labels.map((l) => (
-              <span
-                key={l.id}
-                className="rounded-full border border-neutral-300 bg-white px-2.5 py-1 text-xs text-neutral-800"
-              >
-                {l.name} · {l.conversation_count}
-              </span>
-            ))}
-            {labels.length === 0 && <p className="text-xs text-neutral-500">Nenhuma etiqueta sincronizada.</p>}
-          </div>
-        )}
+        <StageListEditor label="Etapas" placeholder="Ex.: Negociando" items={stages} onChange={setStages} />
 
         <div className="flex justify-end gap-2">
           <button onClick={onClose} className="rounded-lg border border-neutral-300 px-4 py-2 text-sm">
@@ -1064,9 +1021,9 @@ function NewFunnelModal({
           </button>
           <button
             onClick={submit}
-            className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400"
+            className="rounded-lg bg-neutral-800 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-700"
           >
-            {mode === "tab" && tabFunnel ? "Adicionar" : "Criar"}
+            Criar
           </button>
         </div>
       </div>
@@ -1111,7 +1068,7 @@ function AddCardForm({
             setPhone("");
             setOpen(false);
           }}
-          className="rounded bg-neutral-900 px-3 py-1 text-xs font-semibold text-yellow-400"
+          className="rounded bg-neutral-800 px-3 py-1 text-xs font-semibold text-white"
         >
           adicionar
         </button>

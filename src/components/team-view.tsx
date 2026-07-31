@@ -291,7 +291,7 @@ export function TeamView({ shopId }: { shopId: string }) {
           </div>
           <button
             onClick={() => setShowConfig(true)}
-            className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
+            className="rounded-lg bg-neutral-800 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-700"
           >
             Acessar
           </button>
@@ -341,7 +341,7 @@ export function TeamView({ shopId }: { shopId: string }) {
           </p>
           <button
             onClick={() => setShowConfig(true)}
-            className="mt-4 rounded-lg bg-neutral-900 px-5 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
+            className="mt-4 rounded-lg bg-neutral-800 px-5 py-2 text-sm font-semibold text-white hover:bg-neutral-700"
           >
             Acessar
           </button>
@@ -403,7 +403,7 @@ export function TeamView({ shopId }: { shopId: string }) {
                   <div className="flex flex-col gap-2">
                     <button
                       onClick={() => setShowAddEntry(row.member.id)}
-                      className="rounded-lg bg-neutral-900 px-3 py-2 text-xs font-semibold text-yellow-400 hover:bg-neutral-800"
+                      className="rounded-lg bg-neutral-800 px-3 py-2 text-xs font-semibold text-white hover:bg-neutral-700"
                     >
                       + Lançar venda
                     </button>
@@ -662,7 +662,7 @@ function AddEntryModal({
                 className={
                   "rounded-lg border px-3 py-2 text-sm font-medium " +
                   (kind === o.k
-                    ? "border-neutral-900 bg-neutral-900 text-yellow-400"
+                    ? "border-neutral-800 bg-neutral-800 text-white"
                     : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400")
                 }
               >
@@ -766,7 +766,7 @@ function AddEntryModal({
             });
             onClose();
           }}
-          className="w-full rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-40"
+          className="w-full rounded-lg bg-neutral-800 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-40"
         >
           Registrar
         </button>
@@ -836,7 +836,7 @@ function ClientsPanel({
           <button
             onClick={add}
             disabled={!name.trim()}
-            className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-40"
+            className="rounded-lg bg-neutral-800 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-40"
           >
             Adicionar
           </button>
@@ -1044,7 +1044,7 @@ function MembersTab({
             setName("");
             setPhoto(undefined);
           }}
-          className="w-full rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-40"
+          className="w-full rounded-lg bg-neutral-800 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-40"
         >
           Adicionar à equipe
         </button>
@@ -1131,7 +1131,7 @@ function CatalogTab({
         <button
           disabled={!name.trim()}
           onClick={add}
-          className="w-full rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-40"
+          className="w-full rounded-lg bg-neutral-800 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-40"
         >
           Adicionar {label}
         </button>
@@ -1211,7 +1211,7 @@ function MetasTab({
             bonusExtra: Number(bonus.replace(",", ".")) || 0,
           });
         }}
-        className="w-full rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
+        className="w-full rounded-lg bg-neutral-800 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-700"
       >
         Salvar metas
       </button>
