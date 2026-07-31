@@ -89,6 +89,15 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       });
       created = created || Boolean(r?.ok);
     }
+    // Renomeia o funil de listas criado com o nome antigo ("Etiquetas / Listas").
+    const legacy = list.find((f) => f.mode === "label" && f.name !== "Listas");
+    if (legacy) {
+      const r = await api(`/api/public/extension/funnels/${legacy.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name: "Listas" }),
+      });
+      created = created || Boolean(r?.ok);
+    }
     if (!list.some((f) => f.mode === "label")) {
       const r = await api("/api/public/extension/funnels", {
         method: "POST",
