@@ -18,7 +18,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { jsonResponse, preflight } from "@/lib/extension-cors";
 import { authenticateExtension } from "@/lib/extension-auth";
-import { CUSTOMER_STATUS_VALUES } from "@/lib/customer-presets";
+import { customerStatusSchema } from "@/lib/customer-presets";
 
 const bodySchema = z
   .object({
@@ -45,7 +45,7 @@ const bodySchema = z
     scope: z.enum(["assinaturas", "funil"]).optional(),
     filter: z
       .object({
-        status: z.enum(CUSTOMER_STATUS_VALUES).optional(),
+        status: customerStatusSchema.optional(),
         tags: z.array(z.string().min(1).max(40)).max(10).optional(),
       })
       .optional(),

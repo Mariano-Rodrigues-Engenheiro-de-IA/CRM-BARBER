@@ -8,11 +8,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { jsonResponse, preflight } from "@/lib/extension-cors";
 import { authenticateExtension } from "@/lib/extension-auth";
-import { CUSTOMER_STATUS_VALUES } from "@/lib/customer-presets";
+import { customerStatusSchema } from "@/lib/customer-presets";
 import { normalizePhone } from "@/lib/subscription-systems";
 
 const patchSchema = z.object({
-  status: z.enum(CUSTOMER_STATUS_VALUES).optional(),
+  status: customerStatusSchema.optional(),
   name: z.string().trim().min(1).max(120).optional(),
   phone: z.string().trim().min(8).max(25).optional(),
   tags: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
