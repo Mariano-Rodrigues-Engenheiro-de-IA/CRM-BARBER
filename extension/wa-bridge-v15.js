@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.31.0";
+  const BRIDGE_VERSION = "0.32.0";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -108,15 +108,17 @@
   }
 
   async function sendTextToTarget(target, text) {
-    const chat = await getChatSafe(target);
+    // Ordem importa: nesta build o `chat.sendMessage` não existe, então tentar
+    // por ele primeiro só gerava um erro e atraso a cada envio.
     const attempts = [
-      ["chat.sendMessage", () => {
+      ["sendTextMessage", () => {
+        if (typeof window.WPP?.chat?.sendTextMessage !== "function") throw new Error("sendTextMessage indisponível");
+        return window.WPP.chat.sendTextMessage(target, text, { waitForAck: false });
+      }],
+      ["chat.sendMessage", async () => {
+        const chat = await getChatSafe(target);
         if (!chat || typeof chat.sendMessage !== "function") throw new Error("chat.sendMessage indisponível");
         return chat.sendMessage(text);
-      }],
-      ["sendTextMessage", () => {
-        if (typeof window.WPP.chat.sendTextMessage !== "function") throw new Error("sendTextMessage indisponível");
-        return window.WPP.chat.sendTextMessage(target, text, { waitForAck: false });
       }],
       ["MsgStore.addMsgAndSend", () => {
         const addMsgAndSend = window.WPP?.whatsapp?.MsgStore?.addMsgAndSend;
@@ -432,6 +434,32 @@
       }
     } catch (e) {
       console.warn("[CRM] conversas indisponíveis:", e?.message || e);
+    }
+
+    // Contatos que pertencem a uma lista mas cuja conversa não está carregada
+    // no ChatStore ficavam de fora — era isso que reduzia uma lista de 100
+    // para ~37 no CRM. Aqui completamos pelo ContactStore.
+    try {
+      const seen = new Set(contacts.map((c) => c.wa_id));
+      const known = new Set(labels.map((l) => l.id));
+      for (const [chatId, labelSet] of byChat) {
+        if (seen.has(chatId)) continue;
+        const ids = [...labelSet].filter((id) => !known.size || known.has(id));
+        if (!ids.length) continue;
+        let contact = null;
+        try { contact = window.WPP?.whatsapp?.ContactStore?.get?.(chatId) || null; } catch {}
+        contacts.push({
+          wa_id: chatId,
+          phone: chatId.endsWith("@g.us") ? null : resolvePhoneDigits({ contact }, chatId),
+          name: resolveName({ contact }, chatId),
+          is_group: chatId.endsWith("@g.us"),
+          label_ids: ids.slice(0, 50),
+          last_message_at: null,
+        });
+        seen.add(chatId);
+      }
+    } catch (e) {
+      console.warn("[CRM] membros de lista indisponíveis:", e?.message || e);
     }
 
 
