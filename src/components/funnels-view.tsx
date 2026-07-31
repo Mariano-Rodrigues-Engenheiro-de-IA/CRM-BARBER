@@ -510,24 +510,8 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
 
       {creating && (
         <NewFunnelModal
-          labels={labels}
-          tabFunnel={funnels.find((f) => f.mode === "tab") ?? null}
           onClose={() => setCreating(false)}
-          onAddTabStages={async (funnel, names) => {
-            setCreating(false);
-            const stages = [
-              ...funnel.stages.map((s) => ({ id: s.id, name: s.name, sort_order: s.sort_order })),
-              ...names.map((n, i) => ({ name: n, sort_order: funnel.stages.length + i })),
-            ];
-            const r = await api(`/api/public/extension/funnels/${funnel.id}`, {
-              method: "PATCH",
-              body: JSON.stringify({ stages }),
-            });
-            if (!r?.ok) setErr((r?.error as string) || "Erro ao adicionar etapas");
-            await reload();
-            setActiveId(funnel.id);
-          }}
-          onCreate={async (body, labelStages) => {
+          onCreate={async (body) => {
             const r = await api("/api/public/extension/funnels", {
               method: "POST",
               body: JSON.stringify(body),
@@ -538,36 +522,12 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
             }
             setCreating(false);
             const created = r.funnel as Funnel;
-
-            // Etiquetas: cada etiqueta vira uma etapa já preenchida com seus contatos.
-            if (labelStages?.length && created?.stages?.length) {
-              for (let i = 0; i < labelStages.length; i++) {
-                const stage = created.stages[i];
-                const label = labelStages[i];
-                if (!stage || !label) continue;
-                const list = contacts
-                  .filter((c) => (c.label_ids || []).includes(label.wa_label_id))
-                  .slice(0, 100);
-                for (const c of list) {
-                  await api("/api/public/extension/funnel-cards", {
-                    method: "POST",
-                    body: JSON.stringify({
-                      funnel_id: created.id,
-                      stage_id: stage.id,
-                      title: c.name || c.phone || c.wa_id,
-                      phone: c.phone ?? undefined,
-                      wa_contact_id: c.id,
-                    }),
-                  });
-                }
-              }
-            }
-
             await reload();
             setActiveId(created?.id ?? null);
           }}
         />
       )}
+
 
     </div>
   );
