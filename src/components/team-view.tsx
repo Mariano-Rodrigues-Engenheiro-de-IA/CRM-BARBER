@@ -2,6 +2,7 @@
 // Cadastro de barbeiros, serviços, produtos e metas mora dentro de Configurações.
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import confetti from "canvas-confetti";
 import { useConfirm } from "@/components/confirm-dialog";
 
@@ -165,7 +166,7 @@ function fireConfetti() {
   })();
 }
 
-export function TeamView({ shopId }: { shopId: string }) {
+export function TeamView({ shopId, headerHost }: { shopId: string; headerHost?: HTMLDivElement | null }) {
   const { confirm, dialog } = useConfirm();
   const [state, setState] = useState<TeamState>(DEFAULT_STATE);
   const [ready, setReady] = useState(false);
@@ -250,23 +251,30 @@ export function TeamView({ shopId }: { shopId: string }) {
     return null;
   };
 
+  const nav = (
+    <nav className="flex shrink-0 gap-1 rounded-lg bg-neutral-100 p-1">
+      {(["ranking", "clientes"] as const).map((t) => (
+        <button
+          key={t}
+          onClick={() => setTab(t)}
+          className={
+            "rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition " +
+            (tab === t ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
+          }
+        >
+          {t === "ranking" ? "Equipe" : "Clientes"}
+        </button>
+      ))}
+    </nav>
+  );
+
   return (
     <div className="space-y-6">
       {dialog}
-      <nav className="flex gap-1 rounded-lg bg-neutral-100 p-1 w-fit">
-        {(["ranking", "clientes"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={
-              "rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition " +
-              (tab === t ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
-            }
-          >
-            {t === "ranking" ? "Equipe" : "Clientes"}
-          </button>
-        ))}
-      </nav>
+      {/* As abas moram no cabeçalho fixo do topo (mesmo padrão das outras seções). */}
+      {headerHost
+        ? createPortal(nav, headerHost)
+        : nav}
 
       {tab === "clientes" && (
         <ClientsPanel
