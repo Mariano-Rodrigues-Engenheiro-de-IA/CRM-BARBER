@@ -123,7 +123,18 @@ function syncColumnsFromSheet(shopId: string, statusKeys: string[]) {
 
 
 
+/** Cache entre navegações: voltar pra Assinantes não pisca "Carregando...". */
+let customersCache: Customer[] | null = null;
+
+/** Menu lateral recolhido/expandido — preferência do usuário. */
+const SIDEBAR_KEY = "crm_sidebar_collapsed_v1";
+function readSidebarCollapsed() {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(SIDEBAR_KEY) === "1";
+}
+
 const TOKEN_KEY = "crm_ext_token_v1";
+
 const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
 const EXTENSION_API_REQUEST = "crm_api_request_v180";
 const EXTENSION_API_RESPONSE = "crm_api_response_v180";
