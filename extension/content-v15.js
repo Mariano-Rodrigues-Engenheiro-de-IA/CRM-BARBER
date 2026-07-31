@@ -958,30 +958,36 @@
       .catch(() => null);
     if (r?.ok) {
       crmToast(reply ? "Resposta atualizada" : "Resposta criada");
-      loadQuickReplies();
+      await loadQuickReplies();
     } else {
       crmToast(r?.error || "Não consegui salvar a resposta.", "err");
     }
   }
 
   async function sendQuickReply(reply, chat) {
-    const target = chat.phone || String(chat.wa_id || "").split("@")[0];
-    if (!target) return crmToast("Contato sem telefone.", "err");
+    // O alvo correto é o próprio ID da conversa (wa_id). Usar só os dígitos do
+    // @lid fazia o bridge montar um telefone inexistente e o envio falhava.
+    const waId = chat.wa_id || null;
+    const target = chat.phone || String(waId || "").split("@")[0];
+    if (!target && !waId) return crmToast("Contato sem telefone.", "err");
     crmToast(`Enviando "${reply.title}"…`);
     const sendable = (reply.actions || []).filter((a) =>
       ["text", "image", "video", "audio"].includes(a.type),
     );
+    if (!sendable.length) return crmToast("Essa resposta não tem mensagem para enviar.", "err");
     const prefetched = await chrome.runtime
       .sendMessage({ type: "prefetch_media", actions: sendable })
       .catch(() => null);
     const res = await handleWaAction({
       phone: target,
+      waId,
       name: chat.name || "",
       actions: prefetched?.ok ? prefetched.actions : sendable,
     });
     if (res?.ok) crmToast("Resposta enviada");
     else crmToast(res?.error || "Falha ao enviar", "err");
   }
+
 
   // Modal próprio do CRM — nada de confirm()/alert() nativos do navegador.
   function crmConfirm({ title, body: text, confirmLabel = "Confirmar", cancelLabel = "Cancelar" }) {
