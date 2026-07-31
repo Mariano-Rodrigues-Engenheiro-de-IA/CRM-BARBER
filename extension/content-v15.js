@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.29.2";
+  const CRM_VERSION = "0.30.0";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -142,10 +142,13 @@
   function startSync() {
     if (syncTimer) return;
     // A primeira sincronização varre etiquetas e conversas — pesado logo no
-    // boot. Adiamos 25s para o WhatsApp abrir as conversas primeiro.
-    setTimeout(() => syncWaData(), 25000);
-    syncTimer = setInterval(() => syncWaData(), 10 * 60 * 1000);
+    // boot. Só rodamos quando o navegador estiver ocioso (ou após 60s).
+    const first = () => syncWaData();
+    if (typeof requestIdleCallback === "function") requestIdleCallback(first, { timeout: 60000 });
+    else setTimeout(first, 60000);
+    syncTimer = setInterval(() => syncWaData(), 15 * 60 * 1000);
   }
+
 
   async function loadFunnels() {
     const r = await chrome.runtime
@@ -660,7 +663,7 @@
   }
 
   ensureShell();
-  setInterval(() => loadFunnels(), 60000);
+  setInterval(() => loadFunnels(), 300000);
   ensureChatButton();
   setInterval(() => ensureChatButton(), 3000);
   // O WhatsApp muta o DOM centenas de vezes por segundo enquanto carrega as
@@ -738,6 +741,9 @@
   }
 
   const CHAT_BTN_ID = "crm-chat-action";
+  const QR_BTN_ID = "crm-chat-quickreply";
+  const BOLT_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>`;
+
 
   /**
    * O cabeçalho da conversa é re-renderizado pelo React o tempo todo, e o
@@ -762,15 +768,17 @@
   function ensureChatButton() {
     const header = document.querySelector("#main header");
     if (!header) return;
-    const existing = document.getElementById(CHAT_BTN_ID);
-    if (existing && header.contains(existing)) return;
-    existing?.remove();
+    const hasCrm = document.getElementById(CHAT_BTN_ID);
+    const hasQr = document.getElementById(QR_BTN_ID);
+    if (hasCrm && hasQr && header.contains(hasCrm) && header.contains(hasQr)) return;
+    hasCrm?.remove();
+    hasQr?.remove();
 
     const btn = document.createElement("button");
     btn.id = CHAT_BTN_ID;
     btn.className = "crm-chat-btn";
     btn.type = "button";
-    btn.title = "Ações do CRM neste contato";
+    btn.title = "Adicionar este contato a um funil";
     btn.innerHTML = `${ICONS.funnel}<span>CRM</span>`;
     btn.addEventListener("click", (e) => {
       e.preventDefault();
@@ -778,23 +786,33 @@
       openChatActionMenu(btn);
     });
 
+    const qr = document.createElement("button");
+    qr.id = QR_BTN_ID;
+    qr.className = "crm-chat-btn crm-chat-btn-icon";
+    qr.type = "button";
+    qr.title = "Respostas rápidas";
+    qr.innerHTML = BOLT_SVG;
+    qr.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openQuickReplyModal();
+    });
+
     const slot = headerActionsSlot(header);
-    if (slot === header) header.appendChild(btn);
-    else slot.insertAdjacentElement("beforebegin", btn);
+    if (slot === header) {
+      header.appendChild(btn);
+      header.appendChild(qr);
+    } else {
+      slot.insertAdjacentElement("beforebegin", btn);
+      btn.insertAdjacentElement("afterend", qr);
+    }
   }
 
 
+  /** Botão CRM: somente funis (listas ficam com a função nativa do WhatsApp). */
   async function openChatActionMenu(anchor) {
     const chat = await activeChat();
     if (!chat) return crmToast("Não consegui ler a conversa aberta.", "err");
-    openMenu(anchor, [
-      { label: "Adicionar a um funil", onClick: () => chooseFunnel(anchor, chat) },
-      { label: "Adicionar a uma lista", onClick: () => chooseLabel(anchor, chat) },
-      { label: "Respostas rápidas", onClick: () => chooseQuickReply(anchor, chat) },
-    ]);
-  }
-
-  async function chooseFunnel(anchor, chat) {
     if (!funnels.length) await loadFunnels();
     if (!funnels.length) return crmToast("Nenhum funil criado ainda.", "err");
     openMenu(
@@ -837,47 +855,85 @@
     );
   }
 
-  async function chooseLabel(anchor, chat) {
-    if (!(waData.labels || []).length) await syncWaData();
-    const labels = waData.labels || [];
-    if (!labels.length) return crmToast("Nenhuma lista encontrada no WhatsApp.", "err");
-    openMenu(
-      anchor,
-      labels.map((l) => ({
-        label: l.name,
-        onClick: async () => {
-          const ok = await askBridge("apply_label_v290", "apply_label_done_v290", {
-            waId: chat.wa_id,
-            labelId: String(l.id || l.wa_label_id),
-          });
-          if (!ok) return crmToast("Não consegui aplicar a lista.", "err");
-          crmToast(`Adicionado à lista ${l.name}`);
-          syncing = false;
-          syncWaData();
-        },
-      })),
-    );
+  // ---------------------------------------------------------------------
+  // Pop-up de Respostas Rápidas (ver, editar e disparar em um só lugar).
+  // ---------------------------------------------------------------------
+  async function openQuickReplyModal() {
+    document.querySelector(".crm-qr-overlay")?.remove();
+    const overlay = document.createElement("div");
+    overlay.className = "crm-modal-overlay crm-qr-overlay";
+    overlay.innerHTML = `
+      <div class="crm-qr" role="dialog" aria-modal="true">
+        <div class="crm-qr-head">
+          <p class="crm-qr-title">Respostas rápidas</p>
+          <button class="crm-qr-close" title="Fechar">✕</button>
+        </div>
+        <div class="crm-qr-sub">Carregando conversa…</div>
+        <div class="crm-qr-list"></div>
+        <div class="crm-qr-foot">
+          <button class="crm-qr-new">＋ Nova resposta rápida</button>
+        </div>
+      </div>
+    `;
+    const close = () => overlay.remove();
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+    overlay.querySelector(".crm-qr-close").addEventListener("click", close);
+    document.body.appendChild(overlay);
+
+    const chat = await activeChat();
+    const sub = overlay.querySelector(".crm-qr-sub");
+    sub.textContent = chat
+      ? `Conversa: ${chat.name || chat.phone || chat.wa_id}`
+      : "Nenhuma conversa aberta — abra uma conversa para disparar.";
+
+    const render = () => {
+      const list = overlay.querySelector(".crm-qr-list");
+      if (!quickReplies.length) {
+        list.innerHTML = `<p class="crm-qr-empty">Nenhuma resposta rápida cadastrada ainda.</p>`;
+        return;
+      }
+      list.innerHTML = quickReplies
+        .map((q, i) => {
+          const preview = (q.actions || [])
+            .map((a) => (a.type === "text" ? a.text : `[${a.type}]`))
+            .join(" · ")
+            .slice(0, 120);
+          return `<div class="crm-qr-item">
+            <div class="crm-qr-info">
+              <p class="crm-qr-name">${escapeHtml(q.title)}</p>
+              <p class="crm-qr-prev">${escapeHtml(preview)}</p>
+            </div>
+            <div class="crm-qr-acts">
+              <button data-edit="${i}">Editar</button>
+              <button class="crm-qr-send" data-send="${i}">Disparar</button>
+            </div>
+          </div>`;
+        })
+        .join("");
+    };
+
+    await loadQuickReplies();
+    render();
+
+    overlay.querySelector(".crm-qr-new").addEventListener("click", async () => {
+      await editQuickReply(null);
+      render();
+    });
+    overlay.querySelector(".crm-qr-list").addEventListener("click", async (e) => {
+      const send = e.target.closest("[data-send]");
+      if (send) {
+        if (!chat) return crmToast("Abra uma conversa para disparar.", "err");
+        close();
+        return sendQuickReply(quickReplies[Number(send.getAttribute("data-send"))], chat);
+      }
+      const edit = e.target.closest("[data-edit]");
+      if (edit) {
+        await editQuickReply(quickReplies[Number(edit.getAttribute("data-edit"))]);
+        render();
+      }
+    });
   }
 
-  async function chooseQuickReply(anchor, chat) {
-    if (!quickReplies.length) await loadQuickReplies();
-    const items = quickReplies.map((q) => ({
-      label: q.title,
-      onClick: () => sendQuickReply(q, chat),
-    }));
-    items.push({ label: "＋ Nova resposta rápida", onClick: () => editQuickReply(null) });
-    if (quickReplies.length) {
-      items.push({ label: "✎ Editar respostas", onClick: () => pickQuickReplyToEdit(anchor) });
-    }
-    openMenu(anchor, items);
-  }
-
-  function pickQuickReplyToEdit(anchor) {
-    openMenu(
-      anchor,
-      quickReplies.map((q) => ({ label: q.title, onClick: () => editQuickReply(q) })),
-    );
-  }
 
   /** Cria/edita uma resposta rápida de texto direto do WhatsApp. */
   async function editQuickReply(reply) {
@@ -908,30 +964,36 @@
       .catch(() => null);
     if (r?.ok) {
       crmToast(reply ? "Resposta atualizada" : "Resposta criada");
-      loadQuickReplies();
+      await loadQuickReplies();
     } else {
       crmToast(r?.error || "Não consegui salvar a resposta.", "err");
     }
   }
 
   async function sendQuickReply(reply, chat) {
-    const target = chat.phone || String(chat.wa_id || "").split("@")[0];
-    if (!target) return crmToast("Contato sem telefone.", "err");
+    // O alvo correto é o próprio ID da conversa (wa_id). Usar só os dígitos do
+    // @lid fazia o bridge montar um telefone inexistente e o envio falhava.
+    const waId = chat.wa_id || null;
+    const target = chat.phone || String(waId || "").split("@")[0];
+    if (!target && !waId) return crmToast("Contato sem telefone.", "err");
     crmToast(`Enviando "${reply.title}"…`);
     const sendable = (reply.actions || []).filter((a) =>
       ["text", "image", "video", "audio"].includes(a.type),
     );
+    if (!sendable.length) return crmToast("Essa resposta não tem mensagem para enviar.", "err");
     const prefetched = await chrome.runtime
       .sendMessage({ type: "prefetch_media", actions: sendable })
       .catch(() => null);
     const res = await handleWaAction({
       phone: target,
+      waId,
       name: chat.name || "",
       actions: prefetched?.ok ? prefetched.actions : sendable,
     });
     if (res?.ok) crmToast("Resposta enviada");
     else crmToast(res?.error || "Falha ao enviar", "err");
   }
+
 
   // Modal próprio do CRM — nada de confirm()/alert() nativos do navegador.
   function crmConfirm({ title, body: text, confirmLabel = "Confirmar", cancelLabel = "Cancelar" }) {
@@ -1020,7 +1082,8 @@
   // Ação vinda do painel: abrir conversa, enviar texto ou resposta rápida.
   async function handleWaAction(action) {
     const phone = action?.phone;
-    if (!phone) return { ok: false, error: "Telefone inválido" };
+    const waId = action?.waId || null;
+    if (!phone && !waId) return { ok: false, error: "Contato inválido" };
     try {
       await ensureWaScriptsInjected();
     } catch (e) {
@@ -1053,10 +1116,12 @@
     return bridgeRequest({
       __crm: "action_v190",
       phone,
+      waId,
       openOnly: !!action.openOnly,
       actions,
     });
   }
+
 
   async function handleSend(job) {
     const phone = job?.customer?.phone;

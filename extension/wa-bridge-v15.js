@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.29.0";
+  const BRIDGE_VERSION = "0.30.0";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -200,9 +200,11 @@
   }
 
   /** Executa uma sequência de ações (texto/mídia) na conversa do contato. */
-  async function runActions(phone, openOnly, actions) {
+  async function runActions(phone, openOnly, actions, waId) {
     await waitForWpp();
-    const target = await resolveTarget(phone);
+    // Quando a ação vem de uma conversa aberta, o alvo certo é o próprio id
+    // do chat (inclusive @lid): montar telefone a partir do LID não existe.
+    const target = waId ? String(waId) : await resolveTarget(phone);
     if (openOnly) {
       await openChat(phone);
       return;
@@ -210,7 +212,8 @@
     for (const action of actions || []) {
       if (action.type === "text") {
         if (!action.text) continue;
-        await robustSend(phone, action.text);
+        if (waId) await sendTextToTarget(target, action.text);
+        else await robustSend(phone, action.text);
       } else {
         await sendMediaAction(target, action);
       }
@@ -241,25 +244,66 @@
     if (waId.endsWith("@g.us")) return null;
     if (waId.endsWith("@c.us")) return clean(waId);
 
+    const contact = (() => {
+      try {
+        return chat?.contact || window.WPP?.whatsapp?.ContactStore?.get?.(waId) || null;
+      } catch { return null; }
+    })();
+
     const tries = [
-      () => chat?.contact?.phoneNumber,
-      () => chat?.contact?.id,
-      () => chat?.contact?.__x_id,
-      () => window.WPP?.whatsapp?.ContactStore?.get?.(waId)?.phoneNumber,
-      () => window.WPP?.whatsapp?.ContactStore?.get?.(waId)?.id,
+      () => contact?.phoneNumber,
+      () => contact?.id,
+      () => contact?.userid,
+      () => contact?.__x_id,
+      // Mapeamento LID → telefone (builds novas do WhatsApp).
       () => window.WPP?.whatsapp?.LidUtils?.getPhoneNumber?.(waId),
       () => window.WPP?.whatsapp?.functions?.getPhoneNumber?.(waId),
+      () => window.WPP?.whatsapp?.LidStore?.get?.(waId)?.pn,
+      () => window.WPP?.whatsapp?.LidPnCacheStore?.get?.(waId)?.pn,
+      () => chat?.contact?.displayName,
+      () => chat?.formattedTitle,
     ];
     for (const get of tries) {
       let v;
       try { v = get(); } catch { continue; }
-      const d = clean(typeof v === "object" ? (v?._serialized ?? v?.user ?? "") : v);
+      const d = clean(typeof v === "object" ? (v?._serialized ?? v?.user ?? v?.pn ?? "") : v);
       if (d) return d;
     }
     return null;
   }
 
-  /** Etiquetas: a API pública mudou de nome entre builds — tentamos todas. */
+  /** Nome exibível: passa por todas as fontes antes de desistir. */
+  function resolveName(chat, waId) {
+    let contact = null;
+    try {
+      contact = chat?.contact || window.WPP?.whatsapp?.ContactStore?.get?.(waId) || null;
+    } catch {}
+    const candidates = [
+      chat?.formattedTitle,
+      chat?.__x_formattedTitle,
+      chat?.name,
+      contact?.name,
+      contact?.verifiedName,
+      contact?.pushname,
+      contact?.notifyName,
+      contact?.formattedName,
+      contact?.displayName,
+      contact?.formattedUser,
+      contact?.shortName,
+    ];
+    for (const c of candidates) {
+      const v = String(c || "").trim();
+      if (v && !/^\d{15,}$/.test(v.replace(/\D/g, ""))) return v.slice(0, 160);
+    }
+    const digits = resolvePhoneDigits(chat, waId || "");
+    return digits ? `+${digits}` : null;
+  }
+
+  /**
+   * Etiquetas reais do WhatsApp. Só aceitamos o que vem do LabelStore com
+   * nome de verdade — listas "deduzidas" davam entradas fantasma no CRM que
+   * nunca sincronizavam de volta.
+   */
   function readLabels() {
     const sources = [
       () => window.WPP?.labels?.getAllLabels?.(),
@@ -278,10 +322,11 @@
       const out = [];
       for (const l of list) {
         const id = String(l?.id ?? l?.labelId ?? l?.__x_id ?? "");
-        if (!id || id === "undefined") continue;
+        const name = String(l?.name ?? l?.__x_name ?? "").trim();
+        if (!id || id === "undefined" || !name) continue;
         out.push({
           id,
-          name: String(l?.name ?? l?.__x_name ?? `Etiqueta ${id}`).slice(0, 120),
+          name: name.slice(0, 120),
           color: l?.hexColor ? String(l.hexColor).slice(0, 20) : null,
           count: Number(l?.count ?? l?.labelItemCount ?? l?.__x_count ?? 0) || 0,
         });
@@ -290,6 +335,7 @@
     }
     return [];
   }
+
 
   /**
    * Mapa etiqueta → conversas lido do LabelStore. Em builds recentes o chat
@@ -360,7 +406,8 @@
     const byChat = labelChatMap();
     const contacts = [];
     try {
-      for (const chat of chats.slice(0, 3000)) {
+      const known = new Set(labels.map((l) => l.id));
+      for (const chat of chats.slice(0, 1500)) {
         const waId = serialized(chat?.id);
         if (!waId) continue;
         const isGroup = waId.endsWith("@g.us");
@@ -369,20 +416,16 @@
         contacts.push({
           wa_id: waId,
           phone: isGroup || !digits ? null : digits,
-          name:
-            String(
-              chat?.formattedTitle ||
-                chat?.__x_formattedTitle ||
-                chat?.name ||
-                chat?.contact?.name ||
-                chat?.contact?.pushname ||
-                "",
-            ).slice(0, 160) || null,
+          name: resolveName(chat, waId),
           is_group: isGroup,
           label_ids: (() => {
             const fromChat = chatLabelIds(chat);
             const fromStore = [...(byChat.get(waId) || [])];
-            return [...new Set([...fromChat, ...fromStore])].slice(0, 50);
+            // Só listas que existem de fato no WhatsApp — ids órfãos criavam
+            // listas fantasma no CRM.
+            return [...new Set([...fromChat, ...fromStore])]
+              .filter((id) => !known.size || known.has(id))
+              .slice(0, 50);
           })(),
           last_message_at: ts > 0 ? new Date(ts * 1000).toISOString() : null,
         });
@@ -391,12 +434,7 @@
       console.warn("[CRM] conversas indisponíveis:", e?.message || e);
     }
 
-    // Se as etiquetas não vieram do store, deduzimos pelos ids usados nas conversas.
-    if (!labels.length) {
-      const seen = new Map();
-      for (const c of contacts) for (const id of c.label_ids) seen.set(id, (seen.get(id) || 0) + 1);
-      labels = [...seen.entries()].map(([id, count]) => ({ id, name: `Etiqueta ${id}`, color: null, count }));
-    }
+
 
     console.info(`[CRM] coletado: ${labels.length} etiqueta(s), ${contacts.length} conversa(s)`);
     return { labels, contacts };
@@ -428,9 +466,7 @@
         const data = {
           wa_id: waId,
           phone: resolvePhoneDigits(chat, waId || ""),
-          name:
-            String(chat?.formattedTitle || chat?.name || chat?.contact?.name || chat?.contact?.pushname || "") ||
-            null,
+          name: resolveName(chat, waId || ""),
           is_group: String(waId || "").endsWith("@g.us"),
         };
         window.postMessage({ __crm: "active_chat_done_v290", id: d.id, ok: true, data }, "*");
@@ -457,7 +493,7 @@
     if (d.__crm === "action_v190") {
       try {
         if (!window.WPP?.chat) await sleep(2000);
-        await runActions(d.phone, d.openOnly, d.actions);
+        await runActions(d.phone, d.openOnly, d.actions, d.waId);
         window.postMessage({ __crm: "action_done_v190", id: d.id, ok: true }, "*");
       } catch (e) {
         window.postMessage({ __crm: "action_done_v190", id: d.id, ok: false, error: e?.message || String(e) }, "*");

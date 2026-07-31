@@ -296,3 +296,52 @@ body.crm-shell ._ai_g {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 .crm-toast-err { border-left-color: #ef4444; }
+
+/* ---- Pop-up de Respostas Rápidas ---- */
+.crm-qr {
+  width: 460px;
+  max-width: 92vw;
+  max-height: 78vh;
+  display: flex;
+  flex-direction: column;
+  background: #111111;
+  color: #f5f5f5;
+  border: 1px solid #2a2a2a;
+  border-radius: 14px;
+  padding: 16px 16px 12px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+.crm-qr-head { display: flex; align-items: center; justify-content: space-between; }
+.crm-qr-title { margin: 0; font-size: 15px; font-weight: 700; }
+.crm-qr-close {
+  background: transparent; border: none; color: #a3a3a3; cursor: pointer; font-size: 14px;
+}
+.crm-qr-close:hover { color: #facc15; }
+.crm-qr-sub { margin: 4px 0 12px; font-size: 12px; color: #a3a3a3; }
+.crm-qr-list { overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.crm-qr-empty { margin: 12px 0; font-size: 13px; color: #a3a3a3; }
+.crm-qr-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 12px; border: 1px solid #242424; border-radius: 10px; background: #171717;
+}
+.crm-qr-info { min-width: 0; }
+.crm-qr-name { margin: 0; font-size: 13px; font-weight: 600; }
+.crm-qr-prev {
+  margin: 2px 0 0; font-size: 11px; color: #8f8f8f;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;
+}
+.crm-qr-acts { display: flex; gap: 6px; flex-shrink: 0; }
+.crm-qr-acts button {
+  padding: 6px 10px; border-radius: 8px; border: 1px solid #2f2f2f; background: #1e1e1e;
+  color: #e5e5e5; font-size: 12px; cursor: pointer;
+}
+.crm-qr-acts button:hover { border-color: #facc15; color: #facc15; }
+.crm-qr-acts .crm-qr-send { background: #facc15; border-color: #facc15; color: #111111; font-weight: 700; }
+.crm-qr-acts .crm-qr-send:hover { background: #eab308; color: #111111; }
+.crm-qr-foot { margin-top: 12px; display: flex; justify-content: flex-end; }
+.crm-qr-new {
+  padding: 8px 12px; border-radius: 8px; border: 1px dashed #3a3a3a; background: transparent;
+  color: #d4d4d4; font-size: 12px; cursor: pointer;
+}
+.crm-qr-new:hover { border-color: #facc15; color: #facc15; }
+.crm-chat-btn-icon { padding: 6px 8px; margin-left: 6px; }
