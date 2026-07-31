@@ -521,7 +521,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                     ))}
                   </div>
 
-                  <AddCardForm onAdd={(payload) => addCard(stage.id, payload)} />
+                  
                 </div>
               );
             })}
