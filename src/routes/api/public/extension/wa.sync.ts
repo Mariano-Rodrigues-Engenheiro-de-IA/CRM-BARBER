@@ -52,7 +52,15 @@ export const Route = createFileRoute("/api/public/extension/wa/sync")({
           if (error) {
             return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
           }
+          // Listas que não vieram nessa varredura não existem mais no WhatsApp:
+          // manter só o que está realmente sincronizado evita lista fantasma.
+          await supabaseAdmin
+            .from("wa_labels")
+            .delete()
+            .eq("barbershop_id", shop)
+            .not("wa_label_id", "in", `(${parsed.data.labels.map((l) => `"${l.id.replace(/"/g, "")}"`).join(",")})`);
         }
+
 
         if (parsed.data.contacts.length) {
           // Lotes de 500 para não estourar o limite do PostgREST.
