@@ -263,7 +263,7 @@ export function TeamView({ shopId }: { shopId: string }) {
               (tab === t ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
             }
           >
-            {t === "ranking" ? "Equipe" : `Clientes (${state.clients.length})`}
+            {t === "ranking" ? "Equipe" : "Clientes"}
           </button>
         ))}
       </nav>

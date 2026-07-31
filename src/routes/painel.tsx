@@ -476,8 +476,22 @@ function Painel() {
           (collapsed ? "w-[68px]" : "w-64")
         }
       >
+        {/* Toggle do menu — ícone puro no topo, sem rótulo */}
+        <div className={"flex pt-3 " + (collapsed ? "justify-center px-2" : "justify-end px-3")}>
+          <button
+            onClick={toggleSidebar}
+            title={collapsed ? "Expandir menu" : "Recolher menu"}
+            aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
+            className="grid h-8 w-8 place-items-center rounded-lg text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-900"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+
         {/* Brand card — emoldura o nome pra não parecer "solto na tela" */}
-        <div className={collapsed ? "px-2 pt-4 pb-3" : "px-3 pt-4 pb-3"}>
+        <div className={collapsed ? "px-2 pt-1 pb-3" : "px-3 pt-1 pb-3"}>
           <div
             className={
               "flex items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 shadow-sm " +
@@ -496,23 +510,8 @@ function Painel() {
           </div>
         </div>
 
-        {/* Recolher / expandir o menu */}
-        <div className={"pb-2 " + (collapsed ? "px-2" : "px-3")}>
-          <button
-            onClick={toggleSidebar}
-            title={collapsed ? "Expandir menu" : "Recolher menu"}
-            aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
-            className={
-              "flex items-center gap-2 rounded-lg border border-neutral-200 bg-white py-1.5 text-[11px] font-medium text-neutral-500 transition hover:border-neutral-400 hover:text-neutral-900 " +
-              (collapsed ? "w-full justify-center px-0" : "w-full px-2.5")
-            }
-          >
-            <IconChevron className={collapsed ? "" : "rotate-180"} />
-            {!collapsed && <span>Recolher menu</span>}
-          </button>
-        </div>
-
         <div className="mx-3 mb-2 h-px bg-neutral-200" />
+
 
         <nav className={"flex-1 space-y-1 " + (collapsed ? "px-2" : "px-3")}>
           {NAV_TOP.map((n) => {
@@ -1464,7 +1463,8 @@ function CustomerDrawer({
 function AddModal({ token, cols, onClose }: { token: string; cols: Array<{ key: string; label: string }>; onClose: () => void }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [status, setStatus] = useState("active");
+  // A coluna precisa existir no kanban — senão o contato some da tela.
+  const [status, setStatus] = useState(cols[0]?.key ?? "active");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
