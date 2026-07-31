@@ -346,6 +346,7 @@ function Painel() {
   // Host do cabeçalho de Assinantes: os botões de ação moram na barra do topo,
   // ao lado do título, liberando altura pros kanbans.
   const [assinHeaderEl, setAssinHeaderEl] = useState<HTMLDivElement | null>(null);
+  const [equipeHeaderEl, setEquipeHeaderEl] = useState<HTMLDivElement | null>(null);
   const [shop, setShop] = useState<{ id: string; name: string } | null>(null);
   const [brand, setBrand] = useState<Brand>({});
 
@@ -646,10 +647,19 @@ function Painel() {
         )}
 
         {section === "equipe" && (
-
-          <main className="px-6 py-6 mt-14 md:mt-0">
-            <TeamView shopId={shop?.id ?? "default"} />
-          </main>
+          <>
+            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-2">
+                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
+                  Equipe
+                </h1>
+                <div ref={setEquipeHeaderEl} className="flex shrink-0 items-center gap-2" />
+              </div>
+            </header>
+            <main className="px-4 py-4">
+              <TeamView shopId={shop?.id ?? "default"} headerHost={equipeHeaderEl} />
+            </main>
+          </>
         )}
 
         {section === "conexao" && token && (
