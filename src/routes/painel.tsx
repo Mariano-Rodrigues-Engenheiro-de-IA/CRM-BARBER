@@ -430,98 +430,81 @@ function Painel() {
         {section === "assinantes" && (
           <>
             <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
+              <div className="flex items-center gap-3 px-5 py-2.5">
+                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
+                  Assinaturas — {assinTab === "visao" ? "Visão geral" : "Assinantes"}
+                </h1>
+              </div>
+            </header>
+
+            <main className="px-4 py-4">
+              {assinTab === "visao" && (
+                <OverviewView customers={customers} shopId={shop?.id ?? "default"} />
+              )}
+              {assinTab === "assinantes" && (
+                <KanbanView
+                  customers={customers}
+                  loading={loading}
+                  token={token}
+                  reload={reload}
+                  shopId={shop?.id ?? "default"}
+                  onGoSettings={() => setAssinTab("visao")}
+                />
+              )}
+            </main>
+          </>
+        )}
+
+        {section === "disparo" && token && (
+          <>
+            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
               <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-2.5">
-                <div className="flex min-w-0 items-center gap-2">
-                  <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
-                    Gestão de assinaturas
-                  </h1>
-                  <button
-                    onClick={() => setShowSubSettings(true)}
-                    title="Configurações da assinatura"
-                    className="shrink-0 rounded-md p-1 text-neutral-400 transition hover:text-neutral-900"
-                  >
-                    <IconGear size={13} />
-                  </button>
-                </div>
+                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
+                  Disparo
+                </h1>
                 <nav className="flex shrink-0 gap-1 rounded-lg bg-neutral-100 p-1">
-                  {(["kanban", "disparo", "campanhas"] as const).map((t) => (
+                  {(["novo", "campanhas"] as const).map((t) => (
                     <button
                       key={t}
-                      onClick={() => setTab(t)}
+                      onClick={() => setDisparoTab(t)}
                       className={
                         "rounded-md px-3 py-1.5 text-xs font-medium transition " +
-                        (tab === t ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
+                        (disparoTab === t ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
                       }
                     >
-                      {t === "kanban" ? "Kanban" : t === "disparo" ? "Novo disparo" : "Campanhas"}
+                      {t === "novo" ? "Novo disparo" : "Campanhas"}
                     </button>
                   ))}
                 </nav>
               </div>
             </header>
-
-
             <main className="px-4 py-4">
-              {tab === "kanban" && (
-                <KanbanView customers={customers} loading={loading} token={token} reload={reload} shopId={shop?.id ?? "default"} onGoSettings={() => setShowSubSettings(true)} />
+              {disparoTab === "novo" && (
+                <DispatchCenter
+                  api={(path: string, opts?: RequestInit) => api(token, path, opts)}
+                  customers={customers}
+                  cols={visibleColumns(shop?.id ?? "default")}
+                  onNeedConnection={() => setSection("conexao")}
+                  onDone={() => setDisparoTab("campanhas")}
+                />
               )}
-              {tab === "disparo" && (
-                <DisparoView customers={customers} token={token} shopId={shop?.id ?? "default"} onDone={() => setTab("campanhas")} onNeedConnection={() => setSection("conexao")} />
-              )}
-
-              {tab === "campanhas" && <CampaignsView token={token} />}
+              {disparoTab === "campanhas" && <CampaignsView token={token} />}
             </main>
           </>
-        )}
-
-        {showSubSettings && (
-          <SubscriptionSettingsModal
-            shopId={shop?.id ?? "default"}
-            onClose={() => setShowSubSettings(false)}
-          />
         )}
 
         {section === "funis" && token && (
           <>
             <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-2.5">
-                {funisTab === "kanban" ? (
-                  <div ref={setFunisHeaderEl} className="flex min-w-0 items-center gap-2" />
-                ) : (
-                  <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
-                    Funis de vendas
-                  </h1>
-                )}
-                <nav className="flex shrink-0 gap-1 rounded-lg bg-neutral-100 p-1">
-                  {(["kanban", "disparo", "campanhas"] as const).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setFunisTab(t)}
-                      className={
-                        "rounded-md px-3 py-1.5 text-xs font-medium transition " +
-                        (funisTab === t ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
-                      }
-                    >
-                      {t === "kanban" ? "Funis" : t === "disparo" ? "Novo disparo" : "Campanhas"}
-                    </button>
-                  ))}
-                </nav>
+              <div className="flex items-center gap-3 px-5 py-2.5">
+                <div ref={setFunisHeaderEl} className="flex min-w-0 flex-1 items-center gap-2" />
               </div>
             </header>
             <main className="px-4 py-3">
-              {funisTab === "kanban" && (
-                <FunnelsView
-                  api={(path: string, opts?: RequestInit) => api(token, path, opts)}
-                  headerHost={funisHeaderEl}
-                />
-              )}
-              {funisTab === "disparo" && (
-                <FunnelDispatchView
-                  api={(path: string, opts?: RequestInit) => api(token, path, opts)}
-                  onDone={() => setFunisTab("campanhas")}
-                />
-              )}
-              {funisTab === "campanhas" && <CampaignsView token={token} scope="funil" />}
+              <FunnelsView
+                api={(path: string, opts?: RequestInit) => api(token, path, opts)}
+                headerHost={funisHeaderEl}
+              />
             </main>
           </>
         )}
