@@ -183,7 +183,9 @@ function nudgeExtensionPoll() {
   window.postMessage({ __crm: "poll_now_v180" }, window.location.origin);
 }
 
-type Section = "assinantes" | "funis" | "respostas" | "equipe" | "conexao" | "configuracoes";
+type Section = "assinantes" | "funis" | "disparo" | "respostas" | "equipe" | "conexao" | "configuracoes";
+/** Sub-abas da sanfona de Assinaturas. */
+type AssinTab = "visao" | "assinantes";
 
 function IconUsers() {
   return (
