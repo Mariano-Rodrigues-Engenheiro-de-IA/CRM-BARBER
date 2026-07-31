@@ -75,7 +75,9 @@ type Campaign = {
 };
 
 
-const COLUMNS: Array<{ key: string; label: string }> = [
+type Col = { key: string; label: string };
+
+const COLUMNS: Col[] = [
   { key: "active", label: "Ativos" },
   { key: "due_soon", label: "A vencer" },
   { key: "overdue", label: "Inadimplentes" },
@@ -83,11 +85,30 @@ const COLUMNS: Array<{ key: string; label: string }> = [
   { key: "canceled", label: "Cancelados" },
 ];
 
-/** Colunas visíveis conforme o sistema de assinatura escolhido. */
-function visibleColumns(shopId: string) {
+// Kanbans da barbearia: começam nos padrões do sistema escolhido e, a partir
+// do momento em que o usuário cria/exclui alguma coluna, passam a viver aqui.
+function colsKey(shopId: string) { return `crm_cols_${shopId || "default"}`; }
+
+function defaultColumns(shopId: string): Col[] {
   const allowed = statusesForSystem(readSystem(shopId));
   return allowed ? COLUMNS.filter((c) => allowed.includes(c.key)) : COLUMNS;
 }
+
+/** Colunas visíveis: customizadas pelo usuário ou padrão do sistema. */
+function visibleColumns(shopId: string): Col[] {
+  if (typeof window === "undefined") return defaultColumns(shopId);
+  try {
+    const raw = localStorage.getItem(colsKey(shopId));
+    const parsed = raw ? (JSON.parse(raw) as Col[]) : null;
+    if (Array.isArray(parsed) && parsed.length) return parsed;
+  } catch { /* ignora json inválido */ }
+  return defaultColumns(shopId);
+}
+
+function writeColumns(shopId: string, cols: Col[]) {
+  localStorage.setItem(colsKey(shopId), JSON.stringify(cols));
+}
+
 
 const TOKEN_KEY = "crm_ext_token_v1";
 const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
