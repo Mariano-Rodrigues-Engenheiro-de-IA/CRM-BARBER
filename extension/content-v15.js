@@ -856,9 +856,10 @@
   }
 
   // ---------------------------------------------------------------------
-  // Pop-up de Respostas Rápidas (ver, editar e disparar em um só lugar).
+  // Pop-up de Respostas Rápidas — só selecionar e disparar.
+  // A criação/edição continua no painel do CRM.
   // ---------------------------------------------------------------------
-  async function openQuickReplyModal() {
+  function openQuickReplyModal() {
     document.querySelector(".crm-qr-overlay")?.remove();
     const overlay = document.createElement("div");
     overlay.className = "crm-modal-overlay crm-qr-overlay";
@@ -868,11 +869,7 @@
           <p class="crm-qr-title">Respostas rápidas</p>
           <button class="crm-qr-close" title="Fechar">✕</button>
         </div>
-        <div class="crm-qr-sub">Carregando conversa…</div>
         <div class="crm-qr-list"></div>
-        <div class="crm-qr-foot">
-          <button class="crm-qr-new">＋ Nova resposta rápida</button>
-        </div>
       </div>
     `;
     const close = () => overlay.remove();
@@ -880,94 +877,36 @@
     overlay.querySelector(".crm-qr-close").addEventListener("click", close);
     document.body.appendChild(overlay);
 
-    const chat = await activeChat();
-    const sub = overlay.querySelector(".crm-qr-sub");
-    sub.textContent = chat
-      ? `Conversa: ${chat.name || chat.phone || chat.wa_id}`
-      : "Nenhuma conversa aberta — abra uma conversa para disparar.";
-
     const render = () => {
       const list = overlay.querySelector(".crm-qr-list");
+      if (!list) return;
       if (!quickReplies.length) {
         list.innerHTML = `<p class="crm-qr-empty">Nenhuma resposta rápida cadastrada ainda.</p>`;
         return;
       }
       list.innerHTML = quickReplies
-        .map((q, i) => {
-          const preview = (q.actions || [])
-            .map((a) => (a.type === "text" ? a.text : `[${a.type}]`))
-            .join(" · ")
-            .slice(0, 120);
-          return `<div class="crm-qr-item">
-            <div class="crm-qr-info">
-              <p class="crm-qr-name">${escapeHtml(q.title)}</p>
-              <p class="crm-qr-prev">${escapeHtml(preview)}</p>
-            </div>
-            <div class="crm-qr-acts">
-              <button data-edit="${i}">Editar</button>
-              <button class="crm-qr-send" data-send="${i}">Disparar</button>
-            </div>
-          </div>`;
-        })
+        .map(
+          (q, i) => `<div class="crm-qr-item">
+            <p class="crm-qr-name">${escapeHtml(q.title)}</p>
+            <button class="crm-qr-send" data-send="${i}">Disparar</button>
+          </div>`,
+        )
         .join("");
     };
 
-    await loadQuickReplies();
+    // Abre na hora com o cache; a lista só é recarregada em segundo plano.
     render();
+    void loadQuickReplies().then(render);
 
-    overlay.querySelector(".crm-qr-new").addEventListener("click", async () => {
-      await editQuickReply(null);
-      render();
-    });
     overlay.querySelector(".crm-qr-list").addEventListener("click", async (e) => {
       const send = e.target.closest("[data-send]");
-      if (send) {
-        if (!chat) return crmToast("Abra uma conversa para disparar.", "err");
-        close();
-        return sendQuickReply(quickReplies[Number(send.getAttribute("data-send"))], chat);
-      }
-      const edit = e.target.closest("[data-edit]");
-      if (edit) {
-        await editQuickReply(quickReplies[Number(edit.getAttribute("data-edit"))]);
-        render();
-      }
+      if (!send) return;
+      const reply = quickReplies[Number(send.getAttribute("data-send"))];
+      close();
+      const chat = await activeChat();
+      if (!chat) return;
+      void sendQuickReply(reply, chat);
     });
-  }
-
-
-  /** Cria/edita uma resposta rápida de texto direto do WhatsApp. */
-  async function editQuickReply(reply) {
-    const title = await crmPrompt({
-      title: reply ? "Renomear resposta" : "Título da resposta",
-      value: reply?.title || "",
-    });
-    if (!title) return;
-    const firstText = (reply?.actions || []).find((a) => a.type === "text");
-    const text = await crmPrompt({
-      title: "Mensagem (use {nome})",
-      value: firstText?.text || "",
-    });
-    if (!text) return;
-    const actions = reply
-      ? (reply.actions || []).map((a) => (a === firstText ? { ...a, text } : a))
-      : [{ type: "text", text }];
-    if (reply && !firstText) actions.unshift({ type: "text", text });
-    const clean = actions.map(({ url: _url, ...rest }) => rest);
-    const r = await chrome.runtime
-      .sendMessage({
-        type: "api",
-        path: reply
-          ? `/api/public/extension/quick-replies/${reply.id}`
-          : "/api/public/extension/quick-replies",
-        opts: { method: reply ? "PATCH" : "POST", body: JSON.stringify({ title, actions: clean }) },
-      })
-      .catch(() => null);
-    if (r?.ok) {
-      crmToast(reply ? "Resposta atualizada" : "Resposta criada");
-      await loadQuickReplies();
-    } else {
-      crmToast(r?.error || "Não consegui salvar a resposta.", "err");
-    }
   }
 
   async function sendQuickReply(reply, chat) {
