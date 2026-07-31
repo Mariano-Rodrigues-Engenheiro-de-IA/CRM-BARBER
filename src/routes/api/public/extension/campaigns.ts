@@ -19,12 +19,14 @@ import { z } from "zod";
 import { jsonResponse, preflight } from "@/lib/extension-cors";
 import { authenticateExtension } from "@/lib/extension-auth";
 import { customerStatusSchema } from "@/lib/customer-presets";
+import { quickReplyActionSchema, type QuickReplyAction } from "@/lib/quick-replies";
 
 const bodySchema = z
   .object({
     name: z.string().trim().min(1).max(120),
     message: z.string().trim().min(1).max(4000).optional(),
     message_variants: z.array(z.string().trim().min(1).max(4000)).min(1).max(3).optional(),
+    message_actions: z.array(quickReplyActionSchema).min(1).max(20).optional(),
     pace_seconds: z.number().int().min(5).max(600).optional(),
     pace_seconds_min: z.number().int().min(5).max(600).optional(),
     pace_seconds_max: z.number().int().min(5).max(600).optional(),
@@ -51,8 +53,8 @@ const bodySchema = z
       .optional(),
 
   })
-  .refine((v) => v.message || (v.message_variants && v.message_variants.length > 0), {
-    message: "Informe message ou message_variants",
+  .refine((v) => v.message || (v.message_variants && v.message_variants.length > 0) || v.message_actions?.length, {
+    message: "Informe a mensagem ou as ações do disparo",
   })
   .refine(
     (v) =>
@@ -93,7 +95,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
         }
 
         const barbershopId = auth.token.barbershop_id;
-        const { name, message, message_variants, pace_seconds, pace_seconds_min, pace_seconds_max, customer_ids, phone_targets, filter, scheduled_for, scope } = parsed.data;
+        const { name, message, message_variants, message_actions, pace_seconds, pace_seconds_min, pace_seconds_max, customer_ids, phone_targets, filter, scheduled_for, scope } = parsed.data;
 
         // Agendamento opcional: base do primeiro job. Datas no passado caem para agora.
         const scheduledBase = scheduled_for ? Date.parse(scheduled_for) : NaN;
@@ -101,9 +103,16 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
           return jsonResponse(request, { ok: false, error: "Data de agendamento inválida" }, { status: 400 });
         }
 
+        const actionTexts = (message_actions ?? [])
+          .filter((action) => action.type === "text" && action.text?.trim())
+          .map((action) => String(action.text).trim());
         const variants = (message_variants && message_variants.length > 0)
           ? message_variants
-          : [message as string];
+          : message
+            ? [message]
+            : actionTexts.length
+              ? actionTexts.slice(0, 3)
+              : [""];
 
         // Faixa de pace: se min/max informados, aleatório dentro da faixa.
         // Senão usa pace_seconds fixo (default 30).
@@ -211,6 +220,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
             pace_seconds_min: paceLo,
             pace_seconds_max: paceHi,
             message_variants: variants,
+            message_actions: message_actions ?? [],
             audience_filter: { ...(filter ?? { customer_ids: customer_ids ?? [] }), scope: scope ?? "assinaturas" },
           })
           .select("id, name, status, pace_seconds, pace_seconds_min, pace_seconds_max, created_at")
@@ -229,12 +239,19 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
         const jobs = targets.map((t, i) => {
           if (i > 0) cursor += nextDelayMs();
           const variant = variants[i % variants.length];
+          let textReplaced = false;
+          const actions = (message_actions ?? []).map((action): QuickReplyAction => {
+            if (action.type !== "text" || textReplaced || !variant) return action;
+            textReplaced = true;
+            return { ...action, text: variant };
+          });
           return {
             barbershop_id: barbershopId,
             campaign_id: campaign.id,
             customer_id: t.id,
             phone: t.phone,
             rendered_body: variant,
+            message_actions: actions,
             status: "pending" as const,
             scheduled_for: new Date(cursor).toISOString(),
             expires_at: expiresAt,

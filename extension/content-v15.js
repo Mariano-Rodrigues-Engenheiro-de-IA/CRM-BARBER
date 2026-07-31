@@ -1042,13 +1042,17 @@
   async function handleSend(job) {
     const phone = job?.customer?.phone;
     const text = job?.body;
-    if (!phone || !text) return { ok: false, error: "Job inválido" };
+    const sourceActions = Array.isArray(job?.actions) ? job.actions : [];
+    if (!phone || (!text && !sourceActions.length)) return { ok: false, error: "Job inválido" };
     try {
       await ensureWaScriptsInjected();
     } catch (e) {
       return { ok: false, error: `Falha ao carregar wa-js/bridge: ${String(e?.message || e)}` };
     }
-    const silent = await bridgeRequest({ __crm: "send_v180", phone, text });
+    const sendable = sourceActions.filter((action) => ["text", "image", "video", "audio"].includes(action?.type));
+    const silent = sendable.length
+      ? await handleWaAction({ phone, name: job?.customer?.name || "", actions: sendable })
+      : await bridgeRequest({ __crm: "send_v180", phone, text });
 
     if (silent?.ok) return silent;
     return { ok: false, error: silent?.error || "Envio silencioso falhou" };

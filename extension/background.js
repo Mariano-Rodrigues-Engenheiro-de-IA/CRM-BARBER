@@ -165,6 +165,12 @@ async function getWhatsappTabs() {
 }
 
 async function sendToTab(job) {
+  const preparedJob = { ...job };
+  if (Array.isArray(job?.actions) && job.actions.length) {
+    preparedJob.actions = await prefetchMedia(job.actions);
+    const broken = preparedJob.actions.find((action) => action?.media_error);
+    if (broken) return { ok: false, error: broken.media_error };
+  }
   const tabs = await getWhatsappTabs();
   const candidates = tabs
     .filter((tab) => tab.id)
@@ -179,7 +185,7 @@ async function sendToTab(job) {
         continue;
       }
       await ensureScripts(tab.id);
-      const result = await chrome.tabs.sendMessage(tab.id, { type: "send_message_v180", job });
+      const result = await chrome.tabs.sendMessage(tab.id, { type: "send_message_v180", job: preparedJob });
       if (result?.ok) return result;
       lastError = result?.error || lastError;
     } catch (e) {
