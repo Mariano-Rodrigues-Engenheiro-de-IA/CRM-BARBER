@@ -52,17 +52,23 @@ function resolveMime(file: File, type: QuickReplyActionType) {
   return MIME_BY_EXT[ext] || `${type}/octet-stream`;
 }
 
+/** Cache entre navegações: reabrir a aba não deve piscar "Carregando...". */
+let repliesCache: QuickReply[] | null = null;
+
 export function QuickRepliesView({ token, api }: { token: string; api: ApiFn }) {
-  const [replies, setReplies] = useState<QuickReply[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [replies, setReplies] = useState<QuickReply[]>(() => repliesCache ?? []);
+  const [loading, setLoading] = useState(repliesCache === null);
   const [editing, setEditing] = useState<QuickReply | "new" | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   async function reload() {
-    setLoading(true);
     const r = await api("/api/public/extension/quick-replies");
-    if (r?.ok) setReplies((r.quick_replies as QuickReply[]) || []);
-    else setErr((r?.error as string) || "Erro ao carregar respostas rápidas");
+    if (r?.ok) {
+      const list = (r.quick_replies as QuickReply[]) || [];
+      repliesCache = list;
+      setReplies(list);
+      setErr(null);
+    } else setErr((r?.error as string) || "Erro ao carregar respostas rápidas");
     setLoading(false);
   }
 
@@ -70,6 +76,7 @@ export function QuickRepliesView({ token, api }: { token: string; api: ApiFn }) 
     void reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
 
   async function remove(id: string) {
     await api(`/api/public/extension/quick-replies/${id}`, { method: "DELETE" });

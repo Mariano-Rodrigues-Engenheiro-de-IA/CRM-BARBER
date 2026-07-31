@@ -123,7 +123,18 @@ function syncColumnsFromSheet(shopId: string, statusKeys: string[]) {
 
 
 
+/** Cache entre navegações: voltar pra Assinantes não pisca "Carregando...". */
+let customersCache: Customer[] | null = null;
+
+/** Menu lateral recolhido/expandido — preferência do usuário. */
+const SIDEBAR_KEY = "crm_sidebar_collapsed_v1";
+function readSidebarCollapsed() {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(SIDEBAR_KEY) === "1";
+}
+
 const TOKEN_KEY = "crm_ext_token_v1";
+
 const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
 const EXTENSION_API_REQUEST = "crm_api_request_v180";
 const EXTENSION_API_RESPONSE = "crm_api_response_v180";
@@ -290,37 +301,6 @@ function IconPlug() {
   );
 }
 
-/** Botão único "Adicionar" com as duas origens (manual e planilha). */
-function AddMenu({ onManual, onSheet }: { onManual: () => void; onSheet: () => void }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
-        className="rounded-lg bg-neutral-800 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white hover:bg-neutral-700"
-      >
-        Adicionar
-      </button>
-      {open && (
-        <div className="absolute right-0 z-20 mt-1 w-48 overflow-hidden rounded-xl border border-neutral-200 bg-white py-1 shadow-lg">
-          <button
-            onMouseDown={onManual}
-            className="block w-full px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"
-          >
-            Manualmente
-          </button>
-          <button
-            onMouseDown={onSheet}
-            className="block w-full px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"
-          >
-            Importar planilha
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
 
 
 type Brand = { name?: string; logo?: string };
@@ -352,8 +332,10 @@ function writeSystem(shopId: string, id: SubscriptionSystemId) {
 function Painel() {
   const [token, setToken] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>(() => customersCache ?? []);
   const [loading, setLoading] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+
   const initialSection: Section = (() => {
     if (typeof window === "undefined") return "assinantes";
     const s = new URLSearchParams(window.location.search).get("section");
@@ -373,6 +355,7 @@ function Painel() {
 
 
   useEffect(() => {
+    setCollapsed(readSidebarCollapsed());
     const storedToken = getToken();
     if (storedToken) {
       setToken(storedToken);
@@ -386,17 +369,33 @@ function Painel() {
       .finally(() => setReady(true));
   }, []);
 
+  function toggleSidebar() {
+    setCollapsed((v) => {
+      const next = !v;
+      localStorage.setItem(SIDEBAR_KEY, next ? "1" : "0");
+      return next;
+    });
+  }
+
+
   async function reload(silent = false) {
     if (!token) return;
-    if (!silent) setLoading(true);
+    // Com cache quente nunca mostramos spinner: os dados antigos ficam na tela
+    // enquanto a atualização chega por baixo.
+    if (!silent && customersCache === null) setLoading(true);
     const r = await api(token, "/api/public/extension/customers");
-    if (r?.ok) setCustomers(r.customers || []);
-    if (!silent) setLoading(false);
+    if (r?.ok) {
+      const list = (r.customers || []) as Customer[];
+      customersCache = list;
+      setCustomers(list);
+    }
+    setLoading(false);
   }
 
   useEffect(() => {
     if (!token) return;
     reload();
+
     api(token, "/api/public/extension/meta").then((r) => {
       if (r?.ok && r.barbershop) {
         setShop(r.barbershop);
@@ -471,30 +470,67 @@ function Painel() {
   return (
     <div className="flex min-h-screen bg-neutral-100 text-neutral-900">
       {/* Sidebar */}
-      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-neutral-200 bg-white text-neutral-900">
+      <aside
+        className={
+          "hidden md:flex shrink-0 flex-col border-r border-neutral-200 bg-white text-neutral-900 transition-[width] duration-200 " +
+          (collapsed ? "w-[68px]" : "w-64")
+        }
+      >
         {/* Brand card — emoldura o nome pra não parecer "solto na tela" */}
-        <div className="px-3 pt-4 pb-3">
-          <div className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-3 shadow-sm">
+        <div className={collapsed ? "px-2 pt-4 pb-3" : "px-3 pt-4 pb-3"}>
+          <div
+            className={
+              "flex items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 shadow-sm " +
+              (collapsed ? "justify-center px-1.5 py-2" : "px-3 py-3")
+            }
+          >
             <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-yellow-400 text-base font-bold text-neutral-900 ring-1 ring-black/10">
               {shopLogo ? <img src={shopLogo} alt="logo" className="h-full w-full object-cover" /> : shopInitial}
             </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold tracking-[0.22em] text-neutral-500">CRM BARBER</p>
-              <p className="truncate text-sm font-semibold text-neutral-950">{shopName}</p>
-            </div>
+            {!collapsed && (
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold tracking-[0.22em] text-neutral-500">CRM BARBER</p>
+                <p className="truncate text-sm font-semibold text-neutral-950">{shopName}</p>
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Recolher / expandir o menu */}
+        <div className={"pb-2 " + (collapsed ? "px-2" : "px-3")}>
+          <button
+            onClick={toggleSidebar}
+            title={collapsed ? "Expandir menu" : "Recolher menu"}
+            aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
+            className={
+              "flex items-center gap-2 rounded-lg border border-neutral-200 bg-white py-1.5 text-[11px] font-medium text-neutral-500 transition hover:border-neutral-400 hover:text-neutral-900 " +
+              (collapsed ? "w-full justify-center px-0" : "w-full px-2.5")
+            }
+          >
+            <IconChevron className={collapsed ? "" : "rotate-180"} />
+            {!collapsed && <span>Recolher menu</span>}
+          </button>
         </div>
 
         <div className="mx-3 mb-2 h-px bg-neutral-200" />
 
-        <nav className="flex-1 space-y-1 px-3">
+        <nav className={"flex-1 space-y-1 " + (collapsed ? "px-2" : "px-3")}>
           {NAV_TOP.map((n) => {
             const active = section === n.key;
-            const open = Boolean(n.children) && assinOpen;
+            const open = Boolean(n.children) && assinOpen && !collapsed;
             return (
               <div key={n.key}>
                 <button
+                  title={collapsed ? n.label : undefined}
                   onClick={() => {
+                    // Recolhido: o clique no ícone já expande o menu de volta.
+                    if (collapsed) {
+                      setCollapsed(false);
+                      localStorage.setItem(SIDEBAR_KEY, "0");
+                      setSection(n.key);
+                      if (n.children) setAssinOpen(true);
+                      return;
+                    }
                     // Sanfona: no item com sub-abas, o clique alterna a expansão
                     // (e leva pra seção quando ela ainda não está ativa).
                     if (n.children) {
@@ -504,16 +540,25 @@ function Painel() {
                     }
                     setSection(n.key);
                   }}
-                  className={navRowCls(active)}
+                  className={
+                    collapsed
+                      ? "group flex w-full items-center justify-center rounded-xl px-0 py-2.5 transition " +
+                        (active ? "bg-neutral-900 text-white" : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-950")
+                      : navRowCls(active)
+                  }
                 >
                   <span className="flex h-5 w-5 items-center justify-center">{n.icon}</span>
-                  <span className="flex-1 truncate">{n.label}</span>
-                  <IconChevron
-                    className={
-                      (open ? "rotate-90 " : "") +
-                      (active ? "text-white/70" : "text-neutral-400 group-hover:text-neutral-700")
-                    }
-                  />
+                  {!collapsed && (
+                    <>
+                      <span className="flex-1 truncate">{n.label}</span>
+                      <IconChevron
+                        className={
+                          (open ? "rotate-90 " : "") +
+                          (active ? "text-white/70" : "text-neutral-400 group-hover:text-neutral-700")
+                        }
+                      />
+                    </>
+                  )}
                 </button>
                 {open && n.children && (
                   <div className="mt-1 space-y-0.5 border-l border-neutral-200 pl-3 ml-4">
@@ -538,6 +583,7 @@ function Painel() {
 
           })}
         </nav>
+
 
 
       </aside>
@@ -999,57 +1045,95 @@ function KanbanView({
     reload();
   }
 
+  // Primeira utilização = sem kanbans e sem contatos: só oferecemos a importação.
+  const firstUse = cols.length === 0 && customers.length === 0;
+
   return (
     <div className="space-y-4">
       {dialog}
 
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        {newCol === null ? (
-          <button
-            onClick={() => setNewCol("")}
-            className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-wide text-neutral-700 transition hover:border-neutral-500"
-          >
-            Adicionar kanban
-          </button>
-        ) : (
-          <div className="flex items-center gap-2">
-            <input
-              autoFocus
-              value={newCol}
-              onChange={(e) => setNewCol(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") { addColumn(newCol); setNewCol(null); }
-                if (e.key === "Escape") setNewCol(null);
-              }}
-              placeholder="Nome do kanban"
-              className={inputCls + " w-48"}
-            />
+
+      {/* Primeira utilização: só o botão de importar planilha. */}
+      {firstUse ? (
+        !loading && (
+          <div className="rounded-2xl border border-dashed border-neutral-300 bg-white px-6 py-14 text-center">
+            <p className="text-base font-semibold text-neutral-900">Comece importando sua planilha</p>
+            <p className="mx-auto mt-1 max-w-md text-xs text-neutral-500">
+              Os assinantes são cadastrados automaticamente e os kanbans nascem com a mesma
+              estrutura da planilha.
+            </p>
             <button
-              onClick={() => { addColumn(newCol); setNewCol(null); }}
-              className="rounded-lg bg-neutral-800 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white hover:bg-neutral-700"
+              onClick={() => setShowImport(true)}
+              className="mx-auto mt-6 rounded-xl bg-neutral-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800"
             >
-              Criar
-            </button>
-            <button onClick={() => setNewCol(null)} className="text-xs text-neutral-500 hover:text-neutral-900">
-              cancelar
+              Importar planilha
             </button>
           </div>
-        )}
-        <AddMenu onSheet={() => setShowImport(true)} onManual={() => setShowAdd(true)} />
-      </div>
-
+        )
+      ) : (
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {newCol === null ? (
+            <button
+              onClick={() => setNewCol("")}
+              title="Adicionar kanban"
+              className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:border-neutral-500"
+            >
+              + Kanban
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <input
+                autoFocus
+                value={newCol}
+                onChange={(e) => setNewCol(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { addColumn(newCol); setNewCol(null); }
+                  if (e.key === "Escape") setNewCol(null);
+                }}
+                placeholder="Nome do kanban"
+                className={inputCls + " w-48"}
+              />
+              <button
+                onClick={() => { addColumn(newCol); setNewCol(null); }}
+                className="rounded-lg bg-neutral-800 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white hover:bg-neutral-700"
+              >
+                Criar
+              </button>
+              <button onClick={() => setNewCol(null)} className="text-xs text-neutral-500 hover:text-neutral-900">
+                cancelar
+              </button>
+            </div>
+          )}
+          <button
+            onClick={() => setShowAdd(true)}
+            title="Adicionar contato"
+            className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:border-neutral-500"
+          >
+            + Contato
+          </button>
+          {/* Importar continua disponível pra sempre: reimportar sincroniza a planilha
+              sem apagar contatos criados à mão. */}
+          <button
+            onClick={() => setShowImport(true)}
+            className="rounded-lg bg-neutral-800 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white hover:bg-neutral-700"
+          >
+            Importar planilha
+          </button>
+        </div>
+      )}
 
       {loading && <p className="text-sm text-neutral-500">Carregando...</p>}
 
-      {!loading && cols.length === 0 && (
+      {!loading && !firstUse && cols.length === 0 && (
         <div className="rounded-xl border border-dashed border-neutral-300 bg-white p-8 text-center">
           <p className="text-sm font-medium text-neutral-800">Nenhum kanban ainda</p>
           <p className="mx-auto mt-1 max-w-md text-xs text-neutral-500">
             Importe uma planilha — os kanbans são criados automaticamente com a mesma estrutura dela —
-            ou crie os seus com “Adicionar kanban”.
+            ou crie os seus com “+ Kanban”.
           </p>
         </div>
       )}
+
 
 
 
