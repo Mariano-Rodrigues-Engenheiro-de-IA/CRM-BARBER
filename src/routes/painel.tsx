@@ -1777,9 +1777,10 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
               Assinantes ativos
             </p>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-6xl font-bold leading-none tracking-tight text-neutral-950">{totalSubs}</span>
-              {goal > 0 && <span className="text-xl font-medium text-neutral-400">/ {goal}</span>}
+              <span className="text-4xl font-semibold leading-none tracking-tight text-neutral-950">{totalSubs}</span>
+              {goal > 0 && <span className="text-4xl font-semibold leading-none tracking-tight text-neutral-400">/ {goal}</span>}
             </div>
+
             <p className="mt-2 text-sm font-medium text-neutral-600">
               {goal > 0
                 ? missing > 0
