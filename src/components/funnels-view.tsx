@@ -89,7 +89,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       });
       created = created || Boolean(r?.ok);
     }
-    if (!list.some((f) => f.mode === "label") && ls.length) {
+    if (!list.some((f) => f.mode === "label")) {
       const r = await api("/api/public/extension/funnels", {
         method: "POST",
         body: JSON.stringify({
@@ -99,6 +99,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
         }),
       });
       created = created || Boolean(r?.ok);
+
       // Cada etiqueta vira uma coluna já preenchida com os contatos dela.
       const funnel = r?.ok ? (r.funnel as Funnel) : null;
       if (funnel?.stages?.length) {
@@ -918,72 +919,6 @@ function CardDrawer({
   );
 }
 
-/** Lista de etapas/abas adicionadas uma a uma (sem vírgulas). */
-function StageListEditor({
-  label,
-  placeholder,
-  items,
-  onChange,
-}: {
-  label: string;
-  placeholder: string;
-  items: string[];
-  onChange: (items: string[]) => void;
-}) {
-  const [draft, setDraft] = useState("");
-
-  function add() {
-    const v = draft.trim();
-    if (!v || items.includes(v)) return;
-    onChange([...items, v]);
-    setDraft("");
-  }
-
-  return (
-    <div>
-      <label className="mb-1 block text-xs font-medium text-neutral-600">{label}</label>
-      <div className="flex gap-2">
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              add();
-            }
-          }}
-          placeholder={placeholder}
-          className={inputCls}
-        />
-        <button
-          onClick={add}
-          className="shrink-0 rounded-lg bg-neutral-800 px-3 py-2 text-sm font-semibold text-white"
-        >
-          + adicionar
-        </button>
-      </div>
-      {items.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {items.map((s, i) => (
-            <span
-              key={s}
-              className="inline-flex items-center gap-1 rounded-full border border-neutral-300 bg-neutral-50 px-2.5 py-1 text-xs text-neutral-800"
-            >
-              {s}
-              <button
-                onClick={() => onChange(items.filter((_, idx) => idx !== i))}
-                className="text-neutral-400 hover:text-red-600"
-              >
-                ✕
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 /** Só cria funis personalizados: os fixos nascem automaticamente. */
 function NewFunnelModal({
   onClose,
@@ -993,11 +928,11 @@ function NewFunnelModal({
   onCreate: (body: { name: string; mode: FunnelMode; source_label_id?: string | null; stages?: string[] }) => void;
 }) {
   const [name, setName] = useState("");
-  const [stages, setStages] = useState<string[]>(["Novo lead", "Em conversa", "Negociando", "Fechado"]);
 
   function submit() {
-    if (!name.trim() || !stages.length) return;
-    onCreate({ name: name.trim(), mode: "manual", source_label_id: null, stages });
+    if (!name.trim()) return;
+    // Funil novo nasce vazio: as etapas são criadas depois, pelo usuário.
+    onCreate({ name: name.trim(), mode: "manual", source_label_id: null, stages: [] });
   }
 
   return (
@@ -1013,7 +948,10 @@ function NewFunnelModal({
           />
         </div>
 
-        <StageListEditor label="Etapas" placeholder="Ex.: Negociando" items={stages} onChange={setStages} />
+        <p className="text-xs text-neutral-500">
+          O funil começa sem etapas — você cria as colunas do seu jeito depois de criá-lo.
+        </p>
+
 
         <div className="flex justify-end gap-2">
           <button onClick={onClose} className="rounded-lg border border-neutral-300 px-4 py-2 text-sm">

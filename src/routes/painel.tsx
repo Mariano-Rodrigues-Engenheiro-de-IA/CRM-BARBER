@@ -20,8 +20,8 @@ import { toast } from "sonner";
 
 import {
   SUBSCRIPTION_SYSTEMS,
-  statusesForSystem,
   parseSubscriptionSheet,
+
   planFromTags,
   type SubscriptionSystemId,
 } from "@/lib/subscription-systems";
@@ -85,29 +85,42 @@ const COLUMNS: Col[] = [
   { key: "canceled", label: "Cancelados" },
 ];
 
-// Kanbans da barbearia: começam nos padrões do sistema escolhido e, a partir
-// do momento em que o usuário cria/exclui alguma coluna, passam a viver aqui.
+// Kanbans da barbearia: NÃO existem colunas padrão. Elas nascem da planilha
+// importada (uma coluna por status encontrado) ou da criação manual.
 function colsKey(shopId: string) { return `crm_cols_${shopId || "default"}`; }
 
-function defaultColumns(shopId: string): Col[] {
-  const allowed = statusesForSystem(readSystem(shopId));
-  return allowed ? COLUMNS.filter((c) => allowed.includes(c.key)) : COLUMNS;
-}
-
-/** Colunas visíveis: customizadas pelo usuário ou padrão do sistema. */
+/** Colunas visíveis: só as criadas pelo usuário/importação. */
 function visibleColumns(shopId: string): Col[] {
-  if (typeof window === "undefined") return defaultColumns(shopId);
+  if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(colsKey(shopId));
     const parsed = raw ? (JSON.parse(raw) as Col[]) : null;
-    if (Array.isArray(parsed) && parsed.length) return parsed;
+    if (Array.isArray(parsed)) return parsed.filter((c) => c && c.key && c.label);
   } catch { /* ignora json inválido */ }
-  return defaultColumns(shopId);
+  return [];
 }
 
 function writeColumns(shopId: string, cols: Col[]) {
   localStorage.setItem(colsKey(shopId), JSON.stringify(cols));
 }
+
+/** Rótulo amigável para um status vindo da planilha. */
+function statusLabel(key: string) {
+  const known = COLUMNS.find((c) => c.key === key);
+  if (known) return known.label;
+  return key.replace(/^custom_/, "").replace(/_/g, " ").replace(/^./, (m) => m.toUpperCase());
+}
+
+/**
+ * Após importar a planilha, a estrutura de kanbans espelha a estrutura dela:
+ * um kanban por status presente, na ordem em que aparecem.
+ */
+function syncColumnsFromSheet(shopId: string, statusKeys: string[]) {
+  const cols = statusKeys.map((key) => ({ key, label: statusLabel(key) }));
+  if (cols.length) writeColumns(shopId, cols);
+  return cols;
+}
+
 
 
 const TOKEN_KEY = "crm_ext_token_v1";
@@ -1028,6 +1041,18 @@ function KanbanView({
 
       {loading && <p className="text-sm text-neutral-500">Carregando...</p>}
 
+      {!loading && cols.length === 0 && (
+        <div className="rounded-xl border border-dashed border-neutral-300 bg-white p-8 text-center">
+          <p className="text-sm font-medium text-neutral-800">Nenhum kanban ainda</p>
+          <p className="mx-auto mt-1 max-w-md text-xs text-neutral-500">
+            Importe uma planilha — os kanbans são criados automaticamente com a mesma estrutura dela —
+            ou crie os seus com “Adicionar kanban”.
+          </p>
+        </div>
+      )}
+
+
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         {cols.map((col) => (
           <div
@@ -1458,10 +1483,14 @@ function ImportModal({
 
       const semTelefone = report.rows.filter((r) => r.tags.includes("sem-telefone")).length;
 
-      const dist = COLUMNS
-        .filter((c) => report.byStatus[c.key])
+      // Os kanbans passam a espelhar a estrutura da planilha importada.
+      const sheetStatuses = Object.keys(report.byStatus);
+      const syncedCols = syncColumnsFromSheet(shopId, sheetStatuses);
+
+      const dist = syncedCols
         .map((c) => `${c.label}: ${report.byStatus[c.key]}`)
         .join(" · ");
+
       setResult(
         `Linhas lidas: ${report.total} · Importadas: ${report.rows.length}` +
           (report.skipped ? ` · Ignoradas (sem telefone/status): ${report.skipped}` : "") +
@@ -1777,9 +1806,10 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
               Assinantes ativos
             </p>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-6xl font-bold leading-none tracking-tight text-neutral-950">{totalSubs}</span>
-              {goal > 0 && <span className="text-xl font-medium text-neutral-400">/ {goal}</span>}
+              <span className="text-4xl font-semibold leading-none tracking-tight text-neutral-950">{totalSubs}</span>
+              {goal > 0 && <span className="text-4xl font-semibold leading-none tracking-tight text-neutral-400">/ {goal}</span>}
             </div>
+
             <p className="mt-2 text-sm font-medium text-neutral-600">
               {goal > 0
                 ? missing > 0

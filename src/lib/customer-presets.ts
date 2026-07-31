@@ -1,6 +1,16 @@
 // Preset tags and statuses for barbershop subscribers.
 // The extension UI reads this list to show default chips/selects.
 // Custom tags are still allowed (free text) — this is only the starting set.
+//
+// O status também é livre: cada kanban criado pelo usuário (ou vindo da
+// planilha) vira um status próprio, então a validação aceita qualquer chave.
+
+import { z } from "zod";
+
+/** Status de um contato = chave do kanban em que ele está. Texto livre. */
+export const customerStatusSchema = z.string().trim().min(1).max(60);
+
+
 
 export const CUSTOMER_STATUSES = [
   { value: "active", label: "Ativo" },

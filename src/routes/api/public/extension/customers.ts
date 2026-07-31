@@ -9,14 +9,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { jsonResponse, preflight } from "@/lib/extension-cors";
 import { authenticateExtension } from "@/lib/extension-auth";
-import { CUSTOMER_STATUS_VALUES } from "@/lib/customer-presets";
+import { customerStatusSchema } from "@/lib/customer-presets";
 
 const createSchema = z.object({
   name: z.string().min(1).max(120),
   phone: z.string().min(3).max(40),
   notes: z.string().max(1000).optional(),
   tags: z.array(z.string().min(1).max(40)).max(20).optional(),
-  status: z.enum(CUSTOMER_STATUS_VALUES).optional(),
+  status: customerStatusSchema.optional(),
 });
 
 export const Route = createFileRoute("/api/public/extension/customers")({
