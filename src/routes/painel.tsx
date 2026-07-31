@@ -554,14 +554,15 @@ function Painel() {
         {section === "assinantes" && (
           <>
             <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
-              <div className="flex items-center gap-3 px-5 py-2.5">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-2">
                 <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
                   {assinTab === "visao" ? "Visão geral" : "Assinantes"}
                 </h1>
+                <div ref={setAssinHeaderEl} className="flex shrink-0 items-center gap-2" />
               </div>
             </header>
 
-            <main className="px-4 py-4">
+            <main className="px-4 py-3">
               {assinTab === "visao" && (
                 <OverviewView customers={customers} shopId={shop?.id ?? "default"} />
               )}
@@ -572,6 +573,7 @@ function Painel() {
                   token={token}
                   reload={reload}
                   shopId={shop?.id ?? "default"}
+                  headerHost={assinHeaderEl}
                   onGoSettings={() => setAssinTab("visao")}
                 />
               )}
