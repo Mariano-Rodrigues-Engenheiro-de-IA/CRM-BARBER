@@ -1464,7 +1464,8 @@ function CustomerDrawer({
 function AddModal({ token, cols, onClose }: { token: string; cols: Array<{ key: string; label: string }>; onClose: () => void }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [status, setStatus] = useState("active");
+  // A coluna precisa existir no kanban — senão o contato some da tela.
+  const [status, setStatus] = useState(cols[0]?.key ?? "active");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
