@@ -86,6 +86,7 @@
   let quickReplies = [];
   let syncTimer = null;
   let syncing = false;
+  let pairHint = null;
 
   function readLoggedPhone() {
     try {
