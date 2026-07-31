@@ -1477,12 +1477,15 @@ function ImportModal({
   token,
   shopId,
   onClose,
+  onImported,
   system,
   onGoSettings,
 }: {
   token: string;
   shopId: string;
   onClose: () => void;
+  /** Importou com sucesso: o modal fecha sozinho e a tela já mostra os contatos. */
+  onImported: (summary: string) => void;
   system: SubscriptionSystemId | null;
   onGoSettings: () => void;
 }) {
@@ -1530,7 +1533,7 @@ function ImportModal({
         .map((c) => `${c.label}: ${report.byStatus[c.key]}`)
         .join(" · ");
 
-      setResult(
+      onImported(
         `Linhas lidas: ${report.total} · Importadas: ${report.rows.length}` +
           (report.skipped ? ` · Ignoradas (sem telefone/status): ${report.skipped}` : "") +
           `\nNovos: ${r.inserted} · Atualizados: ${r.updated}` +
