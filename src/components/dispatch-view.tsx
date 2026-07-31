@@ -8,9 +8,16 @@
 // O conteúdo (mensagem manual ou resposta rápida), o ritmo e o termo de uso
 // são idênticos para os três públicos.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { isRealPhone } from "@/lib/wa-actions";
-import { sendableActions, type QuickReply } from "@/lib/quick-replies";
+import {
+  actionLabel,
+  QUICK_REPLY_ACTION_TYPES,
+  QUICK_REPLY_FUNNEL_TYPES,
+  type QuickReply,
+  type QuickReplyAction,
+  type QuickReplyActionType,
+} from "@/lib/quick-replies";
 import type { Funnel } from "@/lib/funnels";
 import { fileToContacts, type SheetContact } from "@/lib/sheet-contacts";
 
@@ -19,6 +26,7 @@ type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknow
 export type DispatchCustomer = { id: string; name: string; phone: string; status: string };
 
 type Audience = "assinantes" | "funis" | "planilha";
+type MessageMode = "custom" | "quick";
 
 const inputCls =
   "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-neutral-900";
@@ -30,6 +38,21 @@ function nudgeExtensionPoll() {
 
 function Label({ children }: { children: React.ReactNode }) {
   return <label className="mb-1 block text-xs font-medium text-neutral-600">{children}</label>;
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function acceptedFiles(type: QuickReplyActionType) {
+  if (type === "image") return "image/*,.jpg,.jpeg,.png,.webp,.gif";
+  if (type === "video") return "video/*,.mp4,.mov,.m4v,.3gp,.webm";
+  return "audio/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.amr";
 }
 
 export function DispatchCenter({
@@ -61,8 +84,11 @@ export function DispatchCenter({
 
   const [name, setName] = useState("");
   const [variants, setVariants] = useState<string[]>([""]);
+  const [actions, setActions] = useState<QuickReplyAction[]>([{ type: "text", text: "" }]);
   const [replies, setReplies] = useState<QuickReply[]>([]);
   const [replyId, setReplyId] = useState("");
+  const [messageOpen, setMessageOpen] = useState(false);
+  const [messageMode, setMessageMode] = useState<MessageMode>("custom");
   const [paceMin, setPaceMin] = useState(20);
   const [paceMax, setPaceMax] = useState(60);
   const [accepted, setAccepted] = useState(false);
@@ -111,27 +137,29 @@ export function DispatchCenter({
         : funnelTargets.length;
 
 
-  const selectedReply = replies.find((q) => q.id === replyId);
-  const mediaDropped = selectedReply
-    ? sendableActions(selectedReply.actions).filter((a) => a.type !== "text").length
-    : 0;
-
   function pickReply(id: string) {
     setReplyId(id);
     const qr = replies.find((q) => q.id === id);
     if (!qr) return;
-    const texts = sendableActions(qr.actions)
+    setActions(qr.actions);
+    const texts = qr.actions
       .filter((a) => a.type === "text" && a.text?.trim())
       .map((a) => (a.text as string).trim());
-    if (texts.length) setVariants(texts.slice(0, 3));
+    setVariants(texts.length ? texts.slice(0, 3) : [""]);
     if (!name.trim()) setName(qr.title);
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const cleaned = variants.map((v) => v.trim()).filter(Boolean);
-    if (!name.trim() || cleaned.length === 0) {
-      setErr("Preencha o nome e ao menos 1 mensagem.");
+    const cleanActions = actions.filter((action) => {
+      if (action.type === "text") return Boolean(action.text?.trim() || cleaned.length);
+      if (action.type === "funnel_add") return Boolean(action.funnel_id && action.stage_id);
+      if (action.type === "funnel_remove") return Boolean(action.funnel_id);
+      return Boolean(action.path);
+    });
+    if (!name.trim() || cleanActions.length === 0) {
+      setErr("Preencha o nome e defina a mensagem do disparo.");
       return;
     }
     if (!accepted) {
@@ -157,7 +185,8 @@ export function DispatchCenter({
 
     const base = {
       name: name.trim(),
-      message_variants: cleaned,
+      message_variants: cleaned.length ? cleaned : undefined,
+      message_actions: cleanActions,
       pace_seconds_min: Math.min(paceMin, paceMax),
       pace_seconds_max: Math.max(paceMin, paceMax),
     };
@@ -296,52 +325,22 @@ export function DispatchCenter({
         <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="Ex.: Cobrança julho" />
       </div>
 
-      {replies.length > 0 && (
-        <div>
-          <Label>Resposta rápida (opcional)</Label>
-          <select value={replyId} onChange={(e) => pickReply(e.target.value)} className={inputCls}>
-            <option value="">— escrever mensagem —</option>
-            {replies.map((q) => (
-              <option key={q.id} value={q.id}>{q.title}</option>
-            ))}
-          </select>
-          {mediaDropped > 0 && <p className="mt-1 text-xs text-neutral-500">Disparo em massa envia só texto.</p>}
-        </div>
-      )}
-
       <div>
-        <Label>Variações de mensagem</Label>
-        <div className="space-y-2">
-          {variants.map((v, i) => (
-            <div key={i} className="flex gap-2">
-              <textarea
-                value={v}
-                onChange={(e) => setVariants((p) => p.map((x, idx) => (idx === i ? e.target.value : x)))}
-                rows={3}
-                placeholder={`Variação ${i + 1}`}
-                className={inputCls}
-              />
-              {variants.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => setVariants((p) => p.filter((_, idx) => idx !== i))}
-                  className="rounded px-2 text-red-500 hover:bg-red-50"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-        {variants.length < 3 && (
-          <button
-            type="button"
-            onClick={() => setVariants((p) => [...p, ""])}
-            className="mt-2 text-xs font-medium text-neutral-700 hover:underline"
-          >
-            + Adicionar variação (máx 3)
-          </button>
-        )}
+        <Label>Mensagem</Label>
+        <button
+          type="button"
+          onClick={() => setMessageOpen(true)}
+          className="flex w-full items-center justify-between rounded-lg border border-neutral-300 bg-white px-3 py-3 text-left text-sm text-neutral-900 hover:border-neutral-500"
+        >
+          <span className="min-w-0 truncate">
+            {replyId
+              ? replies.find((reply) => reply.id === replyId)?.title
+              : actions.some((action) => action.type !== "text") || variants.some((variant) => variant.trim())
+                ? `${actions.length} ação(ões) definida(s)`
+                : "Definir mensagem"}
+          </span>
+          <span aria-hidden="true" className="text-neutral-400">›</span>
+        </button>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -380,6 +379,185 @@ export function DispatchCenter({
       >
         {busy ? "Criando..." : "Disparar"}
       </button>
+
+      {messageOpen && (
+        <MessageComposer
+          api={api}
+          funnels={funnels}
+          replies={replies}
+          mode={messageMode}
+          replyId={replyId}
+          actions={actions}
+          variants={variants}
+          onClose={() => setMessageOpen(false)}
+          onMode={setMessageMode}
+          onPickReply={pickReply}
+          onActions={setActions}
+          onVariants={setVariants}
+          onClearReply={() => setReplyId("")}
+        />
+      )}
     </form>
+  );
+}
+
+function MessageComposer({
+  api,
+  funnels,
+  replies,
+  mode,
+  replyId,
+  actions,
+  variants,
+  onClose,
+  onMode,
+  onPickReply,
+  onActions,
+  onVariants,
+  onClearReply,
+}: {
+  api: ApiFn;
+  funnels: Funnel[];
+  replies: QuickReply[];
+  mode: MessageMode;
+  replyId: string;
+  actions: QuickReplyAction[];
+  variants: string[];
+  onClose: () => void;
+  onMode: (mode: MessageMode) => void;
+  onPickReply: (id: string) => void;
+  onActions: React.Dispatch<React.SetStateAction<QuickReplyAction[]>>;
+  onVariants: React.Dispatch<React.SetStateAction<string[]>>;
+  onClearReply: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const uploadIndex = useRef<number | null>(null);
+  const fileInput = useRef<HTMLInputElement | null>(null);
+
+  function updateAction(index: number, patch: Partial<QuickReplyAction>) {
+    onActions((list) => list.map((action, current) => current === index ? { ...action, ...patch } : action));
+  }
+
+  function addAction(type: QuickReplyActionType) {
+    onClearReply();
+    onActions((list) => [...list, type === "text" ? { type, text: "" } : { type }]);
+    if (type === "text" && !variants.length) onVariants([""]);
+  }
+
+  async function upload(file: File) {
+    const index = uploadIndex.current;
+    if (index === null) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const dataBase64 = await fileToBase64(file);
+      const result = await api("/api/public/extension/quick-replies/upload", {
+        method: "POST",
+        body: JSON.stringify({ filename: file.name, mime: file.type, data_base64: dataBase64 }),
+      });
+      if (!result?.ok) throw new Error((result?.error as string) || "Falha no upload");
+      updateAction(index, {
+        path: result.path as string,
+        url: result.url as string,
+        mime: result.mime as string,
+        filename: result.filename as string,
+      });
+    } catch (uploadError) {
+      setError(String((uploadError as Error)?.message || uploadError));
+    } finally {
+      setBusy(false);
+      uploadIndex.current = null;
+      if (fileInput.current) fileInput.current.value = "";
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) onClose();
+    }}>
+      <div className="mt-8 w-full max-w-2xl rounded-xl border border-neutral-200 bg-white p-5 shadow-xl">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-base font-semibold text-neutral-900">Mensagem do disparo</h3>
+          <button type="button" onClick={onClose} className="rounded p-1 text-neutral-500 hover:bg-neutral-100">✕</button>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <button type="button" onClick={() => { onMode("custom"); onClearReply(); }} className={`rounded-lg border px-3 py-2 text-sm font-semibold ${mode === "custom" ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300 text-neutral-700"}`}>Criar mensagem</button>
+          <button type="button" onClick={() => onMode("quick")} className={`rounded-lg border px-3 py-2 text-sm font-semibold ${mode === "quick" ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300 text-neutral-700"}`}>Resposta rápida</button>
+        </div>
+
+        {mode === "quick" ? (
+          <div className="mt-4 space-y-2">
+            {replies.map((reply) => (
+              <button key={reply.id} type="button" onClick={() => onPickReply(reply.id)} className={`flex w-full items-center justify-between rounded-lg border px-3 py-3 text-left text-sm ${replyId === reply.id ? "border-neutral-900 bg-neutral-50 font-semibold" : "border-neutral-200"}`}>
+                <span>{reply.title}</span><span>{reply.actions.length} ação(ões)</span>
+              </button>
+            ))}
+            {!replies.length && <p className="text-sm text-neutral-500">Nenhuma resposta rápida cadastrada.</p>}
+          </div>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {actions.map((action, index) => (
+              <div key={`${action.type}-${index}`} className="rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-neutral-700">{index + 1}. {actionLabel(action.type)}</span>
+                  <button type="button" onClick={() => onActions((list) => list.filter((_, current) => current !== index))} className="text-xs text-red-600">Remover</button>
+                </div>
+                {action.type === "text" ? (
+                  <div className="mt-2 space-y-2">
+                    {variants.map((variant, variantIndex) => (
+                      <textarea key={variantIndex} value={variant} onChange={(event) => {
+                        const value = event.target.value;
+                        onVariants((list) => list.map((item, current) => current === variantIndex ? value : item));
+                        if (variantIndex === 0) updateAction(index, { text: value });
+                      }} rows={3} placeholder={`Variação ${variantIndex + 1}`} className={inputCls} />
+                    ))}
+                    {variants.length < 3 && <button type="button" onClick={() => onVariants((list) => [...list, ""])} className="text-xs font-medium text-neutral-700">+ Adicionar variação</button>}
+                  </div>
+                ) : action.type === "funnel_add" || action.type === "funnel_remove" ? (
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    <select value={action.funnel_id ?? ""} onChange={(event) => updateAction(index, { funnel_id: event.target.value || undefined, stage_id: undefined })} className={inputCls}>
+                      <option value="">Escolha o funil</option>
+                      {funnels.filter((funnel) => funnel.mode !== "label").map((funnel) => <option key={funnel.id} value={funnel.id}>{funnel.name}</option>)}
+                    </select>
+                    {action.type === "funnel_add" && <select value={action.stage_id ?? ""} onChange={(event) => updateAction(index, { stage_id: event.target.value || undefined })} className={inputCls}>
+                      <option value="">Escolha a coluna</option>
+                      {(funnels.find((funnel) => funnel.id === action.funnel_id)?.stages ?? []).map((stage) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}
+                    </select>}
+                  </div>
+                ) : (
+                  <div className="mt-2 space-y-2">
+                    <button type="button" disabled={busy} onClick={() => {
+                      uploadIndex.current = index;
+                      if (fileInput.current) fileInput.current.accept = acceptedFiles(action.type);
+                      fileInput.current?.click();
+                    }} className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold disabled:opacity-50">
+                      {action.path ? action.filename || "Trocar arquivo" : `Escolher ${actionLabel(action.type).toLowerCase()}`}
+                    </button>
+                    <input value={action.caption ?? ""} onChange={(event) => updateAction(index, { caption: event.target.value })} placeholder="Legenda (opcional)" className={inputCls} />
+                  </div>
+                )}
+              </div>
+            ))}
+
+            <div className="flex flex-wrap gap-2">
+              {[...QUICK_REPLY_ACTION_TYPES, ...QUICK_REPLY_FUNNEL_TYPES].map((type) => (
+                <button key={type} type="button" onClick={() => addAction(type)} className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-100">+ {actionLabel(type)}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <input ref={fileInput} type="file" className="hidden" onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) void upload(file);
+        }} />
+        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+        <div className="mt-5 flex justify-end">
+          <button type="button" onClick={onClose} className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">Concluir</button>
+        </div>
+      </div>
+    </div>
   );
 }
