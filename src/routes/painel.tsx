@@ -1727,7 +1727,7 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
         </div>
 
         <button
-          onClick={() => { writeGoal(shopId, goal); persistPlans(plans); onClose(); }}
+          onClick={() => { writeGoal(shopId, goal); persistPlans(plans); }}
           className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
         >
           Salvar
