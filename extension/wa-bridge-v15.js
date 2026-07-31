@@ -403,7 +403,8 @@
     const byChat = labelChatMap();
     const contacts = [];
     try {
-      for (const chat of chats.slice(0, 3000)) {
+      const known = new Set(labels.map((l) => l.id));
+      for (const chat of chats.slice(0, 1500)) {
         const waId = serialized(chat?.id);
         if (!waId) continue;
         const isGroup = waId.endsWith("@g.us");
@@ -412,20 +413,16 @@
         contacts.push({
           wa_id: waId,
           phone: isGroup || !digits ? null : digits,
-          name:
-            String(
-              chat?.formattedTitle ||
-                chat?.__x_formattedTitle ||
-                chat?.name ||
-                chat?.contact?.name ||
-                chat?.contact?.pushname ||
-                "",
-            ).slice(0, 160) || null,
+          name: resolveName(chat, waId),
           is_group: isGroup,
           label_ids: (() => {
             const fromChat = chatLabelIds(chat);
             const fromStore = [...(byChat.get(waId) || [])];
-            return [...new Set([...fromChat, ...fromStore])].slice(0, 50);
+            // Só listas que existem de fato no WhatsApp — ids órfãos criavam
+            // listas fantasma no CRM.
+            return [...new Set([...fromChat, ...fromStore])]
+              .filter((id) => !known.size || known.has(id))
+              .slice(0, 50);
           })(),
           last_message_at: ts > 0 ? new Date(ts * 1000).toISOString() : null,
         });
@@ -434,12 +431,7 @@
       console.warn("[CRM] conversas indisponíveis:", e?.message || e);
     }
 
-    // Se as etiquetas não vieram do store, deduzimos pelos ids usados nas conversas.
-    if (!labels.length) {
-      const seen = new Map();
-      for (const c of contacts) for (const id of c.label_ids) seen.set(id, (seen.get(id) || 0) + 1);
-      labels = [...seen.entries()].map(([id, count]) => ({ id, name: `Etiqueta ${id}`, color: null, count }));
-    }
+
 
     console.info(`[CRM] coletado: ${labels.length} etiqueta(s), ${contacts.length} conversa(s)`);
     return { labels, contacts };
