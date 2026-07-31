@@ -363,8 +363,10 @@ function writeSystem(shopId: string, id: SubscriptionSystemId) {
 function Painel() {
   const [token, setToken] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>(() => customersCache ?? []);
   const [loading, setLoading] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+
   const initialSection: Section = (() => {
     if (typeof window === "undefined") return "assinantes";
     const s = new URLSearchParams(window.location.search).get("section");
