@@ -1076,9 +1076,13 @@ function KanbanView({
     reload();
   }
 
+  // Primeira utilização = sem kanbans e sem contatos: só oferecemos a importação.
+  const firstUse = cols.length === 0 && customers.length === 0;
+
   return (
     <div className="space-y-4">
       {dialog}
+
 
       {/* Primeira utilização: só o botão de importar planilha. */}
       {firstUse ? (
