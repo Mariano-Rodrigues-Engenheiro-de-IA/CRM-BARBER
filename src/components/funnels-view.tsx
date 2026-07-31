@@ -15,14 +15,18 @@ import {
   type WaContact,
   type WaLabel,
 } from "@/lib/funnels";
-import { applyFunnelActions, canOpenWhatsapp, isRealPhone, openWhatsappChat } from "@/lib/wa-actions";
+import {
+  applyFunnelActions,
+  canOpenWhatsapp,
+  isRealPhone,
+  openWhatsappChat,
+} from "@/lib/wa-actions";
 import { sendableActions, type QuickReply } from "@/lib/quick-replies";
 
 type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
 
 const inputCls =
   "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-900";
-
 
 /** Cache entre navegações: voltar pra aba Funis não deve piscar esqueleto. */
 let funnelsCache: { funnels: Funnel[]; labels: WaLabel[]; contacts: WaContact[] } | null = null;
@@ -31,7 +35,9 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
   const [funnels, setFunnels] = useState<Funnel[]>(() => funnelsCache?.funnels ?? []);
   const [labels, setLabels] = useState<WaLabel[]>(() => funnelsCache?.labels ?? []);
   const [contacts, setContacts] = useState<WaContact[]>(() => funnelsCache?.contacts ?? []);
-  const [activeId, setActiveId] = useState<string | null>(() => funnelsCache?.funnels[0]?.id ?? null);
+  const [activeId, setActiveId] = useState<string | null>(
+    () => funnelsCache?.funnels[0]?.id ?? null,
+  );
   const [loading, setLoading] = useState(!funnelsCache);
   const [err, setErr] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -53,7 +59,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
     if (f?.ok) {
       list = (f.funnels as Funnel[]) || [];
       setFunnels(list);
-      setActiveId((cur) => (cur && list.some((x) => x.id === cur) ? cur : list[0]?.id ?? null));
+      setActiveId((cur) => (cur && list.some((x) => x.id === cur) ? cur : (list[0]?.id ?? null)));
     } else {
       setErr((f?.error as string) || "Erro ao carregar funis");
     }
@@ -109,11 +115,8 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
     return created;
   }
 
-  /**
-   * O funil "Listas" é um espelho das listas (etiquetas) do WhatsApp:
-   * cada lista vira uma coluna e os contatos dela viram os cards.
-   * Nada é criado à mão aqui — a fonte da verdade é sempre o WhatsApp.
-   */
+  /** Mantém somente as colunas. Os contatos são renderizados diretamente do
+   * snapshot do WhatsApp, sem criar/deletar centenas de cards em sequência. */
   async function syncLabelFunnel(list: Funnel[], ls: WaLabel[], cs: WaContact[]) {
     const funnel = list.find((f) => f.mode === "label");
     if (!funnel) return false;
@@ -128,7 +131,9 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
         body: JSON.stringify({
           stages: ls.map((l, i) => {
             const found = byName.get(l.name);
-            return found ? { id: found.id, name: l.name, sort_order: i } : { name: l.name, sort_order: i };
+            return found
+              ? { id: found.id, name: l.name, sort_order: i }
+              : { name: l.name, sort_order: i };
           }),
           removed_stage_ids: stale.map((s) => s.id),
         }),
@@ -136,41 +141,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       return true;
     }
 
-    // 2) Cards = contatos de cada lista.
-    let changed = false;
-    const stageByLabel = new Map(ls.map((l) => [l.wa_label_id, byName.get(l.name)]));
-    const wanted = new Set<string>();
-    for (const [labelId, stage] of stageByLabel) {
-      if (!stage) continue;
-      const inLabel = cs.filter((c) => (c.label_ids || []).includes(labelId)).slice(0, 1000);
-      const have = new Set(
-        funnel.cards.filter((c) => c.stage_id === stage.id).map((c) => c.wa_contact_id),
-      );
-      for (const c of inLabel) {
-        wanted.add(`${stage.id}:${c.id}`);
-        if (have.has(c.id)) continue;
-        await api("/api/public/extension/funnel-cards", {
-          method: "POST",
-          body: JSON.stringify({
-            funnel_id: funnel.id,
-            stage_id: stage.id,
-            title: c.name || c.phone || c.wa_id,
-            phone: c.phone ?? undefined,
-            wa_contact_id: c.id,
-          }),
-        });
-        changed = true;
-      }
-    }
-    for (const card of funnel.cards) {
-      if (card.wa_contact_id && wanted.has(`${card.stage_id}:${card.wa_contact_id}`)) continue;
-      await api("/api/public/extension/funnel-cards", {
-        method: "DELETE",
-        body: JSON.stringify({ id: card.id }),
-      });
-      changed = true;
-    }
-    return changed;
+    return false;
   }
 
   useEffect(() => {
@@ -179,23 +150,38 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       if (!r) return;
       const created = await ensureDefaults(r.list);
       const base = created ? await reload() : r;
-      if (await syncLabelFunnel(base.list, base.labels, base.contacts)) {
-        const next = await reload();
-        await syncLabelFunnel(next.list, next.labels, next.contacts);
-      }
+      if (await syncLabelFunnel(base.list, base.labels, base.contacts)) await reload();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-
   const active = funnels.find((f) => f.id === activeId) || null;
 
   const inboxContacts = useMemo(() => {
-    if (!active) return [];
-    const used = new Set(active.cards.map((card) => card.wa_contact_id).filter(Boolean) as string[]);
-    return contacts.filter((c) => !c.is_group).filter((c) => !used.has(c.id));
-  }, [active, contacts]);
+    return contacts.filter((c) => !c.is_group);
+  }, [contacts]);
 
+  function stageCards(stageId: string): FunnelCard[] {
+    if (!active || active.mode !== "label")
+      return active?.cards.filter((c) => c.stage_id === stageId) ?? [];
+    const stage = active.stages.find((item) => item.id === stageId);
+    const label = labels.find((item) => item.name === stage?.name);
+    if (!label) return [];
+    return contacts
+      .filter((contact) => !contact.is_group && contact.label_ids.includes(label.wa_label_id))
+      .map((contact, index) => ({
+        id: `wa-${stageId}-${contact.id}`,
+        funnel_id: active.id,
+        stage_id: stageId,
+        title: contact.name || contact.phone || contact.wa_id,
+        phone: contact.phone,
+        value_cents: null,
+        notes: null,
+        sort_order: index,
+        customer_id: null,
+        wa_contact_id: contact.id,
+      }));
+  }
 
   async function moveCard(card: FunnelCard, stageId: string) {
     if (card.stage_id === stageId) return;
@@ -203,7 +189,10 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       list.map((f) =>
         f.id !== card.funnel_id
           ? f
-          : { ...f, cards: f.cards.map((c) => (c.id === card.id ? { ...c, stage_id: stageId } : c)) },
+          : {
+              ...f,
+              cards: f.cards.map((c) => (c.id === card.id ? { ...c, stage_id: stageId } : c)),
+            },
       ),
     );
     const r = await api("/api/public/extension/funnel-cards", {
@@ -215,7 +204,9 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
 
   async function removeCard(card: FunnelCard) {
     setFunnels((list) =>
-      list.map((f) => (f.id === card.funnel_id ? { ...f, cards: f.cards.filter((c) => c.id !== card.id) } : f)),
+      list.map((f) =>
+        f.id === card.funnel_id ? { ...f, cards: f.cards.filter((c) => c.id !== card.id) } : f,
+      ),
     );
     await api("/api/public/extension/funnel-cards", {
       method: "DELETE",
@@ -275,7 +266,9 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       const created = r.card as FunnelCard;
       setFunnels((list) =>
         list.map((f) =>
-          f.id !== funnelId ? f : { ...f, cards: f.cards.map((c) => (c.id === tempId ? created : c)) },
+          f.id !== funnelId
+            ? f
+            : { ...f, cards: f.cards.map((c) => (c.id === tempId ? created : c)) },
         ),
       );
       return created;
@@ -299,7 +292,6 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
     setDetail(created);
   }
 
-
   async function removeFunnel(id: string) {
     await api(`/api/public/extension/funnels/${id}`, { method: "DELETE" });
     setActiveId(null);
@@ -307,19 +299,27 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
   }
 
   /** Renomeia uma coluna do funil ativo. */
-  async function renameStage(stage: { id: string; name: string; sort_order: number }, name: string) {
+  async function renameStage(
+    stage: { id: string; name: string; sort_order: number },
+    name: string,
+  ) {
     if (!active || !name.trim() || name.trim() === stage.name) return;
     const funnelId = active.id;
     setFunnels((list) =>
       list.map((f) =>
         f.id !== funnelId
           ? f
-          : { ...f, stages: f.stages.map((s) => (s.id === stage.id ? { ...s, name: name.trim() } : s)) },
+          : {
+              ...f,
+              stages: f.stages.map((s) => (s.id === stage.id ? { ...s, name: name.trim() } : s)),
+            },
       ),
     );
     await api(`/api/public/extension/funnels/${funnelId}`, {
       method: "PATCH",
-      body: JSON.stringify({ stages: [{ id: stage.id, name: name.trim(), sort_order: stage.sort_order }] }),
+      body: JSON.stringify({
+        stages: [{ id: stage.id, name: name.trim(), sort_order: stage.sort_order }],
+      }),
     });
   }
 
@@ -368,13 +368,16 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       >
         Novo funil
       </button>
-
     </>
   );
 
   return (
     <div className="space-y-3">
-      {headerHost ? createPortal(header, headerHost) : <div className="flex items-center gap-2">{header}</div>}
+      {headerHost ? (
+        createPortal(header, headerHost)
+      ) : (
+        <div className="flex items-center gap-2">{header}</div>
+      )}
 
       {err && <p className="text-sm text-red-500">{err}</p>}
 
@@ -395,13 +398,12 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
 
       {active && (
         <>
-
-
-
           <div className="flex h-[calc(100vh-108px)] gap-3 overflow-x-auto pb-1">
             <div className="flex h-full w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-2">
               <div className="flex items-baseline justify-between gap-2">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-900">Inbox</h3>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-900">
+                  Inbox
+                </h3>
                 <span className="shrink-0 rounded-full bg-neutral-200 px-2 py-0.5 text-[11px] font-semibold text-neutral-700">
                   {inboxContacts.length}
                 </span>
@@ -429,7 +431,9 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                       }}
                       className="cursor-grab rounded-lg border border-neutral-200 bg-white p-3 shadow-sm active:cursor-grabbing"
                     >
-                      <p className="truncate text-sm font-medium text-neutral-900">{c.name || c.phone || c.wa_id}</p>
+                      <p className="truncate text-sm font-medium text-neutral-900">
+                        {c.name || c.phone || c.wa_id}
+                      </p>
                       {isRealPhone(c.phone) && (
                         <p className="mt-0.5 truncate text-[11px] text-neutral-500">{c.phone}</p>
                       )}
@@ -437,11 +441,16 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                         <CardAction
                           title="Abrir conversa no WhatsApp"
                           disabled={!canOpenWhatsapp(c.phone, c.wa_id)}
-                          onClick={() => void openWhatsappChat(c.phone || "", c.name || undefined, c.wa_id)}
+                          onClick={() =>
+                            void openWhatsappChat(c.phone || "", c.name || undefined, c.wa_id)
+                          }
                         >
                           <IconWhatsapp />
                         </CardAction>
-                        <CardAction title="Anotações" onClick={() => void promoteContact(c, "notes")}>
+                        <CardAction
+                          title="Anotações"
+                          onClick={() => void promoteContact(c, "notes")}
+                        >
                           <IconNote />
                         </CardAction>
                         <CardAction
@@ -456,9 +465,8 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
               </div>
             </div>
 
-
             {active.stages.map((stage) => {
-              const cards = active.cards.filter((c) => c.stage_id === stage.id);
+              const cards = stageCards(stage.id);
               return (
                 <div
                   key={stage.id}
@@ -492,12 +500,18 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                     />
                     <div className="flex shrink-0 items-center gap-1">
                       <span className="text-[11px] text-neutral-500">{cards.length}</span>
-                      <DotsMenu
-                        items={[
-                          { label: "Renomear", onClick: () => setRenamingStage(stage.id) },
-                          { label: "Excluir", danger: true, onClick: () => void removeStage(stage.id) },
-                        ]}
-                      />
+                      {active.mode !== "label" && (
+                        <DotsMenu
+                          items={[
+                            { label: "Renomear", onClick: () => setRenamingStage(stage.id) },
+                            {
+                              label: "Excluir",
+                              danger: true,
+                              onClick: () => void removeStage(stage.id),
+                            },
+                          ]}
+                        />
+                      )}
                     </div>
                   </div>
 
@@ -513,13 +527,17 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                         className="cursor-grab rounded-lg border border-neutral-200 bg-white p-3 shadow-sm active:cursor-grabbing"
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <p className="min-w-0 truncate text-sm font-medium text-neutral-900">{card.title}</p>
-                          <button
-                            onClick={() => removeCard(card)}
-                            className="shrink-0 text-[11px] text-neutral-400 hover:text-red-600"
-                          >
-                            ✕
-                          </button>
+                          <p className="min-w-0 truncate text-sm font-medium text-neutral-900">
+                            {card.title}
+                          </p>
+                          {active.mode !== "label" && (
+                            <button
+                              onClick={() => removeCard(card)}
+                              className="shrink-0 text-[11px] text-neutral-400 hover:text-red-600"
+                            >
+                              ✕
+                            </button>
+                          )}
                         </div>
                         {isRealPhone(card.phone) && (
                           <p className="mt-0.5 text-[11px] text-neutral-500">{card.phone}</p>
@@ -534,9 +552,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                           <CardAction
                             title="Abrir conversa no WhatsApp"
                             disabled={!isRealPhone(card.phone)}
-                            onClick={() =>
-                              void openWhatsappChat(card.phone!, card.title)
-                            }
+                            onClick={() => void openWhatsappChat(card.phone!, card.title)}
                           >
                             <IconWhatsapp />
                           </CardAction>
@@ -562,16 +578,12 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                       </div>
                     ))}
                   </div>
-
-                  
                 </div>
               );
             })}
           </div>
         </>
       )}
-
-
 
       {detail && (
         <CardDrawer
@@ -604,8 +616,6 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
           }}
         />
       )}
-
-
     </div>
   );
 }
@@ -624,7 +634,9 @@ function StageTitle({
 }) {
   if (!editing) {
     return (
-      <h3 className="truncate text-sm font-semibold uppercase tracking-wide text-neutral-900">{name}</h3>
+      <h3 className="truncate text-sm font-semibold uppercase tracking-wide text-neutral-900">
+        {name}
+      </h3>
     );
   }
   return (
@@ -642,7 +654,11 @@ function StageTitle({
 }
 
 /** Menu de três pontos reutilizável (colunas e funis). */
-function DotsMenu({ items }: { items: { label: string; onClick: () => void; danger?: boolean }[] }) {
+function DotsMenu({
+  items,
+}: {
+  items: { label: string; onClick: () => void; danger?: boolean }[];
+}) {
   const [open, setOpen] = useState(false);
   return (
     <div className="relative">
@@ -726,7 +742,15 @@ function FunnelPicker({
         className="flex min-w-0 items-center gap-1.5 text-[13px] font-semibold uppercase tracking-widest text-neutral-900"
       >
         <span className="truncate">{active ? active.name : "Funis de vendas"}</span>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          aria-hidden
+        >
           <path d="m6 9 6 6 6-6" />
         </svg>
       </button>
@@ -796,19 +820,43 @@ const IconWhatsapp = () => (
   </svg>
 );
 const IconNote = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
     <path d="M4 4h16v12l-4 4H4z" />
     <path d="M16 20v-4h4" />
   </svg>
 );
 const IconClock = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
     <circle cx="12" cy="12" r="9" />
     <path d="M12 7v5l3 2" />
   </svg>
 );
 
-function Overlay({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+function Overlay({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
       <div className="mt-16 w-full max-w-lg rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl">
@@ -897,7 +945,9 @@ function CardDrawer({
                 onClick={() => setTab(t)}
                 className={
                   "rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition " +
-                  (tab === t ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
+                  (tab === t
+                    ? "bg-white text-neutral-900 shadow-sm"
+                    : "text-neutral-500 hover:text-neutral-900")
                 }
               >
                 {t === "notes" ? "Anotações" : "Mensagens agendadas"}
@@ -976,7 +1026,12 @@ function NewFunnelModal({
   onCreate,
 }: {
   onClose: () => void;
-  onCreate: (body: { name: string; mode: FunnelMode; source_label_id?: string | null; stages?: string[] }) => void;
+  onCreate: (body: {
+    name: string;
+    mode: FunnelMode;
+    source_label_id?: string | null;
+    stages?: string[];
+  }) => void;
 }) {
   const [name, setName] = useState("");
   // O funil já nasce com a estrutura montada aqui: nome + abas (etapas).
@@ -1047,7 +1102,10 @@ function NewFunnelModal({
         </p>
 
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-lg border border-neutral-300 px-4 py-2 text-sm">
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm"
+          >
             Cancelar
           </button>
           <button

@@ -8,7 +8,7 @@
 //
 // Rate limit: espaçamento aleatório entre 8s e 20s entre jobs (ritmo humano).
 
-const EXTENSION_VERSION = "0.29.2";
+const EXTENSION_VERSION = "0.33.0";
 const DEFAULT_API_BASE = "https://crm.zayloia.com";
 const POLL_MIN_MS = 8000;
 const POLL_MAX_MS = 20000;
@@ -165,6 +165,12 @@ async function getWhatsappTabs() {
 }
 
 async function sendToTab(job) {
+  const preparedJob = { ...job };
+  if (Array.isArray(job?.actions) && job.actions.length) {
+    preparedJob.actions = await prefetchMedia(job.actions);
+    const broken = preparedJob.actions.find((action) => action?.media_error);
+    if (broken) return { ok: false, error: broken.media_error };
+  }
   const tabs = await getWhatsappTabs();
   const candidates = tabs
     .filter((tab) => tab.id)
@@ -179,7 +185,7 @@ async function sendToTab(job) {
         continue;
       }
       await ensureScripts(tab.id);
-      const result = await chrome.tabs.sendMessage(tab.id, { type: "send_message_v180", job });
+      const result = await chrome.tabs.sendMessage(tab.id, { type: "send_message_v180", job: preparedJob });
       if (result?.ok) return result;
       lastError = result?.error || lastError;
     } catch (e) {

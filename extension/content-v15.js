@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.32.0";
+  const CRM_VERSION = "0.33.0";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -132,16 +132,13 @@
     }
   }
 
-  function startSync() {
-    if (syncTimer) return;
-    // A primeira sincronização varre etiquetas e conversas — pesado logo no
-    // boot. Só rodamos quando o navegador estiver ocioso (ou após 60s).
-    const first = () => {
-      if (typeof requestIdleCallback === "function") requestIdleCallback(() => syncWaData(), { timeout: 30000 });
-      else syncWaData();
-    };
-    setTimeout(first, 180000);
-    syncTimer = setInterval(() => syncWaData(), 30 * 60 * 1000);
+  async function loadWaData() {
+    const r = await chrome.runtime
+      .sendMessage({ type: "api", path: "/api/public/extension/wa/data" })
+      .catch(() => null);
+    if (!r?.ok) return;
+    waData = { labels: r.labels || [], contacts: r.contacts || [] };
+    renderTopbar();
   }
 
 
@@ -388,11 +385,6 @@
 
   /** Lista: filtra a lista de conversas pelos contatos daquela lista. */
   async function filterByLabel(labelId, _labelName) {
-    // Etiqueta clicada antes da sincronização terminar: sincroniza na hora.
-    if (!(waData.contacts || []).length) {
-      syncing = false;
-      await syncWaData();
-    }
     const terms = [];
     for (const c of waData.contacts || []) {
       if (!(c.label_ids || []).includes(labelId)) continue;
@@ -526,10 +518,6 @@
             </button>`;
         })
         .join("");
-      if (!pills && !syncing && !autoSyncTried) {
-        autoSyncTried = true;
-        setTimeout(() => syncWaData(), 0);
-      }
       topbarRef.innerHTML = `${filter}${
         pills ||
         `<span class="crm-topbar-hint">${
@@ -630,11 +618,12 @@
 
     stopPairRetry();
     renderTopbar();
-    startPollHeartbeat();
-    startSync();
+    // A fila já é consumida pelo service worker. Não fazemos heartbeat nem
+    // varredura automática no boot: ambos competiam com o carregamento do WA.
     loadFunnels();
     loadQuickReplies();
     loadBilling();
+    loadWaData();
   }
 
   function ensureShell() {
@@ -663,21 +652,12 @@
   ensureShell();
   setInterval(() => loadFunnels(), 300000);
   ensureChatButton();
-  setInterval(() => ensureChatButton(), 1500);
-  // O WhatsApp muta o DOM centenas de vezes por segundo enquanto carrega as
-  // conversas. Sem throttle, cada mutação disparava duas varreduras e deixava
-  // a interface lenta. Agora agrupamos tudo em um único frame.
-  let domCheckQueued = false;
-  const mo = new MutationObserver(() => {
-    if (domCheckQueued) return;
-    domCheckQueued = true;
-    requestAnimationFrame(() => {
-      domCheckQueued = false;
-      ensureShell();
-      ensureChatButton();
-    });
-  });
-  if (document.body) mo.observe(document.body, { childList: true });
+  // Uma checagem barata e espaçada substitui o MutationObserver global, que
+  // acordava em praticamente toda conversa renderizada pelo WhatsApp.
+  setInterval(() => {
+    ensureShell();
+    ensureChatButton();
+  }, 5000);
 
 
 
@@ -1062,13 +1042,17 @@
   async function handleSend(job) {
     const phone = job?.customer?.phone;
     const text = job?.body;
-    if (!phone || !text) return { ok: false, error: "Job inválido" };
+    const sourceActions = Array.isArray(job?.actions) ? job.actions : [];
+    if (!phone || (!text && !sourceActions.length)) return { ok: false, error: "Job inválido" };
     try {
       await ensureWaScriptsInjected();
     } catch (e) {
       return { ok: false, error: `Falha ao carregar wa-js/bridge: ${String(e?.message || e)}` };
     }
-    const silent = await bridgeRequest({ __crm: "send_v180", phone, text });
+    const sendable = sourceActions.filter((action) => ["text", "image", "video", "audio"].includes(action?.type));
+    const silent = sendable.length
+      ? await handleWaAction({ phone, name: job?.customer?.name || "", actions: sendable })
+      : await bridgeRequest({ __crm: "send_v180", phone, text });
 
     if (silent?.ok) return silent;
     return { ok: false, error: silent?.error || "Envio silencioso falhou" };

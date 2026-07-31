@@ -132,6 +132,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          message_actions: Json
           message_variants: string[]
           name: string
           pace_seconds: number
@@ -148,6 +149,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          message_actions?: Json
           message_variants?: string[]
           name: string
           pace_seconds?: number
@@ -164,6 +166,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          message_actions?: Json
           message_variants?: string[]
           name?: string
           pace_seconds?: number
@@ -518,6 +521,7 @@ export type Database = {
           id: string
           last_error: string | null
           max_attempts: number
+          message_actions: Json
           phone: string
           rendered_body: string
           scheduled_for: string
@@ -537,6 +541,7 @@ export type Database = {
           id?: string
           last_error?: string | null
           max_attempts?: number
+          message_actions?: Json
           phone: string
           rendered_body: string
           scheduled_for?: string
@@ -556,6 +561,7 @@ export type Database = {
           id?: string
           last_error?: string | null
           max_attempts?: number
+          message_actions?: Json
           phone?: string
           rendered_body?: string
           scheduled_for?: string

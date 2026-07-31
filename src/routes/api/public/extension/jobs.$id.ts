@@ -61,6 +61,64 @@ export const Route = createFileRoute("/api/public/extension/jobs/$id")({
           // Either wrong id, or the job belongs to another barbershop.
           return jsonResponse(request, { ok: false, error: "Job não encontrado" }, { status: 404 });
         }
+        if (parsed.data.status === "sent") {
+          const { data: job } = await supabaseAdmin
+            .from("message_jobs")
+            .select("customer_id, message_actions")
+            .eq("id", params.id)
+            .eq("barbershop_id", auth.token.barbershop_id)
+            .maybeSingle();
+          const actions = Array.isArray(job?.message_actions) ? job.message_actions : [];
+          const funnelActions = actions.filter((action) => {
+            if (!action || typeof action !== "object") return false;
+            const type = (action as { type?: unknown }).type;
+            return type === "funnel_add" || type === "funnel_remove";
+          }) as Array<{
+            type: "funnel_add" | "funnel_remove";
+            funnel_id?: string;
+            stage_id?: string;
+          }>;
+          if (job?.customer_id && funnelActions.length) {
+            const { data: customer } = await supabaseAdmin
+              .from("customers")
+              .select("name, phone")
+              .eq("id", job.customer_id)
+              .eq("barbershop_id", auth.token.barbershop_id)
+              .maybeSingle();
+            for (const action of funnelActions) {
+              if (!action.funnel_id || !customer) continue;
+              const { data: cards } = await supabaseAdmin
+                .from("funnel_cards")
+                .select("id, stage_id")
+                .eq("barbershop_id", auth.token.barbershop_id)
+                .eq("funnel_id", action.funnel_id)
+                .eq("phone", customer.phone);
+              if (action.type === "funnel_remove") {
+                const ids = (cards ?? []).map((card) => card.id);
+                if (ids.length) await supabaseAdmin.from("funnel_cards").delete().in("id", ids);
+                continue;
+              }
+              if (!action.stage_id) continue;
+              const existing = cards?.[0];
+              if (existing) {
+                if (existing.stage_id !== action.stage_id) {
+                  await supabaseAdmin
+                    .from("funnel_cards")
+                    .update({ stage_id: action.stage_id })
+                    .eq("id", existing.id);
+                }
+              } else {
+                await supabaseAdmin.from("funnel_cards").insert({
+                  barbershop_id: auth.token.barbershop_id,
+                  funnel_id: action.funnel_id,
+                  stage_id: action.stage_id,
+                  title: customer.name,
+                  phone: customer.phone,
+                });
+              }
+            }
+          }
+        }
         return jsonResponse(request, { ok: true, job: data });
       },
     },

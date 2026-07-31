@@ -78,7 +78,9 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
         // passed; jobs without expires_at are treated as non-expiring.
         let pickQ = supabaseAdmin
           .from("message_jobs")
-          .select("id, customer_id, rendered_body, scheduled_for, attempts, expires_at, campaign_id")
+          .select(
+            "id, customer_id, rendered_body, message_actions, scheduled_for, attempts, expires_at, campaign_id",
+          )
           .eq("barbershop_id", auth.token.barbershop_id)
           .eq("status", "pending")
           .lte("scheduled_for", nowIso);
@@ -106,7 +108,7 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
           })
           .eq("id", candidate.id)
           .eq("status", "pending")
-          .select("id, customer_id, rendered_body, scheduled_for, attempts")
+          .select("id, customer_id, rendered_body, message_actions, scheduled_for, attempts")
           .maybeSingle();
         if (claimErr) {
           return jsonResponse(request, { ok: false, error: "Claim failed" }, { status: 500 });
@@ -129,6 +131,7 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
           job: {
             id: claimed.id,
             body: claimed.rendered_body,
+            actions: claimed.message_actions,
             attempts: claimed.attempts,
             customer: customer ?? null,
           },

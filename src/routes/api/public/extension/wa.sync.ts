@@ -58,9 +58,12 @@ export const Route = createFileRoute("/api/public/extension/wa/sync")({
             .from("wa_labels")
             .delete()
             .eq("barbershop_id", shop)
-            .not("wa_label_id", "in", `(${parsed.data.labels.map((l) => `"${l.id.replace(/"/g, "")}"`).join(",")})`);
+            .not(
+              "wa_label_id",
+              "in",
+              `(${parsed.data.labels.map((l) => `"${l.id.replace(/"/g, "")}"`).join(",")})`,
+            );
         }
-
 
         if (parsed.data.contacts.length) {
           // Lotes de 500 para não estourar o limite do PostgREST.
@@ -82,6 +85,16 @@ export const Route = createFileRoute("/api/public/extension/wa/sync")({
             if (error) {
               return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
             }
+          }
+          // A coleta é um snapshot, não um acumulador. Contatos ausentes no
+          // snapshot concluído deixam de compor Inbox/Listas imediatamente.
+          const { error: staleError } = await supabaseAdmin
+            .from("wa_contacts")
+            .delete()
+            .eq("barbershop_id", shop)
+            .lt("synced_at", now);
+          if (staleError) {
+            return jsonResponse(request, { ok: false, error: staleError.message }, { status: 500 });
           }
         }
 
