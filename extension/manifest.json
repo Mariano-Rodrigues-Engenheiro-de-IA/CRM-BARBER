@@ -34,6 +34,7 @@
     },
     {
       "matches": [
+        "https://crm.zayloia.com/painel*",
         "https://buzz-boost-crm.lovable.app/painel*",
         "https://*.lovable.app/painel*",
         "https://*.lovableproject.com/painel*"
