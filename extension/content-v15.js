@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.29.1";
+  const CRM_VERSION = "0.29.2";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -64,7 +64,16 @@
       });
     return waScriptsPromise;
   }
-  ensureWaScriptsInjected().catch(() => null);
+  // Injeção adiada: o wa-js engancha nos módulos internos do WhatsApp e, se
+  // isso acontece durante o boot, as conversas demoram muito mais pra abrir.
+  // Esperamos o navegador ficar ocioso (ou 20s) antes de injetar.
+  function scheduleWaScripts() {
+    const run = () => ensureWaScriptsInjected().catch(() => null);
+    if (typeof requestIdleCallback === "function") requestIdleCallback(run, { timeout: 20000 });
+    else setTimeout(run, 20000);
+  }
+  if (document.readyState === "complete") scheduleWaScripts();
+  else window.addEventListener("load", scheduleWaScripts, { once: true });
 
 
   let pollHeartbeat = null;
@@ -77,6 +86,7 @@
   let quickReplies = [];
   let syncTimer = null;
   let syncing = false;
+  let pairHint = null;
 
   function readLoggedPhone() {
     try {
@@ -131,7 +141,9 @@
 
   function startSync() {
     if (syncTimer) return;
-    syncWaData();
+    // A primeira sincronização varre etiquetas e conversas — pesado logo no
+    // boot. Adiamos 25s para o WhatsApp abrir as conversas primeiro.
+    setTimeout(() => syncWaData(), 25000);
     syncTimer = setInterval(() => syncWaData(), 10 * 60 * 1000);
   }
 
@@ -494,7 +506,9 @@
     if (!topbarRef) return;
 
     if (!status.paired) {
-      topbarRef.innerHTML = `<span class="crm-topbar-hint">CRM Barber · conectando ao seu WhatsApp…</span>`;
+      topbarRef.innerHTML = `<span class="crm-topbar-hint">${escapeHtml(
+        pairHint || "CRM Barber · conectando ao seu WhatsApp…",
+      )}</span>`;
       return;
     }
 
@@ -560,6 +574,48 @@
 
 
 
+  // O número logado só aparece no localStorage depois que o WhatsApp Web
+  // termina de autenticar. Antes disso o pareamento falha em silêncio e a
+  // barra ficava presa em "conectando…" pra sempre. Agora tentamos de novo.
+  let pairTimer = null;
+  let pairing = false;
+
+  async function attemptPair() {
+    if (pairing) return;
+    pairing = true;
+    try {
+      const phone = readLoggedPhone();
+      if (!phone) {
+        pairHint = "CRM Barber · aguardando o WhatsApp Web terminar de carregar…";
+        renderTopbar();
+        return;
+      }
+      const res = await chrome.runtime.sendMessage({ type: "pair", phone }).catch(() => null);
+      if (res?.ok) {
+        pairHint = null;
+        stopPairRetry();
+        refresh();
+        return;
+      }
+      pairHint = `CRM Barber · não consegui vincular: ${res?.error || "sem resposta do servidor"} — tentando de novo…`;
+      renderTopbar();
+    } finally {
+      pairing = false;
+    }
+  }
+
+  function startPairRetry() {
+    if (pairTimer) return;
+    attemptPair();
+    pairTimer = setInterval(attemptPair, 5000);
+  }
+
+  function stopPairRetry() {
+    if (!pairTimer) return;
+    clearInterval(pairTimer);
+    pairTimer = null;
+  }
+
   async function refresh() {
     const r = await chrome.runtime.sendMessage({ type: "get_status" }).catch(() => null);
     status = r || { paired: false };
@@ -567,15 +623,11 @@
     if (!status.paired) {
       stopPollHeartbeat();
       renderTopbar();
-      const phone = readLoggedPhone();
-      if (phone) {
-        chrome.runtime.sendMessage({ type: "pair", phone }).then((res) => {
-          if (res?.ok) refresh();
-        });
-      }
+      startPairRetry();
       return;
     }
 
+    stopPairRetry();
     renderTopbar();
     startPollHeartbeat();
     startSync();
@@ -610,9 +662,22 @@
   ensureShell();
   setInterval(() => loadFunnels(), 60000);
   ensureChatButton();
-  setInterval(() => ensureChatButton(), 1500);
-  const mo = new MutationObserver(() => { ensureShell(); ensureChatButton(); });
+  setInterval(() => ensureChatButton(), 3000);
+  // O WhatsApp muta o DOM centenas de vezes por segundo enquanto carrega as
+  // conversas. Sem throttle, cada mutação disparava duas varreduras e deixava
+  // a interface lenta. Agora agrupamos tudo em um único frame.
+  let domCheckQueued = false;
+  const mo = new MutationObserver(() => {
+    if (domCheckQueued) return;
+    domCheckQueued = true;
+    requestAnimationFrame(() => {
+      domCheckQueued = false;
+      ensureShell();
+      ensureChatButton();
+    });
+  });
   if (document.body) mo.observe(document.body, { childList: true });
+
 
 
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
