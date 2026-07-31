@@ -142,10 +142,13 @@
   function startSync() {
     if (syncTimer) return;
     // A primeira sincronização varre etiquetas e conversas — pesado logo no
-    // boot. Adiamos 25s para o WhatsApp abrir as conversas primeiro.
-    setTimeout(() => syncWaData(), 25000);
-    syncTimer = setInterval(() => syncWaData(), 10 * 60 * 1000);
+    // boot. Só rodamos quando o navegador estiver ocioso (ou após 60s).
+    const first = () => syncWaData();
+    if (typeof requestIdleCallback === "function") requestIdleCallback(first, { timeout: 60000 });
+    else setTimeout(first, 60000);
+    syncTimer = setInterval(() => syncWaData(), 15 * 60 * 1000);
   }
+
 
   async function loadFunnels() {
     const r = await chrome.runtime
