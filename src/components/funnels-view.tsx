@@ -993,11 +993,11 @@ function NewFunnelModal({
   onCreate: (body: { name: string; mode: FunnelMode; source_label_id?: string | null; stages?: string[] }) => void;
 }) {
   const [name, setName] = useState("");
-  const [stages, setStages] = useState<string[]>(["Novo lead", "Em conversa", "Negociando", "Fechado"]);
 
   function submit() {
-    if (!name.trim() || !stages.length) return;
-    onCreate({ name: name.trim(), mode: "manual", source_label_id: null, stages });
+    if (!name.trim()) return;
+    // Funil novo nasce vazio: as etapas são criadas depois, pelo usuário.
+    onCreate({ name: name.trim(), mode: "manual", source_label_id: null, stages: [] });
   }
 
   return (
@@ -1013,7 +1013,10 @@ function NewFunnelModal({
           />
         </div>
 
-        <StageListEditor label="Etapas" placeholder="Ex.: Negociando" items={stages} onChange={setStages} />
+        <p className="text-xs text-neutral-500">
+          O funil começa sem etapas — você cria as colunas do seu jeito depois de criá-lo.
+        </p>
+
 
         <div className="flex justify-end gap-2">
           <button onClick={onClose} className="rounded-lg border border-neutral-300 px-4 py-2 text-sm">
