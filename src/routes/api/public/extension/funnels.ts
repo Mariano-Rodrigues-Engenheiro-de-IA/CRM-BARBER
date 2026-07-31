@@ -4,7 +4,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { jsonResponse, preflight } from "@/lib/extension-cors";
 import { authenticateExtension } from "@/lib/extension-auth";
-import { funnelSchema, DEFAULT_STAGES } from "@/lib/funnels";
+import { funnelSchema } from "@/lib/funnels";
 
 export const Route = createFileRoute("/api/public/extension/funnels")({
   server: {
