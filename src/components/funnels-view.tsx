@@ -928,11 +928,19 @@ function NewFunnelModal({
   onCreate: (body: { name: string; mode: FunnelMode; source_label_id?: string | null; stages?: string[] }) => void;
 }) {
   const [name, setName] = useState("");
+  // O funil já nasce com a estrutura montada aqui: nome + abas (etapas).
+  const [stages, setStages] = useState<string[]>(["", ""]);
+
+  const cleanStages = stages.map((s) => s.trim()).filter(Boolean);
+  const canSubmit = Boolean(name.trim()) && cleanStages.length > 0;
+
+  function setStage(i: number, value: string) {
+    setStages((prev) => prev.map((s, idx) => (idx === i ? value : s)));
+  }
 
   function submit() {
-    if (!name.trim()) return;
-    // Funil novo nasce vazio: as etapas são criadas depois, pelo usuário.
-    onCreate({ name: name.trim(), mode: "manual", source_label_id: null, stages: [] });
+    if (!canSubmit) return;
+    onCreate({ name: name.trim(), mode: "manual", source_label_id: null, stages: cleanStages });
   }
 
   return (
@@ -948,10 +956,44 @@ function NewFunnelModal({
           />
         </div>
 
-        <p className="text-xs text-neutral-500">
-          O funil começa sem etapas — você cria as colunas do seu jeito depois de criá-lo.
-        </p>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-neutral-600">Abas do funil</label>
+          <div className="space-y-2">
+            {stages.map((s, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input
+                  value={s}
+                  onChange={(e) => setStage(i, e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && i === stages.length - 1) setStages((p) => [...p, ""]);
+                  }}
+                  className={inputCls}
+                  placeholder={`Aba ${i + 1} (ex.: ${i === 0 ? "Novo lead" : "Fechado"})`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setStages((p) => p.filter((_, idx) => idx !== i))}
+                  disabled={stages.length <= 1}
+                  title="Remover aba"
+                  className="shrink-0 rounded-lg border border-neutral-200 px-2.5 py-2 text-xs text-neutral-500 transition hover:border-red-300 hover:text-red-600 disabled:opacity-30"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setStages((p) => [...p, ""])}
+            className="mt-2 rounded-lg border border-dashed border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-600 transition hover:border-neutral-500 hover:text-neutral-900"
+          >
+            + Adicionar aba
+          </button>
+        </div>
 
+        <p className="text-xs text-neutral-500">
+          Monte aqui todas as abas do funil. Você pode renomear ou adicionar novas depois.
+        </p>
 
         <div className="flex justify-end gap-2">
           <button onClick={onClose} className="rounded-lg border border-neutral-300 px-4 py-2 text-sm">
@@ -959,7 +1001,8 @@ function NewFunnelModal({
           </button>
           <button
             onClick={submit}
-            className="rounded-lg bg-neutral-800 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-700"
+            disabled={!canSubmit}
+            className="rounded-lg bg-neutral-800 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
           >
             Criar
           </button>
@@ -968,6 +1011,7 @@ function NewFunnelModal({
     </Overlay>
   );
 }
+
 
 
 function AddCardForm({
