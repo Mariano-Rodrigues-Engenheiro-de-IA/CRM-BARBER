@@ -738,6 +738,9 @@
   }
 
   const CHAT_BTN_ID = "crm-chat-action";
+  const QR_BTN_ID = "crm-chat-quickreply";
+  const BOLT_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>`;
+
 
   /**
    * O cabeçalho da conversa é re-renderizado pelo React o tempo todo, e o
