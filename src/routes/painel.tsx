@@ -893,7 +893,7 @@ function KanbanView({
   customers: Customer[];
   loading: boolean;
   token: string;
-  reload: () => void;
+  reload: () => void | Promise<void>;
   shopId: string;
   headerHost?: HTMLDivElement | null;
   onGoSettings: () => void;
@@ -1228,10 +1228,20 @@ function KanbanView({
           shopId={shopId}
           system={readSystem(shopId)}
           onGoSettings={() => { setShowImport(false); onGoSettings(); }}
+          onImported={async (summary) => {
+            // Sucesso: fecha o pop-up na hora e a lista já aparece atualizada.
+            setShowImport(false);
+            setPending({});
+            setPlans(readPlans(shopId));
+            setCols(visibleColumns(shopId));
+            await reload();
+            toast.success("Planilha importada", { description: summary });
+          }}
           onClose={() => {
             setShowImport(false);
             setPending({});
             setPlans(readPlans(shopId));
+            setCols(visibleColumns(shopId));
             reload();
           }}
         />
@@ -1491,7 +1501,6 @@ function ImportModal({
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -1502,7 +1511,6 @@ function ImportModal({
     if (!file || !system) return;
     setBusy(true);
     setErr(null);
-    setResult(null);
     try {
       const matrix = await sheetToMatrix(file);
       const report = parseSubscriptionSheet(system, matrix);
@@ -1604,7 +1612,6 @@ function ImportModal({
 
 
         {err && <p className="text-sm text-red-500">{err}</p>}
-        {result && <p className="whitespace-pre-line text-sm text-emerald-600">{result}</p>}
         <button
           disabled={busy || !file}
           className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
