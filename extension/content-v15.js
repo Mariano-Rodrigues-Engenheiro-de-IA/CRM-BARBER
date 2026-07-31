@@ -663,7 +663,7 @@
   }
 
   ensureShell();
-  setInterval(() => loadFunnels(), 60000);
+  setInterval(() => loadFunnels(), 300000);
   ensureChatButton();
   setInterval(() => ensureChatButton(), 3000);
   // O WhatsApp muta o DOM centenas de vezes por segundo enquanto carrega as
