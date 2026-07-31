@@ -9,7 +9,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { TeamView } from "@/components/team-view";
 import { ConnectionView } from "@/components/connection-view";
 import { QuickRepliesView } from "@/components/quick-replies-view";
-import { FunnelsView, FunnelDispatchView } from "@/components/funnels-view";
+import { FunnelsView } from "@/components/funnels-view";
+import { DispatchCenter } from "@/components/dispatch-view";
 import { sendWaAction, isRealPhone, openWhatsappChat, applyFunnelActions } from "@/lib/wa-actions";
 import { sendableActions, type QuickReply } from "@/lib/quick-replies";
 
@@ -182,7 +183,9 @@ function nudgeExtensionPoll() {
   window.postMessage({ __crm: "poll_now_v180" }, window.location.origin);
 }
 
-type Section = "assinantes" | "funis" | "respostas" | "equipe" | "conexao" | "configuracoes";
+type Section = "assinantes" | "funis" | "disparo" | "respostas" | "equipe" | "conexao" | "configuracoes";
+/** Sub-abas da sanfona de Assinaturas. */
+type AssinTab = "visao" | "assinantes";
 
 function IconUsers() {
   return (
@@ -235,8 +238,56 @@ function IconChevron({ className = "" }: { className?: string }) {
     </svg>
   );
 }
+/** Aviãozinho — seção de Disparo. */
+function IconSend() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4Z" />
+    </svg>
+  );
+}
+/** Plug — seção de Conexão (não repetir o ícone de Assinaturas). */
+function IconPlug() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 2v6" /><path d="M15 2v6" />
+      <path d="M6 8h12v3a6 6 0 0 1-6 6 6 6 0 0 1-6-6Z" /><path d="M12 17v5" />
+    </svg>
+  );
+}
 
-type AssinantesTab = "kanban" | "disparo" | "campanhas";
+/** Botão único "Adicionar" com as duas origens (manual e planilha). */
+function AddMenu({ onManual, onSheet }: { onManual: () => void; onSheet: () => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        className="rounded-lg bg-neutral-900 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-yellow-400 hover:bg-neutral-800"
+      >
+        Adicionar
+      </button>
+      {open && (
+        <div className="absolute right-0 z-20 mt-1 w-48 overflow-hidden rounded-xl border border-neutral-200 bg-white py-1 shadow-lg">
+          <button
+            onMouseDown={onManual}
+            className="block w-full px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"
+          >
+            Manualmente
+          </button>
+          <button
+            onMouseDown={onSheet}
+            className="block w-full px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"
+          >
+            Importar planilha
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 type Brand = { name?: string; logo?: string };
 function brandKey(shopId: string) { return `crm_brand_${shopId || "default"}`; }
@@ -272,18 +323,17 @@ function Painel() {
   const initialSection: Section = (() => {
     if (typeof window === "undefined") return "assinantes";
     const s = new URLSearchParams(window.location.search).get("section");
-    if (s === "equipe" || s === "conexao" || s === "configuracoes" || s === "respostas" || s === "funis") return s;
+    if (s === "equipe" || s === "conexao" || s === "configuracoes" || s === "respostas" || s === "funis" || s === "disparo") return s;
     return "assinantes";
   })();
   const [section, setSection] = useState<Section>(initialSection);
-  const [tab, setTab] = useState<AssinantesTab>("kanban");
-  const [funisTab, setFunisTab] = useState<"kanban" | "disparo" | "campanhas">("kanban");
-  // Host do cabeçalho dos funis: o seletor de funil + "criar" moram na barra
-  // superior, mas o estado deles vive dentro do FunnelsView (portal).
+  const [assinTab, setAssinTab] = useState<AssinTab>("assinantes");
+  const [disparoTab, setDisparoTab] = useState<"novo" | "campanhas">("novo");
+  // Host do cabeçalho dos funis: o seletor de funil + "novo funil" moram na
+  // barra superior, mas o estado deles vive dentro do FunnelsView (portal).
   const [funisHeaderEl, setFunisHeaderEl] = useState<HTMLDivElement | null>(null);
   const [shop, setShop] = useState<{ id: string; name: string } | null>(null);
   const [brand, setBrand] = useState<Brand>({});
-  const [showSubSettings, setShowSubSettings] = useState(false);
 
 
   useEffect(() => {
@@ -352,14 +402,28 @@ function Painel() {
     setBrand(next);
   }
 
-  const NAV_TOP: Array<{ key: Section; label: string; icon: React.ReactNode }> = [
-    { key: "assinantes", label: "Gestão de Assinaturas", icon: <IconUsers /> },
+  const NAV_TOP: Array<{
+    key: Section;
+    label: string;
+    icon: React.ReactNode;
+    children?: Array<{ key: AssinTab; label: string }>;
+  }> = [
+    {
+      key: "assinantes",
+      label: "Assinaturas",
+      icon: <IconUsers />,
+      children: [
+        { key: "visao", label: "Visão geral" },
+        { key: "assinantes", label: "Assinantes" },
+      ],
+    },
     { key: "funis", label: "Funis de Vendas", icon: <IconChart /> },
+    { key: "disparo", label: "Disparo", icon: <IconSend /> },
     { key: "respostas", label: "Respostas rápidas", icon: <IconChat /> },
     { key: "equipe", label: "Equipe", icon: <IconTrophy /> },
 
     { key: "configuracoes", label: "Configurações", icon: <IconGear /> },
-    { key: "conexao", label: "Conexão", icon: <IconUsers /> },
+    { key: "conexao", label: "Conexão", icon: <IconPlug /> },
   ];
 
   const navRowCls = (active: boolean) =>
@@ -391,14 +455,41 @@ function Painel() {
           {NAV_TOP.map((n) => {
             const active = section === n.key;
             return (
-              <button key={n.key} onClick={() => setSection(n.key)} className={navRowCls(active)}>
-                <span className="flex h-5 w-5 items-center justify-center">{n.icon}</span>
-                <span className="flex-1 truncate">{n.label}</span>
-                <IconChevron className={active ? "text-neutral-900" : "text-neutral-400 group-hover:text-neutral-700"} />
-              </button>
+              <div key={n.key}>
+                <button onClick={() => setSection(n.key)} className={navRowCls(active)}>
+                  <span className="flex h-5 w-5 items-center justify-center">{n.icon}</span>
+                  <span className="flex-1 truncate">{n.label}</span>
+                  <IconChevron
+                    className={
+                      (active && n.children ? "rotate-90 " : "") +
+                      (active ? "text-neutral-900" : "text-neutral-400 group-hover:text-neutral-700")
+                    }
+                  />
+                </button>
+                {/* Sanfona: sub-abas só aparecem com a seção aberta */}
+                {active && n.children && (
+                  <div className="mt-1 space-y-0.5 border-l border-neutral-200 pl-3 ml-4">
+                    {n.children.map((sub) => (
+                      <button
+                        key={sub.key}
+                        onClick={() => setAssinTab(sub.key)}
+                        className={
+                          "block w-full rounded-lg px-3 py-1.5 text-left text-[13px] transition " +
+                          (assinTab === sub.key
+                            ? "bg-neutral-900 font-semibold text-yellow-400"
+                            : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900")
+                        }
+                      >
+                        {sub.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>
+
 
       </aside>
 
@@ -429,98 +520,81 @@ function Painel() {
         {section === "assinantes" && (
           <>
             <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
+              <div className="flex items-center gap-3 px-5 py-2.5">
+                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
+                  Assinaturas — {assinTab === "visao" ? "Visão geral" : "Assinantes"}
+                </h1>
+              </div>
+            </header>
+
+            <main className="px-4 py-4">
+              {assinTab === "visao" && (
+                <OverviewView customers={customers} shopId={shop?.id ?? "default"} />
+              )}
+              {assinTab === "assinantes" && (
+                <KanbanView
+                  customers={customers}
+                  loading={loading}
+                  token={token}
+                  reload={reload}
+                  shopId={shop?.id ?? "default"}
+                  onGoSettings={() => setAssinTab("visao")}
+                />
+              )}
+            </main>
+          </>
+        )}
+
+        {section === "disparo" && token && (
+          <>
+            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
               <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-2.5">
-                <div className="flex min-w-0 items-center gap-2">
-                  <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
-                    Gestão de assinaturas
-                  </h1>
-                  <button
-                    onClick={() => setShowSubSettings(true)}
-                    title="Configurações da assinatura"
-                    className="shrink-0 rounded-md p-1 text-neutral-400 transition hover:text-neutral-900"
-                  >
-                    <IconGear size={13} />
-                  </button>
-                </div>
+                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
+                  Disparo
+                </h1>
                 <nav className="flex shrink-0 gap-1 rounded-lg bg-neutral-100 p-1">
-                  {(["kanban", "disparo", "campanhas"] as const).map((t) => (
+                  {(["novo", "campanhas"] as const).map((t) => (
                     <button
                       key={t}
-                      onClick={() => setTab(t)}
+                      onClick={() => setDisparoTab(t)}
                       className={
                         "rounded-md px-3 py-1.5 text-xs font-medium transition " +
-                        (tab === t ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
+                        (disparoTab === t ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
                       }
                     >
-                      {t === "kanban" ? "Kanban" : t === "disparo" ? "Novo disparo" : "Campanhas"}
+                      {t === "novo" ? "Novo disparo" : "Campanhas"}
                     </button>
                   ))}
                 </nav>
               </div>
             </header>
-
-
             <main className="px-4 py-4">
-              {tab === "kanban" && (
-                <KanbanView customers={customers} loading={loading} token={token} reload={reload} shopId={shop?.id ?? "default"} onGoSettings={() => setShowSubSettings(true)} />
+              {disparoTab === "novo" && (
+                <DispatchCenter
+                  api={(path: string, opts?: RequestInit) => api(token, path, opts)}
+                  customers={customers}
+                  cols={visibleColumns(shop?.id ?? "default")}
+                  onNeedConnection={() => setSection("conexao")}
+                  onDone={() => setDisparoTab("campanhas")}
+                />
               )}
-              {tab === "disparo" && (
-                <DisparoView customers={customers} token={token} shopId={shop?.id ?? "default"} onDone={() => setTab("campanhas")} onNeedConnection={() => setSection("conexao")} />
-              )}
-
-              {tab === "campanhas" && <CampaignsView token={token} />}
+              {disparoTab === "campanhas" && <CampaignsView token={token} />}
             </main>
           </>
-        )}
-
-        {showSubSettings && (
-          <SubscriptionSettingsModal
-            shopId={shop?.id ?? "default"}
-            onClose={() => setShowSubSettings(false)}
-          />
         )}
 
         {section === "funis" && token && (
           <>
             <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-2.5">
-                {funisTab === "kanban" ? (
-                  <div ref={setFunisHeaderEl} className="flex min-w-0 items-center gap-2" />
-                ) : (
-                  <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
-                    Funis de vendas
-                  </h1>
-                )}
-                <nav className="flex shrink-0 gap-1 rounded-lg bg-neutral-100 p-1">
-                  {(["kanban", "disparo", "campanhas"] as const).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setFunisTab(t)}
-                      className={
-                        "rounded-md px-3 py-1.5 text-xs font-medium transition " +
-                        (funisTab === t ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
-                      }
-                    >
-                      {t === "kanban" ? "Funis" : t === "disparo" ? "Novo disparo" : "Campanhas"}
-                    </button>
-                  ))}
-                </nav>
+              <div className="flex items-center gap-3 px-5 py-2.5">
+                <div ref={setFunisHeaderEl} className="flex min-w-0 flex-1 items-center gap-2" />
               </div>
             </header>
             <main className="px-4 py-3">
-              {funisTab === "kanban" && (
-                <FunnelsView
-                  api={(path: string, opts?: RequestInit) => api(token, path, opts)}
-                  headerHost={funisHeaderEl}
-                />
-              )}
-              {funisTab === "disparo" && (
-                <FunnelDispatchView
-                  api={(path: string, opts?: RequestInit) => api(token, path, opts)}
-                  onDone={() => setFunisTab("campanhas")}
-                />
-              )}
-              {funisTab === "campanhas" && <CampaignsView token={token} scope="funil" />}
+              <FunnelsView
+                api={(path: string, opts?: RequestInit) => api(token, path, opts)}
+                headerHost={funisHeaderEl}
+              />
             </main>
           </>
         )}
@@ -794,11 +868,9 @@ function KanbanView({
   // Move otimista: evita o card "voltar" enquanto o reload não chega.
   const [pending, setPending] = useState<Record<string, string>>({});
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [goal, setGoal] = useState(0);
 
   useEffect(() => {
     setPlans(readPlans(shopId));
-    setGoal(readGoal(shopId));
   }, [shopId]);
 
   const cols = useMemo(() => visibleColumns(shopId), [shopId, showImport]);
@@ -821,13 +893,6 @@ function KanbanView({
   const colTotal = (key: string) =>
     (byStatus[key] ?? []).reduce((sum, c) => sum + priceOf(plans, planFromTags(c.tags)), 0);
 
-  const totalSubs = effective.filter((c) => c.status === "active" || c.status === "due_soon").length;
-  const missing = Math.max(0, goal - totalSubs);
-  const pct = goal > 0 ? Math.min(100, Math.round((totalSubs / goal) * 100)) : 0;
-  const mrr = effective
-    .filter((c) => c.status === "active" || c.status === "due_soon")
-    .reduce((sum, c) => sum + priceOf(plans, planFromTags(c.tags)), 0);
-  const plansMissingPrice = plans.filter((p) => p.priceCents <= 0).length;
 
   async function moveTo(id: string, status: string) {
     setPending((p) => ({ ...p, [id]: status }));
@@ -854,63 +919,11 @@ function KanbanView({
   return (
     <div className="space-y-4">
       {dialog}
-      {/* Card de meta — gamificação */}
-      <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500">
-              Assinantes ativos
-            </p>
-            <p className="text-3xl font-semibold text-neutral-900">{totalSubs}</p>
-            <p className="mt-1 text-xs text-neutral-500">
-              Receita recorrente estimada: <strong className="text-neutral-800">{formatBRL(mrr)}</strong>
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500">
-              Meta do mês
-            </p>
-            <p className="text-3xl font-semibold text-neutral-900">{goal || "—"}</p>
-            <p className="mt-1 text-xs text-neutral-500">
-              {goal === 0
-                ? "Defina a meta na engrenagem acima"
-                : missing === 0
-                  ? "Meta batida 🎉"
-                  : `Faltam ${missing} assinante(s)`}
-            </p>
-          </div>
-        </div>
-        <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-neutral-100">
-          <div
-            className="h-full rounded-full bg-yellow-400 transition-all"
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-        <p className="mt-1 text-right text-[11px] font-medium text-neutral-500">{pct}% da meta</p>
-        {plansMissingPrice > 0 && (
-          <button
-            onClick={onGoSettings}
-            className="mt-3 text-xs font-medium text-neutral-900 underline underline-offset-2"
-          >
-            {plansMissingPrice} plano(s) sem valor cadastrado — definir agora
-          </button>
-        )}
+
+      <div className="flex items-center justify-end">
+        <AddMenu onSheet={() => setShowImport(true)} onManual={() => setShowAdd(true)} />
       </div>
 
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <button
-          onClick={() => setShowImport(true)}
-          className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
-        >
-          Importar planilha
-        </button>
-        <button
-          onClick={() => setShowAdd(true)}
-          className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
-        >
-          + Adicionar contato
-        </button>
-      </div>
 
       {loading && <p className="text-sm text-neutral-500">Carregando...</p>}
 
@@ -1423,232 +1436,25 @@ function ImportModal({
 
 
 
-function DisparoView({
-  customers,
-  token,
-  shopId,
-  onDone,
-  onNeedConnection,
-}: {
-  customers: Customer[];
-  token: string;
-  shopId: string;
-  onDone: () => void;
-  onNeedConnection: () => void;
-}) {
-  const cols = useMemo(() => visibleColumns(shopId), [shopId]);
+// O formulário de disparo agora vive na seção "Disparo" (src/components/dispatch-view.tsx).
 
-  const [name, setName] = useState("");
-  const [variants, setVariants] = useState<string[]>([""]);
-  const [segment, setSegment] = useState<string>("overdue");
-  const [paceMin, setPaceMin] = useState(20);
-  const [paceMax, setPaceMax] = useState(60);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [replies, setReplies] = useState<QuickReply[]>([]);
-  const [quickReplyId, setQuickReplyId] = useState("");
-
-  useEffect(() => {
-    api(token, "/api/public/extension/quick-replies").then((r) => {
-      if (r?.ok) setReplies((r.quick_replies as QuickReply[]) || []);
-    });
-  }, [token]);
-
-  /** Usa os textos da resposta rápida como variações da campanha. */
-  function applyQuickReply(id: string) {
-    setQuickReplyId(id);
-    const qr = replies.find((q) => q.id === id);
-    if (!qr) return;
-    const texts = qr.actions
-      .filter((a) => a.type === "text" && a.text?.trim())
-      .map((a) => (a.text as string).trim());
-    if (texts.length) setVariants(texts.slice(0, 3));
-    if (!name.trim()) setName(qr.title);
-  }
-
-  const selectedReply = replies.find((q) => q.id === quickReplyId);
-  const droppedMedia = selectedReply
-    ? selectedReply.actions.filter((a) => a.type !== "text").length
-    : 0;
-
-  // Contatos sem telefone real (placeholder de planilha) nunca entram na fila,
-  // então o alvo mostrado precisa refletir só quem é enviável.
-  const sendable = customers.filter((c) => isRealPhone(c.phone));
-  const countIn = (key: string) =>
-    key === "all" ? sendable.length : sendable.filter((c) => c.status === key).length;
-  const total = countIn(segment);
-  const semTelefone = (segment === "all"
-    ? customers
-    : customers.filter((c) => c.status === segment)
-  ).filter((c) => !isRealPhone(c.phone)).length;
-
-  function updateVariant(i: number, v: string) {
-    setVariants((prev) => prev.map((x, idx) => (idx === i ? v : x)));
-  }
-
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    const cleaned = variants.map((v) => v.trim()).filter(Boolean);
-    if (!name.trim() || cleaned.length === 0) {
-      setErr("Preencha nome e ao menos 1 mensagem.");
-      return;
-    }
-    if (!acceptedTerms) {
-      setErr("Você precisa aceitar o termo de uso para enviar a campanha.");
-      return;
-    }
-    if (total === 0) {
-      setErr("Nenhum contato com telefone válido nesse público. Escolha outro público ou cadastre os telefones.");
-      return;
-    }
-
-    setBusy(true);
-    setErr(null);
-    const st = await api(token, "/api/public/extension/whatsapp/status?sync=1");
-    if (!st?.ok || st?.connection?.status !== "connected") {
-      setBusy(false);
-      setErr("WhatsApp não está conectado. Redirecionando pra aba Conexão…");
-      setTimeout(() => onNeedConnection(), 800);
-      return;
-    }
-    const r = await api(token, "/api/public/extension/campaigns", {
-
-      method: "POST",
-      body: JSON.stringify({
-        name: name.trim(),
-        message_variants: cleaned,
-        pace_seconds_min: Math.min(paceMin, paceMax),
-        pace_seconds_max: Math.max(paceMin, paceMax),
-        filter: segment === "all" ? {} : { status: segment },
-      }),
-    });
-    setBusy(false);
-    if (!r?.ok) { setErr(r?.error || "Erro"); return; }
-    nudgeExtensionPoll();
-    onDone();
-  }
-
-  return (
-    <form onSubmit={submit} className="mx-auto max-w-2xl space-y-5 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-neutral-900">Novo disparo</h2>
-
-      <Field label="Nome interno da campanha">
-        <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="ex: Cobrança julho" required />
-      </Field>
-
-      <Field label="Público-alvo">
-        <select value={segment} onChange={(e) => setSegment(e.target.value)} className={inputCls}>
-          {cols.map((c) => <option key={c.key} value={c.key}>{c.label} ({countIn(c.key)})</option>)}
-          <option value="all">Todos ({countIn("all")})</option>
-        </select>
-        <p className="mt-1 text-xs text-neutral-500">
-          {total} contato(s)
-          {semTelefone > 0 && ` · ${semTelefone} sem telefone`}
-        </p>
-      </Field>
-
-      {replies.length > 0 && (
-        <Field label="Resposta rápida (opcional)">
-          <select value={quickReplyId} onChange={(e) => applyQuickReply(e.target.value)} className={inputCls}>
-            <option value="">— escrever mensagem manualmente —</option>
-            {replies.map((q) => <option key={q.id} value={q.id}>{q.title}</option>)}
-          </select>
-          {droppedMedia > 0 && (
-            <p className="mt-1 text-xs text-neutral-500">Disparo em massa envia só texto.</p>
-          )}
-        </Field>
-      )}
-
-
-      <div>
-        <label className="mb-2 block text-sm font-medium text-neutral-700">Variações de mensagem</label>
-        <div className="space-y-2">
-          {variants.map((v, i) => (
-            <div key={i} className="flex gap-2">
-              <textarea
-                value={v}
-                onChange={(e) => updateVariant(i, e.target.value)}
-                rows={3}
-                placeholder={`Variação ${i + 1}`}
-                className={inputCls}
-              />
-              {variants.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => setVariants((p) => p.filter((_, idx) => idx !== i))}
-                  className="rounded px-2 text-red-500 hover:bg-red-50"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-        {variants.length < 3 && (
-          <button
-            type="button"
-            onClick={() => setVariants((p) => [...p, ""])}
-            className="mt-2 text-xs font-medium text-neutral-700 hover:underline"
-          >
-            + Adicionar variação (máx 3)
-          </button>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Ritmo mínimo (seg)">
-          <input type="number" min={5} max={600} value={paceMin} onChange={(e) => setPaceMin(Number(e.target.value))} className={inputCls} />
-        </Field>
-        <Field label="Ritmo máximo (seg)">
-          <input type="number" min={5} max={600} value={paceMax} onChange={(e) => setPaceMax(Number(e.target.value))} className={inputCls} />
-        </Field>
-      </div>
-
-      <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
-        <p className="text-sm font-semibold text-neutral-900">Termo de uso</p>
-        <p className="mt-2 text-sm leading-relaxed text-neutral-700">
-          A pratica de envios em massa ou spam podem ocasionar o banimento do seu número por parte do WhatsApp. Envie mensagens apenas para pessoas que gostariam de receber sua mensagem.
-        </p>
-        <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-neutral-900">
-          <input
-            type="checkbox"
-            checked={acceptedTerms}
-            onChange={(e) => setAcceptedTerms(e.target.checked)}
-            className="h-4 w-4 rounded border-neutral-400"
-          />
-          Eu entendo e aceito os termos de uso.
-        </label>
-      </div>
-
-      {err && <p className="text-sm text-red-500">{err}</p>}
-      <button
-        disabled={busy || !acceptedTerms}
-        className="w-full rounded-lg bg-neutral-900 px-4 py-3 text-sm font-semibold text-yellow-400 hover:bg-neutral-800 disabled:opacity-50"
-      >
-        {busy ? "Criando..." : "Enviar Campanha"}
-      </button>
-
-    </form>
-  );
-}
 
 // Cache module-scoped: sobrevive à troca de aba, evita "Carregando..." piscando.
 const campaignsCache: Record<string, Campaign[] | undefined> = {};
 
 
-function CampaignsView({ token, scope = "assinaturas" }: { token: string; scope?: "assinaturas" | "funil" }) {
+function CampaignsView({ token, scope }: { token: string; scope?: "assinaturas" | "funil" }) {
   const { confirm, dialog } = useConfirm();
-  const [campaigns, setCampaigns] = useState<Campaign[]>(campaignsCache[scope] ?? []);
-  const [loaded, setLoaded] = useState<boolean>(campaignsCache[scope] !== undefined);
+  const cacheKey = scope ?? "todos";
+  const [campaigns, setCampaigns] = useState<Campaign[]>(campaignsCache[cacheKey] ?? []);
+  const [loaded, setLoaded] = useState<boolean>(campaignsCache[cacheKey] !== undefined);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function reload() {
-    const r = await api(token, `/api/public/extension/campaigns?scope=${scope}`);
+    const r = await api(token, `/api/public/extension/campaigns${scope ? `?scope=${scope}` : ""}`);
     if (r?.ok) {
       const list: Campaign[] = r.campaigns || [];
-      campaignsCache[scope] = list;
+      campaignsCache[cacheKey] = list;
       setCampaigns(list);
     }
     setLoaded(true);
@@ -1813,11 +1619,21 @@ function Modal({
 }
 
 /** Configurações da assinatura (sistema, planos e meta) — abre pela engrenagem. */
-function SubscriptionSettingsModal({ shopId, onClose }: { shopId: string; onClose: () => void }) {
+/**
+ * Visão geral das assinaturas: gamificação da meta + configurações
+ * (sistema, planos e meta). Antes era um modal; virou sub-aba.
+ */
+function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: string }) {
   const [system, setSystem] = useState<SubscriptionSystemId | "">(() => readSystem(shopId) ?? "");
   const [plans, setPlans] = useState<Plan[]>(() => readPlans(shopId));
   const [newPlan, setNewPlan] = useState("");
   const [goal, setGoal] = useState<number>(() => readGoal(shopId));
+
+  const actives = customers.filter((c) => c.status === "active" || c.status === "due_soon");
+  const totalSubs = actives.length;
+  const missing = Math.max(0, goal - totalSubs);
+  const pct = goal > 0 ? Math.min(100, Math.round((totalSubs / goal) * 100)) : 0;
+  const mrr = actives.reduce((sum, c) => sum + priceOf(plans, planFromTags(c.tags)), 0);
 
   function saveSystem(id: SubscriptionSystemId) {
     setSystem(id);
@@ -1841,14 +1657,32 @@ function SubscriptionSettingsModal({ shopId, onClose }: { shopId: string; onClos
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-neutral-900/50 p-4 backdrop-blur-sm">
-      <div className="my-8 w-full max-w-lg space-y-5 rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-neutral-900">
-            Configurações da assinatura
-          </h2>
-          <button onClick={onClose} className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900">✕</button>
+    <div className="mx-auto w-full max-w-4xl space-y-5">
+      {/* Meta do mês — gamificação */}
+      <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-neutral-500">Assinantes ativos</p>
+            <p className="text-3xl font-bold text-neutral-950">{totalSubs}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-neutral-500">Receita recorrente</p>
+            <p className="text-3xl font-bold text-neutral-950">{formatBRL(mrr)}</p>
+          </div>
         </div>
+        <div className="mt-4">
+          <div className="mb-1.5 flex items-center justify-between text-xs text-neutral-500">
+            <span>Meta: {goal || "—"}</span>
+            <span>{goal > 0 ? (missing > 0 ? `Faltam ${missing}` : "Meta batida 🎉") : "Defina uma meta abaixo"}</span>
+          </div>
+          <div className="h-2.5 w-full overflow-hidden rounded-full bg-neutral-100">
+            <div className="h-full rounded-full bg-yellow-400 transition-all" style={{ width: `${pct}%` }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+
 
         <div className="space-y-2">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Sistema</h3>
@@ -1941,7 +1775,7 @@ function SubscriptionSettingsModal({ shopId, onClose }: { shopId: string; onClos
         </div>
 
         <button
-          onClick={() => { writeGoal(shopId, goal); persistPlans(plans); onClose(); }}
+          onClick={() => { writeGoal(shopId, goal); persistPlans(plans); }}
           className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-yellow-400 hover:bg-neutral-800"
         >
           Salvar
