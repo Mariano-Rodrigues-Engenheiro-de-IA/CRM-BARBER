@@ -1080,53 +1080,87 @@ function KanbanView({
     <div className="space-y-4">
       {dialog}
 
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        {newCol === null ? (
-          <button
-            onClick={() => setNewCol("")}
-            className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-wide text-neutral-700 transition hover:border-neutral-500"
-          >
-            Adicionar kanban
-          </button>
-        ) : (
-          <div className="flex items-center gap-2">
-            <input
-              autoFocus
-              value={newCol}
-              onChange={(e) => setNewCol(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") { addColumn(newCol); setNewCol(null); }
-                if (e.key === "Escape") setNewCol(null);
-              }}
-              placeholder="Nome do kanban"
-              className={inputCls + " w-48"}
-            />
+      {/* Primeira utilização: só o botão de importar planilha. */}
+      {firstUse ? (
+        !loading && (
+          <div className="rounded-2xl border border-dashed border-neutral-300 bg-white px-6 py-14 text-center">
+            <p className="text-base font-semibold text-neutral-900">Comece importando sua planilha</p>
+            <p className="mx-auto mt-1 max-w-md text-xs text-neutral-500">
+              Os assinantes são cadastrados automaticamente e os kanbans nascem com a mesma
+              estrutura da planilha.
+            </p>
             <button
-              onClick={() => { addColumn(newCol); setNewCol(null); }}
-              className="rounded-lg bg-neutral-800 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white hover:bg-neutral-700"
+              onClick={() => setShowImport(true)}
+              className="mx-auto mt-6 rounded-xl bg-neutral-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800"
             >
-              Criar
-            </button>
-            <button onClick={() => setNewCol(null)} className="text-xs text-neutral-500 hover:text-neutral-900">
-              cancelar
+              Importar planilha
             </button>
           </div>
-        )}
-        <AddMenu onSheet={() => setShowImport(true)} onManual={() => setShowAdd(true)} />
-      </div>
-
+        )
+      ) : (
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {newCol === null ? (
+            <button
+              onClick={() => setNewCol("")}
+              title="Adicionar kanban"
+              className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:border-neutral-500"
+            >
+              + Kanban
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <input
+                autoFocus
+                value={newCol}
+                onChange={(e) => setNewCol(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { addColumn(newCol); setNewCol(null); }
+                  if (e.key === "Escape") setNewCol(null);
+                }}
+                placeholder="Nome do kanban"
+                className={inputCls + " w-48"}
+              />
+              <button
+                onClick={() => { addColumn(newCol); setNewCol(null); }}
+                className="rounded-lg bg-neutral-800 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white hover:bg-neutral-700"
+              >
+                Criar
+              </button>
+              <button onClick={() => setNewCol(null)} className="text-xs text-neutral-500 hover:text-neutral-900">
+                cancelar
+              </button>
+            </div>
+          )}
+          <button
+            onClick={() => setShowAdd(true)}
+            title="Adicionar contato"
+            className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:border-neutral-500"
+          >
+            + Contato
+          </button>
+          {/* Importar continua disponível pra sempre: reimportar sincroniza a planilha
+              sem apagar contatos criados à mão. */}
+          <button
+            onClick={() => setShowImport(true)}
+            className="rounded-lg bg-neutral-800 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white hover:bg-neutral-700"
+          >
+            Importar planilha
+          </button>
+        </div>
+      )}
 
       {loading && <p className="text-sm text-neutral-500">Carregando...</p>}
 
-      {!loading && cols.length === 0 && (
+      {!loading && !firstUse && cols.length === 0 && (
         <div className="rounded-xl border border-dashed border-neutral-300 bg-white p-8 text-center">
           <p className="text-sm font-medium text-neutral-800">Nenhum kanban ainda</p>
           <p className="mx-auto mt-1 max-w-md text-xs text-neutral-500">
             Importe uma planilha — os kanbans são criados automaticamente com a mesma estrutura dela —
-            ou crie os seus com “Adicionar kanban”.
+            ou crie os seus com “+ Kanban”.
           </p>
         </div>
       )}
+
 
 
 
