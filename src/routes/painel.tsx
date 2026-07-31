@@ -238,8 +238,56 @@ function IconChevron({ className = "" }: { className?: string }) {
     </svg>
   );
 }
+/** Aviãozinho — seção de Disparo. */
+function IconSend() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4Z" />
+    </svg>
+  );
+}
+/** Plug — seção de Conexão (não repetir o ícone de Assinaturas). */
+function IconPlug() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 2v6" /><path d="M15 2v6" />
+      <path d="M6 8h12v3a6 6 0 0 1-6 6 6 6 0 0 1-6-6Z" /><path d="M12 17v5" />
+    </svg>
+  );
+}
 
-type AssinantesTab = "kanban" | "disparo" | "campanhas";
+/** Botão único "Adicionar" com as duas origens (manual e planilha). */
+function AddMenu({ onManual, onSheet }: { onManual: () => void; onSheet: () => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        className="rounded-lg bg-neutral-900 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-yellow-400 hover:bg-neutral-800"
+      >
+        Adicionar
+      </button>
+      {open && (
+        <div className="absolute right-0 z-20 mt-1 w-48 overflow-hidden rounded-xl border border-neutral-200 bg-white py-1 shadow-lg">
+          <button
+            onMouseDown={onManual}
+            className="block w-full px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"
+          >
+            Manualmente
+          </button>
+          <button
+            onMouseDown={onSheet}
+            className="block w-full px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"
+          >
+            Importar planilha
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 type Brand = { name?: string; logo?: string };
 function brandKey(shopId: string) { return `crm_brand_${shopId || "default"}`; }
