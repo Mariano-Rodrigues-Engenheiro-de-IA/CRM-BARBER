@@ -1,22 +1,8 @@
 /* CRM Barber — barra de abas no topo do WhatsApp Web + trilho de ícones minimalista à esquerda. */
 
-/* O WhatsApp usa layout fixo em viewport cheia e ignora padding no body.
-   Reposicionamos o app dele para dentro da área livre: o CRM ocupa o topo
-   (40px) e a lateral (46px), o WhatsApp ocupa o resto e se ajusta sozinho. */
-body.crm-shell {
-  overflow: hidden !important;
-}
-body.crm-shell #app {
-  position: fixed !important;
-  top: 40px !important;
-  left: 46px !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  width: auto !important;
-  height: auto !important;
-  max-width: none !important;
-  margin: 0 !important;
-}
+/* A interface do CRM fica em overlay. Não reposicionamos mais #app nem o body:
+   o React do WhatsApp recalcula o root ao suspender/retomar a aba, e sobrescrever
+   sua geometria causava travas e a tela cinza relatada. */
 
 
 
@@ -272,6 +258,8 @@ body.crm-shell #app {
   font-weight: 700;
   letter-spacing: 0.04em;
   cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
   flex: 0 0 auto;
 }
 .crm-chat-btn:hover { background: #1c1c1c; }

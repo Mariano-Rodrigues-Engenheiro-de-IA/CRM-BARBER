@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.32.0";
+  const BRIDGE_VERSION = "0.33.3";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -92,9 +92,9 @@
       lastError = result.error || lastError;
     }
 
-    window.location.href = `https://web.whatsapp.com/send?phone=${normalizePhone(phone)}`;
-    await sleep(1200);
-    return target;
+    // Nunca navegar como fallback: trocar location reinicia a interface do
+    // WhatsApp e podia deixar a tela cinza ao retomar a aba.
+    throw new Error(lastError);
   }
 
   /** chat.get pode ser síncrono nesta build — nunca encadear .catch direto. */
