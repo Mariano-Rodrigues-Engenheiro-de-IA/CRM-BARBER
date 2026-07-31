@@ -386,6 +386,7 @@ function Painel() {
 
 
   useEffect(() => {
+    setCollapsed(readSidebarCollapsed());
     const storedToken = getToken();
     if (storedToken) {
       setToken(storedToken);
@@ -398,6 +399,15 @@ function Painel() {
       })
       .finally(() => setReady(true));
   }, []);
+
+  function toggleSidebar() {
+    setCollapsed((v) => {
+      const next = !v;
+      localStorage.setItem(SIDEBAR_KEY, next ? "1" : "0");
+      return next;
+    });
+  }
+
 
   async function reload(silent = false) {
     if (!token) return;
