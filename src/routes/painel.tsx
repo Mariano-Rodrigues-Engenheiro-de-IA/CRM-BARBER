@@ -1694,28 +1694,40 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-5">
-      {/* Meta do mês — gamificação */}
-      <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-neutral-500">Assinantes ativos</p>
-            <p className="text-3xl font-bold text-neutral-950">{totalSubs}</p>
+      {/* Meta do mês — o número de assinantes é o herói do card */}
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+        <div className="flex items-start justify-between gap-6">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
+              Assinantes ativos
+            </p>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-6xl font-bold leading-none tracking-tight text-neutral-950">{totalSubs}</span>
+              {goal > 0 && <span className="text-xl font-medium text-neutral-400">/ {goal}</span>}
+            </div>
+            <p className="mt-2 text-sm font-medium text-neutral-600">
+              {goal > 0
+                ? missing > 0
+                  ? `Faltam ${missing} para bater a meta`
+                  : "Meta do mês batida 🎉"
+                : "Defina uma meta do mês abaixo"}
+            </p>
           </div>
-          <div className="text-right">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-neutral-500">Receita recorrente</p>
-            <p className="text-3xl font-bold text-neutral-950">{formatBRL(mrr)}</p>
+          <div className="shrink-0 text-right">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-neutral-400">
+              Receita recorrente
+            </p>
+            <p className="text-base font-semibold text-neutral-600">{formatBRL(mrr)}</p>
           </div>
         </div>
-        <div className="mt-4">
-          <div className="mb-1.5 flex items-center justify-between text-xs text-neutral-500">
-            <span>Meta: {goal || "—"}</span>
-            <span>{goal > 0 ? (missing > 0 ? `Faltam ${missing}` : "Meta batida 🎉") : "Defina uma meta abaixo"}</span>
+        <div className="mt-5">
+          <div className="h-3 w-full overflow-hidden rounded-full bg-neutral-100">
+            <div className="h-full rounded-full bg-yellow-400 transition-all duration-500" style={{ width: `${pct}%` }} />
           </div>
-          <div className="h-2.5 w-full overflow-hidden rounded-full bg-neutral-100">
-            <div className="h-full rounded-full bg-yellow-400 transition-all" style={{ width: `${pct}%` }} />
-          </div>
+          <p className="mt-1.5 text-right text-xs font-semibold text-neutral-500">{pct}%</p>
         </div>
       </div>
+
 
       <div className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
 
