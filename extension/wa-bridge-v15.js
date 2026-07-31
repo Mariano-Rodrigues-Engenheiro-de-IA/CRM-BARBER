@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.29.0";
+  const BRIDGE_VERSION = "0.30.0";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -200,9 +200,11 @@
   }
 
   /** Executa uma sequência de ações (texto/mídia) na conversa do contato. */
-  async function runActions(phone, openOnly, actions) {
+  async function runActions(phone, openOnly, actions, waId) {
     await waitForWpp();
-    const target = await resolveTarget(phone);
+    // Quando a ação vem de uma conversa aberta, o alvo certo é o próprio id
+    // do chat (inclusive @lid): montar telefone a partir do LID não existe.
+    const target = waId ? String(waId) : await resolveTarget(phone);
     if (openOnly) {
       await openChat(phone);
       return;
@@ -210,7 +212,8 @@
     for (const action of actions || []) {
       if (action.type === "text") {
         if (!action.text) continue;
-        await robustSend(phone, action.text);
+        if (waId) await sendTextToTarget(target, action.text);
+        else await robustSend(phone, action.text);
       } else {
         await sendMediaAction(target, action);
       }
@@ -463,9 +466,7 @@
         const data = {
           wa_id: waId,
           phone: resolvePhoneDigits(chat, waId || ""),
-          name:
-            String(chat?.formattedTitle || chat?.name || chat?.contact?.name || chat?.contact?.pushname || "") ||
-            null,
+          name: resolveName(chat, waId || ""),
           is_group: String(waId || "").endsWith("@g.us"),
         };
         window.postMessage({ __crm: "active_chat_done_v290", id: d.id, ok: true, data }, "*");
@@ -492,7 +493,7 @@
     if (d.__crm === "action_v190") {
       try {
         if (!window.WPP?.chat) await sleep(2000);
-        await runActions(d.phone, d.openOnly, d.actions);
+        await runActions(d.phone, d.openOnly, d.actions, d.waId);
         window.postMessage({ __crm: "action_done_v190", id: d.id, ok: true }, "*");
       } catch (e) {
         window.postMessage({ __crm: "action_done_v190", id: d.id, ok: false, error: e?.message || String(e) }, "*");
