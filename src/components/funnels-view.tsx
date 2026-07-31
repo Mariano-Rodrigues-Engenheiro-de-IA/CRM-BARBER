@@ -142,7 +142,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
     const wanted = new Set<string>();
     for (const [labelId, stage] of stageByLabel) {
       if (!stage) continue;
-      const inLabel = cs.filter((c) => (c.label_ids || []).includes(labelId)).slice(0, 200);
+      const inLabel = cs.filter((c) => (c.label_ids || []).includes(labelId)).slice(0, 1000);
       const have = new Set(
         funnel.cards.filter((c) => c.stage_id === stage.id).map((c) => c.wa_contact_id),
       );
@@ -383,7 +383,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
           {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-[calc(100vh-140px)] w-72 shrink-0 animate-pulse rounded-xl border border-neutral-200 bg-neutral-50"
+              className="h-[calc(100vh-108px)] w-72 shrink-0 animate-pulse rounded-xl border border-neutral-200 bg-neutral-50"
             />
           ))}
         </div>
@@ -398,7 +398,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
 
 
 
-          <div className="flex h-[calc(100vh-140px)] gap-3 overflow-x-auto pb-1">
+          <div className="flex h-[calc(100vh-108px)] gap-3 overflow-x-auto pb-1">
             <div className="flex h-full w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-2">
               <div className="flex items-baseline justify-between gap-2">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-900">Inbox</h3>

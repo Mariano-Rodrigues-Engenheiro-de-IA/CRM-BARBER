@@ -409,7 +409,7 @@
     const contacts = [];
     try {
       const known = new Set(labels.map((l) => l.id));
-      for (const chat of chats.slice(0, 1500)) {
+      for (const chat of chats.slice(0, 5000)) {
         const waId = serialized(chat?.id);
         if (!waId) continue;
         const isGroup = waId.endsWith("@g.us");

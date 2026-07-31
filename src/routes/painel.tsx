@@ -1160,7 +1160,7 @@ function KanbanView({
               </div>
             </div>
 
-            <div className="h-[calc(100vh-190px)] min-h-[420px] space-y-2 overflow-y-auto p-2.5">
+            <div className="h-[calc(100vh-150px)] min-h-[420px] space-y-2 overflow-y-auto p-2.5">
 
               {(byStatus[col.key] ?? []).map((c) => {
                 const plan = planFromTags(c.tags);
