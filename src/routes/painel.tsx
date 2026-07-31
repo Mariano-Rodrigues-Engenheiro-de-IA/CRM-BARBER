@@ -9,7 +9,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { TeamView } from "@/components/team-view";
 import { ConnectionView } from "@/components/connection-view";
 import { QuickRepliesView } from "@/components/quick-replies-view";
-import { FunnelsView, FunnelDispatchView } from "@/components/funnels-view";
+import { FunnelsView } from "@/components/funnels-view";
+import { DispatchCenter } from "@/components/dispatch-view";
 import { sendWaAction, isRealPhone, openWhatsappChat, applyFunnelActions } from "@/lib/wa-actions";
 import { sendableActions, type QuickReply } from "@/lib/quick-replies";
 
