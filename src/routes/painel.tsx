@@ -85,29 +85,42 @@ const COLUMNS: Col[] = [
   { key: "canceled", label: "Cancelados" },
 ];
 
-// Kanbans da barbearia: começam nos padrões do sistema escolhido e, a partir
-// do momento em que o usuário cria/exclui alguma coluna, passam a viver aqui.
+// Kanbans da barbearia: NÃO existem colunas padrão. Elas nascem da planilha
+// importada (uma coluna por status encontrado) ou da criação manual.
 function colsKey(shopId: string) { return `crm_cols_${shopId || "default"}`; }
 
-function defaultColumns(shopId: string): Col[] {
-  const allowed = statusesForSystem(readSystem(shopId));
-  return allowed ? COLUMNS.filter((c) => allowed.includes(c.key)) : COLUMNS;
-}
-
-/** Colunas visíveis: customizadas pelo usuário ou padrão do sistema. */
+/** Colunas visíveis: só as criadas pelo usuário/importação. */
 function visibleColumns(shopId: string): Col[] {
-  if (typeof window === "undefined") return defaultColumns(shopId);
+  if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(colsKey(shopId));
     const parsed = raw ? (JSON.parse(raw) as Col[]) : null;
-    if (Array.isArray(parsed) && parsed.length) return parsed;
+    if (Array.isArray(parsed)) return parsed.filter((c) => c && c.key && c.label);
   } catch { /* ignora json inválido */ }
-  return defaultColumns(shopId);
+  return [];
 }
 
 function writeColumns(shopId: string, cols: Col[]) {
   localStorage.setItem(colsKey(shopId), JSON.stringify(cols));
 }
+
+/** Rótulo amigável para um status vindo da planilha. */
+function statusLabel(key: string) {
+  const known = COLUMNS.find((c) => c.key === key);
+  if (known) return known.label;
+  return key.replace(/^custom_/, "").replace(/_/g, " ").replace(/^./, (m) => m.toUpperCase());
+}
+
+/**
+ * Após importar a planilha, a estrutura de kanbans espelha a estrutura dela:
+ * um kanban por status presente, na ordem em que aparecem.
+ */
+function syncColumnsFromSheet(shopId: string, statusKeys: string[]) {
+  const cols = statusKeys.map((key) => ({ key, label: statusLabel(key) }));
+  if (cols.length) writeColumns(shopId, cols);
+  return cols;
+}
+
 
 
 const TOKEN_KEY = "crm_ext_token_v1";
