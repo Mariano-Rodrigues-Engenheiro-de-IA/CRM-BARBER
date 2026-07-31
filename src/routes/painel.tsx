@@ -1483,10 +1483,14 @@ function ImportModal({
 
       const semTelefone = report.rows.filter((r) => r.tags.includes("sem-telefone")).length;
 
-      const dist = COLUMNS
-        .filter((c) => report.byStatus[c.key])
+      // Os kanbans passam a espelhar a estrutura da planilha importada.
+      const sheetStatuses = Object.keys(report.byStatus);
+      const syncedCols = syncColumnsFromSheet(shopId, sheetStatuses);
+
+      const dist = syncedCols
         .map((c) => `${c.label}: ${report.byStatus[c.key]}`)
         .join(" · ");
+
       setResult(
         `Linhas lidas: ${report.total} · Importadas: ${report.rows.length}` +
           (report.skipped ? ` · Ignoradas (sem telefone/status): ${report.skipped}` : "") +
