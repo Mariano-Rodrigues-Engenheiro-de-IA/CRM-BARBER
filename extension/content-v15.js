@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.31.0";
+  const CRM_VERSION = "0.32.0";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -64,17 +64,10 @@
       });
     return waScriptsPromise;
   }
-  // Injeção adiada: o wa-js engancha nos módulos internos do WhatsApp e, se
-  // isso acontece durante o boot, as conversas demoram muito mais pra abrir.
-  // Esperamos o navegador ficar ocioso (ou 20s) antes de injetar.
-  function scheduleWaScripts() {
-    const run = () => ensureWaScriptsInjected().catch(() => null);
-    if (typeof requestIdleCallback === "function") requestIdleCallback(run, { timeout: 20000 });
-    else setTimeout(run, 20000);
-  }
-  if (document.readyState === "complete") scheduleWaScripts();
-  else window.addEventListener("load", scheduleWaScripts, { once: true });
-
+  // Injeção sob demanda: o wa-js engancha nos módulos internos do WhatsApp e
+  // deixa o boot muito mais lento. Não injetamos mais no load — só quando o
+  // usuário pede algo que precisa do motor (sincronizar, disparar, responder)
+  // ou na primeira sincronização em segundo plano, bem depois do boot.
 
   let pollHeartbeat = null;
   let railRef = null;
@@ -143,10 +136,12 @@
     if (syncTimer) return;
     // A primeira sincronização varre etiquetas e conversas — pesado logo no
     // boot. Só rodamos quando o navegador estiver ocioso (ou após 60s).
-    const first = () => syncWaData();
-    if (typeof requestIdleCallback === "function") requestIdleCallback(first, { timeout: 60000 });
-    else setTimeout(first, 60000);
-    syncTimer = setInterval(() => syncWaData(), 15 * 60 * 1000);
+    const first = () => {
+      if (typeof requestIdleCallback === "function") requestIdleCallback(() => syncWaData(), { timeout: 30000 });
+      else syncWaData();
+    };
+    setTimeout(first, 180000);
+    syncTimer = setInterval(() => syncWaData(), 30 * 60 * 1000);
   }
 
 
@@ -668,7 +663,7 @@
   ensureShell();
   setInterval(() => loadFunnels(), 300000);
   ensureChatButton();
-  setInterval(() => ensureChatButton(), 3000);
+  setInterval(() => ensureChatButton(), 1500);
   // O WhatsApp muta o DOM centenas de vezes por segundo enquanto carrega as
   // conversas. Sem throttle, cada mutação disparava duas varreduras e deixava
   // a interface lenta. Agora agrupamos tudo em um único frame.
@@ -779,10 +774,10 @@
 
     const btn = document.createElement("button");
     btn.id = CHAT_BTN_ID;
-    btn.className = "crm-chat-btn";
     btn.type = "button";
     btn.title = "Adicionar este contato a um funil";
-    btn.innerHTML = `${ICONS.funnel}<span>CRM</span>`;
+    btn.className = "crm-chat-btn crm-chat-btn-icon";
+    btn.innerHTML = ICONS.funnel;
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
