@@ -411,15 +411,22 @@ function Painel() {
 
   async function reload(silent = false) {
     if (!token) return;
-    if (!silent) setLoading(true);
+    // Com cache quente nunca mostramos spinner: os dados antigos ficam na tela
+    // enquanto a atualização chega por baixo.
+    if (!silent && customersCache === null) setLoading(true);
     const r = await api(token, "/api/public/extension/customers");
-    if (r?.ok) setCustomers(r.customers || []);
-    if (!silent) setLoading(false);
+    if (r?.ok) {
+      const list = (r.customers || []) as Customer[];
+      customersCache = list;
+      setCustomers(list);
+    }
+    setLoading(false);
   }
 
   useEffect(() => {
     if (!token) return;
     reload();
+
     api(token, "/api/public/extension/meta").then((r) => {
       if (r?.ok && r.barbershop) {
         setShop(r.barbershop);
