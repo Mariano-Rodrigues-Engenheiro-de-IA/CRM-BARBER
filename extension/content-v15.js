@@ -915,11 +915,10 @@
     const waId = chat.wa_id || null;
     const target = chat.phone || String(waId || "").split("@")[0];
     if (!target && !waId) return crmToast("Contato sem telefone.", "err");
-    crmToast(`Enviando "${reply.title}"…`);
     const sendable = (reply.actions || []).filter((a) =>
       ["text", "image", "video", "audio"].includes(a.type),
     );
-    if (!sendable.length) return crmToast("Essa resposta não tem mensagem para enviar.", "err");
+    if (!sendable.length) return;
     const prefetched = await chrome.runtime
       .sendMessage({ type: "prefetch_media", actions: sendable })
       .catch(() => null);
@@ -929,8 +928,8 @@
       name: chat.name || "",
       actions: prefetched?.ok ? prefetched.actions : sendable,
     });
-    if (res?.ok) crmToast("Resposta enviada");
-    else crmToast(res?.error || "Falha ao enviar", "err");
+    // Sem confirmação de envio: só avisa quando falha.
+    if (!res?.ok) crmToast(res?.error || "Falha ao enviar", "err");
   }
 
 
