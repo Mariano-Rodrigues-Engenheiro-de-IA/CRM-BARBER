@@ -17,7 +17,7 @@ type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknow
 
 export type DispatchCustomer = { id: string; name: string; phone: string; status: string };
 
-type Audience = "assinantes" | "etiquetas" | "funis";
+type Audience = "assinantes" | "funis";
 
 const inputCls =
   "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-neutral-900";
