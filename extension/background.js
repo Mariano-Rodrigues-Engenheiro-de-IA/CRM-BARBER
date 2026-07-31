@@ -8,12 +8,14 @@
 //
 // Rate limit: espaçamento aleatório entre 8s e 20s entre jobs (ritmo humano).
 
-const EXTENSION_VERSION = "0.33.2";
+const EXTENSION_VERSION = "0.33.3";
 const DEFAULT_API_BASE = "https://crm.zayloia.com";
 const POLL_MIN_MS = 8000;
 const POLL_MAX_MS = 20000;
 const POLL_ALARM_NAME = "crm-assinaturas-poll";
 const LAST_ERROR_KEY = "last_error";
+const SCRIPT_REINJECTION_COOLDOWN_MS = 60000;
+const lastScriptInjectionByTab = new Map();
 
 function randDelay() {
   return POLL_MIN_MS + Math.floor(Math.random() * (POLL_MAX_MS - POLL_MIN_MS));
@@ -142,6 +144,9 @@ async function ensureScripts(tabId) {
     .then((response) => response?.ok === true)
     .catch(() => false);
   if (alive) return;
+  const lastInjection = lastScriptInjectionByTab.get(tabId) || 0;
+  if (Date.now() - lastInjection < SCRIPT_REINJECTION_COOLDOWN_MS) return;
+  lastScriptInjectionByTab.set(tabId, Date.now());
   await chrome.scripting.insertCSS({ target: { tabId }, files: ["content.css"] }).catch(() => null);
   await chrome.scripting.executeScript({ target: { tabId }, files: ["content-v15.js"] }).catch(() => null);
 }

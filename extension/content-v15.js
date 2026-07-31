@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.33.2";
+  const CRM_VERSION = "0.33.3";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -339,6 +339,7 @@
   // ---------------------------------------------------------------------
   let activeFilter = null; // { key, terms: string[] }
   let filterObserver = null;
+  let filterFrame = null;
 
   function chatRows() {
     const pane = document.querySelector("#pane-side");
@@ -367,6 +368,8 @@
     for (const row of chatRows()) row.style.display = "";
     filterObserver?.disconnect();
     filterObserver = null;
+    if (filterFrame !== null) cancelAnimationFrame(filterFrame);
+    filterFrame = null;
     activeFilter = null;
     renderTopbar();
   }
@@ -377,7 +380,13 @@
     activeFilter = { key, terms: clean };
     const pane = document.querySelector("#pane-side");
     filterObserver?.disconnect();
-    filterObserver = new MutationObserver(() => applyChatFilter());
+    filterObserver = new MutationObserver(() => {
+      if (filterFrame !== null) return;
+      filterFrame = requestAnimationFrame(() => {
+        filterFrame = null;
+        applyChatFilter();
+      });
+    });
     if (pane) filterObserver.observe(pane, { childList: true, subtree: true });
     applyChatFilter();
     renderTopbar();
@@ -658,7 +667,7 @@
     ensureShell();
     ensureChatButton();
   };
-  setInterval(maintenanceTick, 3000);
+  setInterval(maintenanceTick, 8000);
   setInterval(() => {
     if (document.visibilityState === "visible") void loadFunnels();
   }, 300000);
