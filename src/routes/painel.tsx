@@ -6,6 +6,7 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { TeamView } from "@/components/team-view";
 import { ConnectionView } from "@/components/connection-view";
 import { QuickRepliesView } from "@/components/quick-replies-view";
