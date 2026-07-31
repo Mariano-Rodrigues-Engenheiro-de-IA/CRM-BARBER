@@ -2,7 +2,7 @@
 //
 // Público possível:
 //   • Assinantes → coluna (status) do kanban de assinaturas
-//   • Etiquetas  → etiqueta nativa do WhatsApp já sincronizada (wa_labels)
+//   • Listas     → lista nativa do WhatsApp já sincronizada (wa_labels)
 //   • Funis      → funil + coluna
 //
 // O conteúdo (mensagem manual ou resposta rápida), o ritmo e o termo de uso
