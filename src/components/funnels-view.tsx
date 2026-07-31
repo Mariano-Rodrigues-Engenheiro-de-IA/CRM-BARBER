@@ -109,11 +109,8 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
     return created;
   }
 
-  /**
-   * O funil "Listas" é um espelho das listas (etiquetas) do WhatsApp:
-   * cada lista vira uma coluna e os contatos dela viram os cards.
-   * Nada é criado à mão aqui — a fonte da verdade é sempre o WhatsApp.
-   */
+  /** Mantém somente as colunas. Os contatos são renderizados diretamente do
+   * snapshot do WhatsApp, sem criar/deletar centenas de cards em sequência. */
   async function syncLabelFunnel(list: Funnel[], ls: WaLabel[], cs: WaContact[]) {
     const funnel = list.find((f) => f.mode === "label");
     if (!funnel) return false;
@@ -136,41 +133,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       return true;
     }
 
-    // 2) Cards = contatos de cada lista.
-    let changed = false;
-    const stageByLabel = new Map(ls.map((l) => [l.wa_label_id, byName.get(l.name)]));
-    const wanted = new Set<string>();
-    for (const [labelId, stage] of stageByLabel) {
-      if (!stage) continue;
-      const inLabel = cs.filter((c) => (c.label_ids || []).includes(labelId)).slice(0, 1000);
-      const have = new Set(
-        funnel.cards.filter((c) => c.stage_id === stage.id).map((c) => c.wa_contact_id),
-      );
-      for (const c of inLabel) {
-        wanted.add(`${stage.id}:${c.id}`);
-        if (have.has(c.id)) continue;
-        await api("/api/public/extension/funnel-cards", {
-          method: "POST",
-          body: JSON.stringify({
-            funnel_id: funnel.id,
-            stage_id: stage.id,
-            title: c.name || c.phone || c.wa_id,
-            phone: c.phone ?? undefined,
-            wa_contact_id: c.id,
-          }),
-        });
-        changed = true;
-      }
-    }
-    for (const card of funnel.cards) {
-      if (card.wa_contact_id && wanted.has(`${card.stage_id}:${card.wa_contact_id}`)) continue;
-      await api("/api/public/extension/funnel-cards", {
-        method: "DELETE",
-        body: JSON.stringify({ id: card.id }),
-      });
-      changed = true;
-    }
-    return changed;
+    return false;
   }
 
   useEffect(() => {
@@ -179,10 +142,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       if (!r) return;
       const created = await ensureDefaults(r.list);
       const base = created ? await reload() : r;
-      if (await syncLabelFunnel(base.list, base.labels, base.contacts)) {
-        const next = await reload();
-        await syncLabelFunnel(next.list, next.labels, next.contacts);
-      }
+      if (await syncLabelFunnel(base.list, base.labels, base.contacts)) await reload();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -191,10 +151,29 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
   const active = funnels.find((f) => f.id === activeId) || null;
 
   const inboxContacts = useMemo(() => {
-    if (!active) return [];
-    const used = new Set(active.cards.map((card) => card.wa_contact_id).filter(Boolean) as string[]);
-    return contacts.filter((c) => !c.is_group).filter((c) => !used.has(c.id));
-  }, [active, contacts]);
+    return contacts.filter((c) => !c.is_group);
+  }, [contacts]);
+
+  function stageCards(stageId: string): FunnelCard[] {
+    if (!active || active.mode !== "label") return active?.cards.filter((c) => c.stage_id === stageId) ?? [];
+    const stage = active.stages.find((item) => item.id === stageId);
+    const label = labels.find((item) => item.name === stage?.name);
+    if (!label) return [];
+    return contacts
+      .filter((contact) => !contact.is_group && contact.label_ids.includes(label.wa_label_id))
+      .map((contact, index) => ({
+        id: `wa-${stageId}-${contact.id}`,
+        funnel_id: active.id,
+        stage_id: stageId,
+        title: contact.name || contact.phone || contact.wa_id,
+        phone: contact.phone,
+        value_cents: null,
+        notes: null,
+        sort_order: index,
+        customer_id: null,
+        wa_contact_id: contact.id,
+      }));
+  }
 
 
   async function moveCard(card: FunnelCard, stageId: string) {
@@ -458,7 +437,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
 
 
             {active.stages.map((stage) => {
-              const cards = active.cards.filter((c) => c.stage_id === stage.id);
+              const cards = stageCards(stage.id);
               return (
                 <div
                   key={stage.id}
@@ -492,12 +471,12 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                     />
                     <div className="flex shrink-0 items-center gap-1">
                       <span className="text-[11px] text-neutral-500">{cards.length}</span>
-                      <DotsMenu
+                      {active.mode !== "label" && <DotsMenu
                         items={[
                           { label: "Renomear", onClick: () => setRenamingStage(stage.id) },
                           { label: "Excluir", danger: true, onClick: () => void removeStage(stage.id) },
                         ]}
-                      />
+                      />}
                     </div>
                   </div>
 
@@ -514,12 +493,10 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                       >
                         <div className="flex items-start justify-between gap-2">
                           <p className="min-w-0 truncate text-sm font-medium text-neutral-900">{card.title}</p>
-                          <button
+                          {active.mode !== "label" && <button
                             onClick={() => removeCard(card)}
                             className="shrink-0 text-[11px] text-neutral-400 hover:text-red-600"
-                          >
-                            ✕
-                          </button>
+                          >✕</button>}
                         </div>
                         {isRealPhone(card.phone) && (
                           <p className="mt-0.5 text-[11px] text-neutral-500">{card.phone}</p>

@@ -83,6 +83,16 @@ export const Route = createFileRoute("/api/public/extension/wa/sync")({
               return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
             }
           }
+          // A coleta é um snapshot, não um acumulador. Contatos ausentes no
+          // snapshot concluído deixam de compor Inbox/Listas imediatamente.
+          const { error: staleError } = await supabaseAdmin
+            .from("wa_contacts")
+            .delete()
+            .eq("barbershop_id", shop)
+            .lt("synced_at", now);
+          if (staleError) {
+            return jsonResponse(request, { ok: false, error: staleError.message }, { status: 500 });
+          }
         }
 
         return jsonResponse(request, {
