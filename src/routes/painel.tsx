@@ -1041,6 +1041,18 @@ function KanbanView({
 
       {loading && <p className="text-sm text-neutral-500">Carregando...</p>}
 
+      {!loading && cols.length === 0 && (
+        <div className="rounded-xl border border-dashed border-neutral-300 bg-white p-8 text-center">
+          <p className="text-sm font-medium text-neutral-800">Nenhum kanban ainda</p>
+          <p className="mx-auto mt-1 max-w-md text-xs text-neutral-500">
+            Importe uma planilha — os kanbans são criados automaticamente com a mesma estrutura dela —
+            ou crie os seus com “Adicionar kanban”.
+          </p>
+        </div>
+      )}
+
+
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         {cols.map((col) => (
           <div
