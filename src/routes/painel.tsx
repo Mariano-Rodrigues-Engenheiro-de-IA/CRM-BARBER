@@ -822,13 +822,6 @@ function KanbanView({
   const colTotal = (key: string) =>
     (byStatus[key] ?? []).reduce((sum, c) => sum + priceOf(plans, planFromTags(c.tags)), 0);
 
-  const totalSubs = effective.filter((c) => c.status === "active" || c.status === "due_soon").length;
-  const missing = Math.max(0, goal - totalSubs);
-  const pct = goal > 0 ? Math.min(100, Math.round((totalSubs / goal) * 100)) : 0;
-  const mrr = effective
-    .filter((c) => c.status === "active" || c.status === "due_soon")
-    .reduce((sum, c) => sum + priceOf(plans, planFromTags(c.tags)), 0);
-  const plansMissingPrice = plans.filter((p) => p.priceCents <= 0).length;
 
   async function moveTo(id: string, status: string) {
     setPending((p) => ({ ...p, [id]: status }));
