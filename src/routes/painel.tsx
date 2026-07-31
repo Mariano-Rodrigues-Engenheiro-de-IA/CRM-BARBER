@@ -974,12 +974,12 @@ function KanbanView({
   }
 
   async function removeColumn(col: Col) {
-    if ((byStatus[col.key]?.length ?? 0) > 0) {
-      toast.error("Mova os contatos desta coluna antes de excluí-la.");
-      return;
-    }
+    const contactCount = byStatus[col.key]?.length ?? 0;
     const ok = await confirm({
       title: `Excluir o kanban "${col.label}"?`,
+      description: contactCount > 0
+        ? `A coluna será excluída, mas os ${contactCount} contato(s) dentro dela continuarão salvos. Eles voltarão a aparecer se uma coluna com esse mesmo status for criada ou importada novamente.`
+        : "A coluna será excluída. Nenhum contato será removido.",
       confirmLabel: "Excluir",
       destructive: true,
     });

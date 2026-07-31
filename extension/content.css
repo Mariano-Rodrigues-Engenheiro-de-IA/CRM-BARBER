@@ -6,9 +6,7 @@
 body.crm-shell {
   overflow: hidden !important;
 }
-body.crm-shell #app,
-body.crm-shell ._aigs,
-body.crm-shell ._ai_g {
+body.crm-shell #app {
   position: fixed !important;
   top: 40px !important;
   left: 46px !important;

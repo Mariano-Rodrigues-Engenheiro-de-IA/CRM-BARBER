@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.33.0";
+  const CRM_VERSION = "0.33.1";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -650,18 +650,32 @@
   }
 
   ensureShell();
-  setInterval(() => loadFunnels(), 300000);
   ensureChatButton();
-  // Uma checagem barata e espaçada substitui o MutationObserver global, que
-  // acordava em praticamente toda conversa renderizada pelo WhatsApp.
-  setInterval(() => {
+  // Não executamos manutenção nem rede enquanto a aba está oculta. Isso evita
+  // competir com o ciclo de suspensão/retomada do WhatsApp ao trocar de aba.
+  const maintenanceTick = () => {
+    if (document.visibilityState !== "visible") return;
     ensureShell();
     ensureChatButton();
-  }, 5000);
+  };
+  setInterval(maintenanceTick, 3000);
+  setInterval(() => {
+    if (document.visibilityState === "visible") void loadFunnels();
+  }, 300000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") return;
+    // Só restaura os elementos leves. Nunca reinjeta o motor, sincroniza dados
+    // ou chama refresh ao voltar para a aba.
+    maintenanceTick();
+  });
 
 
 
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
+    if (msg?.type === "crm_content_ping") {
+      sendResponse({ ok: true, version: CRM_VERSION });
+      return true;
+    }
     if (msg?.type === "send_message_v180" || msg?.type === "send_message_v170" || msg?.type === "send_message_v161") {
       handleSend(msg.job)
         .then(sendResponse)
@@ -788,18 +802,18 @@
 
 
   /** Botão CRM: somente funis (listas ficam com a função nativa do WhatsApp). */
-  async function openChatActionMenu(anchor) {
-    const chat = await activeChat();
-    if (!chat) return crmToast("Não consegui ler a conversa aberta.", "err");
-    if (!funnels.length) await loadFunnels();
-    if (!funnels.length) return crmToast("Nenhum funil criado ainda.", "err");
+  function openChatActionMenu(anchor) {
+    if (!funnels.length) {
+      void loadFunnels().then(() => openChatActionMenu(anchor));
+      return;
+    }
     openMenu(
       anchor,
-      funnels.filter((f) => f.mode !== "label").map((f) => ({ label: f.name, onClick: () => chooseStage(anchor, chat, f) })),
+      funnels.filter((f) => f.mode !== "label").map((f) => ({ label: f.name, onClick: () => chooseStage(anchor, f) })),
     );
   }
 
-  function chooseStage(anchor, chat, funnel) {
+  function chooseStage(anchor, funnel) {
     const stages = funnel.stages || [];
     if (!stages.length) return crmToast(`"${funnel.name}" ainda não tem etapas.`, "err");
     openMenu(
@@ -807,6 +821,8 @@
       stages.map((st) => ({
         label: st.name,
         onClick: async () => {
+          const chat = await activeChat();
+          if (!chat) return crmToast("Não consegui ler a conversa aberta.", "err");
           const r = await chrome.runtime
             .sendMessage({
               type: "api",

@@ -8,7 +8,7 @@
 //
 // Rate limit: espaçamento aleatório entre 8s e 20s entre jobs (ritmo humano).
 
-const EXTENSION_VERSION = "0.33.0";
+const EXTENSION_VERSION = "0.33.1";
 const DEFAULT_API_BASE = "https://crm.zayloia.com";
 const POLL_MIN_MS = 8000;
 const POLL_MAX_MS = 20000;
@@ -137,6 +137,11 @@ async function reportJob(id, status, error) {
 }
 
 async function ensureScripts(tabId) {
+  const alive = await chrome.tabs
+    .sendMessage(tabId, { type: "crm_content_ping" })
+    .then((response) => response?.ok === true)
+    .catch(() => false);
+  if (alive) return;
   await chrome.scripting.insertCSS({ target: { tabId }, files: ["content.css"] }).catch(() => null);
   await chrome.scripting.executeScript({ target: { tabId }, files: ["content-v15.js"] }).catch(() => null);
 }
