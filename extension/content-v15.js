@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.25.0";
+  const CRM_VERSION = "0.29.0";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -74,6 +74,7 @@
   let funnels = [];
   let billing = null;
   let waData = { labels: [], contacts: [] };
+  let quickReplies = [];
   let syncTimer = null;
   let syncing = false;
 
@@ -144,6 +145,13 @@
     }
   }
 
+  async function loadQuickReplies() {
+    const r = await chrome.runtime
+      .sendMessage({ type: "api", path: "/api/public/extension/quick-replies" })
+      .catch(() => null);
+    if (r?.ok) quickReplies = r.quick_replies || [];
+  }
+
   function painelUrl(section, extra) {
     const base = status.api_base || "";
     const token = status.token || EXTENSION_BRIDGE_TOKEN;
@@ -170,7 +178,7 @@
   let autoSyncTried = false;
   let topbarFilter = "tabs";
   try {
-    topbarFilter = localStorage.getItem("crm-topbar-filter") === "labels" ? "labels" : "tabs";
+    topbarFilter = localStorage.getItem("crm-topbar-filter") || "tabs";
   } catch {}
 
   function buildShell() {
@@ -285,25 +293,35 @@
     });
   }
 
+  function setTopbarFilter(value) {
+    topbarFilter = value;
+    try { localStorage.setItem("crm-topbar-filter", value); } catch {}
+    renderTopbar();
+  }
+
+  /** Nome do filtro ativo (usado no botão da barra). */
+  function currentFilterLabel() {
+    if (topbarFilter === "labels") return "LISTAS";
+    const f = currentFunnel();
+    return (f?.name || "FUNIL PRINCIPAL").toUpperCase();
+  }
+
+  /** Funil selecionado no topo (qualquer funil, não só o "tab"). */
+  function currentFunnel() {
+    if (topbarFilter.startsWith("funnel:")) {
+      const id = topbarFilter.slice(7);
+      const found = funnels.find((f) => f.id === id);
+      if (found) return found;
+    }
+    return tabFunnel() || funnels[0] || null;
+  }
+
   function openFilterMenu(anchor) {
-    openMenu(anchor, [
-      {
-        label: "FUNIL PRINCIPAL",
-        onClick: () => {
-          topbarFilter = "tabs";
-          try { localStorage.setItem("crm-topbar-filter", "tabs"); } catch {}
-          renderTopbar();
-        },
-      },
-      {
-        label: "LISTAS",
-        onClick: () => {
-          topbarFilter = "labels";
-          try { localStorage.setItem("crm-topbar-filter", "labels"); } catch {}
-          renderTopbar();
-        },
-      },
-    ]);
+    const items = [{ label: "LISTAS", onClick: () => setTopbarFilter("labels") }];
+    for (const f of funnels) {
+      items.push({ label: f.name.toUpperCase(), onClick: () => setTopbarFilter(`funnel:${f.id}`) });
+    }
+    openMenu(anchor, items);
   }
 
   // ---------------------------------------------------------------------
@@ -451,7 +469,7 @@
   async function createTab() {
     const name = await crmPrompt({ title: "Nova etapa", value: "" });
     if (!name) return;
-    const funnel = tabFunnel();
+    const funnel = currentFunnel();
     if (funnel) {
       await patchStages(funnel, [
         ...funnel.stages.map((s) => ({ id: s.id, name: s.name, sort_order: s.sort_order })),
@@ -480,9 +498,7 @@
       return;
     }
 
-    const filter = `<button class="crm-filter">${FILTER_SVG}${
-      topbarFilter === "labels" ? "LISTAS" : "FUNIL PRINCIPAL"
-    }</button>`;
+    const filter = `<button class="crm-filter">${FILTER_SVG}${escapeHtml(currentFilterLabel())}</button>`;
 
     if (topbarFilter === "labels") {
       const pills = (waData.labels || [])
@@ -508,23 +524,22 @@
       return;
     }
 
-    const pills = funnels
-      .filter((f) => f.mode === "tab")
-      .flatMap((f) =>
-        (f.stages || []).map((s) => {
-          const cards = (f.cards || []).filter((c) => c.stage_id === s.id);
-          const on = activeFilter?.key === `stage:${s.id}`;
-          return `<span class="crm-pill${on ? " crm-pill-on" : ""}" data-funnel="${escapeHtml(f.id)}" data-stage="${escapeHtml(s.id)}">
+    const f = currentFunnel();
+    const pills = ((f?.stages) || [])
+      .map((s) => {
+        const cards = (f.cards || []).filter((c) => c.stage_id === s.id);
+        const on = activeFilter?.key === `stage:${s.id}`;
+        return `<span class="crm-pill${on ? " crm-pill-on" : ""}" data-funnel="${escapeHtml(f.id)}" data-stage="${escapeHtml(s.id)}">
             ${escapeHtml(s.name)}
             <span class="crm-pill-count">${cards.length}</span>
             <button class="crm-pill-gear" data-funnel="${escapeHtml(f.id)}" data-stage="${escapeHtml(s.id)}" title="Opções">${GEAR_SVG}</button>
           </span>`;
-        }),
-
-      )
+      })
       .join("");
 
-    topbarRef.innerHTML = `${filter}${pills}<button class="crm-pill crm-pill-add">+ etapa</button>${premiumPill()}`;
+    topbarRef.innerHTML = `${filter}${
+      pills || `<span class="crm-topbar-hint">Nenhuma etapa nesse funil ainda.</span>`
+    }<button class="crm-pill crm-pill-add">+ etapa</button>${premiumPill()}`;
   }
 
   /** Aviso de plano vive aqui (no WhatsApp), não mais dentro do painel do CRM. */
@@ -565,6 +580,7 @@
     startPollHeartbeat();
     startSync();
     loadFunnels();
+    loadQuickReplies();
     loadBilling();
   }
 
