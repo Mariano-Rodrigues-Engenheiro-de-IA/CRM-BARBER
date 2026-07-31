@@ -1,6 +1,6 @@
 // Funis de vendas — kanbans customizáveis criados de três formas:
 //   • Aba        → também aparece como aba no topo do WhatsApp Web
-//   • Etiqueta   → alimentado por uma etiqueta nativa do WhatsApp
+//   • Listas     → alimentado por uma lista (etiqueta) nativa do WhatsApp
 //   • Novo funil → colunas e leads montados manualmente
 //
 // Os cards seguem o mesmo padrão dos kanbans de assinaturas:
@@ -71,7 +71,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
   }
 
   /**
-   * "Funil principal" e "Etiquetas / Listas" são fixos: nascem sozinhos e
+   * "Funil principal" e "Listas" são fixos: nascem sozinhos e
    * não podem ser excluídos. O botão do cabeçalho só cria funis personalizados.
    */
   async function ensureDefaults(list: Funnel[], ls: WaLabel[]) {
@@ -89,18 +89,27 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       });
       created = created || Boolean(r?.ok);
     }
+    // Renomeia o funil de listas criado com o nome antigo ("Etiquetas / Listas").
+    const legacy = list.find((f) => f.mode === "label" && f.name !== "Listas");
+    if (legacy) {
+      const r = await api(`/api/public/extension/funnels/${legacy.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name: "Listas" }),
+      });
+      created = created || Boolean(r?.ok);
+    }
     if (!list.some((f) => f.mode === "label")) {
       const r = await api("/api/public/extension/funnels", {
         method: "POST",
         body: JSON.stringify({
-          name: "Etiquetas / Listas",
+          name: "Listas",
           mode: "label",
           stages: ls.map((l) => l.name),
         }),
       });
       created = created || Boolean(r?.ok);
 
-      // Cada etiqueta vira uma coluna já preenchida com os contatos dela.
+      // Cada lista vira uma coluna já preenchida com os contatos dela.
       const funnel = r?.ok ? (r.funnel as Funnel) : null;
       if (funnel?.stages?.length) {
         for (let i = 0; i < ls.length; i++) {
@@ -679,7 +688,7 @@ function FunnelPicker({
           <path d="m6 9 6 6 6-6" />
         </svg>
       </button>
-      {/* Funis fixos (Funil principal e Etiquetas) não podem ser renomeados nem excluídos. */}
+      {/* Funis fixos (Funil principal e Listas) não podem ser renomeados nem excluídos. */}
       {active && active.mode === "manual" && (
         <DotsMenu
           items={[

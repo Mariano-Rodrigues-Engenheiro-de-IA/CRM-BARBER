@@ -1,5 +1,5 @@
 // Content script v0.25.0 — abas do CRM no topo do WhatsApp Web + trilho de
-// ícones minimalista à esquerda. Clicar numa aba/etiqueta filtra a própria
+// ícones minimalista à esquerda. Clicar numa aba/lista filtra a própria
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
@@ -182,7 +182,7 @@
       <button class="crm-rail-btn" data-go="funis" data-label="Funis de Vendas">${ICONS.funnel}</button>
       <button class="crm-rail-btn" data-go="equipe" data-label="Equipe">${ICONS.trophy}</button>
       <button class="crm-rail-btn" data-go="conexao" data-label="Conexão">${ICONS.phone}</button>
-      <button class="crm-rail-btn" data-act="sync" data-label="Sincronizar etiquetas e conversas">${ICONS.sync}</button>
+      <button class="crm-rail-btn" data-act="sync" data-label="Sincronizar listas e conversas">${ICONS.sync}</button>
       <div class="crm-rail-spacer"></div>
       <button class="crm-rail-btn" data-go="configuracoes" data-label="Configurações">${ICONS.gear}</button>
       <button class="crm-rail-btn" data-act="unpair" data-label="Desvincular">${ICONS.exit}</button>
@@ -296,7 +296,7 @@
         },
       },
       {
-        label: "ETIQUETAS / LISTAS",
+        label: "LISTAS",
         onClick: () => {
           topbarFilter = "labels";
           try { localStorage.setItem("crm-topbar-filter", "labels"); } catch {}
@@ -355,7 +355,7 @@
     renderTopbar();
   }
 
-  /** Etiqueta: filtra a lista de conversas pelos contatos daquela etiqueta. */
+  /** Lista: filtra a lista de conversas pelos contatos daquela lista. */
   async function filterByLabel(labelId, _labelName) {
     // Etiqueta clicada antes da sincronização terminar: sincroniza na hora.
     if (!(waData.contacts || []).length) {
@@ -481,7 +481,7 @@
     }
 
     const filter = `<button class="crm-filter">${FILTER_SVG}${
-      topbarFilter === "labels" ? "ETIQUETAS / LISTAS" : "FUNIL PRINCIPAL"
+      topbarFilter === "labels" ? "LISTAS" : "FUNIL PRINCIPAL"
     }</button>`;
 
     if (topbarFilter === "labels") {
@@ -502,7 +502,7 @@
       topbarRef.innerHTML = `${filter}${
         pills ||
         `<span class="crm-topbar-hint">${
-          syncing ? "sincronizando etiquetas…" : "Nenhuma etiqueta sincronizada ainda."
+          syncing ? "sincronizando listas…" : "Nenhuma lista sincronizada ainda."
         }</span>`
       }${premiumPill()}`;
       return;

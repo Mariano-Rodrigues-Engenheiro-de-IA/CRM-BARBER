@@ -6,6 +6,7 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { TeamView } from "@/components/team-view";
 import { ConnectionView } from "@/components/connection-view";
 import { QuickRepliesView } from "@/components/quick-replies-view";
@@ -125,13 +126,6 @@ function syncColumnsFromSheet(shopId: string, statusKeys: string[]) {
 
 /** Cache entre navegações: voltar pra Assinantes não pisca "Carregando...". */
 let customersCache: Customer[] | null = null;
-
-/** Menu lateral recolhido/expandido — preferência do usuário. */
-const SIDEBAR_KEY = "crm_sidebar_collapsed_v1";
-function readSidebarCollapsed() {
-  if (typeof window === "undefined") return false;
-  return localStorage.getItem(SIDEBAR_KEY) === "1";
-}
 
 const TOKEN_KEY = "crm_ext_token_v1";
 
@@ -334,7 +328,6 @@ function Painel() {
   const [ready, setReady] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>(() => customersCache ?? []);
   const [loading, setLoading] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
 
   const initialSection: Section = (() => {
     if (typeof window === "undefined") return "assinantes";
@@ -350,12 +343,15 @@ function Painel() {
   // Host do cabeçalho dos funis: o seletor de funil + "novo funil" moram na
   // barra superior, mas o estado deles vive dentro do FunnelsView (portal).
   const [funisHeaderEl, setFunisHeaderEl] = useState<HTMLDivElement | null>(null);
+  // Host do cabeçalho de Assinantes: os botões de ação moram na barra do topo,
+  // ao lado do título, liberando altura pros kanbans.
+  const [assinHeaderEl, setAssinHeaderEl] = useState<HTMLDivElement | null>(null);
+  const [equipeHeaderEl, setEquipeHeaderEl] = useState<HTMLDivElement | null>(null);
   const [shop, setShop] = useState<{ id: string; name: string } | null>(null);
   const [brand, setBrand] = useState<Brand>({});
 
 
   useEffect(() => {
-    setCollapsed(readSidebarCollapsed());
     const storedToken = getToken();
     if (storedToken) {
       setToken(storedToken);
@@ -369,13 +365,6 @@ function Painel() {
       .finally(() => setReady(true));
   }, []);
 
-  function toggleSidebar() {
-    setCollapsed((v) => {
-      const next = !v;
-      localStorage.setItem(SIDEBAR_KEY, next ? "1" : "0");
-      return next;
-    });
-  }
 
 
   async function reload(silent = false) {
@@ -469,67 +458,32 @@ function Painel() {
 
   return (
     <div className="flex min-h-screen bg-neutral-100 text-neutral-900">
-      {/* Sidebar */}
-      <aside
-        className={
-          "hidden md:flex shrink-0 flex-col border-r border-neutral-200 bg-white text-neutral-900 transition-[width] duration-200 " +
-          (collapsed ? "w-[68px]" : "w-64")
-        }
-      >
-        {/* Toggle do menu — ícone puro no topo, sem rótulo */}
-        <div className={"flex pt-3 " + (collapsed ? "justify-center px-2" : "justify-end px-3")}>
-          <button
-            onClick={toggleSidebar}
-            title={collapsed ? "Expandir menu" : "Recolher menu"}
-            aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
-            className="grid h-8 w-8 place-items-center rounded-lg text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-900"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
-          </button>
-        </div>
-
+      {/* Sidebar fixa */}
+      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-neutral-200 bg-white text-neutral-900">
         {/* Brand card — emoldura o nome pra não parecer "solto na tela" */}
-        <div className={collapsed ? "px-2 pt-1 pb-3" : "px-3 pt-1 pb-3"}>
-          <div
-            className={
-              "flex items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 shadow-sm " +
-              (collapsed ? "justify-center px-1.5 py-2" : "px-3 py-3")
-            }
-          >
+        <div className="px-3 pt-4 pb-3">
+          <div className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-3 shadow-sm">
             <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-yellow-400 text-base font-bold text-neutral-900 ring-1 ring-black/10">
               {shopLogo ? <img src={shopLogo} alt="logo" className="h-full w-full object-cover" /> : shopInitial}
             </div>
-            {!collapsed && (
-              <div className="min-w-0">
-                <p className="text-[10px] font-semibold tracking-[0.22em] text-neutral-500">CRM BARBER</p>
-                <p className="truncate text-sm font-semibold text-neutral-950">{shopName}</p>
-              </div>
-            )}
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold tracking-[0.22em] text-neutral-500">CRM BARBER</p>
+              <p className="truncate text-sm font-semibold text-neutral-950">{shopName}</p>
+            </div>
           </div>
         </div>
 
         <div className="mx-3 mb-2 h-px bg-neutral-200" />
 
 
-        <nav className={"flex-1 space-y-1 " + (collapsed ? "px-2" : "px-3")}>
+        <nav className="flex-1 space-y-1 px-3">
           {NAV_TOP.map((n) => {
             const active = section === n.key;
-            const open = Boolean(n.children) && assinOpen && !collapsed;
+            const open = Boolean(n.children) && assinOpen;
             return (
               <div key={n.key}>
                 <button
-                  title={collapsed ? n.label : undefined}
                   onClick={() => {
-                    // Recolhido: o clique no ícone já expande o menu de volta.
-                    if (collapsed) {
-                      setCollapsed(false);
-                      localStorage.setItem(SIDEBAR_KEY, "0");
-                      setSection(n.key);
-                      if (n.children) setAssinOpen(true);
-                      return;
-                    }
                     // Sanfona: no item com sub-abas, o clique alterna a expansão
                     // (e leva pra seção quando ela ainda não está ativa).
                     if (n.children) {
@@ -539,25 +493,16 @@ function Painel() {
                     }
                     setSection(n.key);
                   }}
-                  className={
-                    collapsed
-                      ? "group flex w-full items-center justify-center rounded-xl px-0 py-2.5 transition " +
-                        (active ? "bg-neutral-900 text-white" : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-950")
-                      : navRowCls(active)
-                  }
+                  className={navRowCls(active)}
                 >
                   <span className="flex h-5 w-5 items-center justify-center">{n.icon}</span>
-                  {!collapsed && (
-                    <>
-                      <span className="flex-1 truncate">{n.label}</span>
-                      <IconChevron
-                        className={
-                          (open ? "rotate-90 " : "") +
-                          (active ? "text-white/70" : "text-neutral-400 group-hover:text-neutral-700")
-                        }
-                      />
-                    </>
-                  )}
+                  <span className="flex-1 truncate">{n.label}</span>
+                  <IconChevron
+                    className={
+                      (open ? "rotate-90 " : "") +
+                      (active ? "text-white/70" : "text-neutral-400 group-hover:text-neutral-700")
+                    }
+                  />
                 </button>
                 {open && n.children && (
                   <div className="mt-1 space-y-0.5 border-l border-neutral-200 pl-3 ml-4">
@@ -614,14 +559,15 @@ function Painel() {
         {section === "assinantes" && (
           <>
             <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
-              <div className="flex items-center gap-3 px-5 py-2.5">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-2">
                 <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
                   {assinTab === "visao" ? "Visão geral" : "Assinantes"}
                 </h1>
+                <div ref={setAssinHeaderEl} className="flex shrink-0 items-center gap-2" />
               </div>
             </header>
 
-            <main className="px-4 py-4">
+            <main className="px-4 py-3">
               {assinTab === "visao" && (
                 <OverviewView customers={customers} shopId={shop?.id ?? "default"} />
               )}
@@ -632,6 +578,7 @@ function Painel() {
                   token={token}
                   reload={reload}
                   shopId={shop?.id ?? "default"}
+                  headerHost={assinHeaderEl}
                   onGoSettings={() => setAssinTab("visao")}
                 />
               )}
@@ -694,33 +641,69 @@ function Painel() {
         )}
 
         {section === "respostas" && token && (
-          <main className="px-6 py-6 mt-14 md:mt-0">
-            <QuickRepliesView token={token} api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
-          </main>
+          <>
+            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
+              <div className="flex items-center gap-3 px-5 py-2">
+                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
+                  Respostas rápidas
+                </h1>
+              </div>
+            </header>
+            <main className="px-4 py-4">
+              <QuickRepliesView token={token} api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+            </main>
+          </>
         )}
 
         {section === "equipe" && (
-
-          <main className="px-6 py-6 mt-14 md:mt-0">
-            <TeamView shopId={shop?.id ?? "default"} />
-          </main>
+          <>
+            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-2">
+                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
+                  Equipe
+                </h1>
+                <div ref={setEquipeHeaderEl} className="flex shrink-0 items-center gap-2" />
+              </div>
+            </header>
+            <main className="px-4 py-4">
+              <TeamView shopId={shop?.id ?? "default"} headerHost={equipeHeaderEl} />
+            </main>
+          </>
         )}
 
         {section === "conexao" && token && (
-          <main className="px-6 py-6 mt-14 md:mt-0 max-w-3xl">
-            <ConnectionView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
-          </main>
+          <>
+            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
+              <div className="flex items-center gap-3 px-5 py-2">
+                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
+                  Conexão
+                </h1>
+              </div>
+            </header>
+            <main className="max-w-3xl px-4 py-4">
+              <ConnectionView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+            </main>
+          </>
         )}
 
         {section === "configuracoes" && (
-          <main className="px-6 py-6 mt-14 md:mt-0">
-            <SettingsView
-              brand={brand}
-              fallbackName={shop?.name || ""}
-              onSave={saveBrand}
-              shopId={shop?.id ?? "default"}
-            />
-          </main>
+          <>
+            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
+              <div className="flex items-center gap-3 px-5 py-2">
+                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
+                  Configurações
+                </h1>
+              </div>
+            </header>
+            <main className="px-4 py-4">
+              <SettingsView
+                brand={brand}
+                fallbackName={shop?.name || ""}
+                onSave={saveBrand}
+                shopId={shop?.id ?? "default"}
+              />
+            </main>
+          </>
         )}
 
       </div>
@@ -941,13 +924,15 @@ function KanbanView({
   token,
   reload,
   shopId,
+  headerHost,
   onGoSettings,
 }: {
   customers: Customer[];
   loading: boolean;
   token: string;
-  reload: () => void;
+  reload: () => void | Promise<void>;
   shopId: string;
+  headerHost?: HTMLDivElement | null;
   onGoSettings: () => void;
 }) {
   const { confirm, dialog } = useConfirm();
@@ -1047,14 +1032,68 @@ function KanbanView({
   // Primeira utilização = sem kanbans e sem contatos: só oferecemos a importação.
   const firstUse = cols.length === 0 && customers.length === 0;
 
+  // Barra de ações: vive no cabeçalho do topo (portal) pra não ocupar altura útil.
+  const toolbar = firstUse ? null : (
+    <div className="flex items-center gap-2">
+      {newCol === null ? (
+        <button
+          onClick={() => setNewCol("")}
+          title="Adicionar kanban"
+          className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-800 shadow-sm transition hover:border-neutral-900 hover:bg-neutral-50"
+        >
+          + Kanban
+        </button>
+      ) : (
+        <div className="flex items-center gap-2">
+          <input
+            autoFocus
+            value={newCol}
+            onChange={(e) => setNewCol(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { addColumn(newCol); setNewCol(null); }
+              if (e.key === "Escape") setNewCol(null);
+            }}
+            placeholder="Nome do kanban"
+            className="w-44 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs text-neutral-900 outline-none focus:border-neutral-900"
+          />
+          <button
+            onClick={() => { addColumn(newCol); setNewCol(null); }}
+            className="rounded-lg bg-neutral-900 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white hover:bg-neutral-800"
+          >
+            Criar
+          </button>
+          <button onClick={() => setNewCol(null)} className="text-xs text-neutral-500 hover:text-neutral-900">
+            cancelar
+          </button>
+        </div>
+      )}
+      <button
+        onClick={() => setShowAdd(true)}
+        title="Adicionar contato"
+        className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-800 shadow-sm transition hover:border-neutral-900 hover:bg-neutral-50"
+      >
+        + Contato
+      </button>
+      {/* Importar continua disponível pra sempre: reimportar sincroniza a planilha
+          sem apagar contatos criados à mão. */}
+      <button
+        onClick={() => setShowImport(true)}
+        className="rounded-lg bg-neutral-900 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-white shadow-sm transition hover:bg-neutral-800"
+      >
+        Importar planilha
+      </button>
+    </div>
+  );
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {dialog}
 
+      {headerHost && toolbar ? createPortal(toolbar, headerHost) : null}
 
       {/* Primeira utilização: só o botão de importar planilha. */}
-      {firstUse ? (
-        !loading && (
+      {firstUse
+        ? !loading && (
           <div className="rounded-2xl border border-dashed border-neutral-300 bg-white px-6 py-14 text-center">
             <p className="text-base font-semibold text-neutral-900">Comece importando sua planilha</p>
             <p className="mx-auto mt-1 max-w-md text-xs text-neutral-500">
@@ -1069,57 +1108,7 @@ function KanbanView({
             </button>
           </div>
         )
-      ) : (
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {newCol === null ? (
-            <button
-              onClick={() => setNewCol("")}
-              title="Adicionar kanban"
-              className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:border-neutral-500"
-            >
-              + Kanban
-            </button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <input
-                autoFocus
-                value={newCol}
-                onChange={(e) => setNewCol(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") { addColumn(newCol); setNewCol(null); }
-                  if (e.key === "Escape") setNewCol(null);
-                }}
-                placeholder="Nome do kanban"
-                className={inputCls + " w-48"}
-              />
-              <button
-                onClick={() => { addColumn(newCol); setNewCol(null); }}
-                className="rounded-lg bg-neutral-800 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white hover:bg-neutral-700"
-              >
-                Criar
-              </button>
-              <button onClick={() => setNewCol(null)} className="text-xs text-neutral-500 hover:text-neutral-900">
-                cancelar
-              </button>
-            </div>
-          )}
-          <button
-            onClick={() => setShowAdd(true)}
-            title="Adicionar contato"
-            className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:border-neutral-500"
-          >
-            + Contato
-          </button>
-          {/* Importar continua disponível pra sempre: reimportar sincroniza a planilha
-              sem apagar contatos criados à mão. */}
-          <button
-            onClick={() => setShowImport(true)}
-            className="rounded-lg bg-neutral-800 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white hover:bg-neutral-700"
-          >
-            Importar planilha
-          </button>
-        </div>
-      )}
+        : null}
 
       {loading && <p className="text-sm text-neutral-500">Carregando...</p>}
 
@@ -1154,9 +1143,9 @@ function KanbanView({
               (overCol === col.key ? "border-neutral-400 ring-2 ring-neutral-300/60" : "border-neutral-200")
             }
           >
-            <div className="border-b border-neutral-200 px-4 py-3">
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="truncate text-xs font-semibold uppercase tracking-wider text-neutral-700">{col.label}</h3>
+            <div className="border-b border-neutral-200 px-3 py-2">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="truncate text-[11px] font-semibold uppercase tracking-wider text-neutral-700">{col.label}</h3>
                 <button
                   onClick={() => void removeColumn(col)}
                   title="Excluir kanban"
@@ -1165,11 +1154,14 @@ function KanbanView({
                   ✕
                 </button>
               </div>
-              <p className="text-xs text-neutral-500">{byStatus[col.key]?.length ?? 0} contato(s)</p>
-              <p className="mt-1 text-sm font-semibold text-neutral-900">{formatBRL(colTotal(col.key))}</p>
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="text-[11px] text-neutral-500">{byStatus[col.key]?.length ?? 0} contato(s)</p>
+                <p className="text-xs font-semibold text-neutral-900">{formatBRL(colTotal(col.key))}</p>
+              </div>
             </div>
 
-            <div className="max-h-[calc(100vh-330px)] min-h-40 space-y-2 overflow-y-auto p-3">
+            <div className="h-[calc(100vh-190px)] min-h-[420px] space-y-2 overflow-y-auto p-2.5">
+
               {(byStatus[col.key] ?? []).map((c) => {
                 const plan = planFromTags(c.tags);
                 return (
@@ -1184,14 +1176,14 @@ function KanbanView({
                     onDragEnd={() => { setDragId(null); setOverCol(null); }}
                     onClick={() => setDetail(c)}
                     className={
-                      "cursor-grab rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-sm transition hover:border-neutral-900 hover:shadow-sm active:cursor-grabbing " +
+                      "cursor-grab rounded-lg border border-neutral-200 bg-neutral-50 p-2.5 text-[13px] transition hover:border-neutral-900 hover:shadow-sm active:cursor-grabbing " +
                       (dragId === c.id ? "opacity-50" : "")
                     }
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="truncate font-semibold text-neutral-900">{c.name}</div>
-                        <div className="text-xs text-neutral-500">{phoneLabel(c.phone)}</div>
+                        <div className="text-[11px] text-neutral-500">{phoneLabel(c.phone)}</div>
                         <div className="mt-1 flex flex-wrap items-center gap-1">
                           {plan && (
                             <span className="rounded bg-yellow-100 px-1.5 py-0.5 text-[10px] font-medium text-yellow-800">
@@ -1273,10 +1265,20 @@ function KanbanView({
           shopId={shopId}
           system={readSystem(shopId)}
           onGoSettings={() => { setShowImport(false); onGoSettings(); }}
+          onImported={async (summary) => {
+            // Sucesso: fecha o pop-up na hora e a lista já aparece atualizada.
+            setShowImport(false);
+            setPending({});
+            setPlans(readPlans(shopId));
+            setCols(visibleColumns(shopId));
+            await reload();
+            toast.success("Planilha importada", { description: summary });
+          }}
           onClose={() => {
             setShowImport(false);
             setPending({});
             setPlans(readPlans(shopId));
+            setCols(visibleColumns(shopId));
             reload();
           }}
         />
@@ -1522,18 +1524,20 @@ function ImportModal({
   token,
   shopId,
   onClose,
+  onImported,
   system,
   onGoSettings,
 }: {
   token: string;
   shopId: string;
   onClose: () => void;
+  /** Importou com sucesso: o modal fecha sozinho e a tela já mostra os contatos. */
+  onImported: (summary: string) => void;
   system: SubscriptionSystemId | null;
   onGoSettings: () => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -1544,7 +1548,6 @@ function ImportModal({
     if (!file || !system) return;
     setBusy(true);
     setErr(null);
-    setResult(null);
     try {
       const matrix = await sheetToMatrix(file);
       const report = parseSubscriptionSheet(system, matrix);
@@ -1575,7 +1578,7 @@ function ImportModal({
         .map((c) => `${c.label}: ${report.byStatus[c.key]}`)
         .join(" · ");
 
-      setResult(
+      onImported(
         `Linhas lidas: ${report.total} · Importadas: ${report.rows.length}` +
           (report.skipped ? ` · Ignoradas (sem telefone/status): ${report.skipped}` : "") +
           `\nNovos: ${r.inserted} · Atualizados: ${r.updated}` +
@@ -1646,7 +1649,6 @@ function ImportModal({
 
 
         {err && <p className="text-sm text-red-500">{err}</p>}
-        {result && <p className="whitespace-pre-line text-sm text-emerald-600">{result}</p>}
         <button
           disabled={busy || !file}
           className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
