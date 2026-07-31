@@ -67,15 +67,15 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
     }
     funnelsCache = { funnels: list, labels: ls, contacts: cs };
     setLoading(false);
-    return { list, labels: ls };
+    return { list, labels: ls, contacts: cs };
   }
 
   /**
    * "Funil principal" e "Listas" são fixos: nascem sozinhos e
    * não podem ser excluídos. O botão do cabeçalho só cria funis personalizados.
    */
-  async function ensureDefaults(list: Funnel[], ls: WaLabel[]) {
-    if (ensuredDefaults.current) return;
+  async function ensureDefaults(list: Funnel[]) {
+    if (ensuredDefaults.current) return false;
     ensuredDefaults.current = true;
     let created = false;
     if (!list.some((f) => f.mode === "tab")) {
@@ -99,49 +99,91 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       created = created || Boolean(r?.ok);
     }
     if (!list.some((f) => f.mode === "label")) {
+      // Nasce vazio: as colunas e os contatos vêm da sincronização abaixo.
       const r = await api("/api/public/extension/funnels", {
         method: "POST",
-        body: JSON.stringify({
-          name: "Listas",
-          mode: "label",
-          stages: ls.map((l) => l.name),
-        }),
+        body: JSON.stringify({ name: "Listas", mode: "label", stages: [] }),
       });
       created = created || Boolean(r?.ok);
+    }
+    return created;
+  }
 
-      // Cada lista vira uma coluna já preenchida com os contatos dela.
-      const funnel = r?.ok ? (r.funnel as Funnel) : null;
-      if (funnel?.stages?.length) {
-        for (let i = 0; i < ls.length; i++) {
-          const stage = funnel.stages[i];
-          const label = ls[i];
-          if (!stage || !label) continue;
-          const inLabel = (funnelsCache?.contacts ?? [])
-            .filter((c) => (c.label_ids || []).includes(label.wa_label_id))
-            .slice(0, 100);
-          for (const c of inLabel) {
-            await api("/api/public/extension/funnel-cards", {
-              method: "POST",
-              body: JSON.stringify({
-                funnel_id: funnel.id,
-                stage_id: stage.id,
-                title: c.name || c.phone || c.wa_id,
-                phone: c.phone ?? undefined,
-                wa_contact_id: c.id,
-              }),
-            });
-          }
-        }
-      }
+  /**
+   * O funil "Listas" é um espelho das listas (etiquetas) do WhatsApp:
+   * cada lista vira uma coluna e os contatos dela viram os cards.
+   * Nada é criado à mão aqui — a fonte da verdade é sempre o WhatsApp.
+   */
+  async function syncLabelFunnel(list: Funnel[], ls: WaLabel[], cs: WaContact[]) {
+    const funnel = list.find((f) => f.mode === "label");
+    if (!funnel) return false;
+
+    // 1) Colunas = listas do WhatsApp (na mesma ordem).
+    const byName = new Map(funnel.stages.map((s) => [s.name, s]));
+    const stale = funnel.stages.filter((s) => !ls.some((l) => l.name === s.name));
+    const missing = ls.filter((l) => !byName.has(l.name));
+    if (stale.length || missing.length) {
+      await api(`/api/public/extension/funnels/${funnel.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          stages: ls.map((l, i) => {
+            const found = byName.get(l.name);
+            return found ? { id: found.id, name: l.name, sort_order: i } : { name: l.name, sort_order: i };
+          }),
+          removed_stage_ids: stale.map((s) => s.id),
+        }),
+      });
+      return true;
     }
 
-    if (created) await reload();
+    // 2) Cards = contatos de cada lista.
+    let changed = false;
+    const stageByLabel = new Map(ls.map((l) => [l.wa_label_id, byName.get(l.name)]));
+    const wanted = new Set<string>();
+    for (const [labelId, stage] of stageByLabel) {
+      if (!stage) continue;
+      const inLabel = cs.filter((c) => (c.label_ids || []).includes(labelId)).slice(0, 200);
+      const have = new Set(
+        funnel.cards.filter((c) => c.stage_id === stage.id).map((c) => c.wa_contact_id),
+      );
+      for (const c of inLabel) {
+        wanted.add(`${stage.id}:${c.id}`);
+        if (have.has(c.id)) continue;
+        await api("/api/public/extension/funnel-cards", {
+          method: "POST",
+          body: JSON.stringify({
+            funnel_id: funnel.id,
+            stage_id: stage.id,
+            title: c.name || c.phone || c.wa_id,
+            phone: c.phone ?? undefined,
+            wa_contact_id: c.id,
+          }),
+        });
+        changed = true;
+      }
+    }
+    for (const card of funnel.cards) {
+      if (card.wa_contact_id && wanted.has(`${card.stage_id}:${card.wa_contact_id}`)) continue;
+      await api("/api/public/extension/funnel-cards", {
+        method: "DELETE",
+        body: JSON.stringify({ id: card.id }),
+      });
+      changed = true;
+    }
+    return changed;
   }
 
   useEffect(() => {
-    void reload().then((r) => {
-      if (r) void ensureDefaults(r.list, r.labels);
-    });
+    void (async () => {
+      const r = await reload();
+      if (!r) return;
+      const created = await ensureDefaults(r.list);
+      const base = created ? await reload() : r;
+      if (await syncLabelFunnel(base.list, base.labels, base.contacts)) {
+        const next = await reload();
+        await syncLabelFunnel(next.list, next.labels, next.contacts);
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -341,7 +383,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
           {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-[calc(100vh-170px)] w-72 shrink-0 animate-pulse rounded-xl border border-neutral-200 bg-neutral-50"
+              className="h-[calc(100vh-140px)] w-72 shrink-0 animate-pulse rounded-xl border border-neutral-200 bg-neutral-50"
             />
           ))}
         </div>
@@ -356,8 +398,8 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
 
 
 
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            <div className="flex w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+          <div className="flex h-[calc(100vh-140px)] gap-3 overflow-x-auto pb-1">
+            <div className="flex h-full w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-2">
               <div className="flex items-baseline justify-between gap-2">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-900">Inbox</h3>
                 <span className="shrink-0 rounded-full bg-neutral-200 px-2 py-0.5 text-[11px] font-semibold text-neutral-700">
@@ -368,9 +410,9 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                 value={inboxQuery}
                 onChange={(e) => setInboxQuery(e.target.value)}
                 placeholder="Buscar"
-                className="mt-2 w-full rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs outline-none focus:border-neutral-900"
+                className="mt-1.5 w-full rounded-lg border border-neutral-200 px-2.5 py-1 text-xs outline-none focus:border-neutral-900"
               />
-              <div className="mt-3 max-h-[calc(100vh-215px)] space-y-2 overflow-y-auto pr-1">
+              <div className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                 {inboxContacts
                   .filter((c) => {
                     const t = inboxQuery.trim().toLowerCase();
@@ -436,7 +478,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                     }
                     if (card) void moveCard(card, stage.id);
                   }}
-                  className="flex w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-3"
+                  className="flex h-full w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-2"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <StageTitle
@@ -459,7 +501,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                     </div>
                   </div>
 
-                  <div className="mt-3 max-h-[calc(100vh-215px)] space-y-2 overflow-y-auto pr-1">
+                  <div className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                     {cards.map((card) => (
                       <div
                         key={card.id}

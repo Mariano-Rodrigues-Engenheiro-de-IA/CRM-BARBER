@@ -12,12 +12,13 @@ import { useEffect, useMemo, useState } from "react";
 import { isRealPhone } from "@/lib/wa-actions";
 import { sendableActions, type QuickReply } from "@/lib/quick-replies";
 import type { Funnel } from "@/lib/funnels";
+import { fileToContacts, type SheetContact } from "@/lib/sheet-contacts";
 
 type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
 
 export type DispatchCustomer = { id: string; name: string; phone: string; status: string };
 
-type Audience = "assinantes" | "funis";
+type Audience = "assinantes" | "funis" | "planilha";
 
 const inputCls =
   "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-neutral-900";
@@ -52,6 +53,10 @@ export function DispatchCenter({
   const [funnels, setFunnels] = useState<Funnel[]>([]);
   const [funnelId, setFunnelId] = useState("");
   const [stageId, setStageId] = useState("");
+  // Planilha importada (Nome + Telefone) usada como público avulso.
+  const [sheetContacts, setSheetContacts] = useState<SheetContact[]>([]);
+  const [sheetName, setSheetName] = useState("");
+  const [sheetErr, setSheetErr] = useState<string | null>(null);
 
 
   const [name, setName] = useState("");
@@ -98,7 +103,12 @@ export function DispatchCenter({
       .map((c) => ({ phone: c.phone as string, name: c.title }));
   }, [funnel, stageId]);
 
-  const total = audience === "assinantes" ? subsCount(status) : funnelTargets.length;
+  const total =
+    audience === "assinantes"
+      ? subsCount(status)
+      : audience === "planilha"
+        ? sheetContacts.length
+        : funnelTargets.length;
 
 
   const selectedReply = replies.find((q) => q.id === replyId);
@@ -154,7 +164,9 @@ export function DispatchCenter({
     const body =
       audience === "assinantes"
         ? { ...base, scope: "assinaturas", filter: status === "all" ? {} : { status } }
-        : { ...base, scope: "funil", phone_targets: funnelTargets };
+        : audience === "planilha"
+          ? { ...base, scope: "funil", phone_targets: sheetContacts }
+          : { ...base, scope: "funil", phone_targets: funnelTargets };
 
 
     const r = await api("/api/public/extension/campaigns", {
@@ -173,6 +185,7 @@ export function DispatchCenter({
   const audienceOptions: Array<{ key: Audience; label: string }> = [
     { key: "assinantes", label: "Assinantes" },
     { key: "funis", label: "Funis de vendas" },
+    { key: "planilha", label: "Importar planilha" },
   ];
 
 
@@ -237,6 +250,42 @@ export function DispatchCenter({
               ))}
             </select>
           </div>
+        </div>
+      )}
+
+      {audience === "planilha" && (
+        <div>
+          <Label>Planilha (.xlsx, .xls ou .csv) com as colunas Nome e Telefone</Label>
+          <input
+            type="file"
+            accept=".xlsx,.xls,.csv,.tsv,.txt"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              setSheetErr(null);
+              try {
+                const rows = await fileToContacts(file);
+                if (!rows.length) {
+                  setSheetContacts([]);
+                  setSheetErr("Nenhum contato válido. A planilha precisa ter Nome e Telefone.");
+                  return;
+                }
+                setSheetContacts(rows);
+                setSheetName(file.name);
+                if (!name.trim()) setName(file.name.replace(/\.[^.]+$/, ""));
+              } catch {
+                setSheetContacts([]);
+                setSheetErr("Não consegui ler esse arquivo.");
+              }
+            }}
+            className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-800 file:mr-3 file:rounded-md file:border-0 file:bg-neutral-800 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white"
+          />
+          {sheetName && sheetContacts.length > 0 && (
+            <p className="mt-1 text-xs text-neutral-500">
+              {sheetName} — {sheetContacts.length} contato(s) prontos para disparo.
+            </p>
+          )}
+          {sheetErr && <p className="mt-1 text-xs text-red-500">{sheetErr}</p>}
         </div>
       )}
 
