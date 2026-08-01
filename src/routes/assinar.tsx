@@ -4,15 +4,18 @@ import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { createPremiumCheckout } from "@/utils/payments.functions";
 import { PaymentTestModeBanner } from "@/components/payment-test-mode-banner";
-import { PREMIUM_PRICE_LABEL } from "@/lib/billing";
+import { PREMIUM_PRICE_LABEL, PROMO_PRICE_LABEL, type PlanId } from "@/lib/billing";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/assinar")({
   head: () => ({
     meta: [
-      { title: "Assinar Premium — CRM de Assinaturas" },
-      { name: "description", content: "Libere assinantes e disparos ilimitados no CRM da sua barbearia." },
-      { property: "og:title", content: "Assinar Premium — CRM de Assinaturas" },
-      { property: "og:description", content: "Libere assinantes e disparos ilimitados no CRM da sua barbearia." },
+      { title: "Assinar Premium — CRM para Barbearias" },
+      { name: "description", content: "Libere contatos, disparos e gestão de equipe ilimitados no CRM da sua barbearia." },
+      { property: "og:title", content: "Assinar Premium — CRM para Barbearias" },
+      { property: "og:description", content: "Libere contatos, disparos e gestão de equipe ilimitados no CRM da sua barbearia." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
@@ -23,28 +26,29 @@ export const Route = createFileRoute("/assinar")({
 
 const TOKEN_KEY = "crm_ext_token_v1";
 
+type Identity = { token?: string; barbershopId?: string; phone?: string; email?: string; name?: string };
+
 function Assinar() {
-  const [ready, setReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [params, setParams] = useState<{ token?: string; barbershopId?: string }>({});
+  const [plan, setPlan] = useState<PlanId>("promo");
+  const [identity, setIdentity] = useState<Identity | null>(null);
+  const [form, setForm] = useState({ name: "", email: "", phone: "" });
 
   useEffect(() => {
     const url = new URL(window.location.href);
+    const planParam = url.searchParams.get("plano");
+    setPlan(planParam === "premium" ? "premium" : "promo");
+
     const stored = localStorage.getItem(TOKEN_KEY);
     const token = url.searchParams.get("token") ?? (stored && stored.startsWith("ext_") ? stored : undefined);
     const barbershopId = url.searchParams.get("shop") ?? undefined;
-    if (!token && !barbershopId) {
-      setError("Abra esta página pelo painel do CRM para identificarmos sua barbearia.");
-      return;
-    }
-    setParams({ token: token ?? undefined, barbershopId });
-    setReady(true);
+    if (token || barbershopId) setIdentity({ token: token ?? undefined, barbershopId });
   }, []);
 
   const fetchClientSecret = async (): Promise<string> => {
     const result = await createPremiumCheckout({
       data: {
-        ...params,
+        ...(identity ?? {}),
+        plan,
         returnUrl: `${window.location.origin}/assinar/retorno?session_id={CHECKOUT_SESSION_ID}`,
         environment: getStripeEnvironment(),
       },
@@ -58,22 +62,61 @@ function Assinar() {
     <div className="min-h-screen bg-background">
       <PaymentTestModeBanner />
       <div className="mx-auto max-w-3xl px-4 py-10">
-        <h1 className="text-2xl font-semibold tracking-tight">CRM Assinaturas Premium</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">CRM Barber Premium</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {PREMIUM_PRICE_LABEL} · assinantes ilimitados, disparos ilimitados, respostas rápidas e campanhas.
+          {plan === "promo" ? (
+            <>
+              Oferta de lançamento: <strong>{PROMO_PRICE_LABEL}</strong> (depois {PREMIUM_PRICE_LABEL}) · contatos e
+              disparos ilimitados, gestão de equipe, funis e respostas rápidas.
+            </>
+          ) : (
+            <>{PREMIUM_PRICE_LABEL} · contatos e disparos ilimitados, gestão de equipe, funis e respostas rápidas.</>
+          )}
         </p>
-        {error ? (
-          <p className="mt-8 rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-            {error}
-          </p>
-        ) : ready ? (
+
+        {identity ? (
           <div className="mt-8" id="checkout">
             <EmbeddedCheckoutProvider stripe={getStripe()} options={{ fetchClientSecret }}>
               <EmbeddedCheckout />
             </EmbeddedCheckoutProvider>
           </div>
         ) : (
-          <p className="mt-8 text-sm text-muted-foreground">Carregando…</p>
+          <form
+            className="mt-8 max-w-md space-y-4 rounded-2xl border p-6"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const phone = form.phone.replace(/\D+/g, "");
+              if (phone.length < 10) return;
+              setIdentity({ phone, email: form.email.trim() || undefined, name: form.name.trim() || undefined });
+            }}
+          >
+            <p className="text-sm text-muted-foreground">
+              Informe o WhatsApp da barbearia — é por ele que a extensão libera o Premium.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome da barbearia</Label>
+              <Input id="name" value={form.name} maxLength={120} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">E-mail</Label>
+              <Input id="email" type="email" value={form.email} maxLength={255} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">WhatsApp (com DDD)</Label>
+              <Input
+                id="phone"
+                type="tel"
+                required
+                maxLength={20}
+                placeholder="ex: 11 99999-0000"
+                value={form.phone}
+                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+              />
+            </div>
+            <Button type="submit" size="lg" className="w-full">
+              Ir para o pagamento
+            </Button>
+          </form>
         )}
       </div>
     </div>
