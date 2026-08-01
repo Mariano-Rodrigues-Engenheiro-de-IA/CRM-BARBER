@@ -424,6 +424,16 @@ function Painel() {
 
   const shopName = brand.name || shop?.name || "Sua barbearia";
   const shopInitial = shopName.trim().charAt(0).toUpperCase() || "B";
+
+  /** Abre o checkout do Premium em nova aba, já identificando a barbearia. */
+  function openCheckout() {
+    const params = new URLSearchParams({ plano: "promo" });
+    const raw = localStorage.getItem(TOKEN_KEY);
+    if (raw && raw.startsWith("ext_")) params.set("token", raw);
+    else if (shop?.id) params.set("shop", shop.id);
+    window.open(`/assinar?${params.toString()}`, "_blank", "noopener");
+  }
+
   const shopLogo = brand.logo || "";
 
   function saveBrand(next: Brand) {
