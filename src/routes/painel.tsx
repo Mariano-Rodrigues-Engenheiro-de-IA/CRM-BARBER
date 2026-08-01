@@ -14,6 +14,7 @@ import { FunnelsView } from "@/components/funnels-view";
 import { DispatchCenter } from "@/components/dispatch-view";
 import { sendWaAction, isRealPhone, openWhatsappChat, applyFunnelActions } from "@/lib/wa-actions";
 import { sendableActions, type QuickReply } from "@/lib/quick-replies";
+import { FREE_LIMITS, PROMO_PRICE_LABEL, type BillingStatus } from "@/lib/billing";
 
 import { useConfirm } from "@/components/confirm-dialog";
 import { toast } from "sonner";
@@ -348,6 +349,7 @@ function Painel() {
   const [assinHeaderEl, setAssinHeaderEl] = useState<HTMLDivElement | null>(null);
   const [equipeHeaderEl, setEquipeHeaderEl] = useState<HTMLDivElement | null>(null);
   const [shop, setShop] = useState<{ id: string; name: string } | null>(null);
+  const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [brand, setBrand] = useState<Brand>({});
 
 
@@ -391,8 +393,12 @@ function Painel() {
         setBrand(readBrand(r.barbershop.id));
       }
     });
+    api(token, "/api/public/extension/billing").then((r) => {
+      if (r?.ok && r.billing) setBilling(r.billing as BillingStatus);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
 
   // Refresh silencioso ao voltar pra seção assinantes — sem "Carregando..." piscando entre abas.
   useEffect(() => {
@@ -418,6 +424,16 @@ function Painel() {
 
   const shopName = brand.name || shop?.name || "Sua barbearia";
   const shopInitial = shopName.trim().charAt(0).toUpperCase() || "B";
+
+  /** Abre o checkout do Premium em nova aba, já identificando a barbearia. */
+  function openCheckout() {
+    const params = new URLSearchParams({ plano: "promo" });
+    const raw = localStorage.getItem(TOKEN_KEY);
+    if (raw && raw.startsWith("ext_")) params.set("token", raw);
+    else if (shop?.id) params.set("shop", shop.id);
+    window.open(`/assinar?${params.toString()}`, "_blank", "noopener");
+  }
+
   const shopLogo = brand.logo || "";
 
   function saveBrand(next: Brand) {
@@ -527,6 +543,25 @@ function Painel() {
 
           })}
         </nav>
+
+        {billing && !billing.premium && (
+          <div className="m-3 rounded-2xl border border-yellow-400/60 bg-yellow-50 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-yellow-700">
+              Plano grátis
+            </p>
+            <p className="mt-1 text-xs text-neutral-700">
+              {billing.usage.customers}/{FREE_LIMITS.customers} contatos · até{" "}
+              {FREE_LIMITS.dispatchBatch} por disparo · equipe bloqueada.
+            </p>
+            <button
+              onClick={openCheckout}
+              className="mt-3 w-full rounded-lg bg-neutral-900 px-3 py-2 text-xs font-bold text-yellow-400 transition hover:bg-neutral-800"
+            >
+              Assinar Premium · {PROMO_PRICE_LABEL}
+            </button>
+          </div>
+        )}
+
 
 
 
@@ -662,14 +697,38 @@ function Painel() {
                 <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
                   Equipe
                 </h1>
-                <div ref={setEquipeHeaderEl} className="flex shrink-0 items-center gap-2" />
+                {billing?.premium !== false && (
+                  <div ref={setEquipeHeaderEl} className="flex shrink-0 items-center gap-2" />
+                )}
               </div>
             </header>
             <main className="px-4 py-4">
-              <TeamView shopId={shop?.id ?? "default"} headerHost={equipeHeaderEl} />
+              {billing && !billing.premium ? (
+                <div className="mx-auto max-w-lg rounded-2xl border border-neutral-200 bg-white p-8 text-center">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-yellow-600">
+                    Recurso Premium
+                  </p>
+                  <h2 className="mt-2 text-xl font-bold text-neutral-900">
+                    Gestão de equipe e vendas
+                  </h2>
+                  <p className="mt-2 text-sm text-neutral-600">
+                    Lançamento de vendas por barbeiro, ranking gamificado, ranking de clientes e
+                    histórico de consumo fazem parte do plano pago.
+                  </p>
+                  <button
+                    onClick={openCheckout}
+                    className="mt-6 w-full rounded-xl bg-yellow-400 px-4 py-3 text-sm font-bold text-neutral-950 transition hover:bg-yellow-300"
+                  >
+                    Assinar Premium por {PROMO_PRICE_LABEL}
+                  </button>
+                </div>
+              ) : (
+                <TeamView shopId={shop?.id ?? "default"} headerHost={equipeHeaderEl} />
+              )}
             </main>
           </>
         )}
+
 
         {section === "conexao" && token && (
           <>

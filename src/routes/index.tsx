@@ -5,22 +5,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { PREMIUM_PRICE_LABEL, FREE_LIMITS } from "@/lib/billing";
+import { PREMIUM_PRICE_LABEL, PROMO_PRICE_LABEL, FREE_LIMITS } from "@/lib/billing";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "CRM de Assinaturas para Barbearias no WhatsApp" },
+      { title: "CRM completo para barbearias dentro do WhatsApp" },
       {
         name: "description",
         content:
-          "Extensão de Chrome que transforma seu WhatsApp Web em um CRM de assinaturas: cobre inadimplentes, reative clientes e dispare campanhas sem trocar de ferramenta.",
+          "Assinaturas, vendas, funis, disparo em massa, respostas rápidas e gestão de equipe — tudo dentro do seu WhatsApp Web, em uma extensão de Chrome.",
       },
-      { property: "og:title", content: "CRM de Assinaturas para Barbearias no WhatsApp" },
+      { property: "og:title", content: "CRM completo para barbearias dentro do WhatsApp" },
       {
         property: "og:description",
         content:
-          "Extensão de Chrome que transforma seu WhatsApp Web em um CRM de assinaturas: cobre inadimplentes, reative clientes e dispare campanhas sem trocar de ferramenta.",
+          "Assinaturas, vendas, funis, disparo em massa, respostas rápidas e gestão de equipe — tudo dentro do seu WhatsApp Web.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -36,47 +36,49 @@ const formSchema = z.object({
 });
 
 const DORES = [
-  "Assinante atrasa e você só descobre no fim do mês",
-  "Cobrança feita na mão, um por um, no WhatsApp",
-  "Planilha do App Barber parada, sem virar ação",
-  "Cliente cancela e ninguém tenta reativar",
+  "Cliente e assinante espalhados entre planilha, agenda e caderno",
+  "Cobrança e follow-up feitos na mão, um por um, no WhatsApp",
+  "Nenhum funil: o orçamento some na conversa e ninguém retoma",
+  "Sem controle de vendas por barbeiro nem histórico do cliente",
 ];
 
 const RECURSOS = [
   {
-    titulo: "Kanban de assinantes",
+    titulo: "Gestão de assinaturas",
     texto:
-      "Ativos, a vencer, inadimplentes, reativar e cancelados. Arraste o card e o status muda na hora.",
+      "Kanban de ativos, a vencer, inadimplentes e cancelados, com meta do mês e faturamento por coluna.",
   },
   {
-    titulo: "Disparo em massa silencioso",
+    titulo: "Funis de vendas",
     texto:
-      "A campanha roda em segundo plano com ritmo aleatório, sem abrir conversa por conversa e sem travar seu WhatsApp.",
+      "Funil próprio e listas reais do WhatsApp, arrastando o lead de etapa em etapa direto na conversa.",
   },
   {
-    titulo: "Importação da sua planilha",
+    titulo: "Disparo em massa",
     texto:
-      "App Barber, Cash Barber, Frizzar ou planilha própria: o sistema lê, organiza e atualiza os status sozinho.",
+      "Campanhas com texto, imagem, áudio e vídeo em ritmo humano, sem abrir conversa por conversa.",
   },
   {
     titulo: "Respostas rápidas",
     texto:
-      "Texto, imagem, áudio e sequências prontas para cobrar, reativar e vender — a um clique dentro da conversa.",
+      "Atalho ⚡ dentro da conversa para enviar mensagens e mídias prontas de cobrança, orçamento e reativação.",
   },
   {
-    titulo: "Metas e ranking da equipe",
-    texto: "Meta do mês, barra de progresso e ranking dos barbeiros pra time entrar no jogo.",
+    titulo: "Gestão de equipe e vendas",
+    texto:
+      "Lançamento de venda por barbeiro, ranking gamificado, ranking de clientes e histórico de consumo.",
   },
   {
-    titulo: "Faturamento por coluna",
-    texto: "Veja quanto dinheiro tem parado em cada etapa — inclusive quanto os inadimplentes somam.",
+    titulo: "Base de clientes unificada",
+    texto:
+      "Importação de planilha (App Barber, Cash Barber, Frizzar), contatos do WhatsApp e cadastro manual, sem duplicar.",
   },
 ];
 
 const PASSOS = [
-  { n: "1", t: "Adicione ao Chrome", d: "Instalação em um clique. Nada pra configurar no servidor." },
-  { n: "2", t: "Abra o WhatsApp Web", d: "O CRM aparece colado na lateral e reconhece seu número." },
-  { n: "3", t: "Importe e dispare", d: "Suba a planilha, monte a campanha e deixe rodando." },
+  { n: "1", t: "Crie sua conta", d: "Nome, e-mail e o WhatsApp da barbearia. Leva menos de um minuto." },
+  { n: "2", t: "Adicione ao Chrome", d: "Instalação em um clique — nada pra configurar em servidor." },
+  { n: "3", t: "Abra o WhatsApp Web", d: "O CRM aparece colado na tela, reconhece seu número e já funciona." },
 ];
 
 const FAQ = [
@@ -90,13 +92,14 @@ const FAQ = [
   },
   {
     q: "Consigo testar antes de pagar?",
-    a: `Sim. O plano grátis libera até ${FREE_LIMITS.customers} assinantes e ${FREE_LIMITS.messages} mensagens. Passou disso, é só assinar o Premium.`,
+    a: `Sim. O plano grátis libera até ${FREE_LIMITS.customers} contatos e disparos de até ${FREE_LIMITS.dispatchBatch} contatos por vez. Gestão de equipe e disparo em massa são do plano pago.`,
   },
   {
     q: "Posso cancelar quando quiser?",
     a: "Pode. A assinatura é mensal, sem fidelidade, e você cancela pelo próprio painel.",
   },
 ];
+
 
 function Landing() {
   const navigate = useNavigate();
@@ -153,25 +156,26 @@ function Landing() {
       <section className="mx-auto grid max-w-6xl gap-10 px-5 py-16 md:grid-cols-2 md:items-center md:py-24">
         <div className="space-y-6">
           <span className="inline-block rounded-full border border-yellow-400/40 bg-yellow-400/10 px-3 py-1 text-[11px] font-semibold tracking-wider text-yellow-400">
-            FEITO PARA BARBEARIAS COM ASSINATURA
+            OFERTA DE LANÇAMENTO · 5 VAGAS
           </span>
           <h1 className="text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl">
-            Pare de perder assinante por{" "}
-            <span className="text-yellow-400">falta de cobrança</span> no WhatsApp
+            O CRM completo da sua barbearia{" "}
+            <span className="text-yellow-400">dentro do WhatsApp</span>
           </h1>
           <p className="text-lg text-neutral-300">
-            Um CRM que vive dentro do seu WhatsApp Web: importa sua planilha do App Barber,
-            separa quem está em dia de quem está devendo e dispara a cobrança sozinho — no seu
-            próprio número, sem abrir conversa por conversa.
+            Assinaturas, vendas, funis, disparo em massa, respostas rápidas e gestão de equipe —
+            tudo em um só lugar, no seu próprio número, sem trocar de ferramenta e sem abrir
+            conversa por conversa.
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <Button size="lg" className="bg-yellow-400 font-bold text-neutral-950 hover:bg-yellow-300" onClick={scrollToForm}>
               QUERO TESTAR GRÁTIS
             </Button>
             <span className="text-xs text-neutral-400">
-              Sem cartão para começar · {PREMIUM_PRICE_LABEL} quando quiser liberar tudo
+              Sem cartão para começar · {PROMO_PRICE_LABEL} no lançamento (depois {PREMIUM_PRICE_LABEL})
             </span>
           </div>
+
           <div className="flex flex-wrap gap-6 pt-2 text-sm text-neutral-400">
             <span>✓ Usa seu número atual</span>
             <span>✓ Instala em 1 clique</span>
@@ -268,40 +272,46 @@ function Landing() {
         <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
           Comece grátis. Assine quando fizer sentido.
         </h2>
+        <p className="mt-3 text-center text-sm text-yellow-400">
+          Oferta de lançamento: {PROMO_PRICE_LABEL} para as 5 primeiras barbearias (depois {PREMIUM_PRICE_LABEL}).
+        </p>
         <div className="mt-10 grid gap-6 md:grid-cols-2">
           <div className="rounded-2xl border border-white/10 bg-neutral-900 p-6">
             <p className="text-sm font-semibold text-neutral-400">Grátis</p>
             <p className="mt-2 text-3xl font-bold">R$ 0</p>
             <ul className="mt-5 space-y-2 text-sm text-neutral-300">
-              <li>✓ Até {FREE_LIMITS.customers} assinantes</li>
-              <li>✓ Até {FREE_LIMITS.messages} mensagens</li>
-              <li>✓ Kanban e importação de planilha</li>
+              <li>✓ Até {FREE_LIMITS.customers} contatos</li>
+              <li>✓ Disparo de até {FREE_LIMITS.dispatchBatch} contatos por vez</li>
+              <li>✓ Kanban, funis e importação de planilha</li>
+              <li className="text-neutral-500">✕ Gestão de equipe e vendas</li>
             </ul>
             <Button variant="secondary" className="mt-6 w-full" onClick={scrollToForm}>
               Instalar extensão
             </Button>
           </div>
           <div className="rounded-2xl border-2 border-yellow-400 bg-neutral-900 p-6">
-            <p className="text-sm font-semibold text-yellow-400">Premium</p>
+            <p className="text-sm font-semibold text-yellow-400">Premium · lançamento</p>
             <p className="mt-2 text-3xl font-bold">
-              R$ 97<span className="text-base font-medium text-neutral-400">/mês</span>
+              R$ 47<span className="text-base font-medium text-neutral-400">/mês</span>
+              <span className="ml-2 align-middle text-sm font-medium text-neutral-500 line-through">R$ 97</span>
             </p>
             <ul className="mt-5 space-y-2 text-sm text-neutral-200">
-              <li>✓ Assinantes ilimitados</li>
+              <li>✓ Contatos ilimitados</li>
               <li>✓ Disparos e campanhas ilimitados</li>
+              <li>✓ Gestão de equipe, vendas e rankings</li>
               <li>✓ Respostas rápidas com mídia</li>
-              <li>✓ Metas, ranking e faturamento por coluna</li>
               <li>✓ Suporte prioritário</li>
             </ul>
             <Button
               className="mt-6 w-full bg-yellow-400 font-bold text-neutral-950 hover:bg-yellow-300"
               onClick={scrollToForm}
             >
-              Começar agora
+              Garantir vaga de lançamento
             </Button>
           </div>
         </div>
       </section>
+
 
       {/* FAQ */}
       <section className="border-t border-white/10 bg-neutral-900/50">
