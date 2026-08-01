@@ -668,14 +668,38 @@ function Painel() {
                 <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
                   Equipe
                 </h1>
-                <div ref={setEquipeHeaderEl} className="flex shrink-0 items-center gap-2" />
+                {billing?.premium !== false && (
+                  <div ref={setEquipeHeaderEl} className="flex shrink-0 items-center gap-2" />
+                )}
               </div>
             </header>
             <main className="px-4 py-4">
-              <TeamView shopId={shop?.id ?? "default"} headerHost={equipeHeaderEl} />
+              {billing && !billing.premium ? (
+                <div className="mx-auto max-w-lg rounded-2xl border border-neutral-200 bg-white p-8 text-center">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-yellow-600">
+                    Recurso Premium
+                  </p>
+                  <h2 className="mt-2 text-xl font-bold text-neutral-900">
+                    Gestão de equipe e vendas
+                  </h2>
+                  <p className="mt-2 text-sm text-neutral-600">
+                    Lançamento de vendas por barbeiro, ranking gamificado, ranking de clientes e
+                    histórico de consumo fazem parte do plano pago.
+                  </p>
+                  <button
+                    onClick={openCheckout}
+                    className="mt-6 w-full rounded-xl bg-yellow-400 px-4 py-3 text-sm font-bold text-neutral-950 transition hover:bg-yellow-300"
+                  >
+                    Assinar Premium por {PROMO_PRICE_LABEL}
+                  </button>
+                </div>
+              ) : (
+                <TeamView shopId={shop?.id ?? "default"} headerHost={equipeHeaderEl} />
+              )}
             </main>
           </>
         )}
+
 
         {section === "conexao" && token && (
           <>
