@@ -42,20 +42,25 @@ export async function getBillingStatus(
     status: active?.status ?? null,
     current_period_end: active?.current_period_end ?? null,
     usage: { customers: customersRes.count ?? 0, messages: messagesRes.count ?? 0 },
-    limits: { customers: FREE_LIMITS.customers, messages: FREE_LIMITS.messages },
+    limits: { customers: FREE_LIMITS.customers, dispatchBatch: FREE_LIMITS.dispatchBatch },
   };
 }
 
-/** Retorna mensagem de bloqueio ou null quando pode seguir. */
+/** Retorna mensagem de bloqueio ou null quando pode seguir (limite de base). */
 export function limitBlock(
   status: BillingStatus,
-  kind: "customers" | "messages",
+  kind: "customers",
   extra: number,
 ): string | null {
   if (status.premium) return null;
   const total = status.usage[kind] + extra;
   if (total <= status.limits[kind]) return null;
-  return kind === "customers"
-    ? `Plano grátis permite até ${status.limits.customers} assinantes (você tem ${status.usage.customers}). Assine o Premium para liberar assinantes ilimitados.`
-    : `Plano grátis permite até ${status.limits.messages} mensagens (você já usou ${status.usage.messages}). Assine o Premium para disparos ilimitados.`;
+  return `Plano grátis permite até ${status.limits.customers} contatos (você tem ${status.usage.customers}). Assine o Premium para liberar contatos ilimitados.`;
+}
+
+/** Bloqueio de tamanho do disparo: plano grátis envia poucos contatos por vez. */
+export function dispatchBlock(status: BillingStatus, targetCount: number): string | null {
+  if (status.premium) return null;
+  if (targetCount <= status.limits.dispatchBatch) return null;
+  return `Plano grátis envia até ${status.limits.dispatchBatch} contatos por disparo (você selecionou ${targetCount}). Assine o Premium para disparos ilimitados.`;
 }
