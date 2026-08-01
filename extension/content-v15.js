@@ -68,6 +68,17 @@
   // deixa o boot muito mais lento. Não injetamos mais no load — só quando o
   // usuário pede algo que precisa do motor (sincronizar, disparar, responder)
   // ou na primeira sincronização em segundo plano, bem depois do boot.
+  //
+  // Prewarm: o primeiro envio ficava travado esperando a injeção do motor.
+  // Aquecemos em segundo plano (sem bloquear nada) assim que o usuário
+  // demonstra intenção — passar o mouse nos botões, abrir um pop-up — e
+  // também um tempo depois do boot, quando a aba está ociosa.
+  function prewarmEngine() {
+    if (document.visibilityState !== "visible") return;
+    ensureWaScriptsInjected().catch(() => null);
+  }
+  setTimeout(prewarmEngine, 20000);
+
 
   let pollHeartbeat = null;
   let railRef = null;
