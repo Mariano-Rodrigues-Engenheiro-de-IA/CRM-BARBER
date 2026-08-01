@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.33.8";
+  const CRM_VERSION = "0.33.9";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -1040,7 +1040,7 @@
   window.addEventListener("message", (ev) => {
     if (ev.source !== window) return;
     const d = ev.data;
-    if (!d || (d.__crm !== "sent_v180" && d.__crm !== "sent_v170" && d.__crm !== "action_done_v338")) return;
+    if (!d || d.__crm !== "action_done_v339") return;
     const p = pending.get(d.id);
     if (!p) return;
     pending.delete(d.id);
@@ -1097,7 +1097,7 @@
     return bridgeRequest({
       // Protocolo versionado: bridges de versões antigas que ainda estejam
       // vivos na aba não reconhecem esta ação e não duplicam o envio.
-      __crm: "action_v338",
+      __crm: "action_v339",
       phone,
       waId,
       openOnly: !!action.openOnly,
@@ -1119,7 +1119,7 @@
     const sendable = sourceActions.filter((action) => ["text", "image", "video", "audio"].includes(action?.type));
     const silent = sendable.length
       ? await handleWaAction({ phone, name: job?.customer?.name || "", actions: sendable })
-      : await bridgeRequest({ __crm: "send_v180", phone, text });
+      : await handleWaAction({ phone, name: job?.customer?.name || "", actions: [{ type: "text", text }] });
 
     if (silent?.ok) return silent;
     return { ok: false, error: silent?.error || "Envio silencioso falhou" };
