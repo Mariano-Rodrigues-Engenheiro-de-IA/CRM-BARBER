@@ -20,7 +20,7 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "Assinaturas, vendas, funis, disparo em massa, respostas rápidas e gestão de equipe — tudo dentro do seu WhatsApp Web.",
+          "Assinaturas, vendas, funis, disparo em massa, respostas rápidas e gestão de equipe — tudo dentro do seu WhatsApp Web, em uma extensão de Chrome.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
