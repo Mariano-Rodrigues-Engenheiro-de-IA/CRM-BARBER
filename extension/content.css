@@ -1,15 +1,20 @@
 /* CRM Barber — barra de abas no topo do WhatsApp Web + trilho de ícones minimalista à esquerda. */
 
-/* Reservamos espaço para o trilho (46px) e a barra superior (40px) apenas via CSS
-   estático — nada de reposicionamento por JS, que causava a tela cinza ao retomar a aba. */
-html body {
-  padding: 40px 0 0 46px !important;
-  box-sizing: border-box !important;
+/* O #app do WhatsApp é uma camada posicionada e ignora padding do body.
+   Reservamos o espaço diretamente nos quatro limites, sem JS e somente depois
+   que o shell da extensão existir. `inset` + dimensões automáticas evita a
+   dupla subtração que escondia parte do WhatsApp sob o trilho e a barra. */
+html body.crm-shell {
+  padding: 0 !important;
   overflow: hidden !important;
 }
-html body #app {
-  height: calc(100vh - 40px) !important;
-  width: calc(100vw - 46px) !important;
+html body.crm-shell > #app {
+  position: fixed !important;
+  inset: 40px 0 0 46px !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
 }
 
 
