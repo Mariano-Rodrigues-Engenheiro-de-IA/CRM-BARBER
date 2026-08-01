@@ -468,6 +468,8 @@
   async function collectWaData() {
     await waitForWpp();
     const chats = await waitForStores();
+    lidIndex = buildLidIndex();
+
 
     let labels = [];
     try {
