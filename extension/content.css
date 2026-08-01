@@ -12,7 +12,9 @@ html body.crm-shell {
   position: relative !important;
 }
 
-html body.crm-shell > #app {
+/* O WhatsApp pode inserir wrappers entre body e #app. Não use combinador `>`:
+   ele fazia esta reserva desaparecer em algumas versões do WhatsApp Web. */
+html body.crm-shell #app {
   position: absolute !important;
   top: 40px !important;
   left: 46px !important;
@@ -24,6 +26,7 @@ html body.crm-shell > #app {
   min-height: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
+  box-sizing: border-box !important;
 }
 
 /* Trilho lateral — só ícones */
