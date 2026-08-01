@@ -5,22 +5,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { PREMIUM_PRICE_LABEL, FREE_LIMITS } from "@/lib/billing";
+import { PREMIUM_PRICE_LABEL, PROMO_PRICE_LABEL, FREE_LIMITS } from "@/lib/billing";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "CRM de Assinaturas para Barbearias no WhatsApp" },
+      { title: "CRM completo para barbearias dentro do WhatsApp" },
       {
         name: "description",
         content:
-          "Extensão de Chrome que transforma seu WhatsApp Web em um CRM de assinaturas: cobre inadimplentes, reative clientes e dispare campanhas sem trocar de ferramenta.",
+          "Assinaturas, vendas, funis, disparo em massa, respostas rápidas e gestão de equipe — tudo dentro do seu WhatsApp Web, em uma extensão de Chrome.",
       },
-      { property: "og:title", content: "CRM de Assinaturas para Barbearias no WhatsApp" },
+      { property: "og:title", content: "CRM completo para barbearias dentro do WhatsApp" },
       {
         property: "og:description",
         content:
-          "Extensão de Chrome que transforma seu WhatsApp Web em um CRM de assinaturas: cobre inadimplentes, reative clientes e dispare campanhas sem trocar de ferramenta.",
+          "Assinaturas, vendas, funis, disparo em massa, respostas rápidas e gestão de equipe — tudo dentro do seu WhatsApp Web.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -36,47 +36,49 @@ const formSchema = z.object({
 });
 
 const DORES = [
-  "Assinante atrasa e você só descobre no fim do mês",
-  "Cobrança feita na mão, um por um, no WhatsApp",
-  "Planilha do App Barber parada, sem virar ação",
-  "Cliente cancela e ninguém tenta reativar",
+  "Cliente e assinante espalhados entre planilha, agenda e caderno",
+  "Cobrança e follow-up feitos na mão, um por um, no WhatsApp",
+  "Nenhum funil: o orçamento some na conversa e ninguém retoma",
+  "Sem controle de vendas por barbeiro nem histórico do cliente",
 ];
 
 const RECURSOS = [
   {
-    titulo: "Kanban de assinantes",
+    titulo: "Gestão de assinaturas",
     texto:
-      "Ativos, a vencer, inadimplentes, reativar e cancelados. Arraste o card e o status muda na hora.",
+      "Kanban de ativos, a vencer, inadimplentes e cancelados, com meta do mês e faturamento por coluna.",
   },
   {
-    titulo: "Disparo em massa silencioso",
+    titulo: "Funis de vendas",
     texto:
-      "A campanha roda em segundo plano com ritmo aleatório, sem abrir conversa por conversa e sem travar seu WhatsApp.",
+      "Funil próprio e listas reais do WhatsApp, arrastando o lead de etapa em etapa direto na conversa.",
   },
   {
-    titulo: "Importação da sua planilha",
+    titulo: "Disparo em massa",
     texto:
-      "App Barber, Cash Barber, Frizzar ou planilha própria: o sistema lê, organiza e atualiza os status sozinho.",
+      "Campanhas com texto, imagem, áudio e vídeo em ritmo humano, sem abrir conversa por conversa.",
   },
   {
     titulo: "Respostas rápidas",
     texto:
-      "Texto, imagem, áudio e sequências prontas para cobrar, reativar e vender — a um clique dentro da conversa.",
+      "Atalho ⚡ dentro da conversa para enviar mensagens e mídias prontas de cobrança, orçamento e reativação.",
   },
   {
-    titulo: "Metas e ranking da equipe",
-    texto: "Meta do mês, barra de progresso e ranking dos barbeiros pra time entrar no jogo.",
+    titulo: "Gestão de equipe e vendas",
+    texto:
+      "Lançamento de venda por barbeiro, ranking gamificado, ranking de clientes e histórico de consumo.",
   },
   {
-    titulo: "Faturamento por coluna",
-    texto: "Veja quanto dinheiro tem parado em cada etapa — inclusive quanto os inadimplentes somam.",
+    titulo: "Base de clientes unificada",
+    texto:
+      "Importação de planilha (App Barber, Cash Barber, Frizzar), contatos do WhatsApp e cadastro manual, sem duplicar.",
   },
 ];
 
 const PASSOS = [
-  { n: "1", t: "Adicione ao Chrome", d: "Instalação em um clique. Nada pra configurar no servidor." },
-  { n: "2", t: "Abra o WhatsApp Web", d: "O CRM aparece colado na lateral e reconhece seu número." },
-  { n: "3", t: "Importe e dispare", d: "Suba a planilha, monte a campanha e deixe rodando." },
+  { n: "1", t: "Crie sua conta", d: "Nome, e-mail e o WhatsApp da barbearia. Leva menos de um minuto." },
+  { n: "2", t: "Adicione ao Chrome", d: "Instalação em um clique — nada pra configurar em servidor." },
+  { n: "3", t: "Abra o WhatsApp Web", d: "O CRM aparece colado na tela, reconhece seu número e já funciona." },
 ];
 
 const FAQ = [
@@ -90,13 +92,14 @@ const FAQ = [
   },
   {
     q: "Consigo testar antes de pagar?",
-    a: `Sim. O plano grátis libera até ${FREE_LIMITS.customers} assinantes e ${FREE_LIMITS.messages} mensagens. Passou disso, é só assinar o Premium.`,
+    a: `Sim. O plano grátis libera até ${FREE_LIMITS.customers} contatos e disparos de até ${FREE_LIMITS.dispatchBatch} contatos por vez. Gestão de equipe e disparo em massa são do plano pago.`,
   },
   {
     q: "Posso cancelar quando quiser?",
     a: "Pode. A assinatura é mensal, sem fidelidade, e você cancela pelo próprio painel.",
   },
 ];
+
 
 function Landing() {
   const navigate = useNavigate();
