@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.33.8";
+  const BRIDGE_VERSION = "0.33.9";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -130,15 +130,6 @@
         const chat = await getChatSafe(target);
         if (!chat || typeof chat.sendMessage !== "function") throw new Error("chat.sendMessage indisponível");
         return chat.sendMessage(text);
-      }],
-      ["MsgStore.addMsgAndSend", () => {
-        const addMsgAndSend = window.WPP?.whatsapp?.MsgStore?.addMsgAndSend;
-        if (typeof addMsgAndSend !== "function") throw new Error("MsgStore.addMsgAndSend indisponível");
-        return addMsgAndSend.call(window.WPP.whatsapp.MsgStore, {
-          to: target,
-          body: text,
-          type: "chat",
-        });
       }],
     ];
 
@@ -529,27 +520,18 @@
       return;
     }
 
-    if (d.__crm === "action_v338") {
+    if (d.__crm === "action_v339") {
       if (!rememberAction(d.id)) return;
       try {
         if (!window.WPP?.chat) await sleep(2000);
         await runActions(d.phone, d.openOnly, d.actions, d.waId);
-        window.postMessage({ __crm: "action_done_v338", id: d.id, ok: true }, "*");
+        window.postMessage({ __crm: "action_done_v339", id: d.id, ok: true }, "*");
       } catch (e) {
-        window.postMessage({ __crm: "action_done_v338", id: d.id, ok: false, error: e?.message || String(e) }, "*");
+        window.postMessage({ __crm: "action_done_v339", id: d.id, ok: false, error: e?.message || String(e) }, "*");
       }
       return;
     }
 
-    if (!["send_v180", "send_v170"].includes(d.__crm)) return;
-    const ackType = d.__crm.replace("send", "sent");
-    try {
-      if (!window.WPP?.chat) await sleep(2000);
-      await robustSend(d.phone, d.text);
-      window.postMessage({ __crm: ackType, id: d.id, ok: true }, "*");
-    } catch (e) {
-      window.postMessage({ __crm: ackType, id: d.id, ok: false, error: e?.message || String(e) }, "*");
-    }
   });
 
   console.info(`[CRM] Bridge ${BRIDGE_VERSION} (Native Engine) pronto.`);
