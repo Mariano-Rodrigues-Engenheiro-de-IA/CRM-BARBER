@@ -156,25 +156,26 @@ function Landing() {
       <section className="mx-auto grid max-w-6xl gap-10 px-5 py-16 md:grid-cols-2 md:items-center md:py-24">
         <div className="space-y-6">
           <span className="inline-block rounded-full border border-yellow-400/40 bg-yellow-400/10 px-3 py-1 text-[11px] font-semibold tracking-wider text-yellow-400">
-            FEITO PARA BARBEARIAS COM ASSINATURA
+            OFERTA DE LANÇAMENTO · 5 VAGAS
           </span>
           <h1 className="text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl">
-            Pare de perder assinante por{" "}
-            <span className="text-yellow-400">falta de cobrança</span> no WhatsApp
+            O CRM completo da sua barbearia{" "}
+            <span className="text-yellow-400">dentro do WhatsApp</span>
           </h1>
           <p className="text-lg text-neutral-300">
-            Um CRM que vive dentro do seu WhatsApp Web: importa sua planilha do App Barber,
-            separa quem está em dia de quem está devendo e dispara a cobrança sozinho — no seu
-            próprio número, sem abrir conversa por conversa.
+            Assinaturas, vendas, funis, disparo em massa, respostas rápidas e gestão de equipe —
+            tudo em um só lugar, no seu próprio número, sem trocar de ferramenta e sem abrir
+            conversa por conversa.
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <Button size="lg" className="bg-yellow-400 font-bold text-neutral-950 hover:bg-yellow-300" onClick={scrollToForm}>
               QUERO TESTAR GRÁTIS
             </Button>
             <span className="text-xs text-neutral-400">
-              Sem cartão para começar · {PREMIUM_PRICE_LABEL} quando quiser liberar tudo
+              Sem cartão para começar · {PROMO_PRICE_LABEL} no lançamento (depois {PREMIUM_PRICE_LABEL})
             </span>
           </div>
+
           <div className="flex flex-wrap gap-6 pt-2 text-sm text-neutral-400">
             <span>✓ Usa seu número atual</span>
             <span>✓ Instala em 1 clique</span>
