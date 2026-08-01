@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CRM Barber",
-  "version": "0.34.0",
+  "version": "0.34.1",
   "description": "CRM completo para barbearias dentro do WhatsApp Web: assinaturas, funis, disparos e equipe.",
   "permissions": ["storage", "activeTab", "tabs", "scripting", "alarms"],
   "host_permissions": [

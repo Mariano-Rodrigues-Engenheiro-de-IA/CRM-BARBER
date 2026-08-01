@@ -4,13 +4,13 @@ import { useState } from "react";
 export const Route = createFileRoute("/baixar")({
   head: () => ({
     meta: [
-      { title: "Baixar pacote da extensão v0.34.0 | CRM Barber" },
+      { title: "Baixar pacote da extensão v0.34.1 | CRM Barber" },
       {
         name: "description",
         content:
-          "Download direto do pacote .zip da extensão CRM Barber v0.34.0, pronto para upload no Chrome Web Store Developer Dashboard.",
+          "Download direto do pacote .zip da extensão CRM Barber v0.34.1, pronto para upload no Chrome Web Store Developer Dashboard.",
       },
-      { property: "og:title", content: "Baixar pacote da extensão v0.34.0" },
+      { property: "og:title", content: "Baixar pacote da extensão v0.34.1" },
       {
         property: "og:description",
         content:
@@ -23,8 +23,8 @@ export const Route = createFileRoute("/baixar")({
   component: BaixarPage,
 });
 
-const VERSION = "0.34.0";
-const FILE = "/crm-barber-v3400.zip";
+const VERSION = "0.34.1";
+const FILE = "/crm-barber-v3401.zip";
 
 function BaixarPage() {
   const [status, setStatus] = useState<string | null>(null);
@@ -39,7 +39,7 @@ function BaixarPage() {
       .then((blob) => {
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `crm-barber-v3400.zip`;
+        a.download = `crm-barber-v3401.zip`;
         a.click();
         URL.revokeObjectURL(a.href);
         setStatus("Download iniciado.");
@@ -69,7 +69,7 @@ function BaixarPage() {
           onClick={download}
           className="w-full rounded-md bg-primary px-6 py-4 text-sm font-medium text-primary-foreground transition hover:opacity-90"
         >
-          Baixar crm-barber-v3400.zip
+          Baixar crm-barber-v3401.zip
         </button>
 
         {status && (
