@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.34.1";
+  const CRM_VERSION = "0.34.2";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -1198,7 +1198,7 @@
     return bridgeRequest({
       // Protocolo versionado: bridges de versões antigas que ainda estejam
       // vivos na aba não reconhecem esta ação e não duplicam o envio.
-      __crm: "action_v339",
+      __crm: "action_v342",
       phone,
       waId,
       openOnly: !!action.openOnly,

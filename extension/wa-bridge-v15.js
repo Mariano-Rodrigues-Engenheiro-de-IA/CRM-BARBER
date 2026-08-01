@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.34.1";
+  const BRIDGE_VERSION = "0.34.2";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -591,7 +591,7 @@
       return;
     }
 
-    if (d.__crm === "action_v339") {
+    if (d.__crm === "action_v342") {
       if (!rememberAction(d.id)) return;
       try {
         if (!window.WPP?.chat) await sleep(2000);
