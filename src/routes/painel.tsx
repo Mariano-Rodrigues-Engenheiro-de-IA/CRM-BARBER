@@ -14,6 +14,7 @@ import { FunnelsView } from "@/components/funnels-view";
 import { DispatchCenter } from "@/components/dispatch-view";
 import { sendWaAction, isRealPhone, openWhatsappChat, applyFunnelActions } from "@/lib/wa-actions";
 import { sendableActions, type QuickReply } from "@/lib/quick-replies";
+import { FREE_LIMITS, PROMO_PRICE_LABEL, type BillingStatus } from "@/lib/billing";
 
 import { useConfirm } from "@/components/confirm-dialog";
 import { toast } from "sonner";
