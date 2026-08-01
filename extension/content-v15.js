@@ -680,6 +680,13 @@
     ensureChatButton();
   };
   setInterval(maintenanceTick, 8000);
+  // Os ícones da conversa precisam aparecer instantaneamente: o React
+  // re-renderiza o cabeçalho a cada troca de conversa e esperar o ciclo de 8s
+  // dava a impressão de sistema quebrado. Esta varredura é barata
+  // (querySelector + contains) e só roda com a aba visível.
+  setInterval(() => {
+    if (document.visibilityState === "visible") ensureChatButton();
+  }, 400);
   setInterval(() => {
     if (document.visibilityState === "visible") void loadFunnels();
   }, 300000);
