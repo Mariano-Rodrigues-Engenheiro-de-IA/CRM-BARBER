@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.33.7";
+  const CRM_VERSION = "0.33.8";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -77,6 +77,7 @@
   let billing = null;
   let waData = { labels: [], contacts: [] };
   let quickReplies = [];
+  let quickReplySending = false;
   let syncTimer = null;
   let syncing = false;
   let pairHint = null;
@@ -932,12 +933,22 @@
 
     overlay.querySelector(".crm-qr-list").addEventListener("click", async (e) => {
       const send = e.target.closest("[data-send]");
-      if (!send) return;
+      if (!send || quickReplySending) return;
       const reply = quickReplies[Number(send.getAttribute("data-send"))];
+      if (!reply) return;
+      quickReplySending = true;
+      send.disabled = true;
       close();
       const chat = await activeChat();
-      if (!chat) return;
-      void sendQuickReply(reply, chat);
+      if (!chat) {
+        quickReplySending = false;
+        return;
+      }
+      try {
+        await sendQuickReply(reply, chat);
+      } finally {
+        quickReplySending = false;
+      }
     });
   }
 
@@ -1029,7 +1040,7 @@
   window.addEventListener("message", (ev) => {
     if (ev.source !== window) return;
     const d = ev.data;
-    if (!d || (d.__crm !== "sent_v180" && d.__crm !== "sent_v170" && d.__crm !== "action_done_v190")) return;
+    if (!d || (d.__crm !== "sent_v180" && d.__crm !== "sent_v170" && d.__crm !== "action_done_v338")) return;
     const p = pending.get(d.id);
     if (!p) return;
     pending.delete(d.id);
@@ -1084,7 +1095,9 @@
     }
 
     return bridgeRequest({
-      __crm: "action_v190",
+      // Protocolo versionado: bridges de versões antigas que ainda estejam
+      // vivos na aba não reconhecem esta ação e não duplicam o envio.
+      __crm: "action_v338",
       phone,
       waId,
       openOnly: !!action.openOnly,
