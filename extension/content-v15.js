@@ -970,6 +970,7 @@
   // A criação/edição continua no painel do CRM.
   // ---------------------------------------------------------------------
   function openQuickReplyModal() {
+    prewarmEngine();
     document.querySelector(".crm-qr-overlay")?.remove();
     const overlay = document.createElement("div");
     overlay.className = "crm-modal-overlay crm-qr-overlay";
