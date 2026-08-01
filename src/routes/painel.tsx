@@ -534,6 +534,25 @@ function Painel() {
           })}
         </nav>
 
+        {billing && !billing.premium && (
+          <div className="m-3 rounded-2xl border border-yellow-400/60 bg-yellow-50 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-yellow-700">
+              Plano grátis
+            </p>
+            <p className="mt-1 text-xs text-neutral-700">
+              {billing.usage.customers}/{FREE_LIMITS.customers} contatos · até{" "}
+              {FREE_LIMITS.dispatchBatch} por disparo · equipe bloqueada.
+            </p>
+            <button
+              onClick={openCheckout}
+              className="mt-3 w-full rounded-lg bg-neutral-900 px-3 py-2 text-xs font-bold text-yellow-400 transition hover:bg-neutral-800"
+            >
+              Assinar Premium · {PROMO_PRICE_LABEL}
+            </button>
+          </div>
+        )}
+
+
 
 
       </aside>
