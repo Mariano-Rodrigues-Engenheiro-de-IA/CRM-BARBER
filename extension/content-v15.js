@@ -828,10 +828,11 @@
     btn.title = "Adicionar este contato a um funil";
     btn.className = "crm-chat-btn crm-chat-btn-icon";
     btn.innerHTML = ICONS.funnel;
+    btn.addEventListener("mouseenter", prewarmEngine);
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      openChatActionMenu(btn);
+      openFunnelModal();
     });
 
     const qr = document.createElement("button");
@@ -840,6 +841,8 @@
     qr.type = "button";
     qr.title = "Respostas rápidas";
     qr.innerHTML = BOLT_SVG;
+    // Aquece o motor antes do clique: era daí que vinha o atraso do 1º envio.
+    qr.addEventListener("mouseenter", prewarmEngine);
     qr.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -857,53 +860,109 @@
   }
 
 
-  /** Botão CRM: somente funis (listas ficam com a função nativa do WhatsApp). */
-  function openChatActionMenu(anchor) {
-    if (!funnels.length) {
-      void loadFunnels().then(() => openChatActionMenu(anchor));
-      return;
-    }
-    openMenu(
-      anchor,
-      funnels.filter((f) => f.mode !== "label").map((f) => ({ label: f.name, onClick: () => chooseStage(anchor, f) })),
-    );
-  }
+  // ---------------------------------------------------------------------
+  // Pop-up de Funis — mesmo formato do pop-up de respostas rápidas:
+  // lista os funis, entra nas etapas e adiciona o contato da conversa.
+  // ---------------------------------------------------------------------
+  function openFunnelModal() {
+    document.querySelector(".crm-fn-overlay")?.remove();
+    const overlay = document.createElement("div");
+    overlay.className = "crm-modal-overlay crm-qr-overlay crm-fn-overlay";
+    overlay.innerHTML = `
+      <div class="crm-qr" role="dialog" aria-modal="true">
+        <div class="crm-qr-head">
+          <p class="crm-qr-title">Adicionar a um funil</p>
+          <button class="crm-qr-close" title="Fechar">✕</button>
+        </div>
+        <div class="crm-qr-list"></div>
+      </div>
+    `;
+    const close = () => overlay.remove();
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+    overlay.querySelector(".crm-qr-close").addEventListener("click", close);
+    document.body.appendChild(overlay);
 
-  function chooseStage(anchor, funnel) {
-    const stages = funnel.stages || [];
-    if (!stages.length) return crmToast(`"${funnel.name}" ainda não tem etapas.`, "err");
-    openMenu(
-      anchor,
-      stages.map((st) => ({
-        label: st.name,
-        onClick: async () => {
-          const chat = await activeChat();
-          if (!chat) return crmToast("Não consegui ler a conversa aberta.", "err");
-          const r = await chrome.runtime
-            .sendMessage({
-              type: "api",
-              path: "/api/public/extension/funnel-cards",
-              opts: {
-                method: "POST",
-                body: JSON.stringify({
-                  funnel_id: funnel.id,
-                  stage_id: st.id,
-                  title: chat.name || chat.phone || "Contato",
-                  phone: chat.phone || null,
-                  wa_contact_id: chat.wa_id || null,
-                }),
-              },
-            })
-            .catch(() => null);
-          if (r?.ok) {
-            crmToast(`Adicionado em ${funnel.name} · ${st.name}`);
-            loadFunnels();
-          } else {
-            crmToast(r?.error || "Não consegui adicionar ao funil.", "err");
-          }
-        },
-      })),
-    );
+    const list = overlay.querySelector(".crm-qr-list");
+    const title = overlay.querySelector(".crm-qr-title");
+
+    const renderFunnels = () => {
+      title.textContent = "Adicionar a um funil";
+      const items = funnels.filter((f) => f.mode !== "label");
+      if (!items.length) {
+        list.innerHTML = `<p class="crm-qr-empty">Nenhum funil cadastrado ainda.</p>`;
+        return;
+      }
+      list.innerHTML = items
+        .map(
+          (f) => `<div class="crm-qr-item">
+            <p class="crm-qr-name">${escapeHtml(f.name)}</p>
+            <button class="crm-qr-send" data-funnel="${escapeHtml(f.id)}">Escolher etapa</button>
+          </div>`,
+        )
+        .join("");
+    };
+
+    const renderStages = (funnel) => {
+      title.textContent = funnel.name;
+      const stages = funnel.stages || [];
+      if (!stages.length) {
+        list.innerHTML = `<p class="crm-qr-empty">Este funil ainda não tem etapas.</p>`;
+        return;
+      }
+      list.innerHTML = stages
+        .map(
+          (st) => `<div class="crm-qr-item">
+            <p class="crm-qr-name">${escapeHtml(st.name)}</p>
+            <button class="crm-qr-send" data-stage="${escapeHtml(st.id)}">Adicionar</button>
+          </div>`,
+        )
+        .join("");
+    };
+
+    let selected = null;
+    // Abre na hora com o cache e recarrega em segundo plano.
+    renderFunnels();
+    void loadFunnels().then(() => { if (!selected) renderFunnels(); });
+
+    list.addEventListener("click", async (e) => {
+      const pickFunnel = e.target.closest("[data-funnel]");
+      if (pickFunnel) {
+        selected = funnels.find((f) => f.id === pickFunnel.getAttribute("data-funnel")) || null;
+        if (selected) renderStages(selected);
+        return;
+      }
+      const pickStage = e.target.closest("[data-stage]");
+      if (!pickStage || !selected) return;
+      const stage = (selected.stages || []).find((s) => s.id === pickStage.getAttribute("data-stage"));
+      if (!stage) return;
+      pickStage.disabled = true;
+      const funnel = selected;
+      close();
+      const chat = await activeChat();
+      if (!chat) return crmToast("Não consegui ler a conversa aberta.", "err");
+      const r = await chrome.runtime
+        .sendMessage({
+          type: "api",
+          path: "/api/public/extension/funnel-cards",
+          opts: {
+            method: "POST",
+            body: JSON.stringify({
+              funnel_id: funnel.id,
+              stage_id: stage.id,
+              title: chat.name || chat.phone || "Contato",
+              phone: chat.phone || null,
+              wa_contact_id: chat.wa_id || null,
+            }),
+          },
+        })
+        .catch(() => null);
+      if (r?.ok) {
+        crmToast(`Adicionado em ${funnel.name} · ${stage.name}`);
+        loadFunnels();
+      } else {
+        crmToast(r?.error || "Não consegui adicionar ao funil.", "err");
+      }
+    });
   }
 
   // ---------------------------------------------------------------------
