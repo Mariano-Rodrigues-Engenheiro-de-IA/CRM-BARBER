@@ -1,9 +1,20 @@
 (function () {
-  const BRIDGE_VERSION = "0.33.7";
+  const BRIDGE_VERSION = "0.33.8";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const handledActionIds = new Set();
+
+  function rememberAction(id) {
+    if (!id || handledActionIds.has(id)) return false;
+    handledActionIds.add(id);
+    if (handledActionIds.size > 500) {
+      const oldest = handledActionIds.values().next().value;
+      if (oldest) handledActionIds.delete(oldest);
+    }
+    return true;
+  }
 
   function normalizePhone(phone) {
     const digits = String(phone || "").replace(/\D/g, "");
@@ -518,13 +529,14 @@
       return;
     }
 
-    if (d.__crm === "action_v190") {
+    if (d.__crm === "action_v338") {
+      if (!rememberAction(d.id)) return;
       try {
         if (!window.WPP?.chat) await sleep(2000);
         await runActions(d.phone, d.openOnly, d.actions, d.waId);
-        window.postMessage({ __crm: "action_done_v190", id: d.id, ok: true }, "*");
+        window.postMessage({ __crm: "action_done_v338", id: d.id, ok: true }, "*");
       } catch (e) {
-        window.postMessage({ __crm: "action_done_v190", id: d.id, ok: false, error: e?.message || String(e) }, "*");
+        window.postMessage({ __crm: "action_done_v338", id: d.id, ok: false, error: e?.message || String(e) }, "*");
       }
       return;
     }
