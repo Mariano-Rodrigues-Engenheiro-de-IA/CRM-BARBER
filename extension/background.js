@@ -8,7 +8,7 @@
 //
 // Rate limit: espaçamento aleatório entre 8s e 20s entre jobs (ritmo humano).
 
-const EXTENSION_VERSION = "0.34.1";
+const EXTENSION_VERSION = "0.34.2";
 const DEFAULT_API_BASE = "https://crm.zayloia.com";
 const POLL_MIN_MS = 8000;
 const POLL_MAX_MS = 20000;

@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.34.1";
+  const CRM_VERSION = "0.34.2";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -747,6 +747,25 @@
     });
   }
 
+  /**
+   * ID real da conversa aberta, lido do próprio DOM do WhatsApp.
+   *
+   * As linhas de mensagem carregam data-id="false_<chatId>_<msgId>". É a fonte
+   * mais confiável e instantânea: casar pelo nome do cabeçalho falhava sempre
+   * que o contato aparecia como "Usuário desconhecido" ou tinha homônimo, e era
+   * exatamente isso que gerava o erro "Contato sem telefone".
+   */
+  function activeChatIdFromDom() {
+    const nodes = document.querySelectorAll("#main [data-id]");
+    for (const node of nodes) {
+      const raw = String(node.getAttribute("data-id") || "");
+      const parts = raw.split("_");
+      const candidate = parts.length >= 3 ? parts[1] : raw;
+      if (/@(c\.us|g\.us|lid)$/.test(candidate)) return candidate;
+    }
+    return null;
+  }
+
   function activeChatFromDom() {
     const header = document.querySelector("#main header");
     if (!header) return null;
@@ -760,18 +779,22 @@
     const digits = String(header.textContent || "").replace(/\D/g, "");
     const visiblePhone = digits.length >= 10 && digits.length <= 13 ? digits : null;
 
+    const waId = activeChatIdFromDom();
     const normalizedName = name.toLocaleLowerCase("pt-BR");
+    const byId = waId ? (waData.contacts || []).find((c) => c.wa_id === waId) : null;
     const matches = (waData.contacts || []).filter(
       (contact) => String(contact.name || "").trim().toLocaleLowerCase("pt-BR") === normalizedName,
     );
-    const cached = matches.length === 1 ? matches[0] : null;
+    const cached = byId || (matches.length === 1 ? matches[0] : null);
     return {
-      wa_id: cached?.wa_id || null,
+      wa_id: waId || cached?.wa_id || null,
       phone: visiblePhone || cached?.phone || null,
       name: cached?.name || name,
-      is_group: cached?.is_group || false,
+      is_group: (waId || "").endsWith("@g.us") || cached?.is_group || false,
     };
   }
+
+
 
   async function activeChat() {
     // Ler o cabeçalho é instantâneo e não carrega o wa-js. O motor interno só
@@ -1175,7 +1198,7 @@
     return bridgeRequest({
       // Protocolo versionado: bridges de versões antigas que ainda estejam
       // vivos na aba não reconhecem esta ação e não duplicam o envio.
-      __crm: "action_v339",
+      __crm: "action_v342",
       phone,
       waId,
       openOnly: !!action.openOnly,
