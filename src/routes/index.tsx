@@ -271,40 +271,46 @@ function Landing() {
         <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
           Comece grátis. Assine quando fizer sentido.
         </h2>
+        <p className="mt-3 text-center text-sm text-yellow-400">
+          Oferta de lançamento: {PROMO_PRICE_LABEL} para as 5 primeiras barbearias (depois {PREMIUM_PRICE_LABEL}).
+        </p>
         <div className="mt-10 grid gap-6 md:grid-cols-2">
           <div className="rounded-2xl border border-white/10 bg-neutral-900 p-6">
             <p className="text-sm font-semibold text-neutral-400">Grátis</p>
             <p className="mt-2 text-3xl font-bold">R$ 0</p>
             <ul className="mt-5 space-y-2 text-sm text-neutral-300">
-              <li>✓ Até {FREE_LIMITS.customers} assinantes</li>
-              <li>✓ Até {FREE_LIMITS.messages} mensagens</li>
-              <li>✓ Kanban e importação de planilha</li>
+              <li>✓ Até {FREE_LIMITS.customers} contatos</li>
+              <li>✓ Disparo de até {FREE_LIMITS.dispatchBatch} contatos por vez</li>
+              <li>✓ Kanban, funis e importação de planilha</li>
+              <li className="text-neutral-500">✕ Gestão de equipe e vendas</li>
             </ul>
             <Button variant="secondary" className="mt-6 w-full" onClick={scrollToForm}>
               Instalar extensão
             </Button>
           </div>
           <div className="rounded-2xl border-2 border-yellow-400 bg-neutral-900 p-6">
-            <p className="text-sm font-semibold text-yellow-400">Premium</p>
+            <p className="text-sm font-semibold text-yellow-400">Premium · lançamento</p>
             <p className="mt-2 text-3xl font-bold">
-              R$ 97<span className="text-base font-medium text-neutral-400">/mês</span>
+              R$ 47<span className="text-base font-medium text-neutral-400">/mês</span>
+              <span className="ml-2 align-middle text-sm font-medium text-neutral-500 line-through">R$ 97</span>
             </p>
             <ul className="mt-5 space-y-2 text-sm text-neutral-200">
-              <li>✓ Assinantes ilimitados</li>
+              <li>✓ Contatos ilimitados</li>
               <li>✓ Disparos e campanhas ilimitados</li>
+              <li>✓ Gestão de equipe, vendas e rankings</li>
               <li>✓ Respostas rápidas com mídia</li>
-              <li>✓ Metas, ranking e faturamento por coluna</li>
               <li>✓ Suporte prioritário</li>
             </ul>
             <Button
               className="mt-6 w-full bg-yellow-400 font-bold text-neutral-950 hover:bg-yellow-300"
               onClick={scrollToForm}
             >
-              Começar agora
+              Garantir vaga de lançamento
             </Button>
           </div>
         </div>
       </section>
+
 
       {/* FAQ */}
       <section className="border-t border-white/10 bg-neutral-900/50">
