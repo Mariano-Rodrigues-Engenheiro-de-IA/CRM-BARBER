@@ -1,8 +1,17 @@
 /* CRM Barber — barra de abas no topo do WhatsApp Web + trilho de ícones minimalista à esquerda. */
 
-/* A interface do CRM fica em overlay. Não reposicionamos mais #app nem o body:
-   o React do WhatsApp recalcula o root ao suspender/retomar a aba, e sobrescrever
-   sua geometria causava travas e a tela cinza relatada. */
+/* Reservamos espaço para o trilho (46px) e a barra superior (40px) apenas via CSS
+   estático — nada de reposicionamento por JS, que causava a tela cinza ao retomar a aba. */
+html body {
+  padding: 40px 0 0 46px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+html body #app {
+  height: calc(100vh - 40px) !important;
+  width: calc(100vw - 46px) !important;
+}
+
 
 
 
