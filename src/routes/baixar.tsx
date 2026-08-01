@@ -4,17 +4,17 @@ import { useState } from "react";
 export const Route = createFileRoute("/baixar")({
   head: () => ({
     meta: [
-      { title: "Baixar pacote da extensão v0.33.9 | CRM Assinaturas" },
+      { title: "Baixar pacote da extensão v0.34.0 | CRM Barber" },
       {
         name: "description",
         content:
-          "Download direto do pacote .zip da extensão CRM Assinaturas v0.33.9, pronto para upload no Chrome Web Store Developer Dashboard.",
+          "Download direto do pacote .zip da extensão CRM Barber v0.34.0, pronto para upload no Chrome Web Store Developer Dashboard.",
       },
-      { property: "og:title", content: "Baixar pacote da extensão v0.33.9" },
+      { property: "og:title", content: "Baixar pacote da extensão v0.34.0" },
       {
         property: "og:description",
         content:
-          "Pacote .zip da extensão CRM Assinaturas pronto para upload na Chrome Web Store.",
+          "Pacote .zip da extensão CRM Barber pronto para upload na Chrome Web Store.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -23,8 +23,8 @@ export const Route = createFileRoute("/baixar")({
   component: BaixarPage,
 });
 
-const VERSION = "0.33.9";
-const FILE = "/crm-assinaturas-extension-v3309.zip";
+const VERSION = "0.34.0";
+const FILE = "/crm-barber-v3400.zip";
 
 function BaixarPage() {
   const [status, setStatus] = useState<string | null>(null);
@@ -39,7 +39,7 @@ function BaixarPage() {
       .then((blob) => {
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `crm-assinaturas-extension-v${VERSION}.zip`;
+        a.download = `crm-barber-v3400.zip`;
         a.click();
         URL.revokeObjectURL(a.href);
         setStatus("Download iniciado.");
@@ -55,7 +55,7 @@ function BaixarPage() {
             Pacote da extensão
           </p>
           <h1 className="text-3xl font-medium">
-            CRM Assinaturas v{VERSION}
+            CRM Barber v{VERSION}
           </h1>
           <p className="text-sm text-muted-foreground">
             Arquivo .zip pronto para envio no Chrome Web Store Developer
@@ -69,7 +69,7 @@ function BaixarPage() {
           onClick={download}
           className="w-full rounded-md bg-primary px-6 py-4 text-sm font-medium text-primary-foreground transition hover:opacity-90"
         >
-          Baixar crm-assinaturas-extension-v{VERSION}.zip
+          Baixar crm-barber-v3400.zip
         </button>
 
         {status && (
