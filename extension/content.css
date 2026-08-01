@@ -1,24 +1,30 @@
 /* CRM Barber — barra de abas no topo do WhatsApp Web + trilho de ícones minimalista à esquerda. */
 
-/* O #app do WhatsApp é uma camada posicionada e ignora padding do body.
-   Reservamos o espaço diretamente nos quatro limites, sem JS e somente depois
-   que o shell da extensão existir. `inset` + dimensões automáticas evita a
-   dupla subtração que escondia parte do WhatsApp sob o trilho e a barra. */
+/* O #app do WhatsApp é uma camada posicionada. Reservamos o espaço usando position absolute
+   em vez de fixed para evitar conflitos com o motor de renderização do React do WhatsApp,
+   que pode causar a "tela cinza" ao tentar recalcular o viewport. */
 html body.crm-shell {
   padding: 0 !important;
+  margin: 0 !important;
   overflow: hidden !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  position: relative !important;
 }
+
 html body.crm-shell > #app {
-  position: fixed !important;
-  inset: 40px 0 0 46px !important;
+  position: absolute !important;
+  top: 40px !important;
+  left: 46px !important;
+  right: 0 !important;
+  bottom: 0 !important;
   width: auto !important;
   height: auto !important;
   min-width: 0 !important;
   min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
-
-
-
 
 /* Trilho lateral — só ícones */
 #crm-rail {
@@ -212,7 +218,6 @@ html body.crm-shell > #app {
   color: #6b6b6b;
   white-space: nowrap;
 }
-
 
 /* Modais do CRM — substituem confirm()/alert() nativos do navegador. */
 .crm-modal-overlay {
