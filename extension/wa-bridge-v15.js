@@ -236,41 +236,114 @@
   }
 
   /**
+   * Índice LID → telefone/nome montado uma vez por coleta.
+   *
+   * Nas builds novas o WhatsApp identifica conversas por @lid (id interno de
+   * privacidade) e o telefone só existe em outro modelo do ContactStore. Sem
+   * cruzar os dois, o CRM recebia contato sem telefone e "Usuário desconhecido".
+   */
+  let lidIndex = new Map();
+
+  function digitsOf(value) {
+    const raw =
+      typeof value === "object" && value
+        ? (value._serialized ?? value.user ?? value.pn ?? value.phoneNumber ?? "")
+        : value;
+    const d = String(raw || "").split("@")[0].replace(/\D/g, "");
+    return /^\d{10,14}$/.test(d) ? d : null;
+  }
+
+  function contactName(c) {
+    const candidates = [
+      c?.name,
+      c?.verifiedName,
+      c?.pushname,
+      c?.notifyName,
+      c?.formattedName,
+      c?.displayName,
+      c?.shortName,
+    ];
+    for (const v of candidates) {
+      const s = String(v || "").trim();
+      if (s && !/^\+?\d{12,}$/.test(s.replace(/[\s-]/g, ""))) return s.slice(0, 160);
+    }
+    return null;
+  }
+
+  function buildLidIndex() {
+    const index = new Map();
+    const put = (key, phone, name) => {
+      const k = String(key || "");
+      if (!k) return;
+      const cur = index.get(k) || {};
+      index.set(k, { phone: cur.phone || phone || null, name: cur.name || name || null });
+    };
+    let models = [];
+    try {
+      models =
+        window.WPP?.whatsapp?.ContactStore?.getModelsArray?.() ||
+        window.WPP?.whatsapp?.ContactStore?.models ||
+        [];
+    } catch {}
+    for (const c of models) {
+      const id = serialized(c?.id);
+      const lid = serialized(c?.lid) || serialized(c?.__x_lid);
+      const phone = digitsOf(c?.phoneNumber) || digitsOf(id);
+      const name = contactName(c);
+      if (id) put(id, phone, name);
+      if (lid) put(lid, phone, name);
+      // Cruza os dois sentidos: @lid ↔ @c.us
+      if (lid && phone) put(`${phone}@c.us`, phone, name);
+    }
+    return index;
+  }
+
+  /** Nome/telefone que o próprio remetente anuncia nas mensagens do chat. */
+  function fromMessages(chat) {
+    try {
+      const coll = chat?.msgs;
+      const msgs = coll?.getModelsArray?.() || coll?.models || [];
+      for (let i = msgs.length - 1; i >= 0 && i > msgs.length - 25; i -= 1) {
+        const m = msgs[i];
+        if (m?.id?.fromMe) continue;
+        const sender = m?.senderObj || m?.author || null;
+        const phone = digitsOf(serialized(m?.author)) || digitsOf(sender?.phoneNumber);
+        const name = contactName(sender) || String(m?.notifyName || "").trim() || null;
+        if (phone || name) return { phone, name };
+      }
+    } catch {}
+    return { phone: null, name: null };
+  }
+
+  /**
    * Telefone real da conversa. Conversas novas do WhatsApp usam @lid (id
    * interno) — nesse caso o número precisa ser buscado no ContactStore,
    * senão o CRM mostraria o LID no lugar do telefone.
    */
   function resolvePhoneDigits(chat, waId) {
-    const clean = (v) => {
-      const d = String(v || "").split("@")[0].replace(/\D/g, "");
-      return /^\d{10,15}$/.test(d) ? d : null;
-    };
     if (waId.endsWith("@g.us")) return null;
-    if (waId.endsWith("@c.us")) return clean(waId);
+    if (waId.endsWith("@c.us")) return digitsOf(waId);
 
-    const contact = (() => {
-      try {
-        return chat?.contact || window.WPP?.whatsapp?.ContactStore?.get?.(waId) || null;
-      } catch { return null; }
-    })();
+    let contact = null;
+    try {
+      contact = chat?.contact || window.WPP?.whatsapp?.ContactStore?.get?.(waId) || null;
+    } catch {}
 
     const tries = [
       () => contact?.phoneNumber,
-      () => contact?.id,
+      () => serialized(contact?.id),
       () => contact?.userid,
-      () => contact?.__x_id,
-      // Mapeamento LID → telefone (builds novas do WhatsApp).
+      () => lidIndex.get(String(waId))?.phone,
       () => window.WPP?.whatsapp?.LidUtils?.getPhoneNumber?.(waId),
       () => window.WPP?.whatsapp?.functions?.getPhoneNumber?.(waId),
       () => window.WPP?.whatsapp?.LidStore?.get?.(waId)?.pn,
       () => window.WPP?.whatsapp?.LidPnCacheStore?.get?.(waId)?.pn,
-      () => chat?.contact?.displayName,
-      () => chat?.formattedTitle,
+      () => fromMessages(chat).phone,
     ];
     for (const get of tries) {
       let v;
       try { v = get(); } catch { continue; }
-      const d = clean(typeof v === "object" ? (v?._serialized ?? v?.user ?? v?.pn ?? "") : v);
+      const d = digitsOf(v);
       if (d) return d;
     }
     return null;
@@ -286,20 +359,16 @@
       chat?.formattedTitle,
       chat?.__x_formattedTitle,
       chat?.name,
-      contact?.name,
-      contact?.verifiedName,
-      contact?.pushname,
-      contact?.notifyName,
-      contact?.formattedName,
-      contact?.displayName,
-      contact?.formattedUser,
-      contact?.shortName,
+      contactName(contact),
+      lidIndex.get(String(waId))?.name,
+      fromMessages(chat).name,
     ];
     for (const c of candidates) {
       const v = String(c || "").trim();
       if (v && !/^\d{15,}$/.test(v.replace(/\D/g, ""))) return v.slice(0, 160);
     }
     const digits = resolvePhoneDigits(chat, waId || "");
+
     return digits ? `+${digits}` : null;
   }
 
