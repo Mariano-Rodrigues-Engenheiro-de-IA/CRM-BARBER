@@ -391,8 +391,12 @@ function Painel() {
         setBrand(readBrand(r.barbershop.id));
       }
     });
+    api(token, "/api/public/extension/billing").then((r) => {
+      if (r?.ok && r.billing) setBilling(r.billing as BillingStatus);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
 
   // Refresh silencioso ao voltar pra seção assinantes — sem "Carregando..." piscando entre abas.
   useEffect(() => {
