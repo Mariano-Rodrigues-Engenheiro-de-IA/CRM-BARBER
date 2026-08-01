@@ -348,6 +348,7 @@ function Painel() {
   const [assinHeaderEl, setAssinHeaderEl] = useState<HTMLDivElement | null>(null);
   const [equipeHeaderEl, setEquipeHeaderEl] = useState<HTMLDivElement | null>(null);
   const [shop, setShop] = useState<{ id: string; name: string } | null>(null);
+  const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [brand, setBrand] = useState<Brand>({});
 
 
