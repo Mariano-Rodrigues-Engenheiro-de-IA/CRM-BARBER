@@ -477,7 +477,7 @@ function Painel() {
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-neutral-200 bg-white text-neutral-900">
         {/* Brand card — emoldura o nome pra não parecer "solto na tela" */}
         <div className="px-3 pt-4 pb-3">
-          <div className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-3 shadow-sm">
+          <div className="flex items-center justify-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-3 shadow-sm">
             <img
               src={zettaWordmark.url}
               alt="Zetta"
