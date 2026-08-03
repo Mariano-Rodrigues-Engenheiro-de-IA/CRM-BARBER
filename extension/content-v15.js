@@ -204,7 +204,7 @@
     const rail = document.createElement("div");
     rail.id = "crm-rail";
     rail.innerHTML = `
-      <div class="crm-rail-mark">CB</div>
+      <div class="crm-rail-mark"><img src="${chrome.runtime.getURL("zetta-z.png")}" alt="Zetta CRM" /></div>
       <button class="crm-rail-btn" data-go="assinantes" data-label="Gestão de Assinaturas">${ICONS.users}</button>
       <button class="crm-rail-btn" data-go="funis" data-label="Funis de Vendas">${ICONS.funnel}</button>
       <button class="crm-rail-btn" data-go="equipe" data-label="Equipe">${ICONS.trophy}</button>
