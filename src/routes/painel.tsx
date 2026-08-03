@@ -480,15 +480,14 @@ function Painel() {
         {/* Brand card — emoldura o nome pra não parecer "solto na tela" */}
         <div className="px-3 pt-4 pb-3">
           <div className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-3 shadow-sm">
-            <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-yellow-400 text-base font-bold text-neutral-900 ring-1 ring-black/10">
-              {shopLogo ? <img src={shopLogo} alt="logo" className="h-full w-full object-cover" /> : shopInitial}
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold tracking-[0.22em] text-neutral-500">ZETTA CRM</p>
-              <p className="truncate text-sm font-semibold text-neutral-950">{shopName}</p>
-            </div>
+            <img
+              src={zettaWordmark.url}
+              alt="Zetta"
+              className="h-9 w-auto max-w-full object-contain"
+            />
           </div>
         </div>
+
 
         <div className="mx-3 mb-2 h-px bg-neutral-200" />
 
