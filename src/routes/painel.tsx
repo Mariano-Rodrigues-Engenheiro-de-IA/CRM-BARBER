@@ -483,7 +483,7 @@ function Painel() {
               {shopLogo ? <img src={shopLogo} alt="logo" className="h-full w-full object-cover" /> : shopInitial}
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold tracking-[0.22em] text-neutral-500">CRM BARBER</p>
+              <p className="text-[10px] font-semibold tracking-[0.22em] text-neutral-500">ZETTA CRM</p>
               <p className="truncate text-sm font-semibold text-neutral-950">{shopName}</p>
             </div>
           </div>
@@ -569,7 +569,7 @@ function Painel() {
 
       {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-neutral-200 bg-white text-neutral-900 px-4 py-3">
-        <span className="text-[11px] font-semibold tracking-[0.22em] text-neutral-700">CRM BARBER</span>
+        <span className="text-[11px] font-semibold tracking-[0.22em] text-neutral-700">ZETTA CRM</span>
         <div className="flex gap-1 rounded-lg bg-neutral-100 p-1">
           {NAV_TOP.map((n) => (
             <button

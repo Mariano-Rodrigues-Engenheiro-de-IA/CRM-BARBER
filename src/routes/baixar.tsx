@@ -4,17 +4,17 @@ import { useState } from "react";
 export const Route = createFileRoute("/baixar")({
   head: () => ({
     meta: [
-      { title: "Baixar pacote da extensão v0.34.2 | CRM Barber" },
+      { title: "Baixar pacote da extensão v0.34.2 | Zetta CRM" },
       {
         name: "description",
         content:
-          "Download direto do pacote .zip da extensão CRM Barber v0.34.2, pronto para upload no Chrome Web Store Developer Dashboard.",
+          "Download direto do pacote .zip da extensão Zetta CRM v0.34.2, pronto para upload no Chrome Web Store Developer Dashboard.",
       },
       { property: "og:title", content: "Baixar pacote da extensão v0.34.2" },
       {
         property: "og:description",
         content:
-          "Pacote .zip da extensão CRM Barber pronto para upload na Chrome Web Store.",
+          "Pacote .zip da extensão Zetta CRM pronto para upload na Chrome Web Store.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -55,7 +55,7 @@ function BaixarPage() {
             Pacote da extensão
           </p>
           <h1 className="text-3xl font-medium">
-            CRM Barber v{VERSION}
+            Zetta CRM v{VERSION}
           </h1>
           <p className="text-sm text-muted-foreground">
             Arquivo .zip pronto para envio no Chrome Web Store Developer

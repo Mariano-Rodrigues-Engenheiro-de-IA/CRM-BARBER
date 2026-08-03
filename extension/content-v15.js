@@ -521,7 +521,7 @@
 
     if (!status.paired) {
       topbarRef.innerHTML = `<span class="crm-topbar-hint">${escapeHtml(
-        pairHint || "CRM Barber · conectando ao seu WhatsApp…",
+        pairHint || "Zetta CRM · conectando ao seu WhatsApp…",
       )}</span>`;
       return;
     }
@@ -596,7 +596,7 @@
     try {
       const phone = readLoggedPhone();
       if (!phone) {
-        pairHint = "CRM Barber · aguardando o WhatsApp Web terminar de carregar…";
+        pairHint = "Zetta CRM · aguardando o WhatsApp Web terminar de carregar…";
         renderTopbar();
         return;
       }
@@ -607,7 +607,7 @@
         refresh();
         return;
       }
-      pairHint = `CRM Barber · não consegui vincular: ${res?.error || "sem resposta do servidor"} — tentando de novo…`;
+      pairHint = `Zetta CRM · não consegui vincular: ${res?.error || "sem resposta do servidor"} — tentando de novo…`;
       renderTopbar();
     } finally {
       pairing = false;
