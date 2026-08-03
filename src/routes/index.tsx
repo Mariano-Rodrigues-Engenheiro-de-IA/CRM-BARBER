@@ -142,7 +142,7 @@ function Landing() {
       {/* Top bar */}
       <header className="border-b border-white/10">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
-          <span className="text-[11px] font-semibold tracking-[0.28em] text-yellow-400">ZETTA CRM</span>
+          <img src={zettaLogo.url} alt="Zetta CRM" className="h-7 w-auto" />
           <button
             onClick={scrollToForm}
             className="rounded-lg bg-yellow-400 px-4 py-2 text-xs font-bold text-neutral-950 hover:bg-yellow-300"
