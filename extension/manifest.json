@@ -21,7 +21,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["wa-js.js", "wa-bridge-v15.js"],
+      "resources": ["wa-js.js", "wa-bridge-v15.js", "zetta-z.png"],
       "matches": ["https://web.whatsapp.com/*"]
     }
   ],
