@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.34.2";
+  const CRM_VERSION = "0.34.3";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -204,7 +204,7 @@
     const rail = document.createElement("div");
     rail.id = "crm-rail";
     rail.innerHTML = `
-      <div class="crm-rail-mark">CB</div>
+      <div class="crm-rail-mark"><img src="${chrome.runtime.getURL("zetta-z.png")}" alt="Zetta CRM" /></div>
       <button class="crm-rail-btn" data-go="assinantes" data-label="Gestão de Assinaturas">${ICONS.users}</button>
       <button class="crm-rail-btn" data-go="funis" data-label="Funis de Vendas">${ICONS.funnel}</button>
       <button class="crm-rail-btn" data-go="equipe" data-label="Equipe">${ICONS.trophy}</button>
@@ -521,7 +521,7 @@
 
     if (!status.paired) {
       topbarRef.innerHTML = `<span class="crm-topbar-hint">${escapeHtml(
-        pairHint || "CRM Barber · conectando ao seu WhatsApp…",
+        pairHint || "Zetta CRM · conectando ao seu WhatsApp…",
       )}</span>`;
       return;
     }
@@ -596,7 +596,7 @@
     try {
       const phone = readLoggedPhone();
       if (!phone) {
-        pairHint = "CRM Barber · aguardando o WhatsApp Web terminar de carregar…";
+        pairHint = "Zetta CRM · aguardando o WhatsApp Web terminar de carregar…";
         renderTopbar();
         return;
       }
@@ -607,7 +607,7 @@
         refresh();
         return;
       }
-      pairHint = `CRM Barber · não consegui vincular: ${res?.error || "sem resposta do servidor"} — tentando de novo…`;
+      pairHint = `Zetta CRM · não consegui vincular: ${res?.error || "sem resposta do servidor"} — tentando de novo…`;
       renderTopbar();
     } finally {
       pairing = false;

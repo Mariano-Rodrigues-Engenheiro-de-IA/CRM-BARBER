@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { PREMIUM_PRICE_LABEL, PROMO_PRICE_LABEL, FREE_LIMITS } from "@/lib/billing";
+import zettaLogo from "@/assets/zetta-logo.png.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -142,7 +143,7 @@ function Landing() {
       {/* Top bar */}
       <header className="border-b border-white/10">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
-          <span className="text-[11px] font-semibold tracking-[0.28em] text-yellow-400">CRM BARBER</span>
+          <img src={zettaLogo.url} alt="Zetta CRM" className="h-7 w-auto" />
           <button
             onClick={scrollToForm}
             className="rounded-lg bg-yellow-400 px-4 py-2 text-xs font-bold text-neutral-950 hover:bg-yellow-300"
@@ -389,7 +390,7 @@ function Landing() {
 
       <footer className="border-t border-white/10 py-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-5 text-xs text-neutral-500">
-          <span>CRM Barber · CRM de assinaturas para barbearias</span>
+          <span>Zetta CRM · CRM de assinaturas para barbearias</span>
           <Link to="/politicas" className="text-neutral-400 transition-colors hover:text-yellow-400">
             Política de Privacidade e Termos de Uso
           </Link>

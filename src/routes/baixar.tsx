@@ -4,17 +4,17 @@ import { useState } from "react";
 export const Route = createFileRoute("/baixar")({
   head: () => ({
     meta: [
-      { title: "Baixar pacote da extensão v0.34.2 | CRM Barber" },
+      { title: "Baixar pacote da extensão v0.34.3 | Zetta CRM" },
       {
         name: "description",
         content:
-          "Download direto do pacote .zip da extensão CRM Barber v0.34.2, pronto para upload no Chrome Web Store Developer Dashboard.",
+          "Download direto do pacote .zip da extensão Zetta CRM v0.34.3, pronto para upload no Chrome Web Store Developer Dashboard.",
       },
-      { property: "og:title", content: "Baixar pacote da extensão v0.34.2" },
+      { property: "og:title", content: "Baixar pacote da extensão v0.34.3" },
       {
         property: "og:description",
         content:
-          "Pacote .zip da extensão CRM Barber pronto para upload na Chrome Web Store.",
+          "Pacote .zip da extensão Zetta CRM pronto para upload na Chrome Web Store.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -23,8 +23,8 @@ export const Route = createFileRoute("/baixar")({
   component: BaixarPage,
 });
 
-const VERSION = "0.34.2";
-const FILE = "/crm-barber-v3402.zip";
+const VERSION = "0.34.3";
+const FILE = "/zetta-crm-v3403.zip";
 
 function BaixarPage() {
   const [status, setStatus] = useState<string | null>(null);
@@ -39,7 +39,7 @@ function BaixarPage() {
       .then((blob) => {
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `crm-barber-v3402.zip`;
+        a.download = `zetta-crm-v3403.zip`;
         a.click();
         URL.revokeObjectURL(a.href);
         setStatus("Download iniciado.");
@@ -55,7 +55,7 @@ function BaixarPage() {
             Pacote da extensão
           </p>
           <h1 className="text-3xl font-medium">
-            CRM Barber v{VERSION}
+            Zetta CRM v{VERSION}
           </h1>
           <p className="text-sm text-muted-foreground">
             Arquivo .zip pronto para envio no Chrome Web Store Developer
@@ -69,7 +69,7 @@ function BaixarPage() {
           onClick={download}
           className="w-full rounded-md bg-primary px-6 py-4 text-sm font-medium text-primary-foreground transition hover:opacity-90"
         >
-          Baixar crm-barber-v3402.zip
+          Baixar zetta-crm-v3403.zip
         </button>
 
         {status && (
