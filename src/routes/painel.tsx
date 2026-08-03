@@ -424,7 +424,6 @@ function Painel() {
   }
 
   const shopName = brand.name || shop?.name || "Sua barbearia";
-  const shopInitial = shopName.trim().charAt(0).toUpperCase() || "B";
 
   /** Abre o checkout do Premium em nova aba, já identificando a barbearia. */
   function openCheckout() {
@@ -435,7 +434,6 @@ function Painel() {
     window.open(`/assinar?${params.toString()}`, "_blank", "noopener");
   }
 
-  const shopLogo = brand.logo || "";
 
   function saveBrand(next: Brand) {
     if (!shop?.id) return;
