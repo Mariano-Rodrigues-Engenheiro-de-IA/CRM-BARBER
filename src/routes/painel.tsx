@@ -569,7 +569,7 @@ function Painel() {
 
       {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-neutral-200 bg-white text-neutral-900 px-4 py-3">
-        <span className="text-[11px] font-semibold tracking-[0.22em] text-neutral-700">ZETTA CRM</span>
+        <img src={zettaWordmark.url} alt="Zetta" className="h-6 w-auto object-contain" />
         <div className="flex gap-1 rounded-lg bg-neutral-100 p-1">
           {NAV_TOP.map((n) => (
             <button
