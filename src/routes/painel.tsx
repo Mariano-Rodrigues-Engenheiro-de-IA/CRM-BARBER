@@ -481,7 +481,7 @@ function Painel() {
             <img
               src={zettaWordmark.url}
               alt="Zetta"
-              className="h-12 w-auto max-w-full object-contain"
+              className="h-8 w-auto max-w-full object-contain"
             />
           </div>
         </div>
@@ -567,7 +567,7 @@ function Painel() {
 
       {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-neutral-200 bg-white text-neutral-900 px-4 py-3">
-        <img src={zettaWordmark.url} alt="Zetta" className="h-9 w-auto object-contain" />
+        <img src={zettaWordmark.url} alt="Zetta" className="h-7 w-auto object-contain" />
         <div className="flex gap-1 rounded-lg bg-neutral-100 p-1">
           {NAV_TOP.map((n) => (
             <button
