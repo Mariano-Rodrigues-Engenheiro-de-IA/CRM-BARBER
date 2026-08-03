@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { PREMIUM_PRICE_LABEL, PROMO_PRICE_LABEL, FREE_LIMITS } from "@/lib/billing";
+import zettaLogo from "@/assets/zetta-logo.png.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
