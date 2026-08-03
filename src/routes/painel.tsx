@@ -13,6 +13,7 @@ import { QuickRepliesView } from "@/components/quick-replies-view";
 import { FunnelsView } from "@/components/funnels-view";
 import { DispatchCenter } from "@/components/dispatch-view";
 import { sendWaAction, isRealPhone, openWhatsappChat, applyFunnelActions } from "@/lib/wa-actions";
+import zettaWordmark from "@/assets/zetta-wordmark.png.asset.json";
 import { sendableActions, type QuickReply } from "@/lib/quick-replies";
 import { FREE_LIMITS, PROMO_PRICE_LABEL, type BillingStatus } from "@/lib/billing";
 
