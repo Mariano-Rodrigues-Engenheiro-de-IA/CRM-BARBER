@@ -13,6 +13,7 @@ import { QuickRepliesView } from "@/components/quick-replies-view";
 import { FunnelsView } from "@/components/funnels-view";
 import { DispatchCenter } from "@/components/dispatch-view";
 import { sendWaAction, isRealPhone, openWhatsappChat, applyFunnelActions } from "@/lib/wa-actions";
+import zettaWordmark from "@/assets/zetta-wordmark.png.asset.json";
 import { sendableActions, type QuickReply } from "@/lib/quick-replies";
 import { FREE_LIMITS, PROMO_PRICE_LABEL, type BillingStatus } from "@/lib/billing";
 
@@ -423,7 +424,6 @@ function Painel() {
   }
 
   const shopName = brand.name || shop?.name || "Sua barbearia";
-  const shopInitial = shopName.trim().charAt(0).toUpperCase() || "B";
 
   /** Abre o checkout do Premium em nova aba, já identificando a barbearia. */
   function openCheckout() {
@@ -434,7 +434,6 @@ function Painel() {
     window.open(`/assinar?${params.toString()}`, "_blank", "noopener");
   }
 
-  const shopLogo = brand.logo || "";
 
   function saveBrand(next: Brand) {
     if (!shop?.id) return;
@@ -479,15 +478,14 @@ function Painel() {
         {/* Brand card — emoldura o nome pra não parecer "solto na tela" */}
         <div className="px-3 pt-4 pb-3">
           <div className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-3 shadow-sm">
-            <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-yellow-400 text-base font-bold text-neutral-900 ring-1 ring-black/10">
-              {shopLogo ? <img src={shopLogo} alt="logo" className="h-full w-full object-cover" /> : shopInitial}
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold tracking-[0.22em] text-neutral-500">ZETTA CRM</p>
-              <p className="truncate text-sm font-semibold text-neutral-950">{shopName}</p>
-            </div>
+            <img
+              src={zettaWordmark.url}
+              alt="Zetta"
+              className="h-9 w-auto max-w-full object-contain"
+            />
           </div>
         </div>
+
 
         <div className="mx-3 mb-2 h-px bg-neutral-200" />
 
@@ -569,7 +567,7 @@ function Painel() {
 
       {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-neutral-200 bg-white text-neutral-900 px-4 py-3">
-        <span className="text-[11px] font-semibold tracking-[0.22em] text-neutral-700">ZETTA CRM</span>
+        <img src={zettaWordmark.url} alt="Zetta" className="h-6 w-auto object-contain" />
         <div className="flex gap-1 rounded-lg bg-neutral-100 p-1">
           {NAV_TOP.map((n) => (
             <button
