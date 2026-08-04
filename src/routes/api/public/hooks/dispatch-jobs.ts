@@ -40,7 +40,20 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { getWhatsAppProviderByName } = await import("@/lib/whatsapp/provider.server");
 
+        const runStartedAt = Date.now();
         const nowIso = new Date().toISOString();
+
+        // Devolve pra fila os jobs travados em in_flight (rodada anterior morreu).
+        await supabaseAdmin
+          .from("message_jobs")
+          .update({
+            status: "pending",
+            claimed_at: null,
+            last_error: "Reagendado automaticamente após travar no envio",
+            scheduled_for: nowIso,
+          })
+          .eq("status", "in_flight")
+          .lt("claimed_at", new Date(Date.now() - STALE_CLAIM_MS).toISOString());
 
         // Expira jobs vencidos (limpeza barata).
         await supabaseAdmin
@@ -49,6 +62,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
           .eq("status", "pending")
           .not("expires_at", "is", null)
           .lte("expires_at", nowIso);
+
 
         // Instâncias conectadas.
         const { data: instances } = await supabaseAdmin
