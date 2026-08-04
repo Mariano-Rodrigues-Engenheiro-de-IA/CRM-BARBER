@@ -149,12 +149,22 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
               continue;
             }
 
-            const result = await provider.sendText({
-              instance_token: instanceToken,
-              phone_number_id: inst.phone_number_id ?? null,
-              to: phone,
-              text: job.rendered_body,
-            });
+            const attempts = (job.attempts ?? 0) + 1;
+            // Nunca deixar uma exceção de rede matar a rodada com o job in_flight.
+            const result = await provider
+              .sendText({
+                instance_token: instanceToken,
+                phone_number_id: inst.phone_number_id ?? null,
+                to: phone,
+                text: job.rendered_body,
+              })
+              .catch((e: unknown) => ({
+                ok: false as const,
+                error: e instanceof Error ? e.message : "Falha de rede no envio",
+                retryable: true,
+              }));
+
+
 
             if (result.ok) {
               await supabaseAdmin
