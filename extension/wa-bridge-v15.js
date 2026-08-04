@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.34.7";
+  const BRIDGE_VERSION = "0.34.8";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
