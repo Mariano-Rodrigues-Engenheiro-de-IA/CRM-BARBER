@@ -103,7 +103,9 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
           let sentThisShop = 0;
           for (const job of jobs) {
             if (sentThisShop >= MAX_JOBS_PER_SHOP_PER_RUN) break;
+            if (Date.now() - runStartedAt > RUN_BUDGET_MS) break;
             if (job.campaign_id && blockedIds.has(job.campaign_id)) continue;
+
 
             // Claim (compare-and-swap).
             const { data: claimed } = await supabaseAdmin
