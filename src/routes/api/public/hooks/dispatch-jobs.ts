@@ -13,6 +13,16 @@ import { createFileRoute } from "@tanstack/react-router";
 
 const MAX_JOBS_PER_SHOP_PER_RUN = 4;
 const DELAY_BETWEEN_SENDS_MS = 6000;
+// Um job reivindicado (in_flight) que não recebeu desfecho em 6 min significa
+// que a rodada anterior morreu no meio (timeout do worker / provider travado).
+// Sem isso o job fica in_flight pra sempre e a campanha "trava".
+const STALE_CLAIM_MS = 6 * 60 * 1000;
+// Teto de tentativas: sem ele, um provider fora do ar (ex.: UAZAPI 503) gera
+// retry infinito e a fila nunca fecha.
+const MAX_ATTEMPTS = 8;
+// Orçamento de tempo da rodada, pra encerrar antes do limite do worker.
+const RUN_BUDGET_MS = 40_000;
+
 
 export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
   server: {
