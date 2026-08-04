@@ -425,10 +425,22 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                     <div
                       key={c.id}
                       draggable
-                      onDragStart={() => {
+                      onDragStart={(e) => {
                         draggedContact.current = c;
                         dragged.current = null;
+                        // Sem payload no dataTransfer o Chrome cancela o drag
+                        // iniciado dentro de containers com scroll/botões.
+                        e.dataTransfer.effectAllowed = "move";
+                        try {
+                          e.dataTransfer.setData("text/plain", c.id);
+                        } catch {
+                          /* alguns navegadores bloqueiam tipos custom */
+                        }
                       }}
+                      onDragEnd={() => {
+                        draggedContact.current = null;
+                      }}
+
                       className="cursor-grab rounded-lg border border-neutral-200 bg-white p-3 shadow-sm active:cursor-grabbing"
                     >
                       <p className="truncate text-sm font-medium text-neutral-900">
