@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.34.8";
+  const BRIDGE_VERSION = "0.34.9";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -261,10 +261,13 @@
       c?.formattedName,
       c?.displayName,
       c?.shortName,
+      c?.header,
+      c?.formattedShortNameWithContext,
     ];
     for (const v of candidates) {
       const s = String(v || "").trim();
-      if (s && !/^\+?\d{12,}$/.test(s.replace(/[\s-]/g, ""))) return s.slice(0, 160);
+      // Se o nome não for apenas o número de telefone, aceitamos.
+      if (s && !/^\+?\d{9,}$/.test(s.replace(/[\s\-\(\)]/g, ""))) return s.slice(0, 160);
     }
     return null;
   }
@@ -352,23 +355,27 @@
   function resolveName(chat, waId) {
     let contact = null;
     try {
-      contact = chat?.contact || window.WPP?.whatsapp?.ContactStore?.get?.(waId) || null;
+      contact = chat?.contact || window.WPP?.whatsapp?.ContactStore?.get?.(waId) || (chat?.id ? window.WPP?.whatsapp?.ContactStore?.get?.(chat.id) : null) || null;
     } catch {}
+    
+    const fromLid = lidIndex.get(String(waId));
     const candidates = [
+      chat?.name,
       chat?.formattedTitle,
       chat?.__x_formattedTitle,
-      chat?.name,
       contactName(contact),
-      lidIndex.get(String(waId))?.name,
+      fromLid?.name,
+      contactName(window.WPP?.whatsapp?.ContactStore?.get?.(fromLid?.phone + '@c.us')),
       fromMessages(chat).name,
     ];
     for (const c of candidates) {
       const v = String(c || "").trim();
-      if (v && !/^\d{15,}$/.test(v.replace(/\D/g, ""))) return v.slice(0, 160);
+      // Se não for um ID de sistema ou número puro muito longo, é um nome válido.
+      if (v && !v.includes('@') && !/^\d{15,}$/.test(v.replace(/\D/g, ""))) return v.slice(0, 160);
     }
     const digits = resolvePhoneDigits(chat, waId || "");
 
-    return digits ? `+${digits}` : null;
+    return digits ? `+${digits}` : "Usuário Desconhecido";
   }
 
   /**
