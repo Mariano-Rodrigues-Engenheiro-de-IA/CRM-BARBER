@@ -425,10 +425,22 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                     <div
                       key={c.id}
                       draggable
-                      onDragStart={() => {
+                      onDragStart={(e) => {
                         draggedContact.current = c;
                         dragged.current = null;
+                        // Sem payload no dataTransfer o Chrome cancela o drag
+                        // iniciado dentro de containers com scroll/botões.
+                        e.dataTransfer.effectAllowed = "move";
+                        try {
+                          e.dataTransfer.setData("text/plain", c.id);
+                        } catch {
+                          /* alguns navegadores bloqueiam tipos custom */
+                        }
                       }}
+                      onDragEnd={() => {
+                        draggedContact.current = null;
+                      }}
+
                       className="cursor-grab rounded-lg border border-neutral-200 bg-white p-3 shadow-sm active:cursor-grabbing"
                     >
                       <p className="truncate text-sm font-medium text-neutral-900">
@@ -470,13 +482,24 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
               return (
                 <div
                   key={stage.id}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => {
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
                     const contact = draggedContact.current;
                     const card = dragged.current;
                     draggedContact.current = null;
                     dragged.current = null;
                     if (contact) {
+                      // Se o contato já virou card neste funil, o drop move o
+                      // card existente em vez de ser ignorado em silêncio.
+                      const existing = active.cards.find((c) => c.wa_contact_id === contact.id);
+                      if (existing) {
+                        if (existing.stage_id !== stage.id) void moveCard(existing, stage.id);
+                        return;
+                      }
                       void addCard(stage.id, {
                         title: contact.name || contact.phone || contact.wa_id,
                         phone: contact.phone ?? undefined,
@@ -486,6 +509,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                     }
                     if (card) void moveCard(card, stage.id);
                   }}
+
                   className="flex h-full w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-2"
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -520,10 +544,20 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                       <div
                         key={card.id}
                         draggable
-                        onDragStart={() => {
+                        onDragStart={(e) => {
                           dragged.current = card;
                           draggedContact.current = null;
+                          e.dataTransfer.effectAllowed = "move";
+                          try {
+                            e.dataTransfer.setData("text/plain", card.id);
+                          } catch {
+                            /* noop */
+                          }
                         }}
+                        onDragEnd={() => {
+                          dragged.current = null;
+                        }}
+
                         className="cursor-grab rounded-lg border border-neutral-200 bg-white p-3 shadow-sm active:cursor-grabbing"
                       >
                         <div className="flex items-start justify-between gap-2">

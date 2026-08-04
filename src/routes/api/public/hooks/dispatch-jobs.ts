@@ -13,6 +13,16 @@ import { createFileRoute } from "@tanstack/react-router";
 
 const MAX_JOBS_PER_SHOP_PER_RUN = 4;
 const DELAY_BETWEEN_SENDS_MS = 6000;
+// Um job reivindicado (in_flight) que não recebeu desfecho em 6 min significa
+// que a rodada anterior morreu no meio (timeout do worker / provider travado).
+// Sem isso o job fica in_flight pra sempre e a campanha "trava".
+const STALE_CLAIM_MS = 6 * 60 * 1000;
+// Teto de tentativas: sem ele, um provider fora do ar (ex.: UAZAPI 503) gera
+// retry infinito e a fila nunca fecha.
+const MAX_ATTEMPTS = 8;
+// Orçamento de tempo da rodada, pra encerrar antes do limite do worker.
+const RUN_BUDGET_MS = 40_000;
+
 
 export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
   server: {
@@ -30,7 +40,20 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { getWhatsAppProviderByName } = await import("@/lib/whatsapp/provider.server");
 
+        const runStartedAt = Date.now();
         const nowIso = new Date().toISOString();
+
+        // Devolve pra fila os jobs travados em in_flight (rodada anterior morreu).
+        await supabaseAdmin
+          .from("message_jobs")
+          .update({
+            status: "pending",
+            claimed_at: null,
+            last_error: "Reagendado automaticamente após travar no envio",
+            scheduled_for: nowIso,
+          })
+          .eq("status", "in_flight")
+          .lt("claimed_at", new Date(Date.now() - STALE_CLAIM_MS).toISOString());
 
         // Expira jobs vencidos (limpeza barata).
         await supabaseAdmin
@@ -39,6 +62,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
           .eq("status", "pending")
           .not("expires_at", "is", null)
           .lte("expires_at", nowIso);
+
 
         // Instâncias conectadas.
         const { data: instances } = await supabaseAdmin
@@ -79,7 +103,9 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
           let sentThisShop = 0;
           for (const job of jobs) {
             if (sentThisShop >= MAX_JOBS_PER_SHOP_PER_RUN) break;
+            if (Date.now() - runStartedAt > RUN_BUDGET_MS) break;
             if (job.campaign_id && blockedIds.has(job.campaign_id)) continue;
+
 
             // Claim (compare-and-swap).
             const { data: claimed } = await supabaseAdmin
@@ -123,12 +149,22 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
               continue;
             }
 
-            const result = await provider.sendText({
-              instance_token: instanceToken,
-              phone_number_id: inst.phone_number_id ?? null,
-              to: phone,
-              text: job.rendered_body,
-            });
+            const attempts = (job.attempts ?? 0) + 1;
+            // Nunca deixar uma exceção de rede matar a rodada com o job in_flight.
+            const result = await provider
+              .sendText({
+                instance_token: instanceToken,
+                phone_number_id: inst.phone_number_id ?? null,
+                to: phone,
+                text: job.rendered_body,
+              })
+              .catch((e: unknown) => ({
+                ok: false as const,
+                error: e instanceof Error ? e.message : "Falha de rede no envio",
+                retryable: true,
+              }));
+
+
 
             if (result.ok) {
               await supabaseAdmin
@@ -150,24 +186,30 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
                 details: { job_id: job.id, provider_id: result.provider_message_id ?? null },
               });
             } else {
+              // Retry só até o teto; depois marca como falho pra fila não girar
+              // eternamente com o provider fora do ar. Backoff cresce por tentativa.
+              const willRetry = result.retryable && attempts < MAX_ATTEMPTS;
+              const backoffMs = Math.min(attempts, 5) * 60_000;
               await supabaseAdmin
                 .from("message_jobs")
                 .update({
-                  status: result.retryable ? "pending" : "failed",
-                  last_error: result.error,
-                  scheduled_for: result.retryable
-                    ? new Date(Date.now() + 60_000).toISOString()
-                    : new Date().toISOString(),
+                  status: willRetry ? "pending" : "failed",
+                  last_error: willRetry
+                    ? result.error
+                    : `${result.error} (após ${attempts} tentativa(s))`,
+                  claimed_at: null,
+                  scheduled_for: new Date(Date.now() + (willRetry ? backoffMs : 0)).toISOString(),
                 })
                 .eq("id", job.id);
               totalFailed++;
               await supabaseAdmin.from("health_events").insert({
                 barbershop_id: inst.barbershop_id,
-                kind: result.retryable ? "dispatch_retry" : "dispatch_failed",
-                severity: result.retryable ? "warning" : "error",
-                details: { job_id: job.id, error: result.error },
+                kind: willRetry ? "dispatch_retry" : "dispatch_failed",
+                severity: willRetry ? "warning" : "error",
+                details: { job_id: job.id, error: result.error, attempts },
               });
             }
+
 
             // Pace humano entre envios da mesma barbearia.
             if (sentThisShop < MAX_JOBS_PER_SHOP_PER_RUN) {
