@@ -149,11 +149,14 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
         let targets: Array<{ id: string; phone: string }> = [];
 
         if (phone_targets && phone_targets.length > 0) {
-          // Disparo vindo dos funis: cada telefone vira (ou reaproveita) um customer.
+          // Disparo vindo dos funis: cada telefone/wa_id vira (ou reaproveita) um customer.
           const wanted = new Map<string, string>();
           for (const t of phone_targets) {
-            const digits = String(t.phone).replace(/\D/g, "");
-            if (!/^\d{10,15}$/.test(digits)) continue;
+            // Se for um wa_id (ex: @lid), não removemos caracteres não-numéricos.
+            const raw = String(t.phone);
+            const digits = raw.includes("@") ? raw : raw.replace(/\D/g, "");
+            // Aceitamos IDs longos (@lid) ou telefones normais.
+            if (digits.length < 8) continue;
             if (!wanted.has(digits)) wanted.set(digits, (t.name || digits).slice(0, 160));
           }
           const phones = [...wanted.keys()];
@@ -209,9 +212,12 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
             return jsonResponse(request, { ok: false, error: tErr.message }, { status: 500 });
           }
           // Planilhas sem coluna de telefone geram contatos com telefone placeholder
-          // ("sem-tel-..."). Eles ficam no CRM, mas nunca entram na fila de disparo.
+          // ("sem-tel-..."). Eles ficam no CRM, mas agora permitimos IDs de WhatsApp (@lid/@c.us).
           targets = (allTargets ?? [])
-            .filter((t) => /^\d{10,15}$/.test(String(t.phone ?? "")))
+            .filter((t) => {
+              const p = String(t.phone ?? "");
+              return p.includes("@") || /^\d{10,25}$/.test(p);
+            })
             .map((t) => ({ id: t.id, phone: String(t.phone) }));
         }
 

@@ -64,7 +64,8 @@ export function sendWaAction(action: WaAction): Promise<{ ok: boolean; error?: s
 export async function openWhatsappChat(phone: string, name?: string, waId?: string | null) {
   const digits = String(phone || "").replace(/\D/g, "");
   const real = isRealPhone(digits);
-  const target = real ? digits : String(waId || "").replace(/\D/g, "");
+  // Se não for telefone real, usa o waId intacto (ex: @lid) para a extensão resolver.
+  const target = real ? digits : (waId || digits);
   if (!target) return { ok: false, error: "Contato sem telefone ou ID do WhatsApp" };
   const r = await sendWaAction({ phone: target, name, openOnly: true });
   if (!r.ok && real && typeof window !== "undefined") {
@@ -76,7 +77,8 @@ export async function openWhatsappChat(phone: string, name?: string, waId?: stri
 
 /** Botão do WhatsApp fica ativo se houver telefone real OU ID do WhatsApp. */
 export function canOpenWhatsapp(phone: string | null | undefined, waId?: string | null) {
-  return isRealPhone(phone) || !!String(waId || "").replace(/\D/g, "");
+  // Ativo se for telefone real ou se tiver qualquer waId (incluindo @lid).
+  return isRealPhone(phone) || !!waId;
 }
 
 /**

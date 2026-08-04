@@ -58,10 +58,9 @@
   }
 
   async function resolveTarget(phone) {
-    const wid = toWid(phone);
+    // Se o 'phone' já for um ID completo (ex: @lid ou @c.us), usa direto.
+    const wid = String(phone || "").includes("@") ? phone : toWid(phone);
 
-    // Não usamos mais WPP.contact.getProfile: essa função saiu da build atual
-    // do WhatsApp/wa-js e quebrava abrir conversa + respostas rápidas.
     const resolvers = [
       async () => {
         if (typeof window.WPP?.contact?.queryExists !== "function") throw new Error("queryExists indisponível");

@@ -10,7 +10,9 @@ import { waSyncSchema } from "@/lib/funnels";
 /** Telefone real tem 10–13 dígitos; LIDs do WhatsApp têm 15+. */
 function normalizePhone(raw: string | null | undefined) {
   const digits = String(raw ?? "").replace(/\D/g, "");
-  return digits.length >= 10 && digits.length <= 13 ? digits : null;
+  // Telefone real tem 10–13 dígitos. IDs @lid têm 15+.
+  // Aceitamos IDs mais longos para evitar que contatos fiquem como 'null'.
+  return digits.length >= 10 ? digits : null;
 }
 
 export const Route = createFileRoute("/api/public/extension/wa/sync")({
