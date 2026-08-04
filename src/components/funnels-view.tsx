@@ -544,10 +544,20 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                       <div
                         key={card.id}
                         draggable
-                        onDragStart={() => {
+                        onDragStart={(e) => {
                           dragged.current = card;
                           draggedContact.current = null;
+                          e.dataTransfer.effectAllowed = "move";
+                          try {
+                            e.dataTransfer.setData("text/plain", card.id);
+                          } catch {
+                            /* noop */
+                          }
                         }}
+                        onDragEnd={() => {
+                          dragged.current = null;
+                        }}
+
                         className="cursor-grab rounded-lg border border-neutral-200 bg-white p-3 shadow-sm active:cursor-grabbing"
                       >
                         <div className="flex items-start justify-between gap-2">
