@@ -325,7 +325,7 @@ function Landing() {
             <div className="py-6 text-center">
               <h2 className="text-2xl font-bold tracking-tight">Tudo certo!</h2>
               <p className="mt-2 text-sm text-neutral-400">
-                Recebemos seus dados. Em breve entramos em contato.
+                Em breve um especialista entrará em contato.
               </p>
             </div>
           ) : (
