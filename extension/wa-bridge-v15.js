@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.34.9";
+  const BRIDGE_VERSION = "0.34.10";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -90,10 +90,12 @@
     await waitForWpp();
     const target = await resolveTarget(phone);
     const attempts = [
-      ["openChatBottom", () => window.WPP.chat.openChatBottom(target)],
-      ["openChatAt", () => window.WPP.chat.openChatAt(target)],
-      ["openChat", () => window.WPP.chat.openChat(target)],
-    ].filter(([, fn]) => typeof fn === "function");
+      ["openChatBottom", window.WPP?.chat?.openChatBottom, () => window.WPP.chat.openChatBottom(target)],
+      ["openChatAt", window.WPP?.chat?.openChatAt, () => window.WPP.chat.openChatAt(target)],
+      ["openChat", window.WPP?.chat?.openChat, () => window.WPP.chat.openChat(target)],
+    ]
+      .filter(([, real]) => typeof real === "function")
+      .map(([label, , fn]) => [label, fn]);
 
     let lastError = "Não foi possível abrir a conversa";
     for (const [label, fn] of attempts) {
@@ -439,7 +441,11 @@
         const coll = l?.labelItemCollection ?? l?.__x_labelItemCollection;
         const items = coll?.getModelsArray?.() || coll?.models || (Array.isArray(coll) ? coll : []);
         for (const it of items) {
-          add(labelId, serialized(it?.parentId) || serialized(it?.id) || it?.parentId);
+          const chatId = serialized(it?.parentId) || serialized(it?.id);
+          // Sem serialização válida, não dá pra usar o objeto cru (vira
+          // "[object Object]" como string e quebra como "invalid wid"
+          // mais adiante). Melhor pular o item do que salvar lixo.
+          if (chatId) add(labelId, chatId);
         }
       }
     } catch (e) {
