@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PoliticasRouteImport } from './routes/politicas'
 import { Route as PainelRouteImport } from './routes/painel'
+import { Route as LinkRouteImport } from './routes/link'
 import { Route as InstalarRouteImport } from './routes/instalar'
 import { Route as BaixarRouteImport } from './routes/baixar'
 import { Route as AssinarRouteImport } from './routes/assinar'
@@ -53,6 +54,11 @@ const PoliticasRoute = PoliticasRouteImport.update({
 const PainelRoute = PainelRouteImport.update({
   id: '/painel',
   path: '/painel',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LinkRoute = LinkRouteImport.update({
+  id: '/link',
+  path: '/link',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InstalarRoute = InstalarRouteImport.update({
@@ -250,6 +256,7 @@ export interface FileRoutesByFullPath {
   '/assinar': typeof AssinarRouteWithChildren
   '/baixar': typeof BaixarRoute
   '/instalar': typeof InstalarRoute
+  '/link': typeof LinkRoute
   '/painel': typeof PainelRoute
   '/politicas': typeof PoliticasRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
@@ -287,6 +294,7 @@ export interface FileRoutesByTo {
   '/assinar': typeof AssinarRouteWithChildren
   '/baixar': typeof BaixarRoute
   '/instalar': typeof InstalarRoute
+  '/link': typeof LinkRoute
   '/painel': typeof PainelRoute
   '/politicas': typeof PoliticasRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
@@ -325,6 +333,7 @@ export interface FileRoutesById {
   '/assinar': typeof AssinarRouteWithChildren
   '/baixar': typeof BaixarRoute
   '/instalar': typeof InstalarRoute
+  '/link': typeof LinkRoute
   '/painel': typeof PainelRoute
   '/politicas': typeof PoliticasRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
@@ -364,6 +373,7 @@ export interface FileRouteTypes {
     | '/assinar'
     | '/baixar'
     | '/instalar'
+    | '/link'
     | '/painel'
     | '/politicas'
     | '/admin/whatsapp'
@@ -401,6 +411,7 @@ export interface FileRouteTypes {
     | '/assinar'
     | '/baixar'
     | '/instalar'
+    | '/link'
     | '/painel'
     | '/politicas'
     | '/admin/whatsapp'
@@ -438,6 +449,7 @@ export interface FileRouteTypes {
     | '/assinar'
     | '/baixar'
     | '/instalar'
+    | '/link'
     | '/painel'
     | '/politicas'
     | '/admin/whatsapp'
@@ -476,6 +488,7 @@ export interface RootRouteChildren {
   AssinarRoute: typeof AssinarRouteWithChildren
   BaixarRoute: typeof BaixarRoute
   InstalarRoute: typeof InstalarRoute
+  LinkRoute: typeof LinkRoute
   PainelRoute: typeof PainelRoute
   PoliticasRoute: typeof PoliticasRoute
   AdminWhatsappRoute: typeof AdminWhatsappRoute
@@ -515,6 +528,13 @@ declare module '@tanstack/react-router' {
       path: '/painel'
       fullPath: '/painel'
       preLoaderRoute: typeof PainelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/link': {
+      id: '/link'
+      path: '/link'
+      fullPath: '/link'
+      preLoaderRoute: typeof LinkRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/instalar': {
@@ -845,6 +865,7 @@ const rootRouteChildren: RootRouteChildren = {
   AssinarRoute: AssinarRouteWithChildren,
   BaixarRoute: BaixarRoute,
   InstalarRoute: InstalarRoute,
+  LinkRoute: LinkRoute,
   PainelRoute: PainelRoute,
   PoliticasRoute: PoliticasRoute,
   AdminWhatsappRoute: AdminWhatsappRoute,
@@ -879,3 +900,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
