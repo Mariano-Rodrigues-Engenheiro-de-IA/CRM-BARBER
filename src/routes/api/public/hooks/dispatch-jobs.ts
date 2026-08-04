@@ -186,24 +186,30 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
                 details: { job_id: job.id, provider_id: result.provider_message_id ?? null },
               });
             } else {
+              // Retry só até o teto; depois marca como falho pra fila não girar
+              // eternamente com o provider fora do ar. Backoff cresce por tentativa.
+              const willRetry = result.retryable && attempts < MAX_ATTEMPTS;
+              const backoffMs = Math.min(attempts, 5) * 60_000;
               await supabaseAdmin
                 .from("message_jobs")
                 .update({
-                  status: result.retryable ? "pending" : "failed",
-                  last_error: result.error,
-                  scheduled_for: result.retryable
-                    ? new Date(Date.now() + 60_000).toISOString()
-                    : new Date().toISOString(),
+                  status: willRetry ? "pending" : "failed",
+                  last_error: willRetry
+                    ? result.error
+                    : `${result.error} (após ${attempts} tentativa(s))`,
+                  claimed_at: null,
+                  scheduled_for: new Date(Date.now() + (willRetry ? backoffMs : 0)).toISOString(),
                 })
                 .eq("id", job.id);
               totalFailed++;
               await supabaseAdmin.from("health_events").insert({
                 barbershop_id: inst.barbershop_id,
-                kind: result.retryable ? "dispatch_retry" : "dispatch_failed",
-                severity: result.retryable ? "warning" : "error",
-                details: { job_id: job.id, error: result.error },
+                kind: willRetry ? "dispatch_retry" : "dispatch_failed",
+                severity: willRetry ? "warning" : "error",
+                details: { job_id: job.id, error: result.error, attempts },
               });
             }
+
 
             // Pace humano entre envios da mesma barbearia.
             if (sentThisShop < MAX_JOBS_PER_SHOP_PER_RUN) {
