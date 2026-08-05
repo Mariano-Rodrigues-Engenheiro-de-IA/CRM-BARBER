@@ -142,33 +142,27 @@ function Landing() {
     <div className="min-h-screen bg-neutral-950 text-neutral-100">
       {/* Top bar */}
       <header className="border-b border-white/10">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
-          <img src={zettaLogo.url} alt="Zetta CRM" className="h-7 w-auto" />
-          <button
-            onClick={scrollToForm}
-            className="rounded-lg bg-yellow-400 px-4 py-2 text-xs font-bold text-neutral-950 hover:bg-yellow-300"
-          >
-            INSTALAR GRÁTIS
-          </button>
+        <div className="mx-auto flex max-w-6xl items-center px-5 py-3">
+          <img src={zettaLogo.url} alt="Zetta CRM" className="h-5 w-auto" />
         </div>
       </header>
 
       {/* Hero */}
-      <section className="mx-auto grid max-w-6xl gap-10 px-5 py-16 md:grid-cols-2 md:items-center md:py-24">
-        <div className="space-y-6">
-          <span className="inline-block rounded-full border border-yellow-400/40 bg-yellow-400/10 px-3 py-1 text-[11px] font-semibold tracking-wider text-yellow-400">
+      <section className="mx-auto grid max-w-6xl gap-6 px-5 py-6 md:gap-10 md:py-24 md:grid-cols-2 md:items-center">
+        <div className="space-y-4 md:space-y-6">
+          <span className="hidden md:inline-block rounded-full border border-yellow-400/40 bg-yellow-400/10 px-3 py-1 text-[11px] font-semibold tracking-wider text-yellow-400">
             OFERTA DE LANÇAMENTO · 5 VAGAS
           </span>
-          <h1 className="text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl">
+          <h1 className="order-1 text-2xl font-bold leading-[1.15] tracking-tight sm:text-4xl md:order-none md:text-5xl md:leading-[1.08]">
             O CRM completo da sua barbearia{" "}
             <span className="text-yellow-400">dentro do WhatsApp</span>
           </h1>
-          <p className="text-lg text-neutral-300">
+          <p className="hidden md:block text-lg text-neutral-300">
             Assinaturas, vendas, funis, disparo em massa, respostas rápidas e gestão de equipe —
             tudo em um só lugar, no seu próprio número, sem trocar de ferramenta e sem abrir
             conversa por conversa.
           </p>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="order-3 flex flex-wrap items-center gap-3 md:order-none">
             <Button size="lg" className="bg-yellow-400 font-bold text-neutral-950 hover:bg-yellow-300" onClick={scrollToForm}>
               QUERO TESTAR GRÁTIS
             </Button>
@@ -177,7 +171,7 @@ function Landing() {
             </span>
           </div>
 
-          <div className="flex flex-wrap gap-6 pt-2 text-sm text-neutral-400">
+          <div className="hidden md:flex flex-wrap gap-6 pt-2 text-sm text-neutral-400">
             <span>✓ Usa seu número atual</span>
             <span>✓ Instala em 1 clique</span>
             <span>✓ Cancela quando quiser</span>
@@ -185,7 +179,7 @@ function Landing() {
         </div>
 
         {/* Vídeo de vendas */}
-        <div className="overflow-hidden rounded-3xl border border-white/10 bg-neutral-900 shadow-2xl">
+        <div className="order-2 overflow-hidden rounded-2xl border border-white/10 bg-neutral-900 shadow-2xl md:order-none md:rounded-3xl">
           <div className="relative aspect-video w-full">
             <iframe
               src="https://www.youtube.com/embed/QJYO1QX-tKQ"
