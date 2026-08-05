@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.34.15";
+  const BRIDGE_VERSION = "0.34.16";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -630,13 +630,34 @@
     // Otimização: Busca fotos de perfil em paralelo para os top 300 contatos
     const topContacts = contacts.filter(c => !c.is_group).slice(0, 300);
     const BATCH_SIZE = 20;
+    let fotoOk = 0;
+    let fotoErro = 0;
+    let primeiroErro = null;
     for (let i = 0; i < topContacts.length; i += BATCH_SIZE) {
       const batch = topContacts.slice(i, i + BATCH_SIZE);
       await Promise.all(batch.map(async (c) => {
-        try { c.profile_picture_url = await resolveProfilePicture(c.wa_id); } catch {}
+        try {
+          c.profile_picture_url = await resolveProfilePicture(c.wa_id);
+          if (c.profile_picture_url) fotoOk++;
+          else fotoErro++;
+        } catch (e) {
+          fotoErro++;
+          if (!primeiroErro) primeiroErro = e?.message || String(e);
+        }
       }));
       await new Promise(r => setTimeout(r, 50));
     }
+    console.info(
+      "[CRM][diagnostico-foto]",
+      `ok=${fotoOk} sem-foto-ou-erro=${fotoErro}`,
+      primeiroErro ? `primeiro erro: ${primeiroErro}` : "(sem erro capturado)",
+      "exemplo de url:",
+      topContacts.find((c) => c.profile_picture_url)?.profile_picture_url || "(nenhuma)",
+    );
+    console.info(
+      "[CRM][diagnostico-foto] getProfilePictureUrl existe?",
+      typeof window.WPP?.contact?.getProfilePictureUrl,
+    );
 
 
 
