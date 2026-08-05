@@ -368,6 +368,75 @@
   // tenta aplicar o filtro nativo da lista de conversas.
   // ---------------------------------------------------------------------
   let activeFilter = null; // { key, kind, id, funnelId, name }
+  let domFilterObserver = null;
+
+  /** Mapeamento de wa_id → label_ids para o filtro visual via DOM */
+  function getContactLabelMap() {
+    const map = new Map(); // wa_id → Set<label_id>
+    if (waData?.contacts) {
+      for (const c of waData.contacts) {
+        if (!c.wa_id) continue;
+        const labels = (c.labels || []).map(l => String(l.id || l.wa_label_id || l));
+        map.set(String(c.wa_id), new Set(labels));
+      }
+    }
+    return map;
+  }
+
+  /** Obtém os wa_ids dos contatos de uma etapa do funil */
+  function getStageWaIds(funnelId, stageId) {
+    const funnel = funnels.find((f) => f.id === funnelId);
+    if (!funnel) return new Set();
+    return new Set(
+      (funnel.cards || [])
+        .filter((c) => c.stage_id === stageId && c.wa_id)
+        .map((c) => String(c.wa_id))
+    );
+  }
+
+  /** Filtra visualmente as conversas no DOM do WhatsApp */
+  function applyDomChatFilter() {
+    if (!activeFilter) {
+      // Remove filtros visuais — mostra tudo
+      const items = document.querySelectorAll('[data-item-id]');
+      items.forEach((el) => { el.style.display = ""; });
+      return;
+    }
+
+    const labelMap = getContactLabelMap();
+    const items = document.querySelectorAll('[data-item-id]');
+
+    if (activeFilter.kind === "label") {
+      const targetLabel = String(activeFilter.id);
+      items.forEach((el) => {
+        const itemId = String(el.getAttribute("data-item-id") || "");
+        if (!itemId) { el.style.display = ""; return; }
+        const labels = labelMap.get(itemId) || new Set();
+        el.style.display = labels.has(targetLabel) ? "" : "none";
+      });
+    } else if (activeFilter.kind === "stage") {
+      const allowedIds = getStageWaIds(activeFilter.funnelId, activeFilter.id);
+      items.forEach((el) => {
+        const itemId = String(el.getAttribute("data-item-id") || "");
+        if (!itemId) { el.style.display = ""; return; }
+        el.style.display = allowedIds.has(itemId) ? "" : "none";
+      });
+    }
+  }
+
+  /** Observa mudanças no DOM para re-aplicar o filtro quando novas conversas aparecem */
+  function ensureDomFilterObserver() {
+    if (domFilterObserver) return;
+    domFilterObserver = new MutationObserver(() => {
+      if (activeFilter) applyDomChatFilter();
+    });
+    // Observa a lista de conversas do WhatsApp
+    const chatList = document.querySelector("[data-tab='chatlist']")?.querySelector("[role='treeitem']")?.parentElement
+      || document.querySelector("#pane-side > div > div > div");
+    if (chatList) {
+      domFilterObserver.observe(chatList, { childList: true, subtree: true });
+    }
+  }
 
   /** Aplica o filtro nativo do WhatsApp (WPP.chat.setChatList).
    * O WPP vive no MAIN world, então a chamada precisa passar pelo bridge —
@@ -379,11 +448,17 @@
     } catch (e) {
       console.warn("[CRM] falha ao aplicar filtro nativo de lista:", e?.message || e);
     }
+    // Fallback visual: filtra o DOM independentemente do resultado nativo
+    applyDomChatFilter();
+    ensureDomFilterObserver();
   }
 
   function clearChatFilter() {
     activeFilter = null;
     closeDrawer();
+    // Limpa filtros visuais
+    const items = document.querySelectorAll('[data-item-id]');
+    items.forEach((el) => { el.style.display = ""; });
     void applyNativeChatList("all");
     renderTopbar();
   }
