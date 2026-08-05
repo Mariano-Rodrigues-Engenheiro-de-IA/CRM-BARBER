@@ -18,7 +18,7 @@ import {
   type QuickReplyAction,
   type QuickReplyActionType,
 } from "@/lib/quick-replies";
-import type { Funnel } from "@/lib/funnels";
+import type { Funnel, WaContact, WaLabel } from "@/lib/funnels";
 import { fileToContacts, type SheetContact } from "@/lib/sheet-contacts";
 
 type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
@@ -76,6 +76,12 @@ export function DispatchCenter({
   const [funnels, setFunnels] = useState<Funnel[]>([]);
   const [funnelId, setFunnelId] = useState("");
   const [stageId, setStageId] = useState("");
+  // Contatos e etiquetas do WhatsApp sincronizados — necessários pra calcular
+  // corretamente o público de funis do tipo "label" (Listas), já que os
+  // cards dessas colunas não ficam persistidos em funnel_cards; eles são
+  // recalculados na hora, igual em funnels-view.tsx (stageCards).
+  const [contacts, setContacts] = useState<WaContact[]>([]);
+  const [labels, setLabels] = useState<WaLabel[]>([]);
   // Planilha importada (Nome + Telefone) usada como público avulso.
   const [sheetContacts, setSheetContacts] = useState<SheetContact[]>([]);
   const [sheetName, setSheetName] = useState("");
@@ -96,9 +102,10 @@ export function DispatchCenter({
 
   useEffect(() => {
     void (async () => {
-      const [f, q] = await Promise.all([
+      const [f, q, w] = await Promise.all([
         api("/api/public/extension/funnels"),
         api("/api/public/extension/quick-replies"),
+        api("/api/public/extension/wa/data"),
       ]);
       if (f?.ok) {
         const list = (f.funnels as Funnel[]) || [];
@@ -106,6 +113,10 @@ export function DispatchCenter({
         setFunnelId((cur) => cur || list[0]?.id || "");
       }
       if (q?.ok) setReplies((q.quick_replies as QuickReply[]) || []);
+      if (w?.ok) {
+        setLabels((w.labels as WaLabel[]) || []);
+        setContacts((w.contacts as WaContact[]) || []);
+      }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -118,11 +129,30 @@ export function DispatchCenter({
 
   const funnelTargets = useMemo(() => {
     if (!funnel) return [];
+    // Funis do tipo "label" (Listas) não têm cards persistidos em
+    // funnel_cards — precisam ser recalculados a partir dos contatos
+    // sincronizados e da etiqueta correspondente à coluna selecionada,
+    // igual em funnels-view.tsx (stageCards).
+    if (funnel.mode === "label") {
+      const relevantStages = stageId
+        ? funnel.stages.filter((s) => s.id === stageId)
+        : funnel.stages;
+      const wantedLabelIds = new Set(
+        relevantStages
+          .map((s) => labels.find((l) => l.name === s.name)?.wa_label_id)
+          .filter((x): x is string => Boolean(x)),
+      );
+      return contacts
+        .filter((c) => !c.is_group && c.label_ids.some((id) => wantedLabelIds.has(id)))
+        .map((c) => ({ phone: (c.phone || c.wa_id) as string, name: c.name || c.phone || c.wa_id }));
+    }
     return funnel.cards
       .filter((c) => (stageId ? c.stage_id === stageId : true))
-      .filter((c) => isRealPhone(c.phone))
-      .map((c) => ({ phone: c.phone as string, name: c.title }));
-  }, [funnel, stageId]);
+      // Aceita telefone real OU wa_id (contato "desconhecido" ainda é um
+      // destinatário válido — a extensão já sabe mandar mensagem por wa_id).
+      .filter((c) => isRealPhone(c.phone) || c.wa_id)
+      .map((c) => ({ phone: (c.phone || c.wa_id) as string, name: c.title }));
+  }, [funnel, stageId, contacts, labels]);
 
   const total =
     audience === "assinantes"
