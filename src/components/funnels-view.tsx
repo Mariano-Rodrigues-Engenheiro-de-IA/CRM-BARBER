@@ -31,6 +31,8 @@ const inputCls =
 
 /** Cache entre navegações: voltar pra aba Funis não deve piscar esqueleto. */
 let funnelsCache: { funnels: Funnel[]; labels: WaLabel[]; contacts: WaContact[] } | null = null;
+/** Trava global para evitar que múltiplos componentes (ou remounts) criem funis padrão ao mesmo tempo. */
+let isEnsuringDefaults = false;
 
 export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTMLElement | null }) {
   const [funnels, setFunnels] = useState<Funnel[]>(() => funnelsCache?.funnels ?? []);
@@ -49,7 +51,6 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
   const dragged = useRef<FunnelCard | null>(null);
   const draggedContact = useRef<WaContact | null>(null);
   const pendingContacts = useRef<Set<string>>(new Set());
-  const ensuredDefaults = useRef(false);
 
   async function reload() {
     const [f, w] = await Promise.all([
@@ -82,59 +83,65 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
    * não podem ser excluídos. O botão do cabeçalho só cria funis personalizados.
    */
   async function ensureDefaults(list: Funnel[]) {
-    if (ensuredDefaults.current) return false;
-    ensuredDefaults.current = true;
-    let created = false;
-    if (!list.some((f) => f.mode === "tab")) {
-      const r = await api("/api/public/extension/funnels", {
-        method: "POST",
-        body: JSON.stringify({
-          name: "Funil principal",
-          mode: "tab",
-          stages: ["Novo lead", "Em conversa", "Negociando", "Fechado"],
-        }),
-      });
-      created = created || Boolean(r?.ok);
-    }
-    // Se existir mais de um funil de "Listas" (mode label) — situação que
-    // pode ter acontecido antes desta correção — mantém só um e apaga os
-    // duplicados, em vez de só renomear (renomear sozinho fazia os dois
-    // ficarem com o mesmo nome "Listas", aparecendo duplicado no Disparo).
-    const labelFunnels = list.filter((f) => f.mode === "label");
-    if (labelFunnels.length > 1) {
-      const keep = labelFunnels.find((f) => f.name === "Listas") || labelFunnels[0];
-      for (const dup of labelFunnels) {
-        if (dup.id === keep.id) continue;
-        await api(`/api/public/extension/funnels/${dup.id}`, { method: "DELETE" });
-        created = true;
-      }
-      if (keep.name !== "Listas") {
-        await api(`/api/public/extension/funnels/${keep.id}`, {
-          method: "PATCH",
-          body: JSON.stringify({ name: "Listas" }),
-        });
-        created = true;
-      }
-    } else {
-      // Renomeia o funil de listas criado com o nome antigo ("Etiquetas / Listas").
-      const legacy = list.find((f) => f.mode === "label" && f.name !== "Listas");
-      if (legacy) {
-        const r = await api(`/api/public/extension/funnels/${legacy.id}`, {
-          method: "PATCH",
-          body: JSON.stringify({ name: "Listas" }),
+    if (isEnsuringDefaults) return false;
+    isEnsuringDefaults = true;
+    try {
+      let created = false;
+
+      // 1) Garantir apenas UM funil principal (mode: tab)
+      // Buscamos qualquer funil que seja "tab" ou que tenha o nome "Funil principal"
+      const tabFunnels = list.filter((f) => f.mode === "tab" || f.name === "Funil principal");
+      if (tabFunnels.length === 0) {
+        const r = await api("/api/public/extension/funnels", {
+          method: "POST",
+          body: JSON.stringify({
+            name: "Funil principal",
+            mode: "tab",
+            stages: ["Novo lead", "Em conversa", "Negociando", "Fechado"],
+          }),
         });
         created = created || Boolean(r?.ok);
+      } else if (tabFunnels.length > 1) {
+        // Limpa duplicados: mantém o primeiro que for realmente "tab", ou o primeiro da lista
+        const keep = tabFunnels.find(f => f.mode === "tab") || tabFunnels[0];
+        for (const dup of tabFunnels) {
+          if (dup.id === keep.id) continue;
+          await api(`/api/public/extension/funnels/${dup.id}`, { method: "DELETE" });
+          created = true;
+        }
       }
+
+      // 2) Garantir apenas UM funil de listas (mode: label)
+      const labelFunnels = list.filter((f) => f.mode === "label");
+      if (labelFunnels.length === 0) {
+        const r = await api("/api/public/extension/funnels", {
+          method: "POST",
+          body: JSON.stringify({ name: "Listas", mode: "label", stages: [] }),
+        });
+        created = created || Boolean(r?.ok);
+      } else if (labelFunnels.length > 1) {
+        const keep = labelFunnels.find((f) => f.name === "Listas") || labelFunnels[0];
+        for (const dup of labelFunnels) {
+          if (dup.id === keep.id) continue;
+          await api(`/api/public/extension/funnels/${dup.id}`, { method: "DELETE" });
+          created = true;
+        }
+      }
+
+      // 3) Renomear legado se necessário
+      const legacy = list.find((f) => f.mode === "label" && f.name !== "Listas");
+      if (legacy && labelFunnels.length === 1) {
+        await api(`/api/public/extension/funnels/${legacy.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ name: "Listas" }),
+        });
+        created = true;
+      }
+
+      return created;
+    } finally {
+      isEnsuringDefaults = false;
     }
-    if (!list.some((f) => f.mode === "label")) {
-      // Nasce vazio: as colunas e os contatos vêm da sincronização abaixo.
-      const r = await api("/api/public/extension/funnels", {
-        method: "POST",
-        body: JSON.stringify({ name: "Listas", mode: "label", stages: [] }),
-      });
-      created = created || Boolean(r?.ok);
-    }
-    return created;
   }
 
   /** Mantém somente as colunas. Os contatos são renderizados diretamente do

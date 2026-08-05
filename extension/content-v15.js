@@ -77,19 +77,21 @@
     if (document.visibilityState !== "visible") return;
     ensureWaScriptsInjected()
       .then(() => {
-        // Primeira sincronização automática após o boot (30s depois)
-        setTimeout(() => syncWaData(), 10000);
+        // Primeira sincronização automática rápida após o boot (5s depois)
+        setTimeout(() => syncWaData(), 5000);
+        // Segunda sincronização um pouco depois para garantir que o WPP carregou as fotos
+        setTimeout(() => syncWaData(), 15000);
       })
       .catch(() => null);
   }
-  setTimeout(prewarmEngine, 20000);
+  setTimeout(prewarmEngine, 10000); // Reduzi para 10s para ser mais rápido
 
-  // Sincronização automática a cada 5 minutos
+  // Sincronização automática a cada 3 minutos (mais frequente para capturar mudanças)
   setInterval(() => {
     if (document.visibilityState === "visible" && status.paired) {
       syncWaData();
     }
-  }, 5 * 60 * 1000);
+  }, 3 * 60 * 1000);
 
 
   let pollHeartbeat = null;

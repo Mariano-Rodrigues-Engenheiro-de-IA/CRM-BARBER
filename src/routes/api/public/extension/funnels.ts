@@ -94,6 +94,29 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
         }
         const shop = auth.token.barbershop_id;
 
+        // Evita duplicar funis padrão (mode: tab ou label)
+        if (parsed.data.mode === "tab" || parsed.data.mode === "label") {
+          const { data: existing } = await supabaseAdmin
+            .from("funnels")
+            .select("id, name, mode, source_label_id, sort_order")
+            .eq("barbershop_id", shop)
+            .eq("mode", parsed.data.mode)
+            .maybeSingle();
+          
+          if (existing) {
+            const { data: stages } = await supabaseAdmin
+              .from("funnel_stages")
+              .select("id, funnel_id, name, color, sort_order")
+              .eq("funnel_id", existing.id)
+              .order("sort_order", { ascending: true });
+            
+            return jsonResponse(request, {
+              ok: true,
+              funnel: { ...existing, stages: stages ?? [], cards: [] },
+            });
+          }
+        }
+
         const { count } = await supabaseAdmin
           .from("funnels")
           .select("id", { count: "exact", head: true })

@@ -399,22 +399,25 @@
   // CSS não entende o número puro — precisa converter pra "#rrggbb".
   function normalizeLabelColor(raw) {
     if (raw == null) return null;
-    // Se já for uma string hex válida
-    const s = String(raw).trim();
-    if (s.startsWith("#") && (s.length === 7 || s.length === 9)) return s.slice(0, 7);
-    if (/^[0-9a-fA-F]{6}$/.test(s)) return `#${s}`;
-
-    // Se for um número (formato interno do WhatsApp)
-    if (typeof raw === "number" && Number.isFinite(raw)) {
-      // Às vezes o número é ARGB, pegamos os últimos 3 bytes (RGB)
-      const r = (raw >> 16) & 0xff;
-      const g = (raw >> 8) & 0xff;
-      const b = raw & 0xff;
-      return (
-        "#" +
-        [r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("")
-      );
+    
+    // Se for um número grande (ARGB)
+    if (typeof raw === "number" || (!isNaN(raw) && !String(raw).startsWith("#"))) {
+      const num = Number(raw);
+      const u32 = num >>> 0;
+      const r = (u32 >> 16) & 0xff;
+      const g = (u32 >> 8) & 0xff;
+      const b = u32 & 0xff;
+      return "#" + [r, g, b].map(c => c.toString(16).padStart(2, "0")).join("");
     }
+
+    const s = String(raw).trim();
+    if (s.startsWith("#")) {
+      if (s.length === 7) return s;
+      if (s.length === 9) return "#" + s.slice(3); // Remove alpha de #AARRGGBB
+      if (s.length === 4) return s;
+    }
+    if (/^[0-9a-fA-F]{6}$/.test(s)) return `#${s}`;
+    
     return null;
   }
 
@@ -548,16 +551,13 @@
               .slice(0, 50);
           })(),
           last_message_at: ts > 0 ? new Date(ts * 1000).toISOString() : null,
-          profile_picture_url: await resolveProfilePicture(waId),
+          profile_picture_url: null,
         });
       }
     } catch (e) {
       console.warn("[CRM] conversas indisponíveis:", e?.message || e);
     }
 
-    // Contatos que pertencem a uma lista mas cuja conversa não está carregada
-    // no ChatStore ficavam de fora — era isso que reduzia uma lista de 100
-    // para ~37 no CRM. Aqui completamos pelo ContactStore.
     try {
       const seen = new Set(contacts.map((c) => c.wa_id));
       const known = new Set(labels.map((l) => l.id));
@@ -574,12 +574,23 @@
           is_group: chatId.endsWith("@g.us"),
           label_ids: ids.slice(0, 50),
           last_message_at: null,
-          profile_picture_url: await resolveProfilePicture(chatId),
+          profile_picture_url: null,
         });
         seen.add(chatId);
       }
     } catch (e) {
       console.warn("[CRM] membros de lista indisponíveis:", e?.message || e);
+    }
+
+    // Otimização: Busca fotos de perfil em paralelo para os top 300 contatos
+    const topContacts = contacts.filter(c => !c.is_group).slice(0, 300);
+    const BATCH_SIZE = 20;
+    for (let i = 0; i < topContacts.length; i += BATCH_SIZE) {
+      const batch = topContacts.slice(i, i + BATCH_SIZE);
+      await Promise.all(batch.map(async (c) => {
+        try { c.profile_picture_url = await resolveProfilePicture(c.wa_id); } catch {}
+      }));
+      await new Promise(r => setTimeout(r, 50));
     }
 
 
