@@ -388,21 +388,19 @@
     renderTopbar();
   }
 
-  /** Lista (etiqueta do WhatsApp): mostra os contatos na gaveta e filtra
-   * a lista nativa de conversas pela etiqueta correspondente. */
+  /** Lista (etiqueta do WhatsApp): filtra
+   * a lista nativa de conversas pela etiqueta correspondente (inbox do WhatsApp). */
   async function filterByLabel(labelId, labelName) {
     const key = `label:${labelId}`;
     if (activeFilter?.key === key) return clearChatFilter();
     activeFilter = { key, kind: "label", id: labelId, name: labelName || "Lista" };
     renderTopbar();
-    // Encontrar o elemento da pílula clicada
-    const anchor = document.querySelector(`[data-label-id="${labelId}"]`);
-    openDrawer(anchor);
+    closeDrawer();
     void applyNativeChatList("labels", [labelId]);
   }
 
-  /** Etapa de funil: a gaveta lista os cards daquela etapa e a lista de
-   * conversas é filtrada pelos wa_id correspondentes. */
+  /** Etapa de funil: filtra a lista nativa de conversas
+   * pelos wa_id correspondentes àquela etapa (inbox do WhatsApp). */
   async function filterByStage(funnelId, stageId) {
     const key = `stage:${stageId}`;
     if (activeFilter?.key === key) return clearChatFilter();
@@ -418,9 +416,7 @@
       funnelName: funnel.name,
     };
     renderTopbar();
-    // Encontrar o elemento da pílula clicada
-    const anchor = document.querySelector(`[data-stage="${stageId}"]`);
-    openDrawer(anchor);
+    closeDrawer();
     const waIds = (funnel.cards || [])
       .filter((c) => c.stage_id === stageId && c.wa_id)
       .map((c) => c.wa_id);
