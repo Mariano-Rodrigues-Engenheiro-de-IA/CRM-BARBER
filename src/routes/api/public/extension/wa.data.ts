@@ -28,7 +28,8 @@ export const Route = createFileRoute("/api/public/extension/wa/data")({
           return jsonResponse(request, { ok: false, error: labels.error.message }, { status: 500 });
         }
 
-        let contacts = await supabaseAdmin
+        // Tipo largo: os fallbacks abaixo usam selects mais enxutos.
+        let contacts: { data: any[] | null; error: { message: string } | null } = await supabaseAdmin
           .from("wa_contacts")
           .select("id, wa_id, phone, name, is_group, label_ids, last_message_at, profile_picture_url, unread_count")
           .eq("barbershop_id", shop)
