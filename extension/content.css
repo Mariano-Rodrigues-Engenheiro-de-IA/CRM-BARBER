@@ -1,28 +1,28 @@
-/* Zetta CRM — identidade visual "verde profundo".
+/* Zetta CRM — identidade visual Zaylo IA.
    Paleta única, definida em variáveis, usada por trilho, topo, pílulas,
-   menus, modais e a gaveta de contatos. Objetivo: tirar o peso do preto
-   puro e trabalhar tons de verde-escuro com um acento verde vivo. */
+   menus, modais e a gaveta de contatos. Identidade Zaylo IA: azul da marca
+   como acento principal, tons neutros claros (cinza/branco/preto) como base. */
 
 :root {
-  /* superfícies - paleta clara com cinza e verde WhatsApp */
-  --z-ink: #f5f5f5;        /* trilho lateral (cinza muito claro) */
+  /* superfícies - paleta clara neutra (cinza/branco) */
+  --z-ink: #f7f8fa;        /* trilho lateral (cinza muito claro com leve azul) */
   --z-bar: #ffffff;        /* barra do topo (branco) */
-  --z-surface: #f0f0f0;    /* cards, menus, modais (cinza claro) */
-  --z-surface-2: #e8e8e8;  /* hover / estado intermediário (cinza mais escuro) */
-  --z-line: #d0d0d0;       /* bordas (cinza médio) */
-  --z-line-soft: #e0e0e0;  /* bordas suaves */
+  --z-surface: #f0f2f5;    /* cards, menus, modais (cinza claro) */
+  --z-surface-2: #e5e8ec;  /* hover / estado intermediário */
+  --z-line: #d1d5db;       /* bordas (cinza médio) */
+  --z-line-soft: #e4e7ec;  /* bordas suaves */
 
-  /* acento - verde WhatsApp */
-  --z-accent: #25d366;     /* verde WhatsApp oficial */
-  --z-accent-strong: #1fa854;
-  --z-accent-soft: rgba(37, 211, 102, 0.12);
-  --z-on-accent: #ffffff;  /* texto branco sobre verde */
+  /* acento - azul Zaylo IA */
+  --z-accent: #1a3a8a;     /* azul Zaylo IA (cor principal da marca) */
+  --z-accent-strong: #122a6b;  /* azul mais escuro para hover */
+  --z-accent-soft: rgba(26, 58, 138, 0.10);  /* azul com transparência */
+  --z-on-accent: #ffffff;  /* texto branco sobre azul */
 
   /* texto */
   --z-text: #1a1a1a;       /* texto escuro */
-  --z-text-dim: #666666;   /* texto médio */
-  --z-text-faint: #999999; /* texto claro */
-  --z-danger: #f87171;
+  --z-text-dim: #64748b;   /* texto médio (cinza azulado) */
+  --z-text-faint: #94a3b8; /* texto claro (cinza azulado) */
+  --z-danger: #ef4444;
 
   --z-radius: 10px;
   --z-font: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
@@ -64,7 +64,7 @@ html body.crm-shell #app {
   left: 0;
   bottom: 0;
   width: 46px;
-  background: linear-gradient(180deg, var(--z-ink) 0%, #efefef 100%);
+  background: linear-gradient(180deg, var(--z-ink) 0%, #edf0f4 100%);
   border-right: 1px solid var(--z-line-soft);
   z-index: 1000000;
   display: flex;
@@ -220,7 +220,7 @@ html body.crm-shell #app {
   box-shadow: 0 0 0 3px var(--z-accent-soft);
 }
 .crm-pill-on:hover { background: var(--z-accent-strong); color: var(--z-on-accent); }
-.crm-pill-on:hover .crm-pill-count { background: rgba(0, 0, 0, 0.18); color: var(--z-on-accent); }
+.crm-pill-on:hover .crm-pill-count { background: rgba(255, 255, 255, 0.2); color: var(--z-on-accent); }
 .crm-pill-on .crm-pill-count, .crm-pill-on .crm-pill-value, .crm-pill-on .crm-pill-gear { color: var(--z-on-accent); }
 .crm-pill-value { font-weight: 500; color: var(--z-accent); text-transform: none; }
 .crm-pill-count {
@@ -232,7 +232,7 @@ html body.crm-shell #app {
   padding: 1px 6px;
   font-size: 10px;
 }
-.crm-pill-on .crm-pill-count { background: rgba(0, 0, 0, 0.16); }
+.crm-pill-on .crm-pill-count { background: rgba(255, 255, 255, 0.18); }
 .crm-pill-dot {
   width: 7px;
   height: 7px;
@@ -423,7 +423,7 @@ html body.crm-shell #app {
   gap: 8px;
   padding: 14px 14px 12px;
   border-bottom: 1px solid var(--z-line-soft);
-  background: linear-gradient(135deg, #f9f9f9 0%, #ffffff 100%);
+  background: linear-gradient(135deg, #f7f8fa 0%, #ffffff 100%);
 }
 .crm-dw-kind {
   margin: 0 0 2px;
