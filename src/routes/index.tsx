@@ -148,38 +148,24 @@ function Landing() {
       </header>
 
       {/* Hero */}
-      <section className="mx-auto grid max-w-6xl gap-6 px-5 py-6 md:gap-10 md:py-24 md:grid-cols-2 md:items-center">
-        <div className="space-y-4 md:space-y-6">
-          <span className="hidden md:inline-block rounded-full border border-yellow-400/40 bg-yellow-400/10 px-3 py-1 text-[11px] font-semibold tracking-wider text-yellow-400">
-            OFERTA DE LANÇAMENTO · 5 VAGAS
-          </span>
-          <h1 className="order-1 text-2xl font-bold leading-[1.15] tracking-tight sm:text-4xl md:order-none md:text-5xl md:leading-[1.08]">
-            O CRM completo da sua barbearia{" "}
-            <span className="text-yellow-400">dentro do WhatsApp</span>
-          </h1>
-          <p className="hidden md:block text-lg text-neutral-300">
-            Assinaturas, vendas, funis, disparo em massa, respostas rápidas e gestão de equipe —
-            tudo em um só lugar, no seu próprio número, sem trocar de ferramenta e sem abrir
-            conversa por conversa.
-          </p>
-          <div className="order-3 flex flex-wrap items-center gap-3 md:order-none">
-            <Button size="lg" className="bg-yellow-400 font-bold text-neutral-950 hover:bg-yellow-300" onClick={scrollToForm}>
-              QUERO TESTAR GRÁTIS
-            </Button>
-            <span className="text-xs text-neutral-400">
-              Sem cartão para começar · {PROMO_PRICE_LABEL} no lançamento (depois {PREMIUM_PRICE_LABEL})
-            </span>
-          </div>
+      <section className="mx-auto grid max-w-6xl gap-4 px-5 py-6 md:grid-cols-2 md:items-center md:gap-10 md:py-24">
+        <span className="hidden md:col-start-1 md:row-start-1 md:inline-block rounded-full border border-yellow-400/40 bg-yellow-400/10 px-3 py-1 text-[11px] font-semibold tracking-wider text-yellow-400">
+          OFERTA DE LANÇAMENTO · 5 VAGAS
+        </span>
 
-          <div className="hidden md:flex flex-wrap gap-6 pt-2 text-sm text-neutral-400">
-            <span>✓ Usa seu número atual</span>
-            <span>✓ Instala em 1 clique</span>
-            <span>✓ Cancela quando quiser</span>
-          </div>
-        </div>
+        <h1 className="order-1 text-2xl font-bold leading-[1.15] tracking-tight sm:text-4xl md:order-none md:col-start-1 md:row-start-2 md:text-5xl md:leading-[1.08]">
+          O CRM completo da sua barbearia{" "}
+          <span className="text-yellow-400">dentro do WhatsApp</span>
+        </h1>
+
+        <p className="order-2 text-base text-neutral-300 md:order-none md:col-start-1 md:row-start-3 md:text-lg">
+          Assinaturas, vendas, funis, disparo em massa, respostas rápidas e gestão de equipe —
+          tudo em um só lugar, no seu próprio número, sem trocar de ferramenta e sem abrir
+          conversa por conversa.
+        </p>
 
         {/* Vídeo de vendas */}
-        <div className="order-2 overflow-hidden rounded-2xl border border-white/10 bg-neutral-900 shadow-2xl md:order-none md:rounded-3xl">
+        <div className="order-3 overflow-hidden rounded-2xl border border-white/10 bg-neutral-900 shadow-2xl md:order-none md:col-start-2 md:row-start-1 md:row-span-5 md:rounded-3xl">
           <div className="relative aspect-video w-full">
             <iframe
               src="https://www.youtube.com/embed/QJYO1QX-tKQ"
@@ -190,6 +176,21 @@ function Landing() {
               loading="lazy"
             />
           </div>
+        </div>
+
+        <div className="order-4 flex flex-wrap items-center gap-3 md:order-none md:col-start-1 md:row-start-4">
+          <Button size="lg" className="bg-yellow-400 font-bold text-neutral-950 hover:bg-yellow-300" onClick={scrollToForm}>
+            QUERO TESTAR GRÁTIS
+          </Button>
+          <span className="text-xs text-neutral-400">
+            Sem cartão para começar · {PROMO_PRICE_LABEL} no lançamento (depois {PREMIUM_PRICE_LABEL})
+          </span>
+        </div>
+
+        <div className="hidden md:col-start-1 md:row-start-5 md:flex flex-wrap gap-6 pt-2 text-sm text-neutral-400">
+          <span>✓ Usa seu número atual</span>
+          <span>✓ Instala em 1 clique</span>
+          <span>✓ Cancela quando quiser</span>
         </div>
       </section>
 
