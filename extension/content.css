@@ -64,7 +64,7 @@ html body.crm-shell #app {
   left: 0;
   bottom: 0;
   width: 46px;
-  background: linear-gradient(180deg, var(--z-ink) 0%, #0b1712 100%);
+  background: linear-gradient(180deg, var(--z-ink) 0%, #efefef 100%);
   border-right: 1px solid var(--z-line-soft);
   z-index: 1000000;
   display: flex;
@@ -227,7 +227,7 @@ html body.crm-shell #app {
   font-weight: 700;
   color: var(--z-text-dim);
   text-transform: none;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(0, 0, 0, 0.08);
   border-radius: 999px;
   padding: 1px 6px;
   font-size: 10px;
