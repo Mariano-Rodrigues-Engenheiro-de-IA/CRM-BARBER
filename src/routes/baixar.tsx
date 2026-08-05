@@ -23,8 +23,8 @@ export const Route = createFileRoute("/baixar")({
   component: BaixarPage,
 });
 
-const VERSION = "0.34.12";
-const FILE = "/zetta-crm-v3412.zip";
+const VERSION = "0.34.12 (Rev. 1)";
+const FILE = "/zetta-crm-v3412-rev1.zip";
 
 function BaixarPage() {
   const [status, setStatus] = useState<string | null>(null);
@@ -69,7 +69,7 @@ function BaixarPage() {
           onClick={download}
           className="w-full rounded-md bg-primary px-6 py-4 text-sm font-medium text-primary-foreground transition hover:opacity-90"
         >
-          Baixar zetta-crm-v3412.zip
+          Baixar zetta-crm-v3412-rev1.zip
         </button>
 
         {status && (
