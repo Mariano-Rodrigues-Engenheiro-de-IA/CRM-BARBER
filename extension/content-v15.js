@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.34.16";
+  const CRM_VERSION = "0.34.17";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -363,84 +363,50 @@
   // ---------------------------------------------------------------------
   // Filtro da própria lista de conversas do WhatsApp (não abre o CRM).
   // ---------------------------------------------------------------------
-  let activeFilter = null; // { key, terms: string[] }
-  let filterObserver = null;
-  let filterFrame = null;
+  let activeFilter = null; // { key }
 
-  function chatRows() {
-    const pane = document.querySelector("#pane-side");
-    return pane ? Array.from(pane.querySelectorAll('[role="listitem"]')) : [];
-  }
-
-  function rowText(row) {
-    const t = row.querySelector("span[title]");
-    return String(t?.getAttribute("title") || row.innerText || "").toLowerCase();
-  }
-
-  function applyChatFilter() {
-    if (!activeFilter) return;
-    for (const row of chatRows()) {
-      const text = rowText(row);
-      const digits = text.replace(/\D/g, "");
-      const match = activeFilter.terms.some((t) =>
-        /^\d{8,}$/.test(t) ? digits.includes(t.slice(-8)) : text.includes(t),
-      );
-      row.style.display = match ? "" : "none";
+  /** Aplica o filtro nativo do próprio WhatsApp (WPP.chat.setChatList),
+   * em vez de esconder linhas via DOM — mais robusto, é a mesma função que
+   * o WhatsApp usa quando o usuário clica num filtro de etiqueta nativo. */
+  async function applyNativeChatList(type, ids) {
+    try {
+      await window.WPP?.chat?.setChatList?.(type, ids);
+    } catch (e) {
+      console.warn("[CRM] falha ao aplicar filtro nativo de lista:", e?.message || e);
     }
   }
-
 
   function clearChatFilter() {
-    for (const row of chatRows()) row.style.display = "";
-    filterObserver?.disconnect();
-    filterObserver = null;
-    if (filterFrame !== null) cancelAnimationFrame(filterFrame);
-    filterFrame = null;
     activeFilter = null;
+    void applyNativeChatList("all");
     renderTopbar();
   }
 
-  function setChatFilter(key, terms) {
-    if (activeFilter?.key === key) return clearChatFilter();
-    const clean = terms.map((t) => String(t || "").trim().toLowerCase()).filter(Boolean);
-    activeFilter = { key, terms: clean };
-    const pane = document.querySelector("#pane-side");
-    filterObserver?.disconnect();
-    filterObserver = new MutationObserver(() => {
-      if (filterFrame !== null) return;
-      filterFrame = requestAnimationFrame(() => {
-        filterFrame = null;
-        applyChatFilter();
-      });
-    });
-    if (pane) filterObserver.observe(pane, { childList: true, subtree: true });
-    applyChatFilter();
-    renderTopbar();
-  }
-
-  /** Lista: filtra a lista de conversas pelos contatos daquela lista. */
+  /** Lista: filtra a lista de conversas do WhatsApp pela etiqueta nativa
+   * correspondente — usa o filtro nativo do próprio WhatsApp (mesma coisa
+   * que o usuário conseguiria clicando na etiqueta dentro do WhatsApp). */
   async function filterByLabel(labelId, _labelName) {
-    const terms = [];
-    for (const c of waData.contacts || []) {
-      if (!(c.label_ids || []).includes(labelId)) continue;
-      if (c.name) terms.push(c.name);
-      if (c.phone) terms.push(c.phone);
-      if (!c.name && !c.phone && c.wa_id) terms.push(String(c.wa_id).split("@")[0]);
-    }
-    setChatFilter(`label:${labelId}`, terms);
+    const key = `label:${labelId}`;
+    if (activeFilter?.key === key) return clearChatFilter();
+    activeFilter = { key };
+    await applyNativeChatList("labels", [labelId]);
+    renderTopbar();
   }
 
-  /** Aba/etapa do funil principal: filtra a lista pelos leads daquela etapa. */
-  function filterByStage(funnelId, stageId) {
+  /** Aba/etapa do funil principal: sem correspondência de etiqueta nativa,
+   * então filtra a lista pelos wa_id dos contatos daquela etapa usando o
+   * modo "custom" do filtro nativo do WhatsApp. */
+  async function filterByStage(funnelId, stageId) {
+    const key = `stage:${stageId}`;
+    if (activeFilter?.key === key) return clearChatFilter();
     const funnel = funnels.find((f) => f.id === funnelId);
     if (!funnel) return;
-    const terms = [];
-    for (const c of funnel.cards || []) {
-      if (c.stage_id !== stageId) continue;
-      if (c.title) terms.push(c.title);
-      if (c.phone) terms.push(c.phone);
-    }
-    setChatFilter(`stage:${stageId}`, terms);
+    const waIds = (funnel.cards || [])
+      .filter((c) => c.stage_id === stageId && c.wa_id)
+      .map((c) => c.wa_id);
+    activeFilter = { key };
+    await applyNativeChatList("custom", waIds);
+    renderTopbar();
   }
 
 
