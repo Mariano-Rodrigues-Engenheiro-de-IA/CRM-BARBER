@@ -33,7 +33,9 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
             .order("sort_order", { ascending: true }),
           supabaseAdmin
             .from("funnel_cards")
-            .select("id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id")
+            .select(
+              "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id)",
+            )
             .eq("barbershop_id", shop)
             .order("sort_order", { ascending: true }),
         ]);
@@ -43,10 +45,19 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
         }
 
+        // wa_contacts(wa_id) vem aninhado pelo relacionamento; achata pra
+        // card.wa_id direto, que é o identificador real do WhatsApp — o
+        // wa_contact_id sozinho é só o UUID interno, não serve pra abrir chat.
+        const flatCards = (cards.data ?? []).map((c: any) => ({
+          ...c,
+          wa_id: c.wa_contacts?.wa_id ?? null,
+          wa_contacts: undefined,
+        }));
+
         const result = (funnels.data ?? []).map((f) => ({
           ...f,
           stages: (stages.data ?? []).filter((s) => s.funnel_id === f.id),
-          cards: (cards.data ?? []).filter((c) => c.funnel_id === f.id),
+          cards: flatCards.filter((c) => c.funnel_id === f.id),
         }));
         return jsonResponse(request, { ok: true, funnels: result });
       },

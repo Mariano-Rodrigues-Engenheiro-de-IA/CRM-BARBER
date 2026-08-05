@@ -180,6 +180,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
         sort_order: index,
         customer_id: null,
         wa_contact_id: contact.id,
+        wa_id: contact.wa_id,
       }));
   }
 
@@ -585,9 +586,9 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                         <div className="mt-2 flex items-center gap-1">
                           <CardAction
                             title="Abrir conversa no WhatsApp"
-                            disabled={!canOpenWhatsapp(card.phone, card.wa_contact_id)}
+                            disabled={!canOpenWhatsapp(card.phone, card.wa_id)}
                             onClick={() =>
-                              void openWhatsappChat(card.phone || "", card.title, card.wa_contact_id)
+                              void openWhatsappChat(card.phone || "", card.title, card.wa_id)
                             }
                           >
                             <IconWhatsapp />
@@ -990,9 +991,9 @@ function CardDrawer({
               </button>
             ))}
           </div>
-          {canOpenWhatsapp(card.phone, card.wa_contact_id) && (
+          {canOpenWhatsapp(card.phone, card.wa_id) && (
             <button
-              onClick={() => void openWhatsappChat(card.phone || "", card.title, card.wa_contact_id)}
+              onClick={() => void openWhatsappChat(card.phone || "", card.title, card.wa_id)}
               className="ml-auto flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
             >
               <IconWhatsapp /> WhatsApp

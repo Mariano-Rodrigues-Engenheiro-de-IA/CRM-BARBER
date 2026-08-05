@@ -105,6 +105,10 @@ export type FunnelCard = {
   sort_order: number;
   customer_id: string | null;
   wa_contact_id: string | null;
+  /** Identificador real do WhatsApp (ex: "5511...@c.us" ou "...@lid"), vindo
+   * de wa_contacts.wa_id via join. Diferente de wa_contact_id, que é só o
+   * UUID interno — não serve pra abrir chat na extensão. */
+  wa_id?: string | null;
 };
 
 export type Funnel = {
