@@ -720,13 +720,32 @@
         if (typeof window.WPP?.labels?.addOrRemoveLabels !== "function") {
           throw new Error("Listas indisponíveis nesta versão do WhatsApp");
         }
-        await window.WPP.labels.addOrRemoveLabels([d.waId], [{ labelId: String(d.labelId), type: "add" }]);
+        const op = d.op === "remove" ? "remove" : "add";
+        await window.WPP.labels.addOrRemoveLabels([d.waId], [{ labelId: String(d.labelId), type: op }]);
         window.postMessage({ __crm: "apply_label_done_v290", id: d.id, ok: true, data: true }, "*");
       } catch (e) {
         window.postMessage({ __crm: "apply_label_done_v290", id: d.id, ok: false, error: e?.message || String(e) }, "*");
       }
       return;
     }
+
+    // Filtro da lista de conversas do WhatsApp. O WPP só existe aqui no MAIN
+    // world — o content script precisa passar por esta ponte.
+    if (d.__crm === "chatlist_v350") {
+      try {
+        await waitForWpp();
+        if (typeof window.WPP?.chat?.setChatList !== "function") {
+          throw new Error("setChatList indisponível nesta versão do WhatsApp");
+        }
+        if (d.listType === "all") await window.WPP.chat.setChatList("all");
+        else await window.WPP.chat.setChatList(d.listType, d.ids || []);
+        window.postMessage({ __crm: "chatlist_done_v350", id: d.id, ok: true, data: true }, "*");
+      } catch (e) {
+        window.postMessage({ __crm: "chatlist_done_v350", id: d.id, ok: false, error: e?.message || String(e) }, "*");
+      }
+      return;
+    }
+
 
     if (d.__crm === "action_v342") {
       if (!rememberAction(d.id)) return;
