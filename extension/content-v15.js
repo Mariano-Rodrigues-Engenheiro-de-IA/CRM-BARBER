@@ -395,7 +395,9 @@
     if (activeFilter?.key === key) return clearChatFilter();
     activeFilter = { key, kind: "label", id: labelId, name: labelName || "Lista" };
     renderTopbar();
-    openDrawer();
+    // Encontrar o elemento da pílula clicada
+    const anchor = document.querySelector(`[data-label-id="${labelId}"]`);
+    openDrawer(anchor);
     void applyNativeChatList("labels", [labelId]);
   }
 
@@ -416,7 +418,9 @@
       funnelName: funnel.name,
     };
     renderTopbar();
-    openDrawer();
+    // Encontrar o elemento da pílula clicada
+    const anchor = document.querySelector(`[data-stage="${stageId}"]`);
+    openDrawer(anchor);
     const waIds = (funnel.cards || [])
       .filter((c) => c.stage_id === stageId && c.wa_id)
       .map((c) => c.wa_id);
@@ -428,11 +432,13 @@
   // ---------------------------------------------------------------------
   let drawerRef = null;
   let drawerQuery = "";
+  let drawerAnchor = null; // Elemento que acionou o drawer
 
   function closeDrawer() {
     drawerRef?.remove();
     drawerRef = null;
     drawerQuery = "";
+    drawerAnchor = null;
   }
 
   function contactByWaId(waId) {
@@ -481,7 +487,7 @@
       .toUpperCase();
   }
 
-  function openDrawer() {
+  function openDrawer(anchor) {
     if (!drawerRef) {
       const el = document.createElement("div");
       el.id = "crm-drawer";
@@ -515,6 +521,7 @@
       });
       el.querySelector(".crm-dw-list").addEventListener("click", onDrawerListClick);
     }
+    drawerAnchor = anchor;
     renderDrawer();
   }
 
@@ -523,7 +530,53 @@
     drawerRef.querySelector(".crm-dw-kind").textContent =
       activeFilter.kind === "label" ? "Lista" : `Funil · ${activeFilter.funnelName || ""}`;
     drawerRef.querySelector(".crm-dw-title").textContent = activeFilter.name;
+    
+    // Posicionar o popover abaixo da aba clicada
+    positionDrawer();
     renderDrawerList();
+  }
+
+  function positionDrawer() {
+    if (!drawerRef) return;
+    
+    // Encontrar a aba ativa (pill com classe crm-pill-on)
+    let anchor = drawerAnchor;
+    if (!anchor) {
+      anchor = document.querySelector(".crm-pill-on");
+    }
+    
+    if (!anchor) {
+      // Fallback: centralizar na tela
+      drawerRef.style.top = "50%";
+      drawerRef.style.left = "50%";
+      drawerRef.style.transform = "translate(-50%, -50%)";
+      return;
+    }
+    
+    const rect = anchor.getBoundingClientRect();
+    const drawerWidth = 420;
+    const drawerHeight = drawerRef.offsetHeight || 600;
+    const gap = 10; // espaço entre a aba e o popover
+    
+    // Posicionar abaixo da aba, centralizado horizontalmente em relação a ela
+    let top = rect.bottom + gap;
+    let left = rect.left + (rect.width - drawerWidth) / 2;
+    
+    // Ajustar se sair da tela (horizontal)
+    const viewportWidth = window.innerWidth;
+    if (left < 8) left = 8;
+    if (left + drawerWidth > viewportWidth - 8) left = viewportWidth - drawerWidth - 8;
+    
+    // Ajustar se sair da tela (vertical)
+    const viewportHeight = window.innerHeight;
+    if (top + drawerHeight > viewportHeight - 8) {
+      // Se não cabe abaixo, tentar acima
+      top = rect.top - drawerHeight - gap;
+    }
+    
+    drawerRef.style.top = `${Math.max(8, top)}px`;
+    drawerRef.style.left = `${left}px`;
+    drawerRef.style.transform = "none";
   }
 
   function renderDrawerList() {

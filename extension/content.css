@@ -4,24 +4,24 @@
    puro e trabalhar tons de verde-escuro com um acento verde vivo. */
 
 :root {
-  /* superfícies */
-  --z-ink: #0e1a15;        /* trilho lateral (mais profundo) */
-  --z-bar: #12211b;        /* barra do topo */
-  --z-surface: #16281f;    /* cards, menus, modais */
-  --z-surface-2: #1b3227;  /* hover / estado intermediário */
-  --z-line: #23402f;       /* bordas */
-  --z-line-soft: #1c3226;
+  /* superfícies - paleta clara com cinza e verde WhatsApp */
+  --z-ink: #f5f5f5;        /* trilho lateral (cinza muito claro) */
+  --z-bar: #ffffff;        /* barra do topo (branco) */
+  --z-surface: #f0f0f0;    /* cards, menus, modais (cinza claro) */
+  --z-surface-2: #e8e8e8;  /* hover / estado intermediário (cinza mais escuro) */
+  --z-line: #d0d0d0;       /* bordas (cinza médio) */
+  --z-line-soft: #e0e0e0;  /* bordas suaves */
 
-  /* acento */
-  --z-accent: #2ecc8f;
-  --z-accent-strong: #22b47c;
-  --z-accent-soft: rgba(46, 204, 143, 0.14);
-  --z-on-accent: #06231a;
+  /* acento - verde WhatsApp */
+  --z-accent: #25d366;     /* verde WhatsApp oficial */
+  --z-accent-strong: #1fa854;
+  --z-accent-soft: rgba(37, 211, 102, 0.12);
+  --z-on-accent: #ffffff;  /* texto branco sobre verde */
 
   /* texto */
-  --z-text: #e7f2ec;
-  --z-text-dim: #9db3a8;
-  --z-text-faint: #6f877c;
+  --z-text: #1a1a1a;       /* texto escuro */
+  --z-text-dim: #666666;   /* texto médio */
+  --z-text-faint: #999999; /* texto claro */
   --z-danger: #f87171;
 
   --z-radius: 10px;
@@ -399,30 +399,31 @@ html body.crm-shell #app {
 .crm-chat-btn-icon { padding: 6px 8px; margin-left: 6px; }
 
 /* ------------------------------------------------------------------ */
-/* Gaveta de contatos — abre ao clicar numa LISTA ou numa ETAPA de funil */
+/* Popover de contatos — abre abaixo da aba clicada, centralizado */
 /* ------------------------------------------------------------------ */
 #crm-drawer {
   position: fixed;
-  top: 40px;
-  left: 46px;
-  bottom: 0;
-  width: 340px;
   z-index: 999999;
   display: flex;
   flex-direction: column;
   background: var(--z-bar);
-  border-right: 1px solid var(--z-line);
+  border: 1px solid var(--z-line);
+  border-radius: 12px;
   font-family: var(--z-font);
   color: var(--z-text);
-  box-shadow: 18px 0 40px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  width: 420px;
+  max-height: 600px;
+  /* Posicionamento será definido via JavaScript */
 }
 .crm-dw-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
-  padding: 12px 12px 10px;
+  padding: 14px 14px 12px;
   border-bottom: 1px solid var(--z-line-soft);
+  background: linear-gradient(135deg, #f9f9f9 0%, #ffffff 100%);
 }
 .crm-dw-kind {
   margin: 0 0 2px;
