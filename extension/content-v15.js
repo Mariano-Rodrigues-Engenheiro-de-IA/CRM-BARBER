@@ -361,16 +361,19 @@
   }
 
   // ---------------------------------------------------------------------
-  // Filtro da própria lista de conversas do WhatsApp (não abre o CRM).
+  // Listas e etapas de funil funcionais dentro do WhatsApp:
+  // clicar numa pílula abre a gaveta com os contatos daquele grupo e ainda
+  // tenta aplicar o filtro nativo da lista de conversas.
   // ---------------------------------------------------------------------
-  let activeFilter = null; // { key }
+  let activeFilter = null; // { key, kind, id, funnelId, name }
 
-  /** Aplica o filtro nativo do próprio WhatsApp (WPP.chat.setChatList),
-   * em vez de esconder linhas via DOM — mais robusto, é a mesma função que
-   * o WhatsApp usa quando o usuário clica num filtro de etiqueta nativo. */
-  async function applyNativeChatList(type, ids) {
+  /** Aplica o filtro nativo do WhatsApp (WPP.chat.setChatList).
+   * O WPP vive no MAIN world, então a chamada precisa passar pelo bridge —
+   * era por isso que clicar na pílula não fazia nada. */
+  async function applyNativeChatList(listType, ids) {
     try {
-      await window.WPP?.chat?.setChatList?.(type, ids);
+      await ensureWaScriptsInjected();
+      await askBridge("chatlist_v350", "chatlist_done_v350", { listType, ids: ids || [] }, 15000);
     } catch (e) {
       console.warn("[CRM] falha ao aplicar filtro nativo de lista:", e?.message || e);
     }
@@ -378,36 +381,283 @@
 
   function clearChatFilter() {
     activeFilter = null;
+    closeDrawer();
     void applyNativeChatList("all");
     renderTopbar();
   }
 
-  /** Lista: filtra a lista de conversas do WhatsApp pela etiqueta nativa
-   * correspondente — usa o filtro nativo do próprio WhatsApp (mesma coisa
-   * que o usuário conseguiria clicando na etiqueta dentro do WhatsApp). */
-  async function filterByLabel(labelId, _labelName) {
+  /** Lista (etiqueta do WhatsApp): mostra os contatos na gaveta e filtra
+   * a lista nativa de conversas pela etiqueta correspondente. */
+  async function filterByLabel(labelId, labelName) {
     const key = `label:${labelId}`;
     if (activeFilter?.key === key) return clearChatFilter();
-    activeFilter = { key };
-    await applyNativeChatList("labels", [labelId]);
+    activeFilter = { key, kind: "label", id: labelId, name: labelName || "Lista" };
     renderTopbar();
+    openDrawer();
+    void applyNativeChatList("labels", [labelId]);
   }
 
-  /** Aba/etapa do funil principal: sem correspondência de etiqueta nativa,
-   * então filtra a lista pelos wa_id dos contatos daquela etapa usando o
-   * modo "custom" do filtro nativo do WhatsApp. */
+  /** Etapa de funil: a gaveta lista os cards daquela etapa e a lista de
+   * conversas é filtrada pelos wa_id correspondentes. */
   async function filterByStage(funnelId, stageId) {
     const key = `stage:${stageId}`;
     if (activeFilter?.key === key) return clearChatFilter();
     const funnel = funnels.find((f) => f.id === funnelId);
     if (!funnel) return;
+    const stage = (funnel.stages || []).find((s) => s.id === stageId);
+    activeFilter = {
+      key,
+      kind: "stage",
+      id: stageId,
+      funnelId,
+      name: stage?.name || "Etapa",
+      funnelName: funnel.name,
+    };
+    renderTopbar();
+    openDrawer();
     const waIds = (funnel.cards || [])
       .filter((c) => c.stage_id === stageId && c.wa_id)
       .map((c) => c.wa_id);
-    activeFilter = { key };
-    await applyNativeChatList("custom", waIds);
-    renderTopbar();
+    void applyNativeChatList("custom", waIds);
   }
+
+  // ---------------------------------------------------------------------
+  // Gaveta de contatos da lista / etapa selecionada
+  // ---------------------------------------------------------------------
+  let drawerRef = null;
+  let drawerQuery = "";
+
+  function closeDrawer() {
+    drawerRef?.remove();
+    drawerRef = null;
+    drawerQuery = "";
+  }
+
+  function contactByWaId(waId) {
+    if (!waId) return null;
+    return (waData.contacts || []).find((c) => c.wa_id === waId) || null;
+  }
+
+  /** Contatos do grupo selecionado, já normalizados para a gaveta. */
+  function drawerEntries() {
+    if (!activeFilter) return [];
+    if (activeFilter.kind === "label") {
+      return (waData.contacts || [])
+        .filter((c) => (c.label_ids || []).map(String).includes(String(activeFilter.id)))
+        .map((c) => ({
+          wa_id: c.wa_id,
+          name: c.name || c.phone || "Contato",
+          phone: c.phone || null,
+          photo: c.profile_picture_url || null,
+          unread: Number(c.unread_count || 0),
+          card_id: null,
+        }));
+    }
+    const funnel = funnels.find((f) => f.id === activeFilter.funnelId);
+    return ((funnel?.cards) || [])
+      .filter((c) => c.stage_id === activeFilter.id)
+      .map((c) => {
+        const wa = contactByWaId(c.wa_id);
+        return {
+          wa_id: c.wa_id || null,
+          name: c.title || wa?.name || c.phone || "Contato",
+          phone: c.phone || wa?.phone || null,
+          photo: c.profile_picture_url || wa?.profile_picture_url || null,
+          unread: Number(c.unread_count || wa?.unread_count || 0),
+          card_id: c.id,
+        };
+      });
+  }
+
+  function initials(name) {
+    return String(name || "?")
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((p) => p[0])
+      .join("")
+      .toUpperCase();
+  }
+
+  function openDrawer() {
+    if (!drawerRef) {
+      const el = document.createElement("div");
+      el.id = "crm-drawer";
+      el.innerHTML = `
+        <div class="crm-dw-head">
+          <div>
+            <p class="crm-dw-kind"></p>
+            <p class="crm-dw-title"></p>
+            <p class="crm-dw-sub"></p>
+          </div>
+          <button class="crm-dw-close" title="Fechar">✕</button>
+        </div>
+        <input class="crm-dw-search" placeholder="Buscar contato…" />
+        <div class="crm-dw-list"></div>
+        <div class="crm-dw-foot"><span></span><button data-act="open-crm">Abrir no CRM</button></div>
+      `;
+      document.body.appendChild(el);
+      drawerRef = el;
+
+      el.querySelector(".crm-dw-close").addEventListener("click", () => clearChatFilter());
+      el.querySelector(".crm-dw-search").addEventListener("input", (e) => {
+        drawerQuery = e.target.value || "";
+        renderDrawerList();
+      });
+      el.querySelector('[data-act="open-crm"]').addEventListener("click", () => {
+        if (activeFilter?.kind === "stage") {
+          openPainel("funis", `&funnel=${encodeURIComponent(activeFilter.funnelId)}`);
+        } else {
+          openPainel("funis");
+        }
+      });
+      el.querySelector(".crm-dw-list").addEventListener("click", onDrawerListClick);
+    }
+    renderDrawer();
+  }
+
+  function renderDrawer() {
+    if (!drawerRef || !activeFilter) return;
+    drawerRef.querySelector(".crm-dw-kind").textContent =
+      activeFilter.kind === "label" ? "Lista" : `Funil · ${activeFilter.funnelName || ""}`;
+    drawerRef.querySelector(".crm-dw-title").textContent = activeFilter.name;
+    renderDrawerList();
+  }
+
+  function renderDrawerList() {
+    if (!drawerRef) return;
+    const all = drawerEntries();
+    const q = drawerQuery.trim().toLocaleLowerCase("pt-BR");
+    const rows = q
+      ? all.filter(
+          (c) =>
+            String(c.name).toLocaleLowerCase("pt-BR").includes(q) ||
+            String(c.phone || "").includes(q.replace(/\D/g, "")),
+        )
+      : all;
+
+    drawerRef.querySelector(".crm-dw-sub").textContent =
+      `${all.length} contato${all.length === 1 ? "" : "s"}`;
+    drawerRef.querySelector(".crm-dw-foot span").textContent =
+      rows.length === all.length ? "Clique num contato para abrir a conversa" : `${rows.length} encontrado(s)`;
+
+    const list = drawerRef.querySelector(".crm-dw-list");
+    if (!rows.length) {
+      list.innerHTML = `<p class="crm-dw-empty">${
+        all.length
+          ? "Nenhum contato bate com a busca."
+          : activeFilter?.kind === "label"
+            ? "Nenhum contato nesta lista ainda. Sincronize as listas no trilho lateral ou marque conversas com esta etiqueta no WhatsApp."
+            : "Nenhum contato nesta etapa ainda. Use o botão de funil no cabeçalho da conversa para adicionar."
+      }</p>`;
+      return;
+    }
+    list.innerHTML = rows
+      .map(
+        (c, i) => `<div class="crm-dw-row" data-i="${i}">
+          ${
+            c.photo
+              ? `<img class="crm-dw-avatar" src="${escapeHtml(c.photo)}" alt="" />`
+              : `<div class="crm-dw-fallback">${escapeHtml(initials(c.name))}</div>`
+          }
+          <div class="crm-dw-info">
+            <p class="crm-dw-name">${escapeHtml(c.name)}</p>
+            <p class="crm-dw-meta">${escapeHtml(c.phone || c.wa_id || "sem telefone")}</p>
+          </div>
+          ${c.unread ? `<span class="crm-dw-badge">${c.unread > 99 ? "99+" : c.unread}</span>` : ""}
+          <button class="crm-dw-more" data-more="${i}" title="Ações">⋯</button>
+        </div>`,
+      )
+      .join("");
+    drawerRef.__rows = rows;
+  }
+
+  async function onDrawerListClick(e) {
+    const rows = drawerRef?.__rows || [];
+    const more = e.target.closest("[data-more]");
+    if (more) {
+      e.stopPropagation();
+      const entry = rows[Number(more.getAttribute("data-more"))];
+      if (entry) openDrawerRowMenu(more, entry);
+      return;
+    }
+    const row = e.target.closest(".crm-dw-row");
+    if (!row) return;
+    const entry = rows[Number(row.getAttribute("data-i"))];
+    if (entry) void openConversation(entry);
+  }
+
+  async function openConversation(entry) {
+    const target = entry.phone || String(entry.wa_id || "").split("@")[0];
+    if (!target && !entry.wa_id) return crmToast("Contato sem telefone.", "err");
+    const res = await handleWaAction({ phone: target, waId: entry.wa_id, openOnly: true });
+    if (!res?.ok) crmToast(res?.error || "Não consegui abrir a conversa.", "err");
+  }
+
+  function openDrawerRowMenu(anchor, entry) {
+    const items = [{ label: "Abrir conversa", onClick: () => void openConversation(entry) }];
+
+    if (activeFilter?.kind === "stage") {
+      const funnel = funnels.find((f) => f.id === activeFilter.funnelId);
+      for (const st of (funnel?.stages || []).filter((s) => s.id !== activeFilter.id)) {
+        items.push({
+          label: `Mover para “${st.name}”`,
+          onClick: async () => {
+            const r = await chrome.runtime
+              .sendMessage({
+                type: "api",
+                path: "/api/public/extension/funnel-cards",
+                opts: { method: "PATCH", body: JSON.stringify({ id: entry.card_id, stage_id: st.id }) },
+              })
+              .catch(() => null);
+            if (r?.ok) {
+              crmToast(`Movido para ${st.name}`);
+              await loadFunnels();
+              renderDrawer();
+            } else crmToast(r?.error || "Não consegui mover o contato.", "err");
+          },
+        });
+      }
+      items.push({
+        label: "Remover do funil",
+        danger: true,
+        onClick: async () => {
+          const r = await chrome.runtime
+            .sendMessage({
+              type: "api",
+              path: "/api/public/extension/funnel-cards",
+              opts: { method: "DELETE", body: JSON.stringify({ id: entry.card_id }) },
+            })
+            .catch(() => null);
+          if (r?.ok) {
+            crmToast("Removido do funil");
+            await loadFunnels();
+            renderDrawer();
+          } else crmToast(r?.error || "Não consegui remover.", "err");
+        },
+      });
+    } else {
+      items.push({
+        label: "Remover desta lista",
+        danger: true,
+        onClick: async () => {
+          await ensureWaScriptsInjected().catch(() => null);
+          const ok = await askBridge("apply_label_v290", "apply_label_done_v290", {
+            waId: entry.wa_id,
+            labelId: activeFilter.id,
+            op: "remove",
+          });
+          if (ok) {
+            crmToast("Removido da lista");
+            await syncWaData();
+            renderDrawer();
+          } else crmToast("Não consegui remover da lista.", "err");
+        },
+      });
+    }
+    openMenu(anchor, items);
+  }
+
 
 
   function tabFunnel() {
