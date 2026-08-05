@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.34.20";
+  const BRIDGE_VERSION = "0.34.22";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -734,13 +734,19 @@
     if (d.__crm === "chatlist_v350") {
       try {
         await waitForWpp();
+        console.info("[CRM][chatlist] listType=", d.listType, "ids=", d.ids?.length || 0);
         if (typeof window.WPP?.chat?.setChatList !== "function") {
-          throw new Error("setChatList indisponível nesta versão do WhatsApp");
+          // Tenta descobrir métodos alternativos
+          const chatMethods = window.WPP?.chat ? Object.getOwnPropertyNames(Object.getPrototypeOf(window.WPP.chat)).filter(m => m.toLowerCase().includes("list") || m.toLowerCase().includes("filter") || m.toLowerCase().includes("chat")) : [];
+          console.warn("[CRM][chatlist] setChatList indisponível! Métodos disponíveis:", chatMethods);
+          throw new Error("setChatList indisponível nesta versão do WhatsApp. Métodos disponíveis: " + chatMethods.join(", "));
         }
         if (d.listType === "all") await window.WPP.chat.setChatList("all");
         else await window.WPP.chat.setChatList(d.listType, d.ids || []);
+        console.info("[CRM][chatlist] filtrado com sucesso");
         window.postMessage({ __crm: "chatlist_done_v350", id: d.id, ok: true, data: true }, "*");
       } catch (e) {
+        console.warn("[CRM][chatlist] ERRO:", e?.message || e);
         window.postMessage({ __crm: "chatlist_done_v350", id: d.id, ok: false, error: e?.message || String(e) }, "*");
       }
       return;

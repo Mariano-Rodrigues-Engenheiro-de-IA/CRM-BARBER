@@ -23,8 +23,8 @@ export const Route = createFileRoute("/baixar")({
   component: BaixarPage,
 });
 
-const VERSION = "0.34.21";
-const FILE = "/zetta-crm-v3500.zip";
+const VERSION = "0.34.22";
+const FILE = "/crm-barber-v3422.zip";
 
 function BaixarPage() {
   const [status, setStatus] = useState<string | null>(null);
@@ -39,7 +39,7 @@ function BaixarPage() {
       .then((blob) => {
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `zetta-crm-v3500.zip`;
+        a.download = `crm-barber-v3422.zip`;
         a.click();
         URL.revokeObjectURL(a.href);
         setStatus("Download iniciado.");

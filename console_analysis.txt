@@ -1,0 +1,28 @@
+Console analysis:
+
+1. Bridge version: 0.34.20 (OK - já foi atualizada)
+2. Content script: v0.35.0 (OK)
+3. Sincronização funciona: "coletado: 13 etiqueta(s), 983 conversa(s)" (OK)
+4. Erros do WhatsApp (não relacionados ao CRM):
+   - PerformanceObserver buffered flag (WhatsApp internal)
+   - Failed to find Haste-supplied config (WhatsApp internal)
+   - 400 crashlogs upload (WhatsApp internal)
+   - 403 media CDN (WhatsApp internal)
+   - "Cannot read properties of undefined (reading 'name')" (WhatsApp internal)
+
+CONCLUSÃO: O console NÃO mostra nenhum erro do CRM ao clicar nas abas/etiquetas.
+O filtro de conversas deveria estar sendo chamado via applyNativeChatList.
+Possível causa: setChatList pode não estar disponível nesta versão do WhatsApp
+ou a bridge não está processando o message do chatlist_v350 corretamente.
+
+Etiquetas coletadas com cores:
+- CLIENTES ATIVOS: #90A841
+- LEADS BARBEARIAS: #792138
+- LEADS INTERESSADOS CURSO: #57C9FF
+- BARBEARIAS INTERESSADAS IA: #26C4DC
+- INTERESSE EM IA: #FF8A8C
+- JÁ COMPROU ALGUMA COISA: #54C265
+- MUITO INTERESSADO: #90A841
+- RECEBERAM MSG CAMPANHA REGIS: #7E90A3
+- IA OFF: #6E257E
+- LISTA TESTE: #A62C71
