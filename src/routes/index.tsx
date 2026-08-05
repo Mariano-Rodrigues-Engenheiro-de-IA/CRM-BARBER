@@ -181,7 +181,7 @@ function Landing() {
         <div className="order-4 mt-3 flex flex-wrap items-center justify-center gap-3 md:order-none md:col-start-1 md:row-start-4 md:mt-0 md:justify-start">
           <Button
             size="lg"
-            className="w-full max-w-xs px-10 py-6 text-base bg-yellow-400 font-bold text-neutral-950 hover:bg-yellow-300 md:w-auto md:max-w-none md:px-8 md:py-4"
+            className="w-full max-w-[240px] px-6 py-4 text-sm bg-yellow-400 font-bold text-neutral-950 hover:bg-yellow-300 md:w-auto md:max-w-none md:px-8 md:py-4 md:text-base"
             onClick={scrollToForm}
           >
             QUERO TESTAR GRÁTIS
