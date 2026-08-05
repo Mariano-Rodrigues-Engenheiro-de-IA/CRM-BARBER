@@ -161,15 +161,21 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
     const byName = new Map(uniqueStages.map((s) => [s.name, s]));
     const stale = uniqueStages.filter((s) => !ls.some((l) => l.name === s.name));
     const missing = ls.filter((l) => !byName.has(l.name));
-    if (stale.length || missing.length || duplicateIds.length) {
+    // Verifica se houve mudança nas colunas ou nas cores das etiquetas
+    const hasColorChange = ls.some(l => {
+      const stage = byName.get(l.name);
+      return stage && stage.color !== l.color;
+    });
+
+    if (stale.length || missing.length || duplicateIds.length || hasColorChange) {
       await api(`/api/public/extension/funnels/${funnel.id}`, {
         method: "PATCH",
         body: JSON.stringify({
           stages: ls.map((l, i) => {
             const found = byName.get(l.name);
             return found
-              ? { id: found.id, name: l.name, sort_order: i }
-              : { name: l.name, sort_order: i };
+              ? { id: found.id, name: l.name, color: l.color, sort_order: i }
+              : { name: l.name, color: l.color, sort_order: i };
           }),
           removed_stage_ids: [...stale.map((s) => s.id), ...duplicateIds],
         }),
@@ -569,6 +575,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                   }}
 
                   className="flex h-full w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-2"
+                  style={stage.color ? { borderTop: `4px solid ${stage.color}` } : {}}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <StageTitle
