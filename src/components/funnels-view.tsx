@@ -541,6 +541,15 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                         >
                           <IconClock />
                         </CardAction>
+                        {c.label_ids && c.label_ids.length > 0 ? (
+                          c.label_ids.map((labelId) => {
+                            const lbl = labels.find((l) => l.wa_label_id === labelId);
+                            if (!lbl) return null;
+                            return <IconTag key={labelId} color={lbl.color} title={lbl.name} />;
+                          })
+                        ) : (
+                          <IconTag color={null} title="Sem etiqueta" />
+                        )}
                       </div>
                     </div>
                   ))}
@@ -697,11 +706,15 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                           >
                             <IconClock />
                           </CardAction>
-                          {(card.label_ids ?? []).map((labelId) => {
-                            const lbl = labels.find((l) => l.wa_label_id === labelId);
-                            if (!lbl) return null;
-                            return <IconTag key={labelId} color={lbl.color} title={lbl.name} />;
-                          })}
+                          {(card.label_ids ?? []).length > 0 ? (
+                            (card.label_ids ?? []).map((labelId) => {
+                              const lbl = labels.find((l) => l.wa_label_id === labelId);
+                              if (!lbl) return null;
+                              return <IconTag key={labelId} color={lbl.color} title={lbl.name} />;
+                            })
+                          ) : (
+                            <IconTag color={null} title="Sem etiqueta" />
+                          )}
                         </div>
                       </div>
                     ))}
@@ -985,10 +998,25 @@ function IconTag({ color, title }: { color: string | null; title: string }) {
       title={title}
       className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-neutral-200 bg-white"
     >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill={color || "#a3a3a3"} aria-hidden>
-        <path d="M20.59 13.41 12 22l-9-9V4a1 1 0 0 1 1-1h9l9 9a2 2 0 0 1 0 2.82Z" />
-        <circle cx="6.5" cy="6.5" r="1.5" fill="white" />
-      </svg>
+      {color ? (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill={color} aria-hidden>
+          <path d="M20.59 13.41 12 22l-9-9V4a1 1 0 0 1 1-1h9l9 9a2 2 0 0 1 0 2.82Z" />
+          <circle cx="6.5" cy="6.5" r="1.5" fill="white" />
+        </svg>
+      ) : (
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#d4d4d4"
+          strokeWidth="1.5"
+          aria-hidden
+        >
+          <path d="M20.59 13.41 12 22l-9-9V4a1 1 0 0 1 1-1h9l9 9a2 2 0 0 1 0 2.82Z" />
+          <circle cx="6.5" cy="6.5" r="1.5" />
+        </svg>
+      )}
     </span>
   );
 }
