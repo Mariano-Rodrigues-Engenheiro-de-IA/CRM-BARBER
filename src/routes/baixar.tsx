@@ -23,7 +23,7 @@ export const Route = createFileRoute("/baixar")({
   component: BaixarPage,
 });
 
-const VERSION = "0.34.19";
+const VERSION = "0.34.20";
 const FILE = "/zetta-crm-v3500.zip";
 
 function BaixarPage() {
