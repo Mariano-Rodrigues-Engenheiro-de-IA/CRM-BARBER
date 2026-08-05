@@ -224,6 +224,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
         wa_contact_id: contact.id,
         wa_id: contact.wa_id,
         label_ids: contact.label_ids,
+        profile_picture_url: contact.profile_picture_url ?? null,
       }));
   }
 
@@ -627,16 +628,16 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
-                            {card.profile_picture_url ? (
+                            {card?.profile_picture_url ? (
                               <Avatar className="h-7 w-7 shrink-0">
-                                <AvatarImage src={card.profile_picture_url} alt={card.title} />
+                                <AvatarImage src={card.profile_picture_url} alt={card.title ?? ""} />
                                 <AvatarFallback className="text-[10px]">
-                                  {card.title.slice(0, 2).toUpperCase()}
+                                  {(card.title ?? "").slice(0, 2).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
                             ) : (
                               <div className="h-7 w-7 shrink-0 rounded-full bg-neutral-100 flex items-center justify-center text-[10px] text-neutral-400 font-bold">
-                                {card.title.slice(0, 2).toUpperCase()}
+                                {(card?.title ?? "").slice(0, 2).toUpperCase()}
                               </div>
                             )}
                             <p className="min-w-0 truncate text-sm font-medium text-neutral-900">

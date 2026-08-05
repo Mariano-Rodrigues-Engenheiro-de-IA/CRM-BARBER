@@ -18,23 +18,35 @@ export const Route = createFileRoute("/api/public/extension/wa/data")({
         }
         const shop = auth.token.barbershop_id;
 
-        const [labels, contacts] = await Promise.all([
-          supabaseAdmin
-            .from("wa_labels")
-            .select("id, wa_label_id, name, color, conversation_count")
-            .eq("barbershop_id", shop)
-            .order("name", { ascending: true }),
-          supabaseAdmin
+        const labels = await supabaseAdmin
+          .from("wa_labels")
+          .select("id, wa_label_id, name, color, conversation_count")
+          .eq("barbershop_id", shop)
+          .order("name", { ascending: true });
+
+        if (labels.error) {
+          return jsonResponse(request, { ok: false, error: labels.error.message }, { status: 500 });
+        }
+
+        let contacts = await supabaseAdmin
+          .from("wa_contacts")
+          .select("id, wa_id, phone, name, is_group, label_ids, last_message_at, profile_picture_url")
+          .eq("barbershop_id", shop)
+          .order("last_message_at", { ascending: false, nullsFirst: false })
+          .limit(2000);
+
+        // Se a coluna profile_picture_url não existir, tenta sem ela
+        if (contacts.error?.message?.includes("profile_picture_url")) {
+          contacts = await supabaseAdmin
             .from("wa_contacts")
-            .select("id, wa_id, phone, name, is_group, label_ids, last_message_at, profile_picture_url")
+            .select("id, wa_id, phone, name, is_group, label_ids, last_message_at")
             .eq("barbershop_id", shop)
             .order("last_message_at", { ascending: false, nullsFirst: false })
-            .limit(2000),
-        ]);
+            .limit(2000);
+        }
 
-        const error = labels.error || contacts.error;
-        if (error) {
-          return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
+        if (contacts.error) {
+          return jsonResponse(request, { ok: false, error: contacts.error.message }, { status: 500 });
         }
         return jsonResponse(request, {
           ok: true,

@@ -19,26 +19,37 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
         }
         const shop = auth.token.barbershop_id;
 
-        const [funnels, stages, cards] = await Promise.all([
-          supabaseAdmin
-            .from("funnels")
-            .select("id, name, mode, source_label_id, sort_order")
-            .eq("barbershop_id", shop)
-            .order("sort_order", { ascending: true })
-            .order("created_at", { ascending: true }),
-          supabaseAdmin
-            .from("funnel_stages")
-            .select("id, funnel_id, name, color, sort_order")
-            .eq("barbershop_id", shop)
-            .order("sort_order", { ascending: true }),
-          supabaseAdmin
+        const funnels = await supabaseAdmin
+          .from("funnels")
+          .select("id, name, mode, source_label_id, sort_order")
+          .eq("barbershop_id", shop)
+          .order("sort_order", { ascending: true })
+          .order("created_at", { ascending: true });
+
+        const stages = await supabaseAdmin
+          .from("funnel_stages")
+          .select("id, funnel_id, name, color, sort_order")
+          .eq("barbershop_id", shop)
+          .order("sort_order", { ascending: true });
+
+        let cards = await supabaseAdmin
+          .from("funnel_cards")
+          .select(
+            "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids, profile_picture_url)",
+          )
+          .eq("barbershop_id", shop)
+          .order("sort_order", { ascending: true });
+
+        // Se a coluna profile_picture_url não existir, tenta sem ela
+        if (cards.error?.message?.includes("profile_picture_url")) {
+          cards = await supabaseAdmin
             .from("funnel_cards")
             .select(
-              "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids, profile_picture_url)",
+              "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids)",
             )
             .eq("barbershop_id", shop)
-            .order("sort_order", { ascending: true }),
-        ]);
+            .order("sort_order", { ascending: true });
+        }
 
         const error = funnels.error || stages.error || cards.error;
         if (error) {

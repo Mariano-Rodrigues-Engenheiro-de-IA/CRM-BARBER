@@ -54,7 +54,7 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
         // (constraint funnel_cards_unique_contact). Se já existir, apenas
         // movemos para a coluna alvo em vez de tentar inserir de novo.
         if (parsed.data.wa_contact_id) {
-          const { data: existing } = await supabaseAdmin
+          let existingRes = await supabaseAdmin
             .from("funnel_cards")
             .select(
               "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids, profile_picture_url)",
@@ -63,6 +63,20 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
             .eq("funnel_id", parsed.data.funnel_id)
             .eq("wa_contact_id", parsed.data.wa_contact_id)
             .maybeSingle();
+
+          if (existingRes.error?.message?.includes("profile_picture_url")) {
+            existingRes = await supabaseAdmin
+              .from("funnel_cards")
+              .select(
+                "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids)",
+              )
+              .eq("barbershop_id", shop)
+              .eq("funnel_id", parsed.data.funnel_id)
+              .eq("wa_contact_id", parsed.data.wa_contact_id)
+              .maybeSingle();
+          }
+
+          const existing = existingRes.data;
           if (existing) {
             const { wa_contacts, ...rest } = existing as any;
             if (existing.stage_id !== parsed.data.stage_id) {
@@ -94,24 +108,38 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
           .eq("stage_id", parsed.data.stage_id);
 
 
-        const { data, error } = await supabaseAdmin
+        const insertPayload = {
+          barbershop_id: shop,
+          funnel_id: parsed.data.funnel_id,
+          stage_id: parsed.data.stage_id,
+          title: parsed.data.title,
+          phone: normalizePhone(parsed.data.phone),
+          value_cents: parsed.data.value_cents ?? null,
+          notes: parsed.data.notes ?? null,
+          customer_id: parsed.data.customer_id ?? null,
+          wa_contact_id: parsed.data.wa_contact_id ?? null,
+          sort_order: count ?? 0,
+        };
+
+        let insertRes = await supabaseAdmin
           .from("funnel_cards")
-          .insert({
-            barbershop_id: shop,
-            funnel_id: parsed.data.funnel_id,
-            stage_id: parsed.data.stage_id,
-            title: parsed.data.title,
-            phone: normalizePhone(parsed.data.phone),
-            value_cents: parsed.data.value_cents ?? null,
-            notes: parsed.data.notes ?? null,
-            customer_id: parsed.data.customer_id ?? null,
-            wa_contact_id: parsed.data.wa_contact_id ?? null,
-            sort_order: count ?? 0,
-          })
+          .insert(insertPayload)
           .select(
             "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids, profile_picture_url)",
           )
           .single();
+
+        if (insertRes.error?.message?.includes("profile_picture_url")) {
+          insertRes = await supabaseAdmin
+            .from("funnel_cards")
+            .insert(insertPayload)
+            .select(
+              "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids)",
+            )
+            .single();
+        }
+
+        const { data, error } = insertRes;
         if (error) return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
         const { wa_contacts, ...rest } = (data ?? {}) as any;
         return jsonResponse(request, {

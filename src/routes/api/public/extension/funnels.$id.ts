@@ -63,21 +63,40 @@ export const Route = createFileRoute("/api/public/extension/funnels/$id")({
         }
 
         for (const stage of parsed.data.stages ?? []) {
+          const stageData = { name: stage.name, color: stage.color ?? null, sort_order: stage.sort_order };
           if (stage.id) {
-            await supabaseAdmin
+            const { error } = await supabaseAdmin
               .from("funnel_stages")
-              .update({ name: stage.name, color: stage.color ?? null, sort_order: stage.sort_order })
+              .update(stageData)
               .eq("id", stage.id)
               .eq("funnel_id", params.id)
               .eq("barbershop_id", shop);
+            
+            // Se falhar por causa da coluna color, tenta sem ela
+            if (error?.message?.includes("color")) {
+              await supabaseAdmin
+                .from("funnel_stages")
+                .update({ name: stage.name, sort_order: stage.sort_order })
+                .eq("id", stage.id)
+                .eq("funnel_id", params.id)
+                .eq("barbershop_id", shop);
+            }
           } else {
-            await supabaseAdmin.from("funnel_stages").insert({
+            const { error } = await supabaseAdmin.from("funnel_stages").insert({
               barbershop_id: shop,
               funnel_id: params.id,
-              name: stage.name,
-              color: stage.color ?? null,
-              sort_order: stage.sort_order,
+              ...stageData,
             });
+
+            // Se falhar por causa da coluna color, tenta sem ela
+            if (error?.message?.includes("color")) {
+              await supabaseAdmin.from("funnel_stages").insert({
+                barbershop_id: shop,
+                funnel_id: params.id,
+                name: stage.name,
+                sort_order: stage.sort_order,
+              });
+            }
           }
         }
 

@@ -82,9 +82,19 @@ export const Route = createFileRoute("/api/public/extension/wa/sync")({
               profile_picture_url: c.profile_picture_url ?? null,
               synced_at: now,
             }));
-            const { error } = await supabaseAdmin
+            let { error } = await supabaseAdmin
               .from("wa_contacts")
               .upsert(chunk, { onConflict: "barbershop_id,wa_id" });
+
+            // Se a coluna profile_picture_url não existir, tenta sem ela
+            if (error?.message?.includes("profile_picture_url")) {
+              const safeChunk = chunk.map(({ profile_picture_url, ...rest }) => rest);
+              const retry = await supabaseAdmin
+                .from("wa_contacts")
+                .upsert(safeChunk, { onConflict: "barbershop_id,wa_id" });
+              error = retry.error;
+            }
+
             if (error) {
               return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
             }

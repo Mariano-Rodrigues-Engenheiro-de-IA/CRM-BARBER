@@ -75,9 +75,21 @@
   // também um tempo depois do boot, quando a aba está ociosa.
   function prewarmEngine() {
     if (document.visibilityState !== "visible") return;
-    ensureWaScriptsInjected().catch(() => null);
+    ensureWaScriptsInjected()
+      .then(() => {
+        // Primeira sincronização automática após o boot (30s depois)
+        setTimeout(() => syncWaData(), 10000);
+      })
+      .catch(() => null);
   }
   setTimeout(prewarmEngine, 20000);
+
+  // Sincronização automática a cada 5 minutos
+  setInterval(() => {
+    if (document.visibilityState === "visible" && status.paired) {
+      syncWaData();
+    }
+  }, 5 * 60 * 1000);
 
 
   let pollHeartbeat = null;
