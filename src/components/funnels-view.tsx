@@ -216,6 +216,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
         customer_id: null,
         wa_contact_id: contact.id,
         wa_id: contact.wa_id,
+        label_ids: contact.label_ids,
       }));
   }
 
@@ -252,7 +253,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
 
   async function addCard(
     stageId: string | undefined,
-    payload: { title: string; phone?: string; wa_contact_id?: string },
+    payload: { title: string; phone?: string; wa_contact_id?: string; wa_id?: string; label_ids?: string[] },
   ) {
     if (!active || !stageId) return;
     // Guard: um mesmo contato só pode entrar uma vez no funil (constraint
@@ -287,6 +288,8 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                   sort_order: f.cards.length,
                   customer_id: null,
                   wa_contact_id: key ?? null,
+                  wa_id: payload.wa_id ?? null,
+                  label_ids: payload.label_ids ?? [],
                 } as FunnelCard,
               ],
             },
@@ -322,6 +325,8 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       title: c.name || c.phone || c.wa_id,
       phone: c.phone ?? undefined,
       wa_contact_id: c.id,
+      wa_id: c.wa_id,
+      label_ids: c.label_ids,
     });
     if (!created) return;
     setDetailTab(tab);
@@ -540,6 +545,8 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                         title: contact.name || contact.phone || contact.wa_id,
                         phone: contact.phone ?? undefined,
                         wa_contact_id: contact.id,
+                        wa_id: contact.wa_id,
+                        label_ids: contact.label_ids,
                       });
                       return;
                     }
@@ -609,6 +616,31 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                             </button>
                           )}
                         </div>
+                        {card.label_ids && card.label_ids.length > 0 && (
+                          <div className="mt-1 flex flex-wrap items-center gap-1">
+                            {card.label_ids.map((labelId) => {
+                              const lbl = labels.find((l) => l.wa_label_id === labelId);
+                              if (!lbl) return null;
+                              return (
+                                <span
+                                  key={labelId}
+                                  title={lbl.name}
+                                  className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                                  style={{
+                                    backgroundColor: lbl.color ? `${lbl.color}22` : "#e5e5e5",
+                                    color: lbl.color || "#525252",
+                                  }}
+                                >
+                                  <span
+                                    className="h-1.5 w-1.5 rounded-full"
+                                    style={{ backgroundColor: lbl.color || "#a3a3a3" }}
+                                  />
+                                  {lbl.name}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
                         {isRealPhone(card.phone) && (
                           <p className="mt-0.5 text-[11px] text-neutral-500">{card.phone}</p>
                         )}

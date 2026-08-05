@@ -109,6 +109,9 @@ export type FunnelCard = {
    * de wa_contacts.wa_id via join. Diferente de wa_contact_id, que é só o
    * UUID interno — não serve pra abrir chat na extensão. */
   wa_id?: string | null;
+  /** Etiquetas do WhatsApp associadas ao contato (wa_labels.wa_label_id),
+   * usado pra desenhar a cor da etiqueta no card. */
+  label_ids?: string[];
 };
 
 export type Funnel = {

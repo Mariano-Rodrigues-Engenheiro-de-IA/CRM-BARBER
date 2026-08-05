@@ -34,7 +34,7 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
           supabaseAdmin
             .from("funnel_cards")
             .select(
-              "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id)",
+              "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids)",
             )
             .eq("barbershop_id", shop)
             .order("sort_order", { ascending: true }),
@@ -45,12 +45,14 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
         }
 
-        // wa_contacts(wa_id) vem aninhado pelo relacionamento; achata pra
-        // card.wa_id direto, que é o identificador real do WhatsApp — o
-        // wa_contact_id sozinho é só o UUID interno, não serve pra abrir chat.
+        // wa_contacts(wa_id, label_ids) vem aninhado pelo relacionamento;
+        // achata pra card.wa_id/card.label_ids diretos. wa_contact_id
+        // sozinho é só o UUID interno, não serve pra abrir chat nem pra
+        // saber a cor da etiqueta.
         const flatCards = (cards.data ?? []).map((c: any) => ({
           ...c,
           wa_id: c.wa_contacts?.wa_id ?? null,
+          label_ids: c.wa_contacts?.label_ids ?? [],
           wa_contacts: undefined,
         }));
 

@@ -57,7 +57,7 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
           const { data: existing } = await supabaseAdmin
             .from("funnel_cards")
             .select(
-              "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id)",
+              "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids)",
             )
             .eq("barbershop_id", shop)
             .eq("funnel_id", parsed.data.funnel_id)
@@ -77,7 +77,12 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
             }
             return jsonResponse(request, {
               ok: true,
-              card: { ...rest, wa_id: wa_contacts?.wa_id ?? null, stage_id: parsed.data.stage_id },
+              card: {
+                ...rest,
+                wa_id: wa_contacts?.wa_id ?? null,
+                label_ids: wa_contacts?.label_ids ?? [],
+                stage_id: parsed.data.stage_id,
+              },
             });
           }
         }
@@ -103,12 +108,15 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
             sort_order: count ?? 0,
           })
           .select(
-            "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id)",
+            "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids)",
           )
           .single();
         if (error) return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
         const { wa_contacts, ...rest } = (data ?? {}) as any;
-        return jsonResponse(request, { ok: true, card: { ...rest, wa_id: wa_contacts?.wa_id ?? null } });
+        return jsonResponse(request, {
+          ok: true,
+          card: { ...rest, wa_id: wa_contacts?.wa_id ?? null, label_ids: wa_contacts?.label_ids ?? [] },
+        });
       },
 
       PATCH: async ({ request }) => {
