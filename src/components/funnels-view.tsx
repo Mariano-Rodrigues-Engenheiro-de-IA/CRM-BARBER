@@ -95,14 +95,35 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       });
       created = created || Boolean(r?.ok);
     }
-    // Renomeia o funil de listas criado com o nome antigo ("Etiquetas / Listas").
-    const legacy = list.find((f) => f.mode === "label" && f.name !== "Listas");
-    if (legacy) {
-      const r = await api(`/api/public/extension/funnels/${legacy.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ name: "Listas" }),
-      });
-      created = created || Boolean(r?.ok);
+    // Se existir mais de um funil de "Listas" (mode label) — situação que
+    // pode ter acontecido antes desta correção — mantém só um e apaga os
+    // duplicados, em vez de só renomear (renomear sozinho fazia os dois
+    // ficarem com o mesmo nome "Listas", aparecendo duplicado no Disparo).
+    const labelFunnels = list.filter((f) => f.mode === "label");
+    if (labelFunnels.length > 1) {
+      const keep = labelFunnels.find((f) => f.name === "Listas") || labelFunnels[0];
+      for (const dup of labelFunnels) {
+        if (dup.id === keep.id) continue;
+        await api(`/api/public/extension/funnels/${dup.id}`, { method: "DELETE" });
+        created = true;
+      }
+      if (keep.name !== "Listas") {
+        await api(`/api/public/extension/funnels/${keep.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ name: "Listas" }),
+        });
+        created = true;
+      }
+    } else {
+      // Renomeia o funil de listas criado com o nome antigo ("Etiquetas / Listas").
+      const legacy = list.find((f) => f.mode === "label" && f.name !== "Listas");
+      if (legacy) {
+        const r = await api(`/api/public/extension/funnels/${legacy.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ name: "Listas" }),
+        });
+        created = created || Boolean(r?.ok);
+      }
     }
     if (!list.some((f) => f.mode === "label")) {
       // Nasce vazio: as colunas e os contatos vêm da sincronização abaixo.
