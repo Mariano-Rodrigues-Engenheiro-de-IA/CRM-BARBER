@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.34.12";
+  const BRIDGE_VERSION = "0.34.13";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -421,7 +421,25 @@
     return null;
   }
 
-  function readLabels() {
+  async function readLabels() {
+    // Paleta de cores (índice -> hex), buscada 1x. É necessária porque o
+    // fallback cru (LabelStore.getModelsArray/.models) só expõe colorIndex
+    // (um número que indexa a paleta fixa do WhatsApp), não uma cor pronta.
+    // As fontes de alto nível (getAllLabels/getAll) já vêm com "hexColor"
+    // calculado, mas quando essas falham (ex: timing no carregamento) e cai
+    // no fallback cru, sem essa paleta a cor nunca é resolvida.
+    let palette = null;
+    try {
+      palette = await window.WPP?.labels?.getLabelColorPalette?.();
+    } catch (e) {
+      console.warn("[CRM] paleta de cores de etiqueta indisponível:", e?.message || e);
+    }
+    function colorFromIndex(idx) {
+      if (palette == null || idx == null) return null;
+      const raw = Array.isArray(palette) ? palette[idx] : palette[String(idx)];
+      return normalizeLabelColor(raw);
+    }
+
     const sources = [
       () => window.WPP?.labels?.getAllLabels?.(),
       () => window.WPP?.labels?.getAll?.(),
@@ -441,10 +459,14 @@
         const id = String(l?.id ?? l?.labelId ?? l?.__x_id ?? "");
         const name = String(l?.name ?? l?.__x_name ?? "").trim();
         if (!id || id === "undefined" || !name) continue;
+        const directColor = normalizeLabelColor(
+          l?.hexColor ?? l?.__x_hexColor ?? l?.color ?? l?.__x_color ?? l?.backgroundColor,
+        );
+        const colorIndex = l?.colorIndex ?? l?.__x_colorIndex;
         out.push({
           id,
           name: name.slice(0, 120),
-          color: normalizeLabelColor(l?.hexColor ?? l?.__x_hexColor ?? l?.color ?? l?.__x_color ?? l?.backgroundColor),
+          color: directColor ?? colorFromIndex(colorIndex),
           count: Number(l?.count ?? l?.labelItemCount ?? l?.__x_count ?? 0) || 0,
         });
       }
@@ -521,7 +543,7 @@
 
     let labels = [];
     try {
-      labels = readLabels();
+      labels = await readLabels();
     } catch (e) {
       console.warn("[CRM] etiquetas indisponíveis:", e?.message || e);
     }
