@@ -616,31 +616,6 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                             </button>
                           )}
                         </div>
-                        {card.label_ids && card.label_ids.length > 0 && (
-                          <div className="mt-1 flex flex-wrap items-center gap-1">
-                            {card.label_ids.map((labelId) => {
-                              const lbl = labels.find((l) => l.wa_label_id === labelId);
-                              if (!lbl) return null;
-                              return (
-                                <span
-                                  key={labelId}
-                                  title={lbl.name}
-                                  className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-                                  style={{
-                                    backgroundColor: lbl.color ? `${lbl.color}22` : "#e5e5e5",
-                                    color: lbl.color || "#525252",
-                                  }}
-                                >
-                                  <span
-                                    className="h-1.5 w-1.5 rounded-full"
-                                    style={{ backgroundColor: lbl.color || "#a3a3a3" }}
-                                  />
-                                  {lbl.name}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        )}
                         {isRealPhone(card.phone) && (
                           <p className="mt-0.5 text-[11px] text-neutral-500">{card.phone}</p>
                         )}
@@ -678,6 +653,11 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                           >
                             <IconClock />
                           </CardAction>
+                          {(card.label_ids ?? []).map((labelId) => {
+                            const lbl = labels.find((l) => l.wa_label_id === labelId);
+                            if (!lbl) return null;
+                            return <IconTag key={labelId} color={lbl.color} title={lbl.name} />;
+                          })}
                         </div>
                       </div>
                     ))}
@@ -951,6 +931,23 @@ const IconClock = () => (
     <path d="M12 7v5l3 2" />
   </svg>
 );
+
+/** Ícone de etiqueta (formato de bandeirinha inclinada), colorido com a cor
+ * real da etiqueta do WhatsApp. Mostra o nome só no hover (title), sem
+ * poluir o card com texto fixo. */
+function IconTag({ color, title }: { color: string | null; title: string }) {
+  return (
+    <span
+      title={title}
+      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-neutral-200 bg-white"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill={color || "#a3a3a3"} aria-hidden>
+        <path d="M20.59 13.41 12 22l-9-9V4a1 1 0 0 1 1-1h9l9 9a2 2 0 0 1 0 2.82Z" />
+        <circle cx="6.5" cy="6.5" r="1.5" fill="white" />
+      </svg>
+    </span>
+  );
+}
 
 function Overlay({
   title,
