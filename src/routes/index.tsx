@@ -184,36 +184,17 @@ function Landing() {
           </div>
         </div>
 
-        {/* Mock do painel */}
-        <div className="rounded-3xl border border-white/10 bg-neutral-900 p-4 shadow-2xl">
-          <div className="mb-3 flex gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-neutral-700" />
-            <span className="h-2.5 w-2.5 rounded-full bg-neutral-700" />
-            <span className="h-2.5 w-2.5 rounded-full bg-yellow-400" />
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { t: "Ativos", n: "184", c: "text-emerald-400" },
-              { t: "A vencer", n: "37", c: "text-yellow-400" },
-              { t: "Inadimplentes", n: "22", c: "text-red-400" },
-            ].map((col) => (
-              <div key={col.t} className="rounded-xl bg-neutral-950 p-3">
-                <p className="text-[10px] uppercase tracking-wider text-neutral-500">{col.t}</p>
-                <p className={`mt-1 text-2xl font-bold ${col.c}`}>{col.n}</p>
-                <div className="mt-3 space-y-2">
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} className="h-7 rounded-md bg-neutral-800/80" />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-3 rounded-xl bg-neutral-950 p-3">
-            <p className="text-[10px] uppercase tracking-wider text-neutral-500">Campanha rodando</p>
-            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-neutral-800">
-              <div className="h-full w-2/3 rounded-full bg-yellow-400" />
-            </div>
-            <p className="mt-2 text-xs text-neutral-400">64 de 96 cobranças enviadas · ritmo humano</p>
+        {/* Vídeo de vendas */}
+        <div className="overflow-hidden rounded-3xl border border-white/10 bg-neutral-900 shadow-2xl">
+          <div className="relative aspect-video w-full">
+            <iframe
+              src="https://www.youtube.com/embed/QJYO1QX-tKQ"
+              title="Zetta CRM — vídeo de apresentação"
+              className="absolute inset-0 h-full w-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              loading="lazy"
+            />
           </div>
         </div>
       </section>
