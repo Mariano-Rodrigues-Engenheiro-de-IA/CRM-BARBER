@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.34.13";
+  const BRIDGE_VERSION = "0.34.14";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -431,6 +431,7 @@
     let palette = null;
     try {
       palette = await window.WPP?.labels?.getLabelColorPalette?.();
+      console.info("[CRM][diagnostico-cor] paleta:", JSON.stringify(palette));
     } catch (e) {
       console.warn("[CRM] paleta de cores de etiqueta indisponível:", e?.message || e);
     }
@@ -446,7 +447,7 @@
       () => window.WPP?.whatsapp?.LabelStore?.getModelsArray?.(),
       () => window.WPP?.whatsapp?.LabelStore?.models,
     ];
-    for (const get of sources) {
+    for (const [sourceIdx, get] of sources.entries()) {
       let list;
       try {
         list = get();
@@ -454,6 +455,24 @@
         continue;
       }
       if (!Array.isArray(list) || list.length === 0) continue;
+      try {
+        const seen = new WeakSet();
+        console.info(
+          "[CRM][diagnostico-cor] fonte",
+          sourceIdx,
+          "primeiro item bruto:",
+          JSON.stringify(list[0], (k, v) => {
+            if (typeof v === "function") return undefined;
+            if (typeof v === "object" && v !== null) {
+              if (seen.has(v)) return "[circular]";
+              seen.add(v);
+            }
+            return v;
+          }).slice(0, 800),
+        );
+      } catch (e) {
+        console.warn("[CRM][diagnostico-cor] falha ao logar item bruto:", e?.message || e);
+      }
       const out = [];
       for (const l of list) {
         const id = String(l?.id ?? l?.labelId ?? l?.__x_id ?? "");
@@ -544,6 +563,10 @@
     let labels = [];
     try {
       labels = await readLabels();
+      console.info(
+        "[CRM][diagnostico-cor] etiquetas coletadas:",
+        JSON.stringify(labels.map((l) => ({ name: l.name, color: l.color }))),
+      );
     } catch (e) {
       console.warn("[CRM] etiquetas indisponíveis:", e?.message || e);
     }
