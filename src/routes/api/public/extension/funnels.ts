@@ -32,7 +32,9 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
           .eq("barbershop_id", shop)
           .order("sort_order", { ascending: true });
 
-        let cards = await supabaseAdmin
+        // Tipo largo: os fallbacks abaixo usam selects mais enxutos, com
+        // formato diferente, e o TS não aceita reatribuir sem isso.
+        let cards: { data: any[] | null; error: { message: string } | null } = await supabaseAdmin
           .from("funnel_cards")
           .select(
             "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids, profile_picture_url, unread_count)",
