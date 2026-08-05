@@ -142,11 +142,25 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
     const funnel = list.find((f) => f.mode === "label");
     if (!funnel) return false;
 
+    // Detecta stages duplicados por nome (pode ter acontecido antes desta
+    // lógica de dedup existir). Mantém só um por nome — o de menor
+    // sort_order — e manda o resto pra remoção junto com os "stale".
+    const seenNames = new Set<string>();
+    const duplicateIds: string[] = [];
+    for (const s of [...funnel.stages].sort((a, b) => a.sort_order - b.sort_order)) {
+      if (seenNames.has(s.name)) {
+        duplicateIds.push(s.id);
+      } else {
+        seenNames.add(s.name);
+      }
+    }
+    const uniqueStages = funnel.stages.filter((s) => !duplicateIds.includes(s.id));
+
     // 1) Colunas = listas do WhatsApp (na mesma ordem).
-    const byName = new Map(funnel.stages.map((s) => [s.name, s]));
-    const stale = funnel.stages.filter((s) => !ls.some((l) => l.name === s.name));
+    const byName = new Map(uniqueStages.map((s) => [s.name, s]));
+    const stale = uniqueStages.filter((s) => !ls.some((l) => l.name === s.name));
     const missing = ls.filter((l) => !byName.has(l.name));
-    if (stale.length || missing.length) {
+    if (stale.length || missing.length || duplicateIds.length) {
       await api(`/api/public/extension/funnels/${funnel.id}`, {
         method: "PATCH",
         body: JSON.stringify({
@@ -156,7 +170,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
               ? { id: found.id, name: l.name, sort_order: i }
               : { name: l.name, sort_order: i };
           }),
-          removed_stage_ids: stale.map((s) => s.id),
+          removed_stage_ids: [...stale.map((s) => s.id), ...duplicateIds],
         }),
       });
       return true;
