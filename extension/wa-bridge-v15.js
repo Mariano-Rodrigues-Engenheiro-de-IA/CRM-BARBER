@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.34.17";
+  const BRIDGE_VERSION = "0.34.18";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -597,6 +597,12 @@
           })(),
           last_message_at: ts > 0 ? new Date(ts * 1000).toISOString() : null,
           profile_picture_url: null,
+          unread_count: (() => {
+            // unreadCount pode vir negativo no WhatsApp quando ele sabe que
+            // tem não lida mas não sabe a contagem exata — nesse caso, 1.
+            const raw = Number(chat?.unreadCount ?? chat?.__x_unreadCount ?? 0) || 0;
+            return raw < 0 ? 1 : raw;
+          })(),
         });
       }
     } catch (e) {
@@ -620,6 +626,7 @@
           label_ids: ids.slice(0, 50),
           last_message_at: null,
           profile_picture_url: null,
+          unread_count: 0,
         });
         seen.add(chatId);
       }

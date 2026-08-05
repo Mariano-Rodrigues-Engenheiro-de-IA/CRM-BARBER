@@ -30,12 +30,21 @@ export const Route = createFileRoute("/api/public/extension/wa/data")({
 
         let contacts = await supabaseAdmin
           .from("wa_contacts")
-          .select("id, wa_id, phone, name, is_group, label_ids, last_message_at, profile_picture_url")
+          .select("id, wa_id, phone, name, is_group, label_ids, last_message_at, profile_picture_url, unread_count")
           .eq("barbershop_id", shop)
           .order("last_message_at", { ascending: false, nullsFirst: false })
           .limit(2000);
 
-        // Se a coluna profile_picture_url não existir, tenta sem ela
+        // Se colunas novas não existirem ainda (migration pendente), tenta
+        // de novo com um select mais enxuto, removendo uma de cada vez.
+        if (contacts.error?.message?.includes("unread_count")) {
+          contacts = await supabaseAdmin
+            .from("wa_contacts")
+            .select("id, wa_id, phone, name, is_group, label_ids, last_message_at, profile_picture_url")
+            .eq("barbershop_id", shop)
+            .order("last_message_at", { ascending: false, nullsFirst: false })
+            .limit(2000);
+        }
         if (contacts.error?.message?.includes("profile_picture_url")) {
           contacts = await supabaseAdmin
             .from("wa_contacts")
@@ -51,7 +60,7 @@ export const Route = createFileRoute("/api/public/extension/wa/data")({
         return jsonResponse(request, {
           ok: true,
           labels: labels.data ?? [],
-          contacts: contacts.data ?? [],
+          contacts: (contacts.data ?? []).map((c: any) => ({ ...c, unread_count: c.unread_count ?? 0 })),
         });
       },
     },

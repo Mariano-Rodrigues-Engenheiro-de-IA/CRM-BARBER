@@ -57,13 +57,24 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
           let existingRes = await supabaseAdmin
             .from("funnel_cards")
             .select(
-              "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids, profile_picture_url)",
+              "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids, profile_picture_url, unread_count)",
             )
             .eq("barbershop_id", shop)
             .eq("funnel_id", parsed.data.funnel_id)
             .eq("wa_contact_id", parsed.data.wa_contact_id)
             .maybeSingle();
 
+          if (existingRes.error?.message?.includes("unread_count")) {
+            existingRes = await supabaseAdmin
+              .from("funnel_cards")
+              .select(
+                "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids, profile_picture_url)",
+              )
+              .eq("barbershop_id", shop)
+              .eq("funnel_id", parsed.data.funnel_id)
+              .eq("wa_contact_id", parsed.data.wa_contact_id)
+              .maybeSingle();
+          }
           if (existingRes.error?.message?.includes("profile_picture_url")) {
             existingRes = await supabaseAdmin
               .from("funnel_cards")
@@ -96,6 +107,7 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
                 wa_id: wa_contacts?.wa_id ?? null,
                 label_ids: wa_contacts?.label_ids ?? [],
                 profile_picture_url: wa_contacts?.profile_picture_url ?? null,
+                unread_count: wa_contacts?.unread_count ?? 0,
                 stage_id: parsed.data.stage_id,
               },
             });
@@ -125,10 +137,19 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
           .from("funnel_cards")
           .insert(insertPayload)
           .select(
-            "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids, profile_picture_url)",
+            "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids, profile_picture_url, unread_count)",
           )
           .single();
 
+        if (insertRes.error?.message?.includes("unread_count")) {
+          insertRes = await supabaseAdmin
+            .from("funnel_cards")
+            .insert(insertPayload)
+            .select(
+              "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids, profile_picture_url)",
+            )
+            .single();
+        }
         if (insertRes.error?.message?.includes("profile_picture_url")) {
           insertRes = await supabaseAdmin
             .from("funnel_cards")
@@ -149,6 +170,7 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
             wa_id: wa_contacts?.wa_id ?? null,
             label_ids: wa_contacts?.label_ids ?? [],
             profile_picture_url: wa_contacts?.profile_picture_url ?? null,
+            unread_count: wa_contacts?.unread_count ?? 0,
           },
         });
       },

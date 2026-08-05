@@ -35,12 +35,22 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
         let cards = await supabaseAdmin
           .from("funnel_cards")
           .select(
-            "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids, profile_picture_url)",
+            "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids, profile_picture_url, unread_count)",
           )
           .eq("barbershop_id", shop)
           .order("sort_order", { ascending: true });
 
-        // Se a coluna profile_picture_url não existir, tenta sem ela
+        // Se colunas novas não existirem ainda (migration pendente), tenta
+        // de novo com um select mais enxuto, indo removendo uma de cada vez.
+        if (cards.error?.message?.includes("unread_count")) {
+          cards = await supabaseAdmin
+            .from("funnel_cards")
+            .select(
+              "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids, profile_picture_url)",
+            )
+            .eq("barbershop_id", shop)
+            .order("sort_order", { ascending: true });
+        }
         if (cards.error?.message?.includes("profile_picture_url")) {
           cards = await supabaseAdmin
             .from("funnel_cards")
@@ -65,6 +75,7 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
           wa_id: c.wa_contacts?.wa_id ?? null,
           label_ids: c.wa_contacts?.label_ids ?? [],
           profile_picture_url: c.wa_contacts?.profile_picture_url ?? null,
+          unread_count: c.wa_contacts?.unread_count ?? 0,
           wa_contacts: undefined,
         }));
 

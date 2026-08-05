@@ -82,6 +82,7 @@ export const waSyncSchema = z.object({
         label_ids: z.array(z.string().trim().max(120)).max(50).optional(),
         last_message_at: z.string().datetime().nullable().optional(),
         profile_picture_url: z.string().trim().nullable().optional(),
+        unread_count: z.number().int().min(0).max(100_000).optional(),
       }),
     )
     .max(3000)
@@ -114,6 +115,8 @@ export type FunnelCard = {
    * usado pra desenhar a cor da etiqueta no card. */
   label_ids?: string[];
   profile_picture_url?: string | null;
+  /** Mensagens não lidas nessa conversa, pro selo no botão de WhatsApp. */
+  unread_count?: number;
 };
 
 export type Funnel = {
@@ -143,6 +146,7 @@ export type WaContact = {
   label_ids: string[];
   last_message_at: string | null;
   profile_picture_url: string | null;
+  unread_count: number;
 };
 
 export function formatBRL(cents: number | null | undefined) {

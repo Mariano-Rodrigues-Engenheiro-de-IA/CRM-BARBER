@@ -232,6 +232,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
         wa_id: contact.wa_id,
         label_ids: contact.label_ids,
         profile_picture_url: contact.profile_picture_url ?? null,
+        unread_count: contact.unread_count ?? 0,
       }));
   }
 
@@ -268,7 +269,14 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
 
   async function addCard(
     stageId: string | undefined,
-    payload: { title: string; phone?: string; wa_contact_id?: string; wa_id?: string; label_ids?: string[] },
+    payload: {
+      title: string;
+      phone?: string;
+      wa_contact_id?: string;
+      wa_id?: string;
+      label_ids?: string[];
+      unread_count?: number;
+    },
   ) {
     if (!active || !stageId) return;
     // Guard: um mesmo contato só pode entrar uma vez no funil (constraint
@@ -305,6 +313,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                   wa_contact_id: key ?? null,
                   wa_id: payload.wa_id ?? null,
                   label_ids: payload.label_ids ?? [],
+                  unread_count: payload.unread_count ?? 0,
                 } as FunnelCard,
               ],
             },
@@ -342,6 +351,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       wa_contact_id: c.id,
       wa_id: c.wa_id,
       label_ids: c.label_ids,
+      unread_count: c.unread_count,
     });
     if (!created) return;
     setDetailTab(tab);
@@ -520,15 +530,18 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                         <p className="mt-0.5 truncate text-[11px] text-neutral-500">{c.phone}</p>
                       )}
                       <div className="mt-2 flex items-center gap-1">
-                        <CardAction
-                          title="Abrir conversa no WhatsApp"
-                          disabled={!canOpenWhatsapp(c.phone, c.wa_id)}
-                          onClick={() =>
-                            void openWhatsappChat(c.phone || "", c.name || undefined, c.wa_id)
-                          }
-                        >
-                          <IconWhatsapp />
-                        </CardAction>
+                        <div className="relative inline-block">
+                          <CardAction
+                            title="Abrir conversa no WhatsApp"
+                            disabled={!canOpenWhatsapp(c.phone, c.wa_id)}
+                            onClick={() =>
+                              void openWhatsappChat(c.phone || "", c.name || undefined, c.wa_id)
+                            }
+                          >
+                            <IconWhatsapp />
+                          </CardAction>
+                          <UnreadBadge count={c.unread_count} />
+                        </div>
                         <CardAction
                           title="Anotações"
                           onClick={() => void promoteContact(c, "notes")}
@@ -585,6 +598,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                         wa_contact_id: contact.id,
                         wa_id: contact.wa_id,
                         label_ids: contact.label_ids,
+                        unread_count: contact.unread_count,
                       });
                       return;
                     }
@@ -679,15 +693,18 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                         )}
 
                         <div className="mt-2 flex items-center gap-1">
-                          <CardAction
-                            title="Abrir conversa no WhatsApp"
-                            disabled={!canOpenWhatsapp(card.phone, card.wa_id)}
-                            onClick={() =>
-                              void openWhatsappChat(card.phone || "", card.title, card.wa_id)
-                            }
-                          >
-                            <IconWhatsapp />
-                          </CardAction>
+                          <div className="relative inline-block">
+                            <CardAction
+                              title="Abrir conversa no WhatsApp"
+                              disabled={!canOpenWhatsapp(card.phone, card.wa_id)}
+                              onClick={() =>
+                                void openWhatsappChat(card.phone || "", card.title, card.wa_id)
+                              }
+                            >
+                              <IconWhatsapp />
+                            </CardAction>
+                            <UnreadBadge count={card.unread_count ?? 0} />
+                          </div>
                           <CardAction
                             title="Anotações"
                             onClick={() => {
@@ -926,6 +943,16 @@ function FunnelPicker({
         </div>
       )}
     </div>
+  );
+}
+
+/** Selo de mensagens não lidas, sobreposto no canto do botão de WhatsApp. */
+function UnreadBadge({ count }: { count: number }) {
+  if (!count || count <= 0) return null;
+  return (
+    <span className="absolute -bottom-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
+      {count > 99 ? "99+" : count}
+    </span>
   );
 }
 

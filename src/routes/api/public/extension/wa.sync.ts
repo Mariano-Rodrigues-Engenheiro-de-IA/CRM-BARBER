@@ -80,15 +80,24 @@ export const Route = createFileRoute("/api/public/extension/wa/sync")({
               label_ids: c.label_ids ?? [],
               last_message_at: c.last_message_at ?? null,
               profile_picture_url: c.profile_picture_url ?? null,
+              unread_count: c.unread_count ?? 0,
               synced_at: now,
             }));
             let { error } = await supabaseAdmin
               .from("wa_contacts")
               .upsert(chunk, { onConflict: "barbershop_id,wa_id" });
 
-            // Se a coluna profile_picture_url não existir, tenta sem ela
+            // Se colunas novas não existirem ainda (migration pendente),
+            // tenta de novo sem elas em vez de falhar a sincronização toda.
             if (error?.message?.includes("profile_picture_url")) {
               const safeChunk = chunk.map(({ profile_picture_url, ...rest }) => rest);
+              const retry = await supabaseAdmin
+                .from("wa_contacts")
+                .upsert(safeChunk, { onConflict: "barbershop_id,wa_id" });
+              error = retry.error;
+            }
+            if (error?.message?.includes("unread_count")) {
+              const safeChunk = chunk.map(({ unread_count, ...rest }) => rest);
               const retry = await supabaseAdmin
                 .from("wa_contacts")
                 .upsert(safeChunk, { onConflict: "barbershop_id,wa_id" });
