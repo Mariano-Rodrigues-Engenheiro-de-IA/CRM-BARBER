@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.34.19";
+  const CRM_VERSION = "0.35.0";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -165,6 +165,7 @@
     if (!r?.ok) return;
     waData = { labels: r.labels || [], contacts: r.contacts || [] };
     renderTopbar();
+    renderDrawer();
   }
 
 
@@ -175,6 +176,7 @@
     if (r?.ok) {
       funnels = r.funnels || [];
       renderTopbar();
+      renderDrawer();
     }
   }
 
@@ -1341,7 +1343,7 @@
       overlay.innerHTML = `
         <div class="crm-modal" role="dialog" aria-modal="true">
           <p class="crm-modal-title">${escapeHtml(title)}</p>
-          <input class="crm-modal-input" value="${escapeHtml(value)}" style="width:100%;margin-bottom:16px;padding:9px 10px;border-radius:8px;border:1px solid #2a2a2a;background:#1a1a1a;color:#f5f5f5;font-size:13px;outline:none" />
+          <input class="crm-modal-input" value="${escapeHtml(value)}" />
           <div class="crm-modal-actions">
             <button class="crm-modal-cancel">Cancelar</button>
             <button class="crm-modal-confirm">${escapeHtml(confirmLabel)}</button>
