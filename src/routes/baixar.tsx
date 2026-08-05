@@ -4,13 +4,13 @@ import { useState } from "react";
 export const Route = createFileRoute("/baixar")({
   head: () => ({
     meta: [
-      { title: "Baixar pacote da extensão v0.35.0 | Zetta CRM" },
+      { title: "Baixar pacote da extensão v0.34.21 | Zetta CRM" },
       {
         name: "description",
         content:
-          "Download direto do pacote .zip da extensão Zetta CRM v0.35.0, pronto para upload no Chrome Web Store Developer Dashboard.",
+          "Download direto do pacote .zip da extensão Zetta CRM v0.34.21, pronto para upload no Chrome Web Store Developer Dashboard.",
       },
-      { property: "og:title", content: "Baixar pacote da extensão v0.35.0" },
+      { property: "og:title", content: "Baixar pacote da extensão v0.34.21" },
       {
         property: "og:description",
         content:
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/baixar")({
   component: BaixarPage,
 });
 
-const VERSION = "0.34.20";
+const VERSION = "0.34.21";
 const FILE = "/zetta-crm-v3500.zip";
 
 function BaixarPage() {
