@@ -814,10 +814,15 @@
         .map((l) => {
           const id = l.id || l.wa_label_id;
           const on = activeFilter?.key === `label:${id}`;
+          const labelColor = l.color || "";
+          // Quando ativa, aplica a cor da etiqueta no background (inline override)
+          const activeStyle = on && labelColor
+            ? `background-color:${escapeHtml(labelColor)};border-color:${escapeHtml(labelColor)};box-shadow:0 0 0 3px ${escapeHtml(labelColor)}22;`
+            : "";
           const countStyle = l.color
             ? ` style="background-color:${escapeHtml(l.color)};color:#fff"`
             : "";
-          return `<button class="crm-pill${on ? " crm-pill-on" : ""}" data-label-id="${escapeHtml(id)}" data-name="${escapeHtml(l.name)}">
+          return `<button class="crm-pill${on ? " crm-pill-on" : ""}" data-label-id="${escapeHtml(id)}" data-name="${escapeHtml(l.name)}"${activeStyle ? ` style="${activeStyle}"` : ""}>
               ${escapeHtml(l.name)}
               <span class="crm-pill-count"${countStyle}>${Number(l.count ?? l.conversation_count ?? 0)}</span>
             </button>`;

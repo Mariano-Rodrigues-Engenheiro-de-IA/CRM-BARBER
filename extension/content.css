@@ -211,17 +211,22 @@ html body.crm-shell #app {
   white-space: nowrap;
   transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
 }
+/* Hover padrão — destaca com acento */
 .crm-pill:hover { border-color: var(--z-accent); background: var(--z-surface-2); color: var(--z-accent); }
 .crm-pill:hover .crm-pill-count { background: var(--z-accent-soft); color: var(--z-accent); }
+
+/* Pílula ativa — funil: cor neutra (cinza escuro, sem destaque espalhafatoso) */
 .crm-pill-on {
-  border-color: var(--z-accent);
-  background: var(--z-accent);
-  color: var(--z-on-accent);
-  box-shadow: 0 0 0 3px var(--z-accent-soft);
+  border-color: #374151;
+  background: #374151;
+  color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(55, 65, 81, 0.14);
 }
-.crm-pill-on:hover { background: var(--z-accent-strong); color: var(--z-on-accent); }
-.crm-pill-on:hover .crm-pill-count { background: rgba(255, 255, 255, 0.2); color: var(--z-on-accent); }
-.crm-pill-on .crm-pill-count, .crm-pill-on .crm-pill-value, .crm-pill-on .crm-pill-gear { color: var(--z-on-accent); }
+.crm-pill-on:hover { background: #1f2937; color: #ffffff; }
+.crm-pill-on:hover .crm-pill-count { background: rgba(255, 255, 255, 0.18); color: #ffffff; }
+.crm-pill-on .crm-pill-count, .crm-pill-on .crm-pill-value, .crm-pill-on .crm-pill-gear { color: #ffffff; }
+
+/* Pílula ativa — etiqueta: a cor inline (data-color) sobrescreve via JS */
 .crm-pill-value { font-weight: 500; color: var(--z-accent); text-transform: none; }
 .crm-pill-count {
   font-weight: 700;
