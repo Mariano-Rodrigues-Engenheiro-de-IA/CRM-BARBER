@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.34.14";
+  const CRM_VERSION = "0.34.15";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -547,9 +547,12 @@
         .map((l) => {
           const id = l.id || l.wa_label_id;
           const on = activeFilter?.key === `label:${id}`;
+          const countStyle = l.color
+            ? ` style="background-color:${escapeHtml(l.color)};color:#fff"`
+            : "";
           return `<button class="crm-pill${on ? " crm-pill-on" : ""}" data-label-id="${escapeHtml(id)}" data-name="${escapeHtml(l.name)}">
               ${escapeHtml(l.name)}
-              <span class="crm-pill-count">${Number(l.count ?? l.conversation_count ?? 0)}</span>
+              <span class="crm-pill-count"${countStyle}>${Number(l.count ?? l.conversation_count ?? 0)}</span>
             </button>`;
         })
         .join("");
