@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.34.10";
+  const BRIDGE_VERSION = "0.34.11";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -385,6 +385,27 @@
    * nome de verdade — listas "deduzidas" davam entradas fantasma no CRM que
    * nunca sincronizavam de volta.
    */
+  // A cor da etiqueta pode vir como número ARGB (formato interno do
+  // WhatsApp, ex: 4292960042) OU como string hex, dependendo da fonte.
+  // CSS não entende o número puro — precisa converter pra "#rrggbb".
+  function normalizeLabelColor(raw) {
+    if (raw == null) return null;
+    if (typeof raw === "number" && Number.isFinite(raw)) {
+      const r = (raw >> 16) & 0xff;
+      const g = (raw >> 8) & 0xff;
+      const b = raw & 0xff;
+      return (
+        "#" +
+        [r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("")
+      );
+    }
+    const s = String(raw).trim();
+    if (!s) return null;
+    if (s.startsWith("#")) return s.slice(0, 20);
+    if (/^[0-9a-fA-F]{6}$/.test(s)) return `#${s}`;
+    return null;
+  }
+
   function readLabels() {
     const sources = [
       () => window.WPP?.labels?.getAllLabels?.(),
@@ -408,7 +429,7 @@
         out.push({
           id,
           name: name.slice(0, 120),
-          color: l?.hexColor ? String(l.hexColor).slice(0, 20) : null,
+          color: normalizeLabelColor(l?.hexColor ?? l?.color ?? l?.__x_hexColor),
           count: Number(l?.count ?? l?.labelItemCount ?? l?.__x_count ?? 0) || 0,
         });
       }
