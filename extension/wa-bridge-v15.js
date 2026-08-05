@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.34.11";
+  const BRIDGE_VERSION = "0.34.12";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -354,6 +354,15 @@
   }
 
   /** Nome exibível: passa por todas as fontes antes de desistir. */
+  async function resolveProfilePicture(waId) {
+    try {
+      if (typeof window.WPP?.contact?.getProfilePictureUrl === "function") {
+        return await window.WPP.contact.getProfilePictureUrl(waId);
+      }
+    } catch {}
+    return null;
+  }
+
   function resolveName(chat, waId) {
     let contact = null;
     try {
@@ -390,7 +399,14 @@
   // CSS não entende o número puro — precisa converter pra "#rrggbb".
   function normalizeLabelColor(raw) {
     if (raw == null) return null;
+    // Se já for uma string hex válida
+    const s = String(raw).trim();
+    if (s.startsWith("#") && (s.length === 7 || s.length === 9)) return s.slice(0, 7);
+    if (/^[0-9a-fA-F]{6}$/.test(s)) return `#${s}`;
+
+    // Se for um número (formato interno do WhatsApp)
     if (typeof raw === "number" && Number.isFinite(raw)) {
+      // Às vezes o número é ARGB, pegamos os últimos 3 bytes (RGB)
       const r = (raw >> 16) & 0xff;
       const g = (raw >> 8) & 0xff;
       const b = raw & 0xff;
@@ -399,10 +415,6 @@
         [r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("")
       );
     }
-    const s = String(raw).trim();
-    if (!s) return null;
-    if (s.startsWith("#")) return s.slice(0, 20);
-    if (/^[0-9a-fA-F]{6}$/.test(s)) return `#${s}`;
     return null;
   }
 
@@ -429,7 +441,7 @@
         out.push({
           id,
           name: name.slice(0, 120),
-          color: normalizeLabelColor(l?.hexColor ?? l?.color ?? l?.__x_hexColor),
+          color: normalizeLabelColor(l?.hexColor ?? l?.__x_hexColor ?? l?.color ?? l?.__x_color ?? l?.backgroundColor),
           count: Number(l?.count ?? l?.labelItemCount ?? l?.__x_count ?? 0) || 0,
         });
       }
@@ -536,6 +548,7 @@
               .slice(0, 50);
           })(),
           last_message_at: ts > 0 ? new Date(ts * 1000).toISOString() : null,
+          profile_picture_url: await resolveProfilePicture(waId),
         });
       }
     } catch (e) {
@@ -561,6 +574,7 @@
           is_group: chatId.endsWith("@g.us"),
           label_ids: ids.slice(0, 50),
           last_message_at: null,
+          profile_picture_url: await resolveProfilePicture(chatId),
         });
         seen.add(chatId);
       }

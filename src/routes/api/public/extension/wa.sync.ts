@@ -79,6 +79,7 @@ export const Route = createFileRoute("/api/public/extension/wa/sync")({
               is_group: !!c.is_group,
               label_ids: c.label_ids ?? [],
               last_message_at: c.last_message_at ?? null,
+              profile_picture_url: c.profile_picture_url ?? null,
               synced_at: now,
             }));
             const { error } = await supabaseAdmin

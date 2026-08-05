@@ -21,6 +21,7 @@ import {
   isRealPhone,
   openWhatsappChat,
 } from "@/lib/wa-actions";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { sendableActions, type QuickReply } from "@/lib/quick-replies";
 
 type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
@@ -484,9 +485,23 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
 
                       className="cursor-grab rounded-lg border border-neutral-200 bg-white p-3 shadow-sm active:cursor-grabbing"
                     >
-                      <p className="truncate text-sm font-medium text-neutral-900">
-                        {c.name || c.phone || c.wa_id}
-                      </p>
+                      <div className="flex items-center gap-2 min-w-0 mb-1">
+                        {c.profile_picture_url ? (
+                          <Avatar className="h-7 w-7 shrink-0">
+                            <AvatarImage src={c.profile_picture_url} alt={c.name || ""} />
+                            <AvatarFallback className="text-[10px]">
+                              {(c.name || c.phone || "??").slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        ) : (
+                          <div className="h-7 w-7 shrink-0 rounded-full bg-neutral-100 flex items-center justify-center text-[10px] text-neutral-400 font-bold">
+                            {(c.name || c.phone || "??").slice(0, 2).toUpperCase()}
+                          </div>
+                        )}
+                        <p className="truncate text-sm font-medium text-neutral-900">
+                          {c.name || c.phone || c.wa_id}
+                        </p>
+                      </div>
                       {isRealPhone(c.phone) && (
                         <p className="mt-0.5 truncate text-[11px] text-neutral-500">{c.phone}</p>
                       )}
@@ -604,9 +619,23 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                         className="cursor-grab rounded-lg border border-neutral-200 bg-white p-3 shadow-sm active:cursor-grabbing"
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <p className="min-w-0 truncate text-sm font-medium text-neutral-900">
-                            {card.title}
-                          </p>
+                          <div className="flex items-center gap-2 min-w-0">
+                            {card.profile_picture_url ? (
+                              <Avatar className="h-7 w-7 shrink-0">
+                                <AvatarImage src={card.profile_picture_url} alt={card.title} />
+                                <AvatarFallback className="text-[10px]">
+                                  {card.title.slice(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                            ) : (
+                              <div className="h-7 w-7 shrink-0 rounded-full bg-neutral-100 flex items-center justify-center text-[10px] text-neutral-400 font-bold">
+                                {card.title.slice(0, 2).toUpperCase()}
+                              </div>
+                            )}
+                            <p className="min-w-0 truncate text-sm font-medium text-neutral-900">
+                              {card.title}
+                            </p>
+                          </div>
                           {active.mode !== "label" && (
                             <button
                               onClick={() => removeCard(card)}

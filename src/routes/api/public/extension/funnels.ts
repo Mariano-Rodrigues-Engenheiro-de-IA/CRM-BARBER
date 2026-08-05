@@ -34,7 +34,7 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
           supabaseAdmin
             .from("funnel_cards")
             .select(
-              "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids)",
+              "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids, profile_picture_url)",
             )
             .eq("barbershop_id", shop)
             .order("sort_order", { ascending: true }),
@@ -53,6 +53,7 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
           ...c,
           wa_id: c.wa_contacts?.wa_id ?? null,
           label_ids: c.wa_contacts?.label_ids ?? [],
+          profile_picture_url: c.wa_contacts?.profile_picture_url ?? null,
           wa_contacts: undefined,
         }));
 

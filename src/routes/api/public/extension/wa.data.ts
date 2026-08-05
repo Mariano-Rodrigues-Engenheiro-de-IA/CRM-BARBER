@@ -26,7 +26,7 @@ export const Route = createFileRoute("/api/public/extension/wa/data")({
             .order("name", { ascending: true }),
           supabaseAdmin
             .from("wa_contacts")
-            .select("id, wa_id, phone, name, is_group, label_ids, last_message_at")
+            .select("id, wa_id, phone, name, is_group, label_ids, last_message_at, profile_picture_url")
             .eq("barbershop_id", shop)
             .order("last_message_at", { ascending: false, nullsFirst: false })
             .limit(2000),

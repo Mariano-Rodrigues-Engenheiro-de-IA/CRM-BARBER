@@ -81,6 +81,7 @@ export const waSyncSchema = z.object({
         is_group: z.boolean().optional(),
         label_ids: z.array(z.string().trim().max(120)).max(50).optional(),
         last_message_at: z.string().datetime().nullable().optional(),
+        profile_picture_url: z.string().trim().nullable().optional(),
       }),
     )
     .max(3000)
@@ -112,6 +113,7 @@ export type FunnelCard = {
   /** Etiquetas do WhatsApp associadas ao contato (wa_labels.wa_label_id),
    * usado pra desenhar a cor da etiqueta no card. */
   label_ids?: string[];
+  profile_picture_url?: string | null;
 };
 
 export type Funnel = {
@@ -140,6 +142,7 @@ export type WaContact = {
   is_group: boolean;
   label_ids: string[];
   last_message_at: string | null;
+  profile_picture_url: string | null;
 };
 
 export function formatBRL(cents: number | null | undefined) {
