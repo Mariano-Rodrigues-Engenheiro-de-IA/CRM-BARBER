@@ -1,4 +1,32 @@
-/* Zetta CRM — barra de abas no topo do WhatsApp Web + trilho de ícones minimalista à esquerda. */
+/* Zetta CRM — identidade visual "verde profundo".
+   Paleta única, definida em variáveis, usada por trilho, topo, pílulas,
+   menus, modais e a gaveta de contatos. Objetivo: tirar o peso do preto
+   puro e trabalhar tons de verde-escuro com um acento verde vivo. */
+
+:root {
+  /* superfícies */
+  --z-ink: #0e1a15;        /* trilho lateral (mais profundo) */
+  --z-bar: #12211b;        /* barra do topo */
+  --z-surface: #16281f;    /* cards, menus, modais */
+  --z-surface-2: #1b3227;  /* hover / estado intermediário */
+  --z-line: #23402f;       /* bordas */
+  --z-line-soft: #1c3226;
+
+  /* acento */
+  --z-accent: #2ecc8f;
+  --z-accent-strong: #22b47c;
+  --z-accent-soft: rgba(46, 204, 143, 0.14);
+  --z-on-accent: #06231a;
+
+  /* texto */
+  --z-text: #e7f2ec;
+  --z-text-dim: #9db3a8;
+  --z-text-faint: #6f877c;
+  --z-danger: #f87171;
+
+  --z-radius: 10px;
+  --z-font: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+}
 
 /* O #app do WhatsApp é uma camada posicionada. Reservamos o espaço usando position absolute
    em vez de fixed para evitar conflitos com o motor de renderização do React do WhatsApp,
@@ -36,15 +64,15 @@ html body.crm-shell #app {
   left: 0;
   bottom: 0;
   width: 46px;
-  background: #111111;
-  border-right: 1px solid #1f1f1f;
+  background: linear-gradient(180deg, var(--z-ink) 0%, #0b1712 100%);
+  border-right: 1px solid var(--z-line-soft);
   z-index: 1000000;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
   padding: 8px 0;
-  font-family: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  font-family: var(--z-font);
 }
 .crm-rail-mark {
   width: 24px;
@@ -52,7 +80,7 @@ html body.crm-shell #app {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 .crm-rail-mark img {
   width: 100%;
@@ -66,14 +94,14 @@ html body.crm-shell #app {
   border: 0;
   border-radius: 9px;
   background: transparent;
-  color: #8a8a8a;
+  color: var(--z-text-dim);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
-.crm-rail-btn:hover { background: #1e1e1e; color: #facc15; }
+.crm-rail-btn:hover { background: var(--z-accent-soft); color: var(--z-accent); }
 .crm-rail-spacer { flex: 1; }
 
 /* Tooltip do trilho (nome da aba ao passar o mouse) */
@@ -84,9 +112,9 @@ html body.crm-shell #app {
   left: 40px;
   top: 50%;
   transform: translateY(-50%);
-  background: #111111;
-  color: #facc15;
-  border: 1px solid #2a2a2a;
+  background: var(--z-surface);
+  color: var(--z-text);
+  border: 1px solid var(--z-line);
   border-radius: 8px;
   padding: 5px 9px;
   font-size: 11px;
@@ -106,15 +134,15 @@ html body.crm-shell #app {
   left: 46px;
   right: 0;
   height: 40px;
-  background: #111111;
-  border-bottom: 1px solid #1f1f1f;
+  background: var(--z-bar);
+  border-bottom: 1px solid var(--z-line-soft);
   z-index: 1000000;
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 0 10px;
   overflow-x: auto;
-  font-family: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  font-family: var(--z-font);
 }
 #crm-topbar::-webkit-scrollbar { height: 0; }
 
@@ -127,27 +155,27 @@ html body.crm-shell #app {
   height: 26px;
   padding: 0 10px;
   border-radius: 8px;
-  border: 1px solid #2a2a2a;
-  background: #1a1a1a;
-  color: #facc15;
+  border: 1px solid var(--z-line);
+  background: var(--z-surface);
+  color: var(--z-accent);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
   cursor: pointer;
 }
-.crm-filter:hover { background: #222222; border-color: #facc15; }
+.crm-filter:hover { background: var(--z-surface-2); border-color: var(--z-accent); }
 
 .crm-menu {
   position: fixed;
   min-width: 190px;
-  background: #111111;
-  border: 1px solid #2a2a2a;
-  border-radius: 10px;
+  background: var(--z-surface);
+  border: 1px solid var(--z-line);
+  border-radius: 12px;
   padding: 5px;
   z-index: 2147483646;
-  font-family: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  font-family: var(--z-font);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
 }
 .crm-menu button {
   display: block;
@@ -155,14 +183,14 @@ html body.crm-shell #app {
   text-align: left;
   border: 0;
   background: transparent;
-  color: #e5e5e5;
+  color: var(--z-text);
   font-size: 12px;
   padding: 7px 9px;
   border-radius: 7px;
   cursor: pointer;
 }
-.crm-menu button:hover { background: #1e1e1e; color: #facc15; }
-.crm-menu button.crm-menu-danger:hover { color: #f87171; }
+.crm-menu button:hover { background: var(--z-surface-2); color: var(--z-accent); }
+.crm-menu button.crm-menu-danger:hover { color: var(--z-danger); background: rgba(248, 113, 113, 0.1); }
 
 .crm-pill {
   display: inline-flex;
@@ -172,54 +200,67 @@ html body.crm-shell #app {
   height: 26px;
   padding: 0 10px;
   border-radius: 999px;
-  border: 1px solid #2a2a2a;
-  background: #1a1a1a;
-  color: #e5e5e5;
+  border: 1px solid var(--z-line);
+  background: var(--z-surface);
+  color: var(--z-text);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.2px;
   text-transform: uppercase;
   cursor: pointer;
   white-space: nowrap;
+  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
 }
-.crm-pill:hover { border-color: #facc15; background: #232323; color: #facc15; }
-.crm-pill:hover .crm-pill-count { background: rgba(250, 204, 21, 0.18); color: #facc15; }
-.crm-pill-on { border-color: #facc15; background: #facc15; color: #111111; }
-.crm-pill-on:hover { background: #eab308; color: #111111; }
-.crm-pill-on:hover .crm-pill-count { background: rgba(0, 0, 0, 0.2); color: #111111; }
-.crm-pill-on .crm-pill-count, .crm-pill-on .crm-pill-value, .crm-pill-on .crm-pill-gear { color: #111111; }
-.crm-pill-value { font-weight: 500; color: #facc15; text-transform: none; }
+.crm-pill:hover { border-color: var(--z-accent); background: var(--z-surface-2); color: var(--z-accent); }
+.crm-pill:hover .crm-pill-count { background: var(--z-accent-soft); color: var(--z-accent); }
+.crm-pill-on {
+  border-color: var(--z-accent);
+  background: var(--z-accent);
+  color: var(--z-on-accent);
+  box-shadow: 0 0 0 3px var(--z-accent-soft);
+}
+.crm-pill-on:hover { background: var(--z-accent-strong); color: var(--z-on-accent); }
+.crm-pill-on:hover .crm-pill-count { background: rgba(0, 0, 0, 0.18); color: var(--z-on-accent); }
+.crm-pill-on .crm-pill-count, .crm-pill-on .crm-pill-value, .crm-pill-on .crm-pill-gear { color: var(--z-on-accent); }
+.crm-pill-value { font-weight: 500; color: var(--z-accent); text-transform: none; }
 .crm-pill-count {
-  font-weight: 600;
-  color: inherit;
+  font-weight: 700;
+  color: var(--z-text-dim);
   text-transform: none;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.07);
   border-radius: 999px;
   padding: 1px 6px;
   font-size: 10px;
 }
-.crm-pill-on .crm-pill-count { background: rgba(0, 0, 0, 0.15); }
+.crm-pill-on .crm-pill-count { background: rgba(0, 0, 0, 0.16); }
+.crm-pill-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--z-accent);
+  flex: 0 0 auto;
+}
 .crm-pill-gear {
   border: 0;
   background: transparent;
-  color: #c9c9c9;
+  color: var(--z-text-faint);
   cursor: pointer;
   padding: 0;
   display: inline-flex;
   align-items: center;
 }
-.crm-pill-gear:hover { color: #facc15; }
+.crm-pill-gear:hover { color: var(--z-accent); }
 
 .crm-pill-add {
   border-style: dashed;
-  border-color: #3a3a3a;
+  border-color: var(--z-line);
   background: transparent;
-  color: #a3a3a3;
+  color: var(--z-text-faint);
 }
-.crm-pill-add:hover { color: #facc15; border-color: #facc15; }
+.crm-pill-add:hover { color: var(--z-accent); border-color: var(--z-accent); }
 .crm-topbar-hint {
   font-size: 11px;
-  color: #6b6b6b;
+  color: var(--z-text-faint);
   white-space: nowrap;
 }
 
@@ -228,22 +269,23 @@ html body.crm-shell #app {
   position: fixed;
   inset: 0;
   z-index: 2147483647;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(4, 12, 9, 0.62);
+  backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  font-family: var(--z-font);
 }
 .crm-modal {
   width: min(360px, calc(100vw - 32px));
-  background: #111111;
-  border: 1px solid #2a2a2a;
-  border-radius: 12px;
+  background: var(--z-surface);
+  border: 1px solid var(--z-line);
+  border-radius: 14px;
   padding: 20px;
-  color: #f5f5f5;
+  color: var(--z-text);
 }
 .crm-modal-title { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
-.crm-modal-body { margin: 0 0 18px; font-size: 13px; line-height: 1.5; color: #a3a3a3; }
+.crm-modal-body { margin: 0 0 18px; font-size: 13px; line-height: 1.5; color: var(--z-text-dim); }
 .crm-modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
 .crm-modal-actions button {
   border: 0;
@@ -253,18 +295,30 @@ html body.crm-shell #app {
   font-weight: 600;
   cursor: pointer;
 }
-.crm-modal-cancel { background: #262626; color: #e5e5e5; }
-.crm-modal-confirm { background: #facc15; color: #111111; }
+.crm-modal-cancel { background: var(--z-surface-2); color: var(--z-text); }
+.crm-modal-confirm { background: var(--z-accent); color: var(--z-on-accent); }
+.crm-modal-input {
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--z-line);
+  background: var(--z-ink);
+  color: var(--z-text);
+  font-size: 13px;
+  outline: none;
+}
+.crm-modal-input:focus { border-color: var(--z-accent); }
 
 /* Aviso de plano: vive no topo do WhatsApp, não dentro do painel. */
 .crm-pill-premium {
   margin-left: auto;
-  border-color: #facc15;
-  background: #facc15;
-  color: #111111;
+  border-color: var(--z-accent);
+  background: var(--z-accent);
+  color: var(--z-on-accent);
   font-weight: 700;
 }
-.crm-pill-premium:hover { background: #eab308; color: #111111; }
+.crm-pill-premium:hover { background: var(--z-accent-strong); color: var(--z-on-accent); }
 
 /* Botão CRM dentro do cabeçalho da conversa (ações sem sair do WhatsApp). */
 .crm-chat-btn {
@@ -273,10 +327,10 @@ html body.crm-shell #app {
   gap: 6px;
   margin-left: 8px;
   padding: 6px 10px;
-  border: 1px solid #2a2a2a;
+  border: 1px solid var(--z-line);
   border-radius: 999px;
-  background: #111111;
-  color: #facc15;
+  background: var(--z-surface);
+  color: var(--z-accent);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -285,7 +339,7 @@ html body.crm-shell #app {
   touch-action: manipulation;
   flex: 0 0 auto;
 }
-.crm-chat-btn:hover { background: #1c1c1c; }
+.crm-chat-btn:hover { background: var(--z-surface-2); border-color: var(--z-accent); }
 .crm-chat-btn svg { width: 14px; height: 14px; }
 
 /* Aviso rápido das ações feitas dentro da conversa. */
@@ -295,16 +349,16 @@ html body.crm-shell #app {
   left: 50%;
   transform: translateX(-50%);
   z-index: 2147483647;
-  background: #111111;
-  color: #f5f5f5;
-  border: 1px solid #2a2a2a;
-  border-left: 3px solid #facc15;
+  background: var(--z-surface);
+  color: var(--z-text);
+  border: 1px solid var(--z-line);
+  border-left: 3px solid var(--z-accent);
   border-radius: 10px;
   padding: 10px 14px;
   font-size: 13px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
-.crm-toast-err { border-left-color: #ef4444; }
+.crm-toast-err { border-left-color: var(--z-danger); }
 
 /* ---- Pop-up de Respostas Rápidas ---- */
 .crm-qr {
@@ -313,24 +367,24 @@ html body.crm-shell #app {
   max-height: 78vh;
   display: flex;
   flex-direction: column;
-  background: #111111;
-  color: #f5f5f5;
-  border: 1px solid #2a2a2a;
-  border-radius: 14px;
+  background: var(--z-surface);
+  color: var(--z-text);
+  border: 1px solid var(--z-line);
+  border-radius: 16px;
   padding: 16px 16px 12px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
 }
 .crm-qr-head { display: flex; align-items: center; justify-content: space-between; }
 .crm-qr-title { margin: 0; font-size: 15px; font-weight: 700; }
 .crm-qr-close {
-  background: transparent; border: none; color: #a3a3a3; cursor: pointer; font-size: 14px;
+  background: transparent; border: none; color: var(--z-text-dim); cursor: pointer; font-size: 14px;
 }
-.crm-qr-close:hover { color: #facc15; }
+.crm-qr-close:hover { color: var(--z-accent); }
 .crm-qr-list { margin-top: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-.crm-qr-empty { margin: 12px 0; font-size: 13px; color: #a3a3a3; }
+.crm-qr-empty { margin: 12px 0; font-size: 13px; color: var(--z-text-dim); }
 .crm-qr-item {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 10px 12px; border: 1px solid #242424; border-radius: 10px; background: #171717;
+  padding: 10px 12px; border: 1px solid var(--z-line-soft); border-radius: 10px; background: var(--z-ink);
 }
 .crm-qr-name {
   margin: 0; font-size: 13px; font-weight: 600; min-width: 0;
@@ -338,8 +392,185 @@ html body.crm-shell #app {
 }
 .crm-qr-send {
   flex-shrink: 0; padding: 6px 12px; border-radius: 8px;
-  background: #facc15; border: 1px solid #facc15; color: #111111;
+  background: var(--z-accent); border: 1px solid var(--z-accent); color: var(--z-on-accent);
   font-size: 12px; font-weight: 700; cursor: pointer;
 }
-.crm-qr-send:hover { background: #eab308; }
+.crm-qr-send:hover { background: var(--z-accent-strong); }
 .crm-chat-btn-icon { padding: 6px 8px; margin-left: 6px; }
+
+/* ------------------------------------------------------------------ */
+/* Gaveta de contatos — abre ao clicar numa LISTA ou numa ETAPA de funil */
+/* ------------------------------------------------------------------ */
+#crm-drawer {
+  position: fixed;
+  top: 40px;
+  left: 46px;
+  bottom: 0;
+  width: 340px;
+  z-index: 999999;
+  display: flex;
+  flex-direction: column;
+  background: var(--z-bar);
+  border-right: 1px solid var(--z-line);
+  font-family: var(--z-font);
+  color: var(--z-text);
+  box-shadow: 18px 0 40px rgba(0, 0, 0, 0.28);
+}
+.crm-dw-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid var(--z-line-soft);
+}
+.crm-dw-kind {
+  margin: 0 0 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  color: var(--z-accent);
+}
+.crm-dw-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.crm-dw-sub { margin: 3px 0 0; font-size: 11px; color: var(--z-text-faint); }
+.crm-dw-close {
+  border: 1px solid var(--z-line);
+  background: var(--z-surface);
+  color: var(--z-text-dim);
+  border-radius: 8px;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  flex: 0 0 auto;
+  line-height: 1;
+}
+.crm-dw-close:hover { color: var(--z-accent); border-color: var(--z-accent); }
+.crm-dw-search {
+  margin: 10px 12px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--z-line);
+  background: var(--z-ink);
+  color: var(--z-text);
+  font-size: 12.5px;
+  outline: none;
+}
+.crm-dw-search::placeholder { color: var(--z-text-faint); }
+.crm-dw-search:focus { border-color: var(--z-accent); }
+.crm-dw-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 8px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.crm-dw-list::-webkit-scrollbar { width: 8px; }
+.crm-dw-list::-webkit-scrollbar-thumb { background: var(--z-line); border-radius: 8px; }
+.crm-dw-empty { padding: 22px 14px; font-size: 12.5px; color: var(--z-text-faint); line-height: 1.55; }
+.crm-dw-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 9px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.crm-dw-row:hover { background: var(--z-surface); border-color: var(--z-line-soft); }
+.crm-dw-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  object-fit: cover;
+  background: var(--z-surface-2);
+  border: 1px solid var(--z-line);
+}
+.crm-dw-fallback {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--z-accent-soft);
+  color: var(--z-accent);
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid var(--z-line);
+}
+.crm-dw-info { min-width: 0; flex: 1; }
+.crm-dw-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.crm-dw-meta {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--z-text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.crm-dw-badge {
+  flex: 0 0 auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--z-accent);
+  color: var(--z-on-accent);
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.crm-dw-more {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: var(--z-text-faint);
+  cursor: pointer;
+  border-radius: 7px;
+  width: 24px;
+  height: 24px;
+  font-size: 15px;
+  line-height: 1;
+}
+.crm-dw-more:hover { color: var(--z-accent); background: var(--z-surface-2); }
+.crm-dw-foot {
+  border-top: 1px solid var(--z-line-soft);
+  padding: 9px 12px;
+  font-size: 11px;
+  color: var(--z-text-faint);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.crm-dw-foot button {
+  border: 1px solid var(--z-line);
+  background: var(--z-surface);
+  color: var(--z-accent);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.crm-dw-foot button:hover { border-color: var(--z-accent); background: var(--z-surface-2); }
