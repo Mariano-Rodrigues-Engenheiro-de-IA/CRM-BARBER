@@ -165,7 +165,7 @@ function Landing() {
         </p>
 
         {/* Vídeo de vendas */}
-        <div className="order-3 overflow-hidden rounded-2xl border border-white/10 bg-neutral-900 shadow-2xl md:order-none md:col-start-2 md:row-start-1 md:row-span-5 md:rounded-3xl">
+        <div className="order-3 mt-3 overflow-hidden rounded-2xl border border-white/10 bg-neutral-900 shadow-2xl md:order-none md:col-start-2 md:row-start-1 md:row-span-5 md:mt-0 md:rounded-3xl">
           <div className="relative aspect-video w-full">
             <iframe
               src="https://www.youtube.com/embed/QJYO1QX-tKQ"
@@ -178,11 +178,15 @@ function Landing() {
           </div>
         </div>
 
-        <div className="order-4 flex flex-wrap items-center gap-3 md:order-none md:col-start-1 md:row-start-4">
-          <Button size="lg" className="bg-yellow-400 font-bold text-neutral-950 hover:bg-yellow-300" onClick={scrollToForm}>
+        <div className="order-4 mt-3 flex flex-wrap items-center justify-center gap-3 md:order-none md:col-start-1 md:row-start-4 md:mt-0 md:justify-start">
+          <Button
+            size="lg"
+            className="w-full max-w-xs px-10 py-6 text-base bg-yellow-400 font-bold text-neutral-950 hover:bg-yellow-300 md:w-auto md:max-w-none md:px-8 md:py-4"
+            onClick={scrollToForm}
+          >
             QUERO TESTAR GRÁTIS
           </Button>
-          <span className="text-xs text-neutral-400">
+          <span className="hidden text-xs text-neutral-400 md:inline">
             Sem cartão para começar · {PROMO_PRICE_LABEL} no lançamento (depois {PREMIUM_PRICE_LABEL})
           </span>
         </div>
