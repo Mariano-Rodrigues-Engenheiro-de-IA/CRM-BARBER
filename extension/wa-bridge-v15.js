@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.34.18";
+  const BRIDGE_VERSION = "0.34.19";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -666,7 +666,13 @@
       typeof window.WPP?.contact?.getProfilePictureUrl,
     );
 
-
+    const comNaoLida = contacts.filter((c) => (c.unread_count || 0) > 0);
+    console.info(
+      "[CRM][diagnostico-naolida]",
+      `contatos com unread_count > 0: ${comNaoLida.length} de ${contacts.length}`,
+      "exemplos:",
+      JSON.stringify(comNaoLida.slice(0, 5).map((c) => ({ name: c.name, unread_count: c.unread_count }))),
+    );
 
     console.info(`[CRM] coletado: ${labels.length} etiqueta(s), ${contacts.length} conversa(s)`);
     return { labels, contacts };
