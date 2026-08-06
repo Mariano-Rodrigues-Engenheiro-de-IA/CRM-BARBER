@@ -59,13 +59,17 @@ function loadFacebookSdk(appId: string): Promise<void> {
       resolve();
     };
     if (document.getElementById("facebook-jssdk")) return;
+    // Padrão exato do snippet oficial "JavaScript assíncrono" da Meta:
+    // insere antes do primeiro <script> existente, não no fim do body.
+    const firstScript = document.getElementsByTagName("script")[0];
     const script = document.createElement("script");
     script.id = "facebook-jssdk";
     script.src = "https://connect.facebook.net/en_US/sdk.js";
-    script.async = true;
-    script.defer = true;
-    script.crossOrigin = "anonymous";
-    document.body.appendChild(script);
+    if (firstScript?.parentNode) {
+      firstScript.parentNode.insertBefore(script, firstScript);
+    } else {
+      document.head.appendChild(script);
+    }
   });
   return fbSdkPromise;
 }
