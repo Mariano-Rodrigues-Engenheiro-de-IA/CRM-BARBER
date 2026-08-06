@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.35.2";
+  const CRM_VERSION = "0.35.3";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -279,7 +279,7 @@
         return;
       }
 
-      const addBtn = e.target.closest(".crm-pill-add");
+      const addBtn = e.target.closest(".crm-pill-add-icon");
       if (addBtn) return createTab();
 
       const pill = e.target.closest(".crm-pill");
@@ -927,7 +927,7 @@
 
     topbarRef.innerHTML = `${filter}${
       pills || `<span class="crm-topbar-hint">Nenhuma etapa nesse funil ainda.</span>`
-    }<button class="crm-pill crm-pill-add">+ etapa</button>${premiumPill()}`;
+    }<button class="crm-pill-add-icon" title="Adicionar nova etapa"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10.5V19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v1.5"/><path d="M17 13v6M14 16h6"/></svg></button>${premiumPill()}`;
   }
 
   /** Aviso de plano vive aqui (no WhatsApp), não mais dentro do painel do CRM. */

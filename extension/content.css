@@ -232,7 +232,7 @@ html body.crm-shell #app {
   font-weight: 700;
   color: var(--z-text);
   text-transform: none;
-  background: rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.06);
   border-radius: 999px;
   padding: 2px 8px;
   font-size: 12px;
@@ -256,13 +256,21 @@ html body.crm-shell #app {
 }
 .crm-pill-gear:hover { color: var(--z-accent); }
 
-.crm-pill-add {
-  border-style: dashed;
-  border-color: var(--z-line);
+.crm-pill-add-icon {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--z-line);
+  border-radius: 9px;
   background: transparent;
-  color: var(--z-text-faint);
+  color: var(--z-text-dim);
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
 }
-.crm-pill-add:hover { color: var(--z-accent); border-color: var(--z-accent); }
+.crm-pill-add-icon:hover { color: var(--z-accent); border-color: var(--z-accent); background: var(--z-accent-soft); }
 .crm-topbar-hint {
   font-size: 11px;
   color: var(--z-text-faint);
