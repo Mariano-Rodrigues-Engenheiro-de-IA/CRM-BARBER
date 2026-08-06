@@ -92,10 +92,11 @@ export const Route = createFileRoute("/api/public/whatsapp/signup-callback")({
             .eq("barbershop_id", verified.barbershop_id)
             .maybeSingle();
 
-          if (existing) {
-            await supabaseAdmin.from("whatsapp_instances").update(payload).eq("id", existing.id);
-          } else {
-            await supabaseAdmin.from("whatsapp_instances").insert(payload);
+          const { error: persistenceError } = existing
+            ? await supabaseAdmin.from("whatsapp_instances").update(payload).eq("id", existing.id)
+            : await supabaseAdmin.from("whatsapp_instances").insert(payload);
+          if (persistenceError) {
+            throw new Error(`A Meta autorizou o número, mas o CRM não conseguiu salvar a conexão: ${persistenceError.message}`);
           }
 
           return page(

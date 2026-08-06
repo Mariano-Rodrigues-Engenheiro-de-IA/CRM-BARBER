@@ -53,18 +53,36 @@ let fbSdkPromise: Promise<void> | null = null;
 function loadFacebookSdk(appId: string): Promise<void> {
   if (window.FB) return Promise.resolve();
   if (fbSdkPromise) return fbSdkPromise;
-  fbSdkPromise = new Promise((resolve) => {
+  fbSdkPromise = new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      fbSdkPromise = null;
+      reject(new Error("O SDK da Meta não carregou. Desative bloqueadores e tente novamente."));
+    }, 15000);
     window.fbAsyncInit = () => {
       window.FB?.init({ appId, version: "v26.0", xfbml: true, autoLogAppEvents: true });
+      window.clearTimeout(timeout);
       resolve();
     };
-    if (document.getElementById("facebook-jssdk")) return;
+    const existing = document.getElementById("facebook-jssdk");
+    if (existing) {
+      existing.addEventListener("error", () => {
+        window.clearTimeout(timeout);
+        fbSdkPromise = null;
+        reject(new Error("Falha ao carregar o SDK da Meta."));
+      }, { once: true });
+      return;
+    }
     // Padrão exato do snippet oficial "JavaScript assíncrono" da Meta:
     // insere antes do primeiro <script> existente, não no fim do body.
     const firstScript = document.getElementsByTagName("script")[0];
     const script = document.createElement("script");
     script.id = "facebook-jssdk";
     script.src = "https://connect.facebook.net/en_US/sdk.js";
+    script.onerror = () => {
+      window.clearTimeout(timeout);
+      fbSdkPromise = null;
+      reject(new Error("Falha ao carregar o SDK da Meta."));
+    };
     if (firstScript?.parentNode) {
       firstScript.parentNode.insertBefore(script, firstScript);
     } else {
@@ -213,7 +231,15 @@ export function ConnectionView({ api }: { api: Api }) {
         })();
 
         if (appId && configId && state) {
-          await loadFacebookSdk(appId);
+          try {
+            await loadFacebookSdk(appId);
+          } catch (sdkError) {
+            actionRef.current = null;
+            setBusy(false);
+            statusRef.current = "disconnected";
+            setErr(sdkError instanceof Error ? sdkError.message : "Falha ao carregar o SDK da Meta.");
+            return;
+          }
           window.FB?.login(
             (response) => {
               const code = response.authResponse?.code;
@@ -227,9 +253,16 @@ export function ConnectionView({ api }: { api: Api }) {
               // Reaproveita o mesmo endpoint de callback que já processa o
               // code, descobre a WABA e salva a conexão — só que chamado
               // via fetch em vez de redirect de página completa.
-              const callbackUrl = `/api/public/whatsapp/signup-callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`;
+              const callbackUrl = `/api/public/whatsapp/signup-callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}&source=sdk`;
               fetch(callbackUrl)
-                .catch(() => undefined)
+                .then((callbackResponse) => {
+                  if (!callbackResponse.ok) {
+                    throw new Error("A Meta autorizou o acesso, mas o CRM não conseguiu concluir o vínculo.");
+                  }
+                })
+                .catch((callbackError: unknown) => {
+                  setErr(callbackError instanceof Error ? callbackError.message : "Falha ao concluir o vínculo.");
+                })
                 .finally(() => {
                   actionRef.current = null;
                   setBusy(false);
@@ -243,6 +276,7 @@ export function ConnectionView({ api }: { api: Api }) {
               extras: { feature: "whatsapp_embedded_signup", sessionInfoVersion: 3, version: 3 },
             },
           );
+          return;
         } else {
           // Faltou algum dado pro SDK (app_id/config_id/state) — cai pro
           // comportamento antigo como reserva, em vez de travar o fluxo.
