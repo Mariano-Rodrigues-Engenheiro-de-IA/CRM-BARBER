@@ -27,7 +27,7 @@ import { sendableActions, type QuickReply } from "@/lib/quick-replies";
 type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
 
 const inputCls =
-  "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-900";
+  "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-brand";
 
 /** Cache entre navegações: voltar pra aba Funis não deve piscar esqueleto. */
 let funnelsCache: { funnels: Funnel[]; labels: WaLabel[]; contacts: WaContact[] } | null = null;
@@ -478,7 +478,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                 value={inboxQuery}
                 onChange={(e) => setInboxQuery(e.target.value)}
                 placeholder="Buscar"
-                className="mt-1.5 w-full rounded-lg border border-neutral-200 px-2.5 py-1 text-xs outline-none focus:border-neutral-900"
+                className="mt-1.5 w-full rounded-lg border border-neutral-200 px-2.5 py-1 text-xs outline-none focus:border-brand"
               />
               <div className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                 {inboxContacts
@@ -806,7 +806,7 @@ function StageTitle({
         if (e.key === "Enter") onRename((e.target as HTMLInputElement).value);
         if (e.key === "Escape") onCancel();
       }}
-      className="w-full min-w-0 rounded-md border border-neutral-300 px-2 py-1 text-sm font-semibold uppercase tracking-wide text-neutral-900 outline-none focus:border-neutral-900"
+      className="w-full min-w-0 rounded-md border border-neutral-300 px-2 py-1 text-sm font-semibold uppercase tracking-wide text-neutral-900 outline-none focus:border-brand"
     />
   );
 }
@@ -887,7 +887,7 @@ function FunnelPicker({
           if (e.key === "Enter") (e.target as HTMLInputElement).blur();
           if (e.key === "Escape") setRenaming(false);
         }}
-        className="min-w-0 rounded-md border border-neutral-300 px-2 py-1 text-[13px] font-semibold uppercase tracking-widest text-neutral-900 outline-none focus:border-neutral-900"
+        className="min-w-0 rounded-md border border-neutral-300 px-2 py-1 text-[13px] font-semibold uppercase tracking-widest text-neutral-900 outline-none focus:border-brand"
       />
     );
   }
@@ -934,7 +934,7 @@ function FunnelPicker({
               }}
               className={
                 "block w-full truncate px-3 py-1.5 text-left text-xs transition hover:bg-neutral-100 " +
-                (f.id === activeId ? "font-semibold text-neutral-900" : "text-neutral-600")
+                (f.id === activeId ? "font-semibold text-brand" : "text-neutral-600")
               }
             >
               {f.name}
@@ -975,7 +975,7 @@ function CardAction({
         e.stopPropagation();
         onClick();
       }}
-      className="rounded-md border border-neutral-200 bg-white p-1.5 text-neutral-600 hover:border-neutral-900 hover:text-neutral-900 disabled:opacity-40"
+      className="rounded-md border border-neutral-200 bg-white p-1.5 text-neutral-600 hover:border-brand hover:text-brand disabled:opacity-40"
     >
       {children}
     </button>

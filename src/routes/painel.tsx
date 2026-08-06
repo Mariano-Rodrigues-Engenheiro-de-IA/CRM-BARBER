@@ -467,7 +467,7 @@ function Painel() {
   const navRowCls = (active: boolean) =>
     "group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition " +
     (active
-      ? "bg-neutral-900 text-white"
+      ? "bg-brand text-white"
       : "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950");
 
   return (
@@ -574,7 +574,7 @@ function Painel() {
               onClick={() => setSection(n.key)}
               className={
                 "rounded-md px-2.5 py-1 text-[11px] font-medium " +
-                (section === n.key ? "bg-neutral-900 text-white" : "text-neutral-600")
+                (section === n.key ? "bg-brand text-white" : "text-neutral-600")
               }
             >
               {n.label}
@@ -796,7 +796,7 @@ function CardAction({
       onPointerDown={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
-      className="grid h-7 w-7 place-items-center rounded-md border border-neutral-200 bg-white text-neutral-600 transition hover:border-neutral-900 hover:text-neutral-900 disabled:opacity-40"
+      className="grid h-7 w-7 place-items-center rounded-md border border-neutral-200 bg-white text-neutral-600 transition hover:border-brand hover:text-brand disabled:opacity-40"
     >
       {children}
     </button>
@@ -1075,7 +1075,7 @@ function KanbanView({
         <button
           onClick={() => setNewCol("")}
           title="Adicionar kanban"
-          className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-800 shadow-sm transition hover:border-neutral-900 hover:bg-neutral-50"
+          className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-800 shadow-sm transition hover:border-brand hover:bg-neutral-50"
         >
           + Kanban
         </button>
@@ -1090,11 +1090,11 @@ function KanbanView({
               if (e.key === "Escape") setNewCol(null);
             }}
             placeholder="Nome do kanban"
-            className="w-44 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs text-neutral-900 outline-none focus:border-neutral-900"
+            className="w-44 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs text-neutral-900 outline-none focus:border-brand"
           />
           <button
             onClick={() => { addColumn(newCol); setNewCol(null); }}
-            className="rounded-lg bg-neutral-900 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white hover:bg-neutral-800"
+            className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white hover:bg-brand-strong"
           >
             Criar
           </button>
@@ -1106,7 +1106,7 @@ function KanbanView({
       <button
         onClick={() => setShowAdd(true)}
         title="Adicionar contato"
-        className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-800 shadow-sm transition hover:border-neutral-900 hover:bg-neutral-50"
+        className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-800 shadow-sm transition hover:border-brand hover:bg-neutral-50"
       >
         + Contato
       </button>
@@ -1114,7 +1114,7 @@ function KanbanView({
           sem apagar contatos criados à mão. */}
       <button
         onClick={() => setShowImport(true)}
-        className="rounded-lg bg-neutral-900 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-white shadow-sm transition hover:bg-neutral-800"
+        className="rounded-lg bg-brand px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-white shadow-sm transition hover:bg-brand-strong"
       >
         Importar planilha
       </button>
@@ -1138,7 +1138,7 @@ function KanbanView({
             </p>
             <button
               onClick={() => setShowImport(true)}
-              className="mx-auto mt-6 rounded-xl bg-neutral-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800"
+              className="mx-auto mt-6 rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-strong"
             >
               Importar planilha
             </button>
@@ -1212,7 +1212,7 @@ function KanbanView({
                     onDragEnd={() => { setDragId(null); setOverCol(null); }}
                     onClick={() => setDetail(c)}
                     className={
-                      "cursor-grab rounded-lg border border-neutral-200 bg-neutral-50 p-2.5 text-[13px] transition hover:border-neutral-900 hover:shadow-sm active:cursor-grabbing " +
+                      "cursor-grab rounded-lg border border-neutral-200 bg-neutral-50 p-2.5 text-[13px] transition hover:border-brand hover:shadow-sm active:cursor-grabbing " +
                       (dragId === c.id ? "opacity-50" : "")
                     }
                   >
@@ -1847,7 +1847,7 @@ function CampaignsView({ token, scope }: { token: string; scope?: "assinaturas" 
 // --- Utils ---
 
 const inputCls =
-  "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10";
+  "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

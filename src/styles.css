@@ -19,6 +19,11 @@
  */
 
 @theme inline {
+  /* Azul da marca Zaylo/Zetta — mesma cor usada na extensão (var(--z-accent)
+     em extension/content.css). Hex direto (exceção à convenção oklch acima),
+     pra garantir que bate exatamente com a cor já usada na extensão. */
+  --color-brand: #1a3a8a;
+  --color-brand-strong: #122a6b;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
