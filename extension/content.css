@@ -215,14 +215,14 @@ html body.crm-shell #app {
 .crm-pill:hover { border-color: var(--z-accent); background: var(--z-surface-2); color: var(--z-accent); }
 .crm-pill:hover .crm-pill-count { background: var(--z-accent-soft); color: var(--z-accent); }
 
-/* Pílula ativa — funil: cor neutra (cinza escuro, sem destaque espalhafatoso) */
+/* Pílula ativa — funil: azul da marca (mesma cor usada nos funis) */
 .crm-pill-on {
-  border-color: #374151;
-  background: #374151;
+  border-color: var(--z-accent);
+  background: var(--z-accent);
   color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(55, 65, 81, 0.14);
+  box-shadow: 0 0 0 3px var(--z-accent-soft);
 }
-.crm-pill-on:hover { background: #1f2937; color: #ffffff; }
+.crm-pill-on:hover { background: var(--z-accent-strong, var(--z-accent)); color: #ffffff; }
 .crm-pill-on:hover .crm-pill-count { background: rgba(255, 255, 255, 0.18); color: #ffffff; }
 .crm-pill-on .crm-pill-count, .crm-pill-on .crm-pill-value, .crm-pill-on .crm-pill-gear { color: #ffffff; }
 
@@ -248,13 +248,13 @@ html body.crm-shell #app {
 .crm-pill-gear {
   border: 0;
   background: transparent;
-  color: var(--z-text-faint);
+  color: var(--z-accent);
   cursor: pointer;
   padding: 0;
   display: inline-flex;
   align-items: center;
 }
-.crm-pill-gear:hover { color: var(--z-accent); }
+.crm-pill-gear:hover { color: var(--z-accent-strong, var(--z-accent)); }
 
 .crm-pill-add-icon {
   width: 30px;

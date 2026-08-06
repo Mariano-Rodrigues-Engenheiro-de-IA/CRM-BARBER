@@ -224,7 +224,7 @@ function nudgeExtensionPoll() {
   window.postMessage({ __crm: "poll_now_v180" }, window.location.origin);
 }
 
-type Section = "assinantes" | "funis" | "disparo" | "respostas" | "equipe" | "conexao" | "configuracoes";
+type Section = "assinantes" | "funis" | "disparo" | "respostas" | "equipe" | "conexao";
 /** Sub-abas da sanfona de Assinaturas. */
 type AssinTab = "visao" | "assinantes";
 
@@ -334,7 +334,7 @@ function Painel() {
   const initialSection: Section = (() => {
     if (typeof window === "undefined") return "assinantes";
     const s = new URLSearchParams(window.location.search).get("section");
-    if (s === "equipe" || s === "conexao" || s === "configuracoes" || s === "respostas" || s === "funis" || s === "disparo") return s;
+    if (s === "equipe" || s === "conexao" || s === "respostas" || s === "funis" || s === "disparo") return s;
     return "assinantes";
   })();
   const [section, setSection] = useState<Section>(initialSection);
@@ -461,7 +461,6 @@ function Painel() {
     { key: "respostas", label: "Respostas rápidas", icon: <IconChat /> },
     { key: "equipe", label: "Equipe", icon: <IconTrophy /> },
 
-    { key: "configuracoes", label: "Configurações", icon: <IconGear /> },
     { key: "conexao", label: "Conexão", icon: <IconPlug /> },
   ];
 
@@ -739,26 +738,6 @@ function Painel() {
             </header>
             <main className="max-w-3xl px-4 py-4">
               <ConnectionView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
-            </main>
-          </>
-        )}
-
-        {section === "configuracoes" && (
-          <>
-            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
-              <div className="flex items-center gap-3 px-5 py-2">
-                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
-                  Configurações
-                </h1>
-              </div>
-            </header>
-            <main className="px-4 py-4">
-              <SettingsView
-                brand={brand}
-                fallbackName={shop?.name || ""}
-                onSave={saveBrand}
-                shopId={shop?.id ?? "default"}
-              />
             </main>
           </>
         )}
