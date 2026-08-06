@@ -75,8 +75,8 @@ html body.crm-shell #app {
   font-family: var(--z-font);
 }
 .crm-rail-mark {
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -94,7 +94,7 @@ html body.crm-shell #app {
   border: 0;
   border-radius: 9px;
   background: transparent;
-  color: var(--z-text-dim);
+  color: var(--z-text);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -197,7 +197,7 @@ html body.crm-shell #app {
   align-items: center;
   gap: 6px;
   flex: 0 0 auto;
-  height: 26px;
+  height: 30px;
   padding: 0 10px;
   border-radius: 999px;
   border: 1px solid var(--z-line);
@@ -230,12 +230,12 @@ html body.crm-shell #app {
 .crm-pill-value { font-weight: 500; color: var(--z-accent); text-transform: none; }
 .crm-pill-count {
   font-weight: 700;
-  color: var(--z-text-dim);
+  color: var(--z-text);
   text-transform: none;
-  background: rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.12);
   border-radius: 999px;
-  padding: 1px 6px;
-  font-size: 10px;
+  padding: 2px 8px;
+  font-size: 12px;
 }
 .crm-pill-on .crm-pill-count { background: rgba(255, 255, 255, 0.18); }
 .crm-pill-dot {
