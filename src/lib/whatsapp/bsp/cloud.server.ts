@@ -18,7 +18,7 @@ type Json = Record<string, unknown>;
 const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
 
 function graphVersion(): string {
-  return process.env.META_GRAPH_VERSION ?? "v21.0";
+  return process.env.META_GRAPH_VERSION ?? "v26.0";
 }
 
 function graphUrl(path: string): string {
@@ -82,6 +82,7 @@ export const cloudAdapter: BspAdapter = {
   /** URL do pop-up OAuth do Cadastro Incorporado da Meta. */
   signupUrl({ state }) {
     const appId = requireEnv("META_APP_ID");
+    const configId = requireEnv("META_CONFIG_ID");
     const url = new URL(`https://www.facebook.com/${graphVersion()}/dialog/oauth`);
     url.searchParams.set("client_id", appId);
     url.searchParams.set("redirect_uri", redirectUri());
@@ -89,35 +90,32 @@ export const cloudAdapter: BspAdapter = {
     url.searchParams.set("response_type", "code");
     url.searchParams.set("override_default_response_type", "true");
 
-    const configId = process.env.META_CONFIG_ID?.trim();
-    if (configId) {
-      url.searchParams.set("config_id", configId);
-    } else {
-      url.searchParams.set(
-        "scope",
-        "whatsapp_business_management,whatsapp_business_messaging,business_management",
-      );
-    }
+    url.searchParams.set("config_id", configId);
     url.searchParams.set(
       "extras",
       JSON.stringify({ feature: "whatsapp_embedded_signup", sessionInfoVersion: 3, version: 3 }),
     );
 
-    return { url: url.toString(), params: { app_id: appId, ...(configId ? { config_id: configId } : {}) } };
+    return { url: url.toString(), params: { app_id: appId, config_id: configId } };
   },
 
   /**
    * Troca o `code` do pop-up por token permanente, descobre a WABA e o número,
    * e assina o app nos webhooks da WABA.
    */
-  async exchangeSignup({ code }): Promise<SignupCallbackResult> {
+  async exchangeSignup({ code, extra }): Promise<SignupCallbackResult> {
     const appId = requireEnv("META_APP_ID");
     const appSecret = requireEnv("META_APP_SECRET");
 
     const tokenUrl = new URL(graphUrl("oauth/access_token"));
     tokenUrl.searchParams.set("client_id", appId);
     tokenUrl.searchParams.set("client_secret", appSecret);
-    tokenUrl.searchParams.set("redirect_uri", redirectUri());
+    // O code devolvido pelo FB.login() não nasce de um redirect OAuth e deve
+    // ser trocado sem redirect_uri. O fallback por diálogo OAuth, por outro
+    // lado, exige o mesmo redirect_uri usado na autorização.
+    if (extra?.source !== "sdk") {
+      tokenUrl.searchParams.set("redirect_uri", redirectUri());
+    }
     tokenUrl.searchParams.set("code", code);
     const tokenJson = await graphJson(tokenUrl.toString());
     const accessToken = str(tokenJson.access_token);
@@ -139,10 +137,19 @@ export const cloudAdapter: BspAdapter = {
     if (!phoneNumberId) throw new Error("A WABA autorizada ainda não tem número de telefone disponível.");
 
     // Assina o app nos webhooks da WABA (status de mensagem, respostas etc.).
-    await fetch(`${graphUrl(`${wabaId}/subscribed_apps`)}`, {
+    const subscriptionRes = await fetch(`${graphUrl(`${wabaId}/subscribed_apps`)}`, {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
-    }).catch(() => undefined);
+    });
+    if (!subscriptionRes.ok) {
+      const subscriptionJson = (await subscriptionRes.json().catch(() => ({}))) as Json;
+      const subscriptionError = (subscriptionJson.error as Json | undefined)?.message;
+      throw new Error(
+        typeof subscriptionError === "string"
+          ? `Número autorizado, mas não foi possível assinar os webhooks: ${subscriptionError}`
+          : `Número autorizado, mas a assinatura dos webhooks falhou (HTTP ${subscriptionRes.status}).`,
+      );
+    }
 
     // Registro do número na Cloud API (evita o erro 133010 no 1º envio).
     // Só roda quando há PIN padrão configurado; falha aqui não invalida o
