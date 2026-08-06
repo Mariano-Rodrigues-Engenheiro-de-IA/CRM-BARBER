@@ -28,7 +28,7 @@ type Api = (path: string, opts?: RequestInit) => Promise<{ ok?: boolean; error?:
 declare global {
   interface Window {
     FB?: {
-      init: (opts: { appId: string; version: string; xfbml?: boolean }) => void;
+      init: (opts: { appId: string; version: string; xfbml?: boolean; autoLogAppEvents?: boolean }) => void;
       login: (
         cb: (res: { authResponse?: { code?: string } | null; status?: string }) => void,
         opts: {
@@ -46,22 +46,25 @@ declare global {
 /** Carrega o SDK oficial do JavaScript da Meta uma única vez (cacheado em
  * window.FB). O Cadastro Incorporado exige o SDK — abrir a URL de OAuth
  * crua numa aba/pop-up manual (sem passar pelo SDK) é rejeitado pela Meta
- * com "Recurso indisponível", mesmo com as permissões certas aprovadas. */
+ * com "Recurso indisponível", mesmo com as permissões certas aprovadas.
+ * Snippet e versão (v26.0) seguindo exatamente a documentação oficial —
+ * "SDK do JavaScript" em developers.facebook.com/apps/.../whatsapp-business. */
 let fbSdkPromise: Promise<void> | null = null;
 function loadFacebookSdk(appId: string): Promise<void> {
   if (window.FB) return Promise.resolve();
   if (fbSdkPromise) return fbSdkPromise;
   fbSdkPromise = new Promise((resolve) => {
     window.fbAsyncInit = () => {
-      window.FB?.init({ appId, version: "v21.0", xfbml: false });
+      window.FB?.init({ appId, version: "v26.0", xfbml: true, autoLogAppEvents: true });
       resolve();
     };
     if (document.getElementById("facebook-jssdk")) return;
     const script = document.createElement("script");
     script.id = "facebook-jssdk";
-    script.src = "https://connect.facebook.net/pt_BR/sdk.js";
+    script.src = "https://connect.facebook.net/en_US/sdk.js";
     script.async = true;
     script.defer = true;
+    script.crossOrigin = "anonymous";
     document.body.appendChild(script);
   });
   return fbSdkPromise;
