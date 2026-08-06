@@ -262,7 +262,7 @@ export function ConnectionView({ api }: { api: Api }) {
               variant={isMetaConnection ? "outline" : "default"}
               disabled={busy}
               onClick={() => void switchProvider("uazapi")}
-              className={isMetaConnection ? "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100" : "bg-neutral-900 text-white hover:bg-neutral-800"}
+              className={isMetaConnection ? "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100" : "bg-brand text-white hover:bg-brand-strong"}
             >
               QR / não oficial
             </Button>
@@ -272,7 +272,7 @@ export function ConnectionView({ api }: { api: Api }) {
               variant={isMetaConnection ? "default" : "outline"}
               disabled={busy}
               onClick={() => void switchProvider("meta")}
-              className={isMetaConnection ? "bg-neutral-900 text-white hover:bg-neutral-800" : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100"}
+              className={isMetaConnection ? "bg-brand text-white hover:bg-brand-strong" : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100"}
             >
               API oficial / manual
             </Button>
@@ -303,7 +303,7 @@ export function ConnectionView({ api }: { api: Api }) {
               type="button"
               onClick={() => void connect()}
               disabled={busy}
-              className="bg-neutral-900 text-white hover:bg-neutral-800"
+              className="bg-brand text-white hover:bg-brand-strong"
             >
               {busy ? "Preparando…" : "Conectar WhatsApp"}
             </Button>

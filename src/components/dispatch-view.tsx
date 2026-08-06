@@ -558,14 +558,14 @@ function MessageComposer({
               onMode("custom");
               onClearReply();
             }}
-            className={`rounded-lg border px-3 py-2 text-sm font-semibold ${mode === "custom" ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300 text-neutral-700"}`}
+            className={`rounded-lg border px-3 py-2 text-sm font-semibold ${mode === "custom" ? "border-brand bg-brand text-white" : "border-neutral-300 text-neutral-700"}`}
           >
             Criar mensagem
           </button>
           <button
             type="button"
             onClick={() => onMode("quick")}
-            className={`rounded-lg border px-3 py-2 text-sm font-semibold ${mode === "quick" ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300 text-neutral-700"}`}
+            className={`rounded-lg border px-3 py-2 text-sm font-semibold ${mode === "quick" ? "border-brand bg-brand text-white" : "border-neutral-300 text-neutral-700"}`}
           >
             Resposta rápida
           </button>
@@ -734,7 +734,7 @@ function MessageComposer({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-white"
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white"
           >
             Concluir
           </button>

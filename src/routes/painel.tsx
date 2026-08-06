@@ -552,7 +552,7 @@ function Painel() {
             </p>
             <button
               onClick={openCheckout}
-              className="mt-3 w-full rounded-lg bg-neutral-900 px-3 py-2 text-xs font-bold text-yellow-400 transition hover:bg-neutral-800"
+              className="mt-3 w-full rounded-lg bg-brand px-3 py-2 text-xs font-bold text-yellow-400 transition hover:bg-brand-strong"
             >
               Assinar Premium · {PROMO_PRICE_LABEL}
             </button>
