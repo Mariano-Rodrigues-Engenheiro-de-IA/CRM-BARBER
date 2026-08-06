@@ -194,6 +194,27 @@ export function ConnectionView({ api }: { api: Api }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Listener de eventos de sessão do Cadastro Incorporado — parte obrigatória
+  // da implementação oficial (não opcional): a Meta manda, pela janela que
+  // abriu o FB.login, informações de progresso/erro/abandono do fluxo via
+  // postMessage, além do "code" que já é tratado no callback do FB.login.
+  // https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/implementation
+  useEffect(() => {
+    function onMessage(event: MessageEvent) {
+      if (!event.origin.endsWith("facebook.com")) return;
+      try {
+        const data = JSON.parse(event.data);
+        if (data?.type === "WA_EMBEDDED_SIGNUP") {
+          console.info("[Cadastro Incorporado] evento de sessão:", data);
+        }
+      } catch {
+        console.info("[Cadastro Incorporado] evento de sessão (texto cru):", event.data);
+      }
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
   async function connect() {
     actionRef.current = "connect";
     operationSeqRef.current += 1;
@@ -273,7 +294,11 @@ export function ConnectionView({ api }: { api: Api }) {
               config_id: configId,
               response_type: "code",
               override_default_response_type: true,
-              extras: { feature: "whatsapp_embedded_signup", sessionInfoVersion: 3, version: 3 },
+              // Formato v4 da documentação oficial atual (a versão anterior
+              // usada aqui — feature/sessionInfoVersion/version numérico —
+              // é de uma versão mais antiga do fluxo, v2/v3, e pode não ser
+              // compatível com um config_id criado já na v4).
+              extras: { setup: {} },
             },
           );
           return;
