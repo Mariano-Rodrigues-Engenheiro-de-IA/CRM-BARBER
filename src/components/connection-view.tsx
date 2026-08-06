@@ -278,10 +278,10 @@ export function ConnectionView({ api }: { api: Api }) {
           );
           return;
         } else {
-          // Faltou algum dado pro SDK (app_id/config_id/state) — cai pro
-          // comportamento antigo como reserva, em vez de travar o fluxo.
-          const win = window.open(c.signup.url, "whatsapp-signup", "width=620,height=760");
-          if (!win) window.location.href = c.signup.url;
+          // Cadastro Incorporado não pode cair para uma URL OAuth crua: a
+          // Meta exige app_id + config_id + state via SDK oficial.
+          statusRef.current = "disconnected";
+          setErr("Configuração incompleta do Cadastro Incorporado (app_id, config_id ou state ausente).");
         }
       }
 

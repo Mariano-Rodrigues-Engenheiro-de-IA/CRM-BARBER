@@ -82,6 +82,7 @@ export const cloudAdapter: BspAdapter = {
   /** URL do pop-up OAuth do Cadastro Incorporado da Meta. */
   signupUrl({ state }) {
     const appId = requireEnv("META_APP_ID");
+    const configId = requireEnv("META_CONFIG_ID");
     const url = new URL(`https://www.facebook.com/${graphVersion()}/dialog/oauth`);
     url.searchParams.set("client_id", appId);
     url.searchParams.set("redirect_uri", redirectUri());
@@ -89,21 +90,13 @@ export const cloudAdapter: BspAdapter = {
     url.searchParams.set("response_type", "code");
     url.searchParams.set("override_default_response_type", "true");
 
-    const configId = process.env.META_CONFIG_ID?.trim();
-    if (configId) {
-      url.searchParams.set("config_id", configId);
-    } else {
-      url.searchParams.set(
-        "scope",
-        "whatsapp_business_management,whatsapp_business_messaging,business_management",
-      );
-    }
+    url.searchParams.set("config_id", configId);
     url.searchParams.set(
       "extras",
       JSON.stringify({ feature: "whatsapp_embedded_signup", sessionInfoVersion: 3, version: 3 }),
     );
 
-    return { url: url.toString(), params: { app_id: appId, ...(configId ? { config_id: configId } : {}) } };
+    return { url: url.toString(), params: { app_id: appId, config_id: configId } };
   },
 
   /**
