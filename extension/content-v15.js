@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.35.5";
+  const CRM_VERSION = "0.35.6";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -229,6 +229,7 @@
       <button class="crm-rail-btn" data-go="respostas" data-label="Respostas rápidas">${ICONS.chat}</button>
       <button class="crm-rail-btn" data-go="equipe" data-label="Equipe">${ICONS.trophy}</button>
       <button class="crm-rail-btn" data-go="conexao" data-label="Conexão">${ICONS.phone}</button>
+      <div class="crm-rail-divider"></div>
       <button class="crm-rail-btn" data-act="sync" data-label="Sincronizar listas e conversas">${ICONS.sync}</button>
       <div class="crm-rail-spacer"></div>
       <button class="crm-rail-btn" data-act="unpair" data-label="Desvincular">${ICONS.exit}</button>
@@ -906,7 +907,7 @@
             </button>`;
         })
         .join("");
-      topbarRef.innerHTML = `${filter}${
+      topbarRef.innerHTML = `${filter}<span class="crm-topbar-divider"></span>${
         pills ||
         `<span class="crm-topbar-hint">${
           syncing ? "sincronizando listas…" : "Nenhuma lista sincronizada ainda."
@@ -928,9 +929,9 @@
       })
       .join("");
 
-    topbarRef.innerHTML = `${filter}${
+    topbarRef.innerHTML = `${filter}<span class="crm-topbar-divider"></span>${
       pills || `<span class="crm-topbar-hint">Nenhuma etapa nesse funil ainda.</span>`
-    }<button class="crm-pill-add-icon" title="Adicionar nova etapa"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10.5V19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v1.5"/><path d="M17 13v6M14 16h6"/></svg></button>${premiumPill()}`;
+    }<span class="crm-topbar-divider"></span><button class="crm-pill-add-icon" title="Adicionar nova etapa"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10.5V19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v1.5"/><path d="M17 13v6M14 16h6"/></svg></button>${premiumPill()}`;
   }
 
   /** Aviso de plano vive aqui (no WhatsApp), não mais dentro do painel do CRM. */
