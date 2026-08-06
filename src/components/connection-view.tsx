@@ -25,6 +25,48 @@ import { Button } from "@/components/ui/button";
 
 type Api = (path: string, opts?: RequestInit) => Promise<{ ok?: boolean; error?: string; [k: string]: unknown }>;
 
+declare global {
+  interface Window {
+    FB?: {
+      init: (opts: { appId: string; version: string; xfbml?: boolean }) => void;
+      login: (
+        cb: (res: { authResponse?: { code?: string } | null; status?: string }) => void,
+        opts: {
+          config_id: string;
+          response_type: string;
+          override_default_response_type: boolean;
+          extras?: Record<string, unknown>;
+        },
+      ) => void;
+    };
+    fbAsyncInit?: () => void;
+  }
+}
+
+/** Carrega o SDK oficial do JavaScript da Meta uma única vez (cacheado em
+ * window.FB). O Cadastro Incorporado exige o SDK — abrir a URL de OAuth
+ * crua numa aba/pop-up manual (sem passar pelo SDK) é rejeitado pela Meta
+ * com "Recurso indisponível", mesmo com as permissões certas aprovadas. */
+let fbSdkPromise: Promise<void> | null = null;
+function loadFacebookSdk(appId: string): Promise<void> {
+  if (window.FB) return Promise.resolve();
+  if (fbSdkPromise) return fbSdkPromise;
+  fbSdkPromise = new Promise((resolve) => {
+    window.fbAsyncInit = () => {
+      window.FB?.init({ appId, version: "v21.0", xfbml: false });
+      resolve();
+    };
+    if (document.getElementById("facebook-jssdk")) return;
+    const script = document.createElement("script");
+    script.id = "facebook-jssdk";
+    script.src = "https://connect.facebook.net/pt_BR/sdk.js";
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
+  });
+  return fbSdkPromise;
+}
+
 type Connection = {
   status: "disconnected" | "connecting" | "connected" | "hibernated";
   phone: string | null;
@@ -32,6 +74,10 @@ type Connection = {
   provider: string;
   auth_mode?: string | null;
   needs_manual_credentials?: boolean;
+  signup?: {
+    url?: string | null;
+    params?: { app_id?: string; config_id?: string } | null;
+  } | null;
 };
 
 export function ConnectionView({ api }: { api: Api }) {
@@ -140,19 +186,61 @@ export function ConnectionView({ api }: { api: Api }) {
     }));
     const res = await api("/api/public/extension/whatsapp/connect", { method: "POST" });
     if (res.ok && res.connection) {
-      const c = res.connection as Connection & {
-        auth_mode?: string;
-        signup?: { url?: string | null } | null;
-      };
+      const c = res.connection as Connection;
       statusRef.current = c.status;
       setAuthMode(c.auth_mode ?? null);
       setConn(c);
-      // API oficial: não há QR — abre o pop-up de login da Meta.
+      // API oficial: não há QR — abre o Cadastro Incorporado via SDK
+      // oficial da Meta (FB.login). Abrir a URL crua numa aba/pop-up manual
+      // é bloqueado pela Meta com "Recurso indisponível", mesmo com as
+      // permissões certas aprovadas — o SDK é obrigatório pra esse fluxo.
       if (c.auth_mode === "embedded_signup" && c.signup?.url) {
-        const win = window.open(c.signup.url, "whatsapp-signup", "width=620,height=760");
-        if (!win) {
-          // Pop-up bloqueado: navega na própria aba para não travar o fluxo.
-          window.location.href = c.signup.url;
+        const appId = c.signup.params?.app_id;
+        const configId = c.signup.params?.config_id;
+        const state = (() => {
+          try {
+            return new URL(c.signup!.url as string).searchParams.get("state");
+          } catch {
+            return null;
+          }
+        })();
+
+        if (appId && configId && state) {
+          await loadFacebookSdk(appId);
+          window.FB?.login(
+            (response) => {
+              const code = response.authResponse?.code;
+              if (!code) {
+                actionRef.current = null;
+                setBusy(false);
+                statusRef.current = "disconnected";
+                setErr("Vínculo cancelado ou não concluído no pop-up da Meta.");
+                return;
+              }
+              // Reaproveita o mesmo endpoint de callback que já processa o
+              // code, descobre a WABA e salva a conexão — só que chamado
+              // via fetch em vez de redirect de página completa.
+              const callbackUrl = `/api/public/whatsapp/signup-callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`;
+              fetch(callbackUrl)
+                .catch(() => undefined)
+                .finally(() => {
+                  actionRef.current = null;
+                  setBusy(false);
+                  void refresh(true);
+                });
+            },
+            {
+              config_id: configId,
+              response_type: "code",
+              override_default_response_type: true,
+              extras: { feature: "whatsapp_embedded_signup", sessionInfoVersion: 3, version: 3 },
+            },
+          );
+        } else {
+          // Faltou algum dado pro SDK (app_id/config_id/state) — cai pro
+          // comportamento antigo como reserva, em vez de travar o fluxo.
+          const win = window.open(c.signup.url, "whatsapp-signup", "width=620,height=760");
+          if (!win) window.location.href = c.signup.url;
         }
       }
 
