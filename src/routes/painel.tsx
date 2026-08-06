@@ -898,7 +898,7 @@ function WhatsAppActionModal({
                 <button
                   onClick={savePhone}
                   disabled={busy || !phoneDraft.trim()}
-                  className="whitespace-nowrap rounded-lg bg-neutral-800 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                  className="whitespace-nowrap rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
                 >
                   Salvar
                 </button>
@@ -943,7 +943,7 @@ function WhatsAppActionModal({
           <button
             onClick={() => run(false)}
             disabled={busy || (!selected && !text.trim())}
-            className="flex-1 rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
+            className="flex-1 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
           >
             {busy ? "Enviando..." : "Enviar agora"}
           </button>
@@ -1482,7 +1482,7 @@ function CustomerDrawer({
             <button
               onClick={schedule}
               disabled={busy || !msg.trim()}
-              className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
+              className="w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
             >
               {busy ? "Enviando..." : when ? "Agendar mensagem" : "Enviar mensagem"}
             </button>
@@ -1537,7 +1537,7 @@ function AddModal({ token, cols, onClose }: { token: string; cols: Array<{ key: 
         {err && <p className="text-sm text-red-500">{err}</p>}
         <button
           disabled={busy}
-          className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
+          className="w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
         >
           {busy ? "Salvando..." : "Adicionar"}
         </button>
@@ -1645,7 +1645,7 @@ function ImportModal({
           </p>
           <button
             onClick={onGoSettings}
-            className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700"
+            className="w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong"
           >
             Ir para Configurações
           </button>
@@ -1687,7 +1687,7 @@ function ImportModal({
         {err && <p className="text-sm text-red-500">{err}</p>}
         <button
           disabled={busy || !file}
-          className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
+          className="w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
         >
           {busy ? "Importando..." : "Importar e organizar"}
         </button>
@@ -1804,7 +1804,7 @@ function CampaignsView({ token, scope }: { token: string; scope?: "assinaturas" 
                       "rounded-lg px-3 py-1.5 text-sm font-semibold " +
                       (isRunning
                         ? "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
-                        : "bg-neutral-800 text-white hover:bg-neutral-700")
+                        : "bg-brand text-white hover:bg-brand-strong")
                     }
                   >
                     {isRunning ? "Pausar" : "Retomar"}
@@ -1970,7 +1970,7 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
                 className={
                   "rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition " +
                   (system === s.id
-                    ? "border-neutral-800 bg-neutral-800 text-white"
+                    ? "border-brand bg-brand text-white"
                     : "border-neutral-200 bg-white text-neutral-800 hover:border-neutral-400")
                 }
               >
@@ -2029,7 +2029,7 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
             <button
               type="button"
               onClick={addPlan}
-              className="shrink-0 rounded-lg bg-neutral-800 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-700"
+              className="shrink-0 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong"
             >
               Adicionar
             </button>
@@ -2051,7 +2051,7 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
 
         <button
           onClick={() => { writeGoal(shopId, goal); persistPlans(plans); }}
-          className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700"
+          className="w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong"
         >
           Salvar
         </button>
@@ -2149,7 +2149,7 @@ function SettingsView({
         <div className="flex items-center gap-3">
           <button
             onClick={save}
-            className="rounded-lg bg-neutral-800 px-5 py-2 text-sm font-semibold text-white hover:bg-neutral-700"
+            className="rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white hover:bg-brand-strong"
           >
             Salvar
           </button>

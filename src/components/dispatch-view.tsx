@@ -257,7 +257,7 @@ export function DispatchCenter({
               className={
                 "rounded-xl border px-3 py-2.5 text-sm font-semibold transition " +
                 (audience === o.key
-                  ? "border-neutral-800 bg-neutral-800 text-white"
+                  ? "border-brand bg-brand text-white"
                   : "border-neutral-300 bg-white text-neutral-800 hover:border-neutral-500")
               }
             >
@@ -343,7 +343,7 @@ export function DispatchCenter({
                 setSheetErr("Não consegui ler esse arquivo.");
               }
             }}
-            className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-800 file:mr-3 file:rounded-md file:border-0 file:bg-neutral-800 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white"
+            className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-800 file:mr-3 file:rounded-md file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white"
           />
           {sheetName && sheetContacts.length > 0 && (
             <p className="mt-1 text-xs text-neutral-500">
@@ -433,7 +433,7 @@ export function DispatchCenter({
 
       <button
         disabled={busy || !accepted}
-        className="w-full rounded-lg bg-neutral-800 px-4 py-3 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
+        className="w-full rounded-lg bg-brand px-4 py-3 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
       >
         {busy ? "Criando..." : "Disparar"}
       </button>

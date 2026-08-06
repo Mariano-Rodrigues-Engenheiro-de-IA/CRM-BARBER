@@ -404,7 +404,7 @@ function ConnectionConfirmDialog({
           <AlertDialogAction
             disabled={busy}
             onClick={onConfirm}
-            className="bg-neutral-950 text-white hover:bg-neutral-800"
+            className="bg-brand text-white hover:bg-brand-strong"
           >
             {isConnect ? "Conectar" : "Desconectar"}
           </AlertDialogAction>

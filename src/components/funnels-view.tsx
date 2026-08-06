@@ -430,7 +430,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       />
       <button
         onClick={() => setCreating(true)}
-        className="shrink-0 rounded-lg bg-neutral-800 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-white transition hover:bg-neutral-700"
+        className="shrink-0 rounded-lg bg-brand px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-white transition hover:bg-brand-strong"
       >
         Novo funil
       </button>
@@ -1206,7 +1206,7 @@ function CardDrawer({
             <button
               onClick={schedule}
               disabled={busy || !msg.trim()}
-              className="w-full rounded-lg bg-neutral-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
+              className="w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
             >
               {busy ? "Enviando..." : when ? "Agendar mensagem" : "Enviar mensagem"}
             </button>
@@ -1311,7 +1311,7 @@ function NewFunnelModal({
           <button
             onClick={submit}
             disabled={!canSubmit}
-            className="rounded-lg bg-neutral-800 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
           >
             Criar
           </button>

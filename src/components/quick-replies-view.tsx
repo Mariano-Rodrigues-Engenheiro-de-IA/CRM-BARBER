@@ -89,7 +89,7 @@ export function QuickRepliesView({ token, api }: { token: string; api: ApiFn }) 
         <h2 className="text-lg font-semibold text-neutral-900">Respostas rápidas</h2>
         <button
           onClick={() => setEditing("new")}
-          className="rounded-lg bg-neutral-800 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-700"
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong"
         >
           + Nova resposta
         </button>
@@ -383,7 +383,7 @@ function QuickReplyEditor({
             <button
               onClick={save}
               disabled={busy}
-              className="rounded-lg bg-neutral-800 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
+              className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
             >
               {busy ? "Salvando..." : "Salvar"}
             </button>
