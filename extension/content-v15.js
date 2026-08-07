@@ -380,10 +380,15 @@
     if (waData?.contacts) {
       for (const c of waData.contacts) {
         if (!c.wa_id) continue;
-        const labels = (c.labels || []).map(l => String(l.id || l.wa_label_id || l));
+        // O backend devolve label_ids (array de strings). Versões antigas
+        // mandavam `labels` como objetos — aceitamos os dois formatos.
+        const labels = (c.label_ids || c.labels || []).map((l) =>
+          String(typeof l === "object" ? (l.id ?? l.wa_label_id ?? "") : l),
+        );
         map.set(String(c.wa_id), new Set(labels));
       }
     }
+
     return map;
   }
 
