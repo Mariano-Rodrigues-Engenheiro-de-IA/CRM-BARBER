@@ -373,6 +373,7 @@
   // ---------------------------------------------------------------------
   let activeFilter = null; // { key, kind, id, funnelId, name }
   let domFilterObserver = null;
+  let nativeTabWatcherReady = false;
 
   /** Mapeamento de wa_id → label_ids para o filtro visual via DOM */
   function getContactLabelMap() {
@@ -468,7 +469,10 @@
         if (!tab) return;
         // Só reage a abas dentro do painel de conversas.
         if (!tab.closest("#pane-side, header, [data-tab='chatlist']") && !tab.closest('[role="tablist"]')) return;
-        releaseChatFilter();
+        const label = (tab.getAttribute("aria-label") || tab.textContent || "").toLowerCase();
+        // Só forçamos o reset da lista interna quando o destino é o inbox
+        // completo; nas demais abas o próprio WhatsApp assume a lista.
+        releaseChatFilter(/^|\s/.test(label) && /tudo|all/.test(label));
       },
       true,
     );
@@ -476,8 +480,8 @@
 
   /** Solta o filtro do CRM sem forçar nenhuma lista: devolve o controle da
    * lista de conversas para o WhatsApp. */
-  function releaseChatFilter() {
-    const hadCustom = activeFilter?.kind === "stage";
+  function releaseChatFilter(forceAll = true) {
+    const hadCustom = forceAll && activeFilter?.kind === "stage";
     activeFilter = null;
     if (domFilterObserver) {
       domFilterObserver.disconnect();
@@ -518,6 +522,7 @@
     // ficar em branco nesse caso.
     applyDomChatFilter();
     ensureDomFilterObserver();
+    ensureNativeTabWatcher();
   }
 
   function clearChatFilter() {
