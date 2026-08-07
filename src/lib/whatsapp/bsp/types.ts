@@ -9,6 +9,16 @@ import type { SendResult, SignupCallbackResult, StatusResult } from "../types";
 
 export type BspName = "360dialog" | "cloud";
 
+export type TemplateSummary = {
+  id: string;
+  name: string;
+  status: "APPROVED" | "PENDING" | "REJECTED" | "PAUSED" | "DISABLED" | string;
+  category: string;
+  language: string;
+  /** Motivo da rejeição, quando status === "REJECTED". */
+  rejected_reason?: string | null;
+};
+
 export interface BspAdapter {
   readonly name: BspName;
 
@@ -58,6 +68,25 @@ export interface BspAdapter {
     /** Textos das variáveis {{1}}, {{2}}... do corpo do template, na ordem. */
     body_params?: string[];
   }): Promise<SendResult>;
+
+  /** Lista os modelos de mensagem (templates) da WABA, com status de
+   * aprovação — pra gerenciar tudo pelo painel, sem precisar entrar no
+   * Gerenciador do WhatsApp da Meta. */
+  listTemplates?(input: { access_token: string; waba_id: string }): Promise<
+    | { ok: true; templates: TemplateSummary[] }
+    | { ok: false; error: string }
+  >;
+
+  /** Cria um novo modelo de mensagem — entra em análise da Meta (minutos
+   * a ~24h) antes de poder ser usado em sendTemplate. */
+  createTemplate?(input: {
+    access_token: string;
+    waba_id: string;
+    name: string;
+    category: "MARKETING" | "UTILITY" | "AUTHENTICATION";
+    language_code: string;
+    body_text: string;
+  }): Promise<{ ok: true; id: string } | { ok: false; error: string }>;
 
   /**
    * Registra o número na Cloud API (obrigatório antes do 1º envio — erro

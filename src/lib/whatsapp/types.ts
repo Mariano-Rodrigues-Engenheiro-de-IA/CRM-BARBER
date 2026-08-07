@@ -103,6 +103,22 @@ export interface WhatsAppProvider {
     body_params?: string[];
   }): Promise<SendResult>;
 
+  /** Só na API oficial — lista modelos de mensagem com status de aprovação. */
+  listTemplates?(input: { instance_token: string; waba_id: string }): Promise<
+    | { ok: true; templates: import("./bsp/types").TemplateSummary[] }
+    | { ok: false; error: string }
+  >;
+
+  /** Só na API oficial — cria um novo modelo de mensagem (entra em análise). */
+  createTemplate?(input: {
+    instance_token: string;
+    waba_id: string;
+    name: string;
+    category: "MARKETING" | "UTILITY" | "AUTHENTICATION";
+    language_code: string;
+    body_text: string;
+  }): Promise<{ ok: true; id: string } | { ok: false; error: string }>;
+
 
   /** Desconecta/hiberna a instância (preserva credenciais). */
   disconnect(input: {

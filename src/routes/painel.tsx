@@ -10,6 +10,7 @@ import { createPortal } from "react-dom";
 import { TeamView } from "@/components/team-view";
 import { ConnectionView } from "@/components/connection-view";
 import { QuickRepliesView } from "@/components/quick-replies-view";
+import { TemplatesView } from "@/components/templates-view";
 import { FunnelsView } from "@/components/funnels-view";
 import { DispatchCenter } from "@/components/dispatch-view";
 import { sendWaAction, isRealPhone, openWhatsappChat, applyFunnelActions } from "@/lib/wa-actions";
@@ -224,7 +225,7 @@ function nudgeExtensionPoll() {
   window.postMessage({ __crm: "poll_now_v180" }, window.location.origin);
 }
 
-type Section = "assinantes" | "funis" | "disparo" | "respostas" | "equipe" | "conexao";
+type Section = "assinantes" | "funis" | "disparo" | "respostas" | "equipe" | "conexao" | "templates";
 /** Sub-abas da sanfona de Assinaturas. */
 type AssinTab = "visao" | "assinantes";
 
@@ -334,7 +335,7 @@ function Painel() {
   const initialSection: Section = (() => {
     if (typeof window === "undefined") return "assinantes";
     const s = new URLSearchParams(window.location.search).get("section");
-    if (s === "equipe" || s === "conexao" || s === "respostas" || s === "funis" || s === "disparo") return s;
+    if (s === "equipe" || s === "conexao" || s === "respostas" || s === "funis" || s === "disparo" || s === "templates") return s;
     return "assinantes";
   })();
   const [section, setSection] = useState<Section>(initialSection);
@@ -350,6 +351,7 @@ function Painel() {
   const [assinHeaderEl, setAssinHeaderEl] = useState<HTMLDivElement | null>(null);
   const [equipeHeaderEl, setEquipeHeaderEl] = useState<HTMLDivElement | null>(null);
   const [shop, setShop] = useState<{ id: string; name: string } | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [brand, setBrand] = useState<Brand>({});
 
@@ -393,6 +395,7 @@ function Painel() {
         setShop(r.barbershop);
         setBrand(readBrand(r.barbershop.id));
       }
+      if (r?.ok) setIsAdmin(Boolean(r.is_admin));
     });
     api(token, "/api/public/extension/billing").then((r) => {
       if (r?.ok && r.billing) setBilling(r.billing as BillingStatus);
@@ -460,6 +463,7 @@ function Painel() {
     { key: "disparo", label: "Disparo", icon: <IconSend /> },
     { key: "respostas", label: "Respostas rápidas", icon: <IconChat /> },
     { key: "equipe", label: "Equipe", icon: <IconTrophy /> },
+    ...(isAdmin ? [{ key: "templates" as Section, label: "Modelos", icon: <IconNote /> }] : []),
 
     { key: "conexao", label: "Conexão", icon: <IconPlug /> },
   ];
@@ -738,6 +742,21 @@ function Painel() {
             </header>
             <main className="max-w-3xl px-4 py-4">
               <ConnectionView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+            </main>
+          </>
+        )}
+
+        {section === "templates" && token && isAdmin && (
+          <>
+            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
+              <div className="flex items-center gap-3 px-5 py-2">
+                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
+                  Modelos de mensagem
+                </h1>
+              </div>
+            </header>
+            <main className="max-w-3xl px-4 py-4">
+              <TemplatesView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
             </main>
           </>
         )}

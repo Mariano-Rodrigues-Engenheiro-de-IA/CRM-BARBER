@@ -10,7 +10,7 @@
 // META_CONFIG_ID, além de WHATSAPP_SIGNUP_REDIRECT_URL apontando para
 // /api/public/whatsapp/signup-callback no domínio público do app.
 
-import type { BspAdapter } from "./types";
+import type { BspAdapter, TemplateSummary } from "./types";
 import type { SendResult, SignupCallbackResult, StatusResult } from "../types";
 
 type Json = Record<string, unknown>;
@@ -306,6 +306,62 @@ export const cloudAdapter: BspAdapter = {
       return { ok: true, provider_message_id: str(messages?.id) ?? undefined };
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err), retryable: true };
+    }
+  },
+
+  async listTemplates({ access_token, waba_id }) {
+    try {
+      const url = new URL(graphUrl(`${waba_id}/message_templates`));
+      url.searchParams.set("fields", "id,name,status,category,language,rejected_reason");
+      url.searchParams.set("limit", "100");
+      const res = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${access_token}` },
+      });
+      const json = (await res.json().catch(() => ({}))) as Json;
+      if (!res.ok) {
+        const error = (json.error as Json | undefined)?.message;
+        return { ok: false, error: typeof error === "string" ? error : `HTTP ${res.status}` };
+      }
+      const data = Array.isArray(json.data) ? (json.data as Json[]) : [];
+      const templates: TemplateSummary[] = data.map((t) => ({
+        id: str(t.id) ?? "",
+        name: str(t.name) ?? "",
+        status: (str(t.status) ?? "PENDING") as TemplateSummary["status"],
+        category: str(t.category) ?? "",
+        language: str(t.language) ?? "",
+        rejected_reason: str(t.rejected_reason),
+      }));
+      return { ok: true, templates };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  },
+
+  async createTemplate({ access_token, waba_id, name, category, language_code, body_text }) {
+    try {
+      const res = await fetch(graphUrl(`${waba_id}/message_templates`), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${access_token}`,
+        },
+        body: JSON.stringify({
+          name,
+          category,
+          language: language_code,
+          components: [{ type: "BODY", text: body_text }],
+        }),
+      });
+      const json = (await res.json().catch(() => ({}))) as Json;
+      if (!res.ok) {
+        const error = (json.error as Json | undefined)?.message;
+        return { ok: false, error: typeof error === "string" ? error : `HTTP ${res.status}` };
+      }
+      const id = str(json.id);
+      if (!id) return { ok: false, error: "Meta não devolveu o ID do modelo criado." };
+      return { ok: true, id };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
   },
 };
