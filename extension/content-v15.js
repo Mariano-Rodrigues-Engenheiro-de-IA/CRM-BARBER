@@ -404,35 +404,47 @@
     );
   }
 
+  function showAllChatRows() {
+    document.querySelectorAll("[data-item-id]").forEach((el) => { el.style.display = ""; });
+  }
+
+  /** Conjunto de wa_ids permitidos pelo filtro atual (null = sem filtro). */
+  function getActiveFilterWaIds() {
+    if (!activeFilter) return null;
+    if (activeFilter.kind === "label") {
+      const target = String(activeFilter.id);
+      const allowed = new Set();
+      for (const [waId, labels] of getContactLabelMap()) {
+        if (labels.has(target)) allowed.add(waId);
+      }
+      return allowed;
+    }
+    if (activeFilter.kind === "stage") {
+      return getStageWaIds(activeFilter.funnelId, activeFilter.id);
+    }
+    return null;
+  }
+
   /** Filtra visualmente as conversas no DOM do WhatsApp */
   function applyDomChatFilter() {
-    if (!activeFilter) {
-      // Remove filtros visuais — mostra tudo
-      const items = document.querySelectorAll('[data-item-id]');
-      items.forEach((el) => { el.style.display = ""; });
+    if (!activeFilter) return showAllChatRows();
+
+    const allowed = getActiveFilterWaIds();
+    // Sem dados carregados (sync ainda não rodou / falhou) o mapa vem vazio e
+    // o filtro escondia TODAS as conversas — era a "instabilidade" em que as
+    // abas paravam de carregar contatos. Nesse caso não escondemos nada.
+    if (!allowed || allowed.size === 0) {
+      showAllChatRows();
       return;
     }
 
-    const labelMap = getContactLabelMap();
-    const items = document.querySelectorAll('[data-item-id]');
-
-    if (activeFilter.kind === "label") {
-      const targetLabel = String(activeFilter.id);
-      items.forEach((el) => {
-        const itemId = String(el.getAttribute("data-item-id") || "");
-        if (!itemId) { el.style.display = ""; return; }
-        const labels = labelMap.get(itemId) || new Set();
-        el.style.display = labels.has(targetLabel) ? "" : "none";
-      });
-    } else if (activeFilter.kind === "stage") {
-      const allowedIds = getStageWaIds(activeFilter.funnelId, activeFilter.id);
-      items.forEach((el) => {
-        const itemId = String(el.getAttribute("data-item-id") || "");
-        if (!itemId) { el.style.display = ""; return; }
-        el.style.display = allowedIds.has(itemId) ? "" : "none";
-      });
-    }
+    document.querySelectorAll("[data-item-id]").forEach((el) => {
+      const itemId = String(el.getAttribute("data-item-id") || "");
+      if (!itemId) { el.style.display = ""; return; }
+      el.style.display = allowed.has(itemId) ? "" : "none";
+    });
   }
+
 
   /** Observa mudanças no DOM para re-aplicar o filtro quando novas conversas aparecem */
   function ensureDomFilterObserver() {
