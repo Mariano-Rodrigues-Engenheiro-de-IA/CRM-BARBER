@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.35.10";
+  const CRM_VERSION = "0.35.12";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -404,35 +404,47 @@
     );
   }
 
+  function showAllChatRows() {
+    document.querySelectorAll("[data-item-id]").forEach((el) => { el.style.display = ""; });
+  }
+
+  /** Conjunto de wa_ids permitidos pelo filtro atual (null = sem filtro). */
+  function getActiveFilterWaIds() {
+    if (!activeFilter) return null;
+    if (activeFilter.kind === "label") {
+      const target = String(activeFilter.id);
+      const allowed = new Set();
+      for (const [waId, labels] of getContactLabelMap()) {
+        if (labels.has(target)) allowed.add(waId);
+      }
+      return allowed;
+    }
+    if (activeFilter.kind === "stage") {
+      return getStageWaIds(activeFilter.funnelId, activeFilter.id);
+    }
+    return null;
+  }
+
   /** Filtra visualmente as conversas no DOM do WhatsApp */
   function applyDomChatFilter() {
-    if (!activeFilter) {
-      // Remove filtros visuais — mostra tudo
-      const items = document.querySelectorAll('[data-item-id]');
-      items.forEach((el) => { el.style.display = ""; });
+    if (!activeFilter) return showAllChatRows();
+
+    const allowed = getActiveFilterWaIds();
+    // Sem dados carregados (sync ainda não rodou / falhou) o mapa vem vazio e
+    // o filtro escondia TODAS as conversas — era a "instabilidade" em que as
+    // abas paravam de carregar contatos. Nesse caso não escondemos nada.
+    if (!allowed || allowed.size === 0) {
+      showAllChatRows();
       return;
     }
 
-    const labelMap = getContactLabelMap();
-    const items = document.querySelectorAll('[data-item-id]');
-
-    if (activeFilter.kind === "label") {
-      const targetLabel = String(activeFilter.id);
-      items.forEach((el) => {
-        const itemId = String(el.getAttribute("data-item-id") || "");
-        if (!itemId) { el.style.display = ""; return; }
-        const labels = labelMap.get(itemId) || new Set();
-        el.style.display = labels.has(targetLabel) ? "" : "none";
-      });
-    } else if (activeFilter.kind === "stage") {
-      const allowedIds = getStageWaIds(activeFilter.funnelId, activeFilter.id);
-      items.forEach((el) => {
-        const itemId = String(el.getAttribute("data-item-id") || "");
-        if (!itemId) { el.style.display = ""; return; }
-        el.style.display = allowedIds.has(itemId) ? "" : "none";
-      });
-    }
+    document.querySelectorAll("[data-item-id]").forEach((el) => {
+      const itemId = String(el.getAttribute("data-item-id") || "");
+      if (!itemId) { el.style.display = ""; return; }
+      el.style.display = allowed.has(itemId) ? "" : "none";
+    });
   }
+
 
   /** Observa mudanças no DOM para re-aplicar o filtro quando novas conversas aparecem */
   function ensureDomFilterObserver() {
@@ -535,6 +547,16 @@
     renderTopbar();
   }
 
+  /** Garante que temos contatos/funis em memória antes de filtrar.
+   * Sem isso, uma falha pontual de rede deixava o filtro sem dados e a lista
+   * aparecia vazia até o usuário recarregar a página. */
+  async function ensureFilterData(kind) {
+    try {
+      if (kind === "label" && !(waData?.contacts?.length)) await loadWaData();
+      if (kind === "stage" && !funnels.length) await loadFunnels();
+    } catch { /* silencioso: o fallback já mostra tudo */ }
+  }
+
   /** Lista (etiqueta do WhatsApp): filtra
    * a lista nativa de conversas pela etiqueta correspondente (inbox do WhatsApp). */
   async function filterByLabel(labelId, labelName) {
@@ -543,6 +565,8 @@
     activeFilter = { key, kind: "label", id: labelId, name: labelName || "Lista" };
     renderTopbar();
     closeDrawer();
+    await ensureFilterData("label");
+    if (activeFilter?.key !== key) return; // usuário trocou de filtro no meio
     void applyNativeChatList("labels", [labelId]);
   }
 
@@ -551,6 +575,7 @@
   async function filterByStage(funnelId, stageId) {
     const key = `stage:${stageId}`;
     if (activeFilter?.key === key) return clearChatFilter();
+    await ensureFilterData("stage");
     const funnel = funnels.find((f) => f.id === funnelId);
     if (!funnel) return;
     const stage = (funnel.stages || []).find((s) => s.id === stageId);
@@ -568,6 +593,7 @@
       .filter((c) => c.stage_id === stageId && c.wa_id)
       .map((c) => c.wa_id);
     void applyNativeChatList("custom", waIds);
+
   }
 
   // ---------------------------------------------------------------------
