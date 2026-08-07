@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.35.7";
+  const CRM_VERSION = "0.35.8";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -452,9 +452,6 @@
     } catch (e) {
       console.warn("[CRM] falha ao aplicar filtro nativo de lista:", e?.message || e);
     }
-    // Fallback visual: filtra o DOM independentemente do resultado nativo
-    applyDomChatFilter();
-    ensureDomFilterObserver();
   }
 
   function clearChatFilter() {
