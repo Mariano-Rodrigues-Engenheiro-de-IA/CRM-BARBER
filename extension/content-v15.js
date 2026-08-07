@@ -472,7 +472,7 @@
         const label = (tab.getAttribute("aria-label") || tab.textContent || "").toLowerCase();
         // Só forçamos o reset da lista interna quando o destino é o inbox
         // completo; nas demais abas o próprio WhatsApp assume a lista.
-        releaseChatFilter(/^|\s/.test(label) && /tudo|all/.test(label));
+        releaseChatFilter(/\btudo\b|\ball\b/.test(label) || label === "");
       },
       true,
     );
