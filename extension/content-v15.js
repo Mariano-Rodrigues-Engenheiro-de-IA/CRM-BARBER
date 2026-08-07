@@ -373,6 +373,7 @@
   // ---------------------------------------------------------------------
   let activeFilter = null; // { key, kind, id, funnelId, name }
   let domFilterObserver = null;
+  let nativeTabWatcherReady = false;
 
   /** Mapeamento de wa_id → label_ids para o filtro visual via DOM */
   function getContactLabelMap() {
@@ -380,10 +381,15 @@
     if (waData?.contacts) {
       for (const c of waData.contacts) {
         if (!c.wa_id) continue;
-        const labels = (c.labels || []).map(l => String(l.id || l.wa_label_id || l));
+        // O backend devolve label_ids (array de strings). Versões antigas
+        // mandavam `labels` como objetos — aceitamos os dois formatos.
+        const labels = (c.label_ids || c.labels || []).map((l) =>
+          String(typeof l === "object" ? (l.id ?? l.wa_label_id ?? "") : l),
+        );
         map.set(String(c.wa_id), new Set(labels));
       }
     }
+
     return map;
   }
 
@@ -442,6 +448,63 @@
     }
   }
 
+  /** Ouve cliques nas abas nativas do WhatsApp (Tudo / Não lidas / Favoritas /
+   * Grupos e as abas de etiqueta). Quando o usuário volta pra uma aba nativa,
+   * o nosso filtro precisa sair de cena: com "labels" o WhatsApp reseta
+   * sozinho, mas com "custom" (funis) a lista interna continua presa e o
+   * observer do DOM segue escondendo linhas — era isso que travava a volta
+   * pro inbox completo. */
+  function ensureNativeTabWatcher() {
+    if (nativeTabWatcherReady) return;
+    nativeTabWatcherReady = true;
+    document.addEventListener(
+      "click",
+      (ev) => {
+        if (!activeFilter) return;
+        const target = ev.target;
+        if (!(target instanceof Element)) return;
+        // Ignora cliques na nossa própria UI (topbar, gaveta, pílulas).
+        if (target.closest("#crm-topbar, #crm-drawer, #crm-rail, [data-crm]")) return;
+        const tab = target.closest('[role="tab"], button[aria-pressed]');
+        if (!tab) return;
+        // Só reage a abas dentro do painel de conversas.
+        if (!tab.closest("#pane-side, header, [data-tab='chatlist']") && !tab.closest('[role="tablist"]')) return;
+        const label = (tab.getAttribute("aria-label") || tab.textContent || "").toLowerCase();
+        // Só forçamos o reset da lista interna quando o destino é o inbox
+        // completo; nas demais abas o próprio WhatsApp assume a lista.
+        releaseChatFilter(/\btudo\b|\ball\b/.test(label) || label === "");
+      },
+      true,
+    );
+  }
+
+  /** Solta o filtro do CRM sem forçar nenhuma lista: devolve o controle da
+   * lista de conversas para o WhatsApp. */
+  function releaseChatFilter(forceAll = true) {
+    const hadCustom = forceAll && activeFilter?.kind === "stage";
+    activeFilter = null;
+    if (domFilterObserver) {
+      domFilterObserver.disconnect();
+      domFilterObserver = null;
+    }
+    document.querySelectorAll("[data-item-id]").forEach((el) => { el.style.display = ""; });
+    closeDrawer();
+    renderTopbar();
+    // Lista "custom" não é uma aba real: sem resetar explicitamente, o
+    // WhatsApp continua renderizando o conjunto travado.
+    if (hadCustom) {
+      void (async () => {
+        try {
+          await ensureWaScriptsInjected();
+          await askBridge("chatlist_v350", "chatlist_done_v350", { listType: "all", ids: [] }, 15000);
+        } catch (e) {
+          console.warn("[CRM] falha ao liberar filtro de lista:", e?.message || e);
+        }
+      })();
+    }
+  }
+
+
   /** Aplica o filtro nativo do WhatsApp (WPP.chat.setChatList).
    * O WPP vive no MAIN world, então a chamada precisa passar pelo bridge —
    * era por isso que clicar na pílula não fazia nada. */
@@ -459,6 +522,7 @@
     // ficar em branco nesse caso.
     applyDomChatFilter();
     ensureDomFilterObserver();
+    ensureNativeTabWatcher();
   }
 
   function clearChatFilter() {

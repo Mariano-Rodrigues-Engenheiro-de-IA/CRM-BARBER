@@ -19,6 +19,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AssinarRetornoRouteImport } from './routes/assinar.retorno'
 import { Route as AdminWhatsappRouteImport } from './routes/admin.whatsapp'
 import { Route as ApiPublicSignupRouteImport } from './routes/api/public/signup'
+import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp.webhook'
 import { Route as ApiPublicWhatsappSignupCallbackRouteImport } from './routes/api/public/whatsapp.signup-callback'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksDispatchJobsRouteImport } from './routes/api/public/hooks/dispatch-jobs'
@@ -30,7 +31,9 @@ import { Route as ApiPublicExtensionFunnelCardsRouteImport } from './routes/api/
 import { Route as ApiPublicExtensionCustomersRouteImport } from './routes/api/public/extension/customers'
 import { Route as ApiPublicExtensionCampaignsRouteImport } from './routes/api/public/extension/campaigns'
 import { Route as ApiPublicExtensionBillingRouteImport } from './routes/api/public/extension/billing'
+import { Route as ApiPublicExtensionWhatsappTemplatesRouteImport } from './routes/api/public/extension/whatsapp.templates'
 import { Route as ApiPublicExtensionWhatsappStatusRouteImport } from './routes/api/public/extension/whatsapp.status'
+import { Route as ApiPublicExtensionWhatsappSendTemplateRouteImport } from './routes/api/public/extension/whatsapp.send-template'
 import { Route as ApiPublicExtensionWhatsappProviderRouteImport } from './routes/api/public/extension/whatsapp.provider'
 import { Route as ApiPublicExtensionWhatsappDisconnectRouteImport } from './routes/api/public/extension/whatsapp.disconnect'
 import { Route as ApiPublicExtensionWhatsappConnectRouteImport } from './routes/api/public/extension/whatsapp.connect'
@@ -96,6 +99,12 @@ const ApiPublicSignupRoute = ApiPublicSignupRouteImport.update({
   path: '/api/public/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicWhatsappWebhookRoute =
+  ApiPublicWhatsappWebhookRouteImport.update({
+    id: '/api/public/whatsapp/webhook',
+    path: '/api/public/whatsapp/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicWhatsappSignupCallbackRoute =
   ApiPublicWhatsappSignupCallbackRouteImport.update({
     id: '/api/public/whatsapp/signup-callback',
@@ -160,10 +169,22 @@ const ApiPublicExtensionBillingRoute =
     path: '/api/public/extension/billing',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicExtensionWhatsappTemplatesRoute =
+  ApiPublicExtensionWhatsappTemplatesRouteImport.update({
+    id: '/api/public/extension/whatsapp/templates',
+    path: '/api/public/extension/whatsapp/templates',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicExtensionWhatsappStatusRoute =
   ApiPublicExtensionWhatsappStatusRouteImport.update({
     id: '/api/public/extension/whatsapp/status',
     path: '/api/public/extension/whatsapp/status',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionWhatsappSendTemplateRoute =
+  ApiPublicExtensionWhatsappSendTemplateRouteImport.update({
+    id: '/api/public/extension/whatsapp/send-template',
+    path: '/api/public/extension/whatsapp/send-template',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicExtensionWhatsappProviderRoute =
@@ -273,6 +294,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/dispatch-jobs': typeof ApiPublicHooksDispatchJobsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
+  '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
@@ -287,7 +309,9 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/whatsapp/connect': typeof ApiPublicExtensionWhatsappConnectRoute
   '/api/public/extension/whatsapp/disconnect': typeof ApiPublicExtensionWhatsappDisconnectRoute
   '/api/public/extension/whatsapp/provider': typeof ApiPublicExtensionWhatsappProviderRoute
+  '/api/public/extension/whatsapp/send-template': typeof ApiPublicExtensionWhatsappSendTemplateRoute
   '/api/public/extension/whatsapp/status': typeof ApiPublicExtensionWhatsappStatusRoute
+  '/api/public/extension/whatsapp/templates': typeof ApiPublicExtensionWhatsappTemplatesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -311,6 +335,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/dispatch-jobs': typeof ApiPublicHooksDispatchJobsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
+  '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
@@ -325,7 +350,9 @@ export interface FileRoutesByTo {
   '/api/public/extension/whatsapp/connect': typeof ApiPublicExtensionWhatsappConnectRoute
   '/api/public/extension/whatsapp/disconnect': typeof ApiPublicExtensionWhatsappDisconnectRoute
   '/api/public/extension/whatsapp/provider': typeof ApiPublicExtensionWhatsappProviderRoute
+  '/api/public/extension/whatsapp/send-template': typeof ApiPublicExtensionWhatsappSendTemplateRoute
   '/api/public/extension/whatsapp/status': typeof ApiPublicExtensionWhatsappStatusRoute
+  '/api/public/extension/whatsapp/templates': typeof ApiPublicExtensionWhatsappTemplatesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -350,6 +377,7 @@ export interface FileRoutesById {
   '/api/public/hooks/dispatch-jobs': typeof ApiPublicHooksDispatchJobsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
+  '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
@@ -364,7 +392,9 @@ export interface FileRoutesById {
   '/api/public/extension/whatsapp/connect': typeof ApiPublicExtensionWhatsappConnectRoute
   '/api/public/extension/whatsapp/disconnect': typeof ApiPublicExtensionWhatsappDisconnectRoute
   '/api/public/extension/whatsapp/provider': typeof ApiPublicExtensionWhatsappProviderRoute
+  '/api/public/extension/whatsapp/send-template': typeof ApiPublicExtensionWhatsappSendTemplateRoute
   '/api/public/extension/whatsapp/status': typeof ApiPublicExtensionWhatsappStatusRoute
+  '/api/public/extension/whatsapp/templates': typeof ApiPublicExtensionWhatsappTemplatesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -390,6 +420,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/dispatch-jobs'
     | '/api/public/payments/webhook'
     | '/api/public/whatsapp/signup-callback'
+    | '/api/public/whatsapp/webhook'
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
@@ -404,7 +435,9 @@ export interface FileRouteTypes {
     | '/api/public/extension/whatsapp/connect'
     | '/api/public/extension/whatsapp/disconnect'
     | '/api/public/extension/whatsapp/provider'
+    | '/api/public/extension/whatsapp/send-template'
     | '/api/public/extension/whatsapp/status'
+    | '/api/public/extension/whatsapp/templates'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -428,6 +461,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/dispatch-jobs'
     | '/api/public/payments/webhook'
     | '/api/public/whatsapp/signup-callback'
+    | '/api/public/whatsapp/webhook'
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
@@ -442,7 +476,9 @@ export interface FileRouteTypes {
     | '/api/public/extension/whatsapp/connect'
     | '/api/public/extension/whatsapp/disconnect'
     | '/api/public/extension/whatsapp/provider'
+    | '/api/public/extension/whatsapp/send-template'
     | '/api/public/extension/whatsapp/status'
+    | '/api/public/extension/whatsapp/templates'
   id:
     | '__root__'
     | '/'
@@ -466,6 +502,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/dispatch-jobs'
     | '/api/public/payments/webhook'
     | '/api/public/whatsapp/signup-callback'
+    | '/api/public/whatsapp/webhook'
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
@@ -480,7 +517,9 @@ export interface FileRouteTypes {
     | '/api/public/extension/whatsapp/connect'
     | '/api/public/extension/whatsapp/disconnect'
     | '/api/public/extension/whatsapp/provider'
+    | '/api/public/extension/whatsapp/send-template'
     | '/api/public/extension/whatsapp/status'
+    | '/api/public/extension/whatsapp/templates'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -504,6 +543,7 @@ export interface RootRouteChildren {
   ApiPublicHooksDispatchJobsRoute: typeof ApiPublicHooksDispatchJobsRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiPublicWhatsappSignupCallbackRoute: typeof ApiPublicWhatsappSignupCallbackRoute
+  ApiPublicWhatsappWebhookRoute: typeof ApiPublicWhatsappWebhookRoute
   ApiPublicExtensionJobsIdRoute: typeof ApiPublicExtensionJobsIdRoute
   ApiPublicExtensionJobsNextRoute: typeof ApiPublicExtensionJobsNextRoute
   ApiPublicExtensionWaDataRoute: typeof ApiPublicExtensionWaDataRoute
@@ -511,7 +551,9 @@ export interface RootRouteChildren {
   ApiPublicExtensionWhatsappConnectRoute: typeof ApiPublicExtensionWhatsappConnectRoute
   ApiPublicExtensionWhatsappDisconnectRoute: typeof ApiPublicExtensionWhatsappDisconnectRoute
   ApiPublicExtensionWhatsappProviderRoute: typeof ApiPublicExtensionWhatsappProviderRoute
+  ApiPublicExtensionWhatsappSendTemplateRoute: typeof ApiPublicExtensionWhatsappSendTemplateRoute
   ApiPublicExtensionWhatsappStatusRoute: typeof ApiPublicExtensionWhatsappStatusRoute
+  ApiPublicExtensionWhatsappTemplatesRoute: typeof ApiPublicExtensionWhatsappTemplatesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -584,6 +626,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/signup'
       fullPath: '/api/public/signup'
       preLoaderRoute: typeof ApiPublicSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/whatsapp/webhook': {
+      id: '/api/public/whatsapp/webhook'
+      path: '/api/public/whatsapp/webhook'
+      fullPath: '/api/public/whatsapp/webhook'
+      preLoaderRoute: typeof ApiPublicWhatsappWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/whatsapp/signup-callback': {
@@ -663,11 +712,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensionBillingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/extension/whatsapp/templates': {
+      id: '/api/public/extension/whatsapp/templates'
+      path: '/api/public/extension/whatsapp/templates'
+      fullPath: '/api/public/extension/whatsapp/templates'
+      preLoaderRoute: typeof ApiPublicExtensionWhatsappTemplatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/extension/whatsapp/status': {
       id: '/api/public/extension/whatsapp/status'
       path: '/api/public/extension/whatsapp/status'
       fullPath: '/api/public/extension/whatsapp/status'
       preLoaderRoute: typeof ApiPublicExtensionWhatsappStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/whatsapp/send-template': {
+      id: '/api/public/extension/whatsapp/send-template'
+      path: '/api/public/extension/whatsapp/send-template'
+      fullPath: '/api/public/extension/whatsapp/send-template'
+      preLoaderRoute: typeof ApiPublicExtensionWhatsappSendTemplateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/extension/whatsapp/provider': {
@@ -885,6 +948,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksDispatchJobsRoute: ApiPublicHooksDispatchJobsRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiPublicWhatsappSignupCallbackRoute: ApiPublicWhatsappSignupCallbackRoute,
+  ApiPublicWhatsappWebhookRoute: ApiPublicWhatsappWebhookRoute,
   ApiPublicExtensionJobsIdRoute: ApiPublicExtensionJobsIdRoute,
   ApiPublicExtensionJobsNextRoute: ApiPublicExtensionJobsNextRoute,
   ApiPublicExtensionWaDataRoute: ApiPublicExtensionWaDataRoute,
@@ -895,7 +959,11 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicExtensionWhatsappDisconnectRoute,
   ApiPublicExtensionWhatsappProviderRoute:
     ApiPublicExtensionWhatsappProviderRoute,
+  ApiPublicExtensionWhatsappSendTemplateRoute:
+    ApiPublicExtensionWhatsappSendTemplateRoute,
   ApiPublicExtensionWhatsappStatusRoute: ApiPublicExtensionWhatsappStatusRoute,
+  ApiPublicExtensionWhatsappTemplatesRoute:
+    ApiPublicExtensionWhatsappTemplatesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -56,7 +56,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/templates")
         }
 
         const result = await provider.listTemplates({
-          access_token: instance.meta_access_token,
+          instance_token: instance.meta_access_token,
           waba_id: instance.waba_id,
         });
         if (!result.ok) {
@@ -125,7 +125,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/templates")
         }
 
         const result = await provider.createTemplate({
-          access_token: instance.meta_access_token,
+          instance_token: instance.meta_access_token,
           waba_id: instance.waba_id,
           name,
           category: category as "MARKETING" | "UTILITY" | "AUTHENTICATION",
