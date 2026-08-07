@@ -547,6 +547,16 @@
     renderTopbar();
   }
 
+  /** Garante que temos contatos/funis em memória antes de filtrar.
+   * Sem isso, uma falha pontual de rede deixava o filtro sem dados e a lista
+   * aparecia vazia até o usuário recarregar a página. */
+  async function ensureFilterData(kind) {
+    try {
+      if (kind === "label" && !(waData?.contacts?.length)) await loadWaData();
+      if (kind === "stage" && !funnels.length) await loadFunnels();
+    } catch { /* silencioso: o fallback já mostra tudo */ }
+  }
+
   /** Lista (etiqueta do WhatsApp): filtra
    * a lista nativa de conversas pela etiqueta correspondente (inbox do WhatsApp). */
   async function filterByLabel(labelId, labelName) {
@@ -555,6 +565,8 @@
     activeFilter = { key, kind: "label", id: labelId, name: labelName || "Lista" };
     renderTopbar();
     closeDrawer();
+    await ensureFilterData("label");
+    if (activeFilter?.key !== key) return; // usuário trocou de filtro no meio
     void applyNativeChatList("labels", [labelId]);
   }
 
@@ -563,6 +575,7 @@
   async function filterByStage(funnelId, stageId) {
     const key = `stage:${stageId}`;
     if (activeFilter?.key === key) return clearChatFilter();
+    await ensureFilterData("stage");
     const funnel = funnels.find((f) => f.id === funnelId);
     if (!funnel) return;
     const stage = (funnel.stages || []).find((s) => s.id === stageId);
@@ -580,6 +593,7 @@
       .filter((c) => c.stage_id === stageId && c.wa_id)
       .map((c) => c.wa_id);
     void applyNativeChatList("custom", waIds);
+
   }
 
   // ---------------------------------------------------------------------
