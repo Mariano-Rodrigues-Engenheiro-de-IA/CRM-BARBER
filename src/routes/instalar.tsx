@@ -31,7 +31,7 @@ export const Route = createFileRoute("/instalar")({
 function downloadZip() {
   const version = Date.now();
   const urls = [
-    `/zetta-crm-v3412-rev1.zip?v=${version}`,
+    `/zetta-crm-v3512.zip?v=${version}`,
     `/crm-assinaturas-extension.zip?v=${version}`,
   ];
   urls
@@ -49,7 +49,7 @@ function downloadZip() {
     .then((blob) => {
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = "zetta-crm-v3412-rev1.zip";
+      a.download = "zetta-crm-v3512.zip";
       a.click();
       URL.revokeObjectURL(a.href);
     })
@@ -95,7 +95,7 @@ function Install() {
                 className="w-full bg-yellow-400 font-bold text-neutral-950 hover:bg-yellow-300"
                 onClick={downloadZip}
               >
-                Baixar extensão v0.34.12 Rev. 1 (.zip)
+                Baixar extensão v0.35.12 (.zip)
               </Button>
               <p className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
                 Importante: remova a versão anterior em{" "}
