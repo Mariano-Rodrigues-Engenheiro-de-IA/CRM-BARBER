@@ -1,5 +1,5 @@
 (function () {
-  const BRIDGE_VERSION = "0.35.8";
+  const BRIDGE_VERSION = "0.35.9";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
@@ -734,6 +734,14 @@
     if (d.__crm === "chatlist_v350") {
       try {
         await waitForWpp();
+        // Fecha a conversa aberta antes de filtrar — se ela não pertencer
+        // à lista filtrada, o próprio WhatsApp quebra ao tentar renderizar
+        // uma conversa que "sumiu" do estado dele ('Cannot read properties
+        // of undefined (reading name)'), deixando a lista em branco mesmo
+        // com o filtro aplicado corretamente por baixo.
+        try {
+          await window.WPP?.chat?.closeChat?.();
+        } catch {}
         console.info("[CRM][chatlist] listType=", d.listType, "ids=", d.ids?.length || 0);
         if (typeof window.WPP?.chat?.setChatList !== "function") {
           // Tenta descobrir métodos alternativos
