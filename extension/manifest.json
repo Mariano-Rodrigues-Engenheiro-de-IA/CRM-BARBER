@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Zetta CRM — Tudo que você precisa em um só lugar",
-  "version": "0.35.9",
+  "version": "0.35.10",
   "description": "Zetta CRM: CRM completo para barbearias dentro do WhatsApp Web: assinaturas, funis, disparos e equipe.",
   "permissions": ["storage", "activeTab", "tabs", "scripting", "alarms"],
   "host_permissions": [
