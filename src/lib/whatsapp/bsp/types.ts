@@ -43,6 +43,23 @@ export interface BspAdapter {
   }): Promise<SendResult>;
 
   /**
+   * Envia um modelo de mensagem (message template) já aprovado pela Meta.
+   * Necessário pra iniciar conversa fora da janela de 24h, ou pra mensagens
+   * de marketing/notificação — texto livre (sendText) só funciona depois
+   * que o cliente já mandou mensagem primeiro.
+   */
+  sendTemplate?(input: {
+    access_token: string;
+    phone_number_id?: string | null;
+    to: string;
+    template_name: string;
+    /** Código de idioma do template, ex: "pt_BR", "en_US". */
+    language_code: string;
+    /** Textos das variáveis {{1}}, {{2}}... do corpo do template, na ordem. */
+    body_params?: string[];
+  }): Promise<SendResult>;
+
+  /**
    * Registra o número na Cloud API (obrigatório antes do 1º envio — erro
    * 133010 "Account not registered"). Só existe onde o número é gerenciado
    * direto pela Meta; BSPs fazem isso por conta.

@@ -93,6 +93,16 @@ export interface WhatsAppProvider {
     text: string;
   }): Promise<SendResult>;
 
+  /** Só na API oficial (Cloud API) — envio de modelo de mensagem aprovado. */
+  sendTemplate?(input: {
+    instance_token: string;
+    phone_number_id?: string | null;
+    to: string;
+    template_name: string;
+    language_code: string;
+    body_params?: string[];
+  }): Promise<SendResult>;
+
 
   /** Desconecta/hiberna a instância (preserva credenciais). */
   disconnect(input: {

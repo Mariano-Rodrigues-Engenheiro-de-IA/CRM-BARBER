@@ -253,4 +253,59 @@ export const cloudAdapter: BspAdapter = {
       return { ok: false, error: err instanceof Error ? err.message : String(err), retryable: true };
     }
   },
+
+  async sendTemplate({
+    access_token,
+    phone_number_id,
+    to,
+    template_name,
+    language_code,
+    body_params,
+  }): Promise<SendResult> {
+    if (!phone_number_id) {
+      return { ok: false, error: "phone_number_id ausente na instância", retryable: false };
+    }
+    try {
+      const components =
+        body_params && body_params.length > 0
+          ? [
+              {
+                type: "body",
+                parameters: body_params.map((text) => ({ type: "text", text })),
+              },
+            ]
+          : undefined;
+      const res = await fetch(graphUrl(`${phone_number_id}/messages`), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${access_token}`,
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: to.replace(/\D/g, ""),
+          type: "template",
+          template: {
+            name: template_name,
+            language: { code: language_code },
+            ...(components ? { components } : {}),
+          },
+        }),
+      });
+      const json = (await res.json().catch(() => ({}))) as Json;
+      if (!res.ok) {
+        const error = (json.error as Json | undefined)?.message;
+        return {
+          ok: false,
+          error: typeof error === "string" ? error : `HTTP ${res.status}`,
+          retryable: res.status === 429 || res.status >= 500,
+        };
+      }
+      const messages = Array.isArray(json.messages) ? (json.messages[0] as Json | undefined) : undefined;
+      return { ok: true, provider_message_id: str(messages?.id) ?? undefined };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err), retryable: true };
+    }
+  },
 };
