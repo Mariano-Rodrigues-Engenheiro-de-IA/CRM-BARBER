@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.35.18";
+  const CRM_VERSION = "0.35.19";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -451,7 +451,7 @@
     // o filtro escondia TODAS as conversas — era a "instabilidade" em que as
     // abas paravam de carregar contatos. Nesse caso não escondemos nada.
     if (!allowed || allowed.size === 0) {
-      console.warn("[CRM][diagnostico-filtro] allowed vazio — mostrando tudo sem filtrar. activeFilter:", activeFilter);
+      console.warn("[CRM][diagnostico-filtro] allowed vazio — mostrando tudo sem filtrar. activeFilter:", JSON.stringify(activeFilter));
       showAllChatRows();
       return;
     }
@@ -594,7 +594,12 @@
       }
       return { seletor: sel, encontrados: count, amostra: sample };
     });
-    console.info("[CRM][diagnostico-seletor] varredura de seletores candidatos:", results);
+    console.info("[CRM][diagnostico-seletor] varredura de seletores candidatos:");
+    results.forEach((r) => {
+      console.info(
+        `  → ${r.seletor} :: encontrados=${r.encontrados} :: amostra=${JSON.stringify(r.amostra)}`,
+      );
+    });
     return results;
   }
 
