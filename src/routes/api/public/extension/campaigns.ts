@@ -127,6 +127,19 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
         const actionTexts = (message_actions ?? [])
           .filter((action) => action.type === "text" && action.text?.trim())
           .map((action) => String(action.text).trim());
+        // Duas fontes possíveis de "variants" com significados diferentes:
+        // 1) message_variants (explícito) ou message simples repetido — são
+        //    VERSÕES ALTERNATIVAS de uma única mensagem, pensadas pra evitar
+        //    mandar texto idêntico pra todo mundo (anti-spam). Correto
+        //    alternar uma por contato.
+        // 2) actionTexts, vindo de uma Resposta Rápida com MÚLTIPLAS
+        //    mensagens sequenciais (ex: 3 mensagens que deveriam chegar,
+        //    todas, na mesma pessoa) — NÃO são alternativas entre si.
+        //    Tratá-las como "variantes por contato" fragmentava a sequência,
+        //    entregando 1 mensagem pra cada pessoa diferente em vez de
+        //    todas pra cada uma.
+        const usingActionsAsVariants =
+          !(message_variants && message_variants.length > 0) && !message && actionTexts.length > 0;
         const variants =
           message_variants && message_variants.length > 0
             ? message_variants
@@ -271,13 +284,22 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
         let cursor = now;
         const jobs = targets.map((t, i) => {
           if (i > 0) cursor += nextDelayMs();
-          const variant = variants[i % variants.length];
-          let textReplaced = false;
-          const actions = (message_actions ?? []).map((action): QuickReplyAction => {
-            if (action.type !== "text" || textReplaced || !variant) return action;
-            textReplaced = true;
-            return { ...action, text: variant };
-          });
+          let variant: string;
+          let actions: QuickReplyAction[];
+          if (usingActionsAsVariants) {
+            // Resposta Rápida com múltiplas mensagens: todas vão, intactas
+            // e na ordem original, pra CADA contato — nada de alternar.
+            actions = message_actions ?? [];
+            variant = actionTexts[0] ?? "";
+          } else {
+            variant = variants[i % variants.length];
+            let textReplaced = false;
+            actions = (message_actions ?? []).map((action): QuickReplyAction => {
+              if (action.type !== "text" || textReplaced || !variant) return action;
+              textReplaced = true;
+              return { ...action, text: variant };
+            });
+          }
           return {
             barbershop_id: barbershopId,
             campaign_id: campaign.id,
