@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.35.19";
+  const CRM_VERSION = "0.35.20";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -372,125 +372,40 @@
   // tenta aplicar o filtro nativo da lista de conversas.
   // ---------------------------------------------------------------------
   let activeFilter = null; // { key, kind, id, funnelId, name }
-  let domFilterObserver = null;
   let nativeTabWatcherReady = false;
 
-  /** Mapeamento de wa_id → label_ids para o filtro visual via DOM */
-  /** Normaliza um wa_id/data-item-id pra comparação — extrai só os dígitos
-   * do telefone, ignorando o sufixo (@c.us, @lid, @s.whatsapp.net). O
-   * WhatsApp está migrando contatos pro novo formato "LID" (@lid), que
-   * coexiste com o formato antigo (@c.us) — o mesmo contato pode aparecer
-   * com IDs de formato diferente dependendo de onde veio (nosso banco vs
-   * o que o WhatsApp desenha na tela agora), fazendo a comparação direta
-   * de string falhar mesmo com os dados corretos. Grupos (@g.us) não têm
-   * "telefone", mantém o ID original nesse caso.
-   * https://github.com/wppconnect-team/wa-js/releases (chat: restore
-   * setChatList() for LID chats) */
-  function normalizeWaId(id) {
-    const s = String(id || "");
-    if (s.endsWith("@g.us")) return s;
-    const digits = s.split("@")[0].replace(/\D/g, "");
-    return digits || s;
-  }
-
-  function getContactLabelMap() {
-    const map = new Map(); // wa_id normalizado → Set<label_id>
-    if (waData?.contacts) {
-      for (const c of waData.contacts) {
-        if (!c.wa_id) continue;
-        // O backend devolve label_ids (array de strings). Versões antigas
-        // mandavam `labels` como objetos — aceitamos os dois formatos.
-        const labels = (c.label_ids || c.labels || []).map((l) =>
-          String(typeof l === "object" ? (l.id ?? l.wa_label_id ?? "") : l),
-        );
-        map.set(normalizeWaId(c.wa_id), new Set(labels));
-      }
-    }
-
-    return map;
-  }
-
-  /** Obtém os wa_ids dos contatos de uma etapa do funil */
+  /** IDs completos (@lid/@c.us/@g.us) que o motor interno do WhatsApp usa.
+   * Não normalizamos para dígitos: o wa-js 4.5.0 já cruza LID ↔ telefone pelo
+   * cache interno, enquanto um ID sem sufixo nunca é um WID válido. */
   function getStageWaIds(funnelId, stageId) {
     const funnel = funnels.find((f) => f.id === funnelId);
     if (!funnel) return new Set();
     return new Set(
       (funnel.cards || [])
         .filter((c) => c.stage_id === stageId && c.wa_id)
-        .map((c) => normalizeWaId(c.wa_id))
+        .map((c) => String(c.wa_id))
     );
   }
 
-  function showAllChatRows() {
-    document.querySelectorAll("[data-item-id]").forEach((el) => { el.style.display = ""; });
-  }
-
-  /** Conjunto de wa_ids permitidos pelo filtro atual (null = sem filtro). */
+  /** Conjunto de WIDs permitidos pelo filtro atual (null = sem filtro). */
   function getActiveFilterWaIds() {
     if (!activeFilter) return null;
     if (activeFilter.kind === "label") {
       const target = String(activeFilter.id);
-      const allowed = new Set();
-      for (const [waId, labels] of getContactLabelMap()) {
-        if (labels.has(target)) allowed.add(waId);
-      }
-      return allowed;
+      return new Set(
+        (waData.contacts || [])
+          .filter((c) => (c.label_ids || c.labels || []).some((label) => {
+            const id = typeof label === "object" ? (label?.id ?? label?.wa_label_id) : label;
+            return String(id || "") === target;
+          }))
+          .map((c) => String(c.wa_id || ""))
+          .filter(Boolean),
+      );
     }
     if (activeFilter.kind === "stage") {
       return getStageWaIds(activeFilter.funnelId, activeFilter.id);
     }
     return null;
-  }
-
-  /** Filtra visualmente as conversas no DOM do WhatsApp */
-  function applyDomChatFilter() {
-    if (!activeFilter) return showAllChatRows();
-
-    const allowed = getActiveFilterWaIds();
-    // Sem dados carregados (sync ainda não rodou / falhou) o mapa vem vazio e
-    // o filtro escondia TODAS as conversas — era a "instabilidade" em que as
-    // abas paravam de carregar contatos. Nesse caso não escondemos nada.
-    if (!allowed || allowed.size === 0) {
-      console.warn("[CRM][diagnostico-filtro] allowed vazio — mostrando tudo sem filtrar. activeFilter:", JSON.stringify(activeFilter));
-      showAllChatRows();
-      return;
-    }
-
-    const rows = document.querySelectorAll("[data-item-id]");
-    let shown = 0;
-    let hidden = 0;
-    const domSample = [];
-    rows.forEach((el) => {
-      const itemId = String(el.getAttribute("data-item-id") || "");
-      if (!itemId) { el.style.display = ""; return; }
-      const normalized = normalizeWaId(itemId);
-      const isAllowed = allowed.has(normalized);
-      if (domSample.length < 5) domSample.push({ raw: itemId, normalized, isAllowed });
-      if (isAllowed) shown += 1; else hidden += 1;
-      el.style.display = isAllowed ? "" : "none";
-    });
-    console.info(
-      "[CRM][diagnostico-filtro]",
-      "activeFilter:", activeFilter?.kind, activeFilter?.name,
-      "| allowed (normalizado), amostra:", [...allowed].slice(0, 5),
-      "| total no DOM:", rows.length, "| mostrados:", shown, "| escondidos:", hidden,
-      "| amostra do DOM (raw/normalizado/bateu):", domSample,
-    );
-  }
-
-
-  /** Observa mudanças no DOM para re-aplicar o filtro quando novas conversas aparecem */
-  function ensureDomFilterObserver() {
-    if (domFilterObserver) return;
-    domFilterObserver = new MutationObserver(() => {
-      if (activeFilter) applyDomChatFilter();
-    });
-    // Observa a lista de conversas do WhatsApp
-    const chatList = document.querySelector("[data-tab='chatlist']")?.querySelector("[role='treeitem']")?.parentElement
-      || document.querySelector("#pane-side > div > div > div");
-    if (chatList) {
-      domFilterObserver.observe(chatList, { childList: true, subtree: true });
-    }
   }
 
   /** Ouve cliques nas abas nativas do WhatsApp (Tudo / Não lidas / Favoritas /
@@ -528,11 +443,6 @@
   function releaseChatFilter(forceAll = true) {
     const hadCustom = forceAll && activeFilter?.kind === "stage";
     activeFilter = null;
-    if (domFilterObserver) {
-      domFilterObserver.disconnect();
-      domFilterObserver = null;
-    }
-    document.querySelectorAll("[data-item-id]").forEach((el) => { el.style.display = ""; });
     closeDrawer();
     renderTopbar();
     // Lista "custom" não é uma aba real: sem resetar explicitamente, o
@@ -550,98 +460,28 @@
   }
 
 
-  /** Aplica o filtro nativo do WhatsApp (WPP.chat.setChatList).
-   * O WPP vive no MAIN world, então a chamada precisa passar pelo bridge —
-   * era por isso que clicar na pílula não fazia nada. */
-  /** Espera até existir pelo menos uma conversa renderizada na tela — a API
-   * WPP.chat pode existir (waitForWpp já passou) mesmo com o React interno
-   * do WhatsApp ainda no meio de desenhar a lista. Disparar o filtro nesse
-   * meio-tempo é o que provavelmente causa o crash interno intermitente
-   * ("Cannot read properties of undefined (reading 'name')") — a API
-   * existir não garante que a tela terminou de montar. */
-  /** Testa vários seletores candidatos pra lista de conversas, já que
-   * [data-item-id] parou de achar qualquer elemento (0 sempre, mesmo com
-   * a lista visivelmente cheia na tela) — o WhatsApp deve ter trocado a
-   * estrutura interna. Roda automaticamente, sem precisar de comando
-   * manual no console do usuário. */
-  function scanChatListSelectors() {
-    const candidates = [
-      "[data-item-id]",
-      "[data-id]",
-      "[data-testid]",
-      "div[role='listitem']",
-      "div[role='row']",
-      "#pane-side [tabindex]",
-      "#pane-side li",
-      "#pane-side [role='gridcell']",
-      "[aria-label][data-tab]",
-    ];
-    const results = candidates.map((sel) => {
-      let count = 0;
-      let sample = null;
-      try {
-        const els = document.querySelectorAll(sel);
-        count = els.length;
-        if (count > 0) {
-          const first = els[0];
-          sample = {
-            tag: first.tagName,
-            attrs: [...first.attributes].map((a) => `${a.name}="${a.value.slice(0, 50)}"`),
-          };
-        }
-      } catch (e) {
-        sample = `erro: ${e?.message || e}`;
-      }
-      return { seletor: sel, encontrados: count, amostra: sample };
-    });
-    console.info("[CRM][diagnostico-seletor] varredura de seletores candidatos:");
-    results.forEach((r) => {
-      console.info(
-        `  → ${r.seletor} :: encontrados=${r.encontrados} :: amostra=${JSON.stringify(r.amostra)}`,
-      );
-    });
-    return results;
-  }
-
-  async function waitForChatListRendered() {
-    for (let i = 0; i < 20; i += 1) {
-      const n = document.querySelectorAll("[data-item-id]").length;
-      if (n > 0) {
-        console.info(`[CRM][diagnostico-filtro] lista renderizada com ${n} conversa(s) após ${i * 250}ms de espera`);
-        return;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 250));
-    }
-    console.warn("[CRM][diagnostico-filtro] esgotou 5s de espera e não achou NENHUMA conversa renderizada no DOM — rodando varredura de seletores alternativos");
-    scanChatListSelectors();
-    // Não trava o fluxo se não achar nada (ex: inbox genuinamente vazio) —
-    // só deixa de esperar mais, segue com o filtro mesmo assim.
-  }
-
+  /** Aplica e valida o filtro no estado interno do WhatsApp. A lista é
+   * virtualizada e não expõe mais um ID estável no DOM, então não há fallback
+   * visual por seletor nem comparação frágil por nome. */
   async function applyNativeChatList(listType, ids) {
     try {
       await ensureWaScriptsInjected();
-      await waitForChatListRendered();
-      await askBridge("chatlist_v350", "chatlist_done_v350", { listType, ids: ids || [] }, 15000);
+      const result = await askBridge(
+        "chatlist_v350",
+        "chatlist_done_v350",
+        { listType, ids: ids || [] },
+        45000,
+      );
+      if (!result) throw new Error("O motor do WhatsApp não confirmou o filtro");
     } catch (e) {
       console.warn("[CRM] falha ao aplicar filtro nativo de lista:", e?.message || e);
     }
-    // Fallback visual: reforça o filtro escondendo linhas via DOM,
-    // independentemente do resultado nativo. O WhatsApp às vezes trava a
-    // renderização da lista internamente (erro próprio dele) mesmo quando
-    // o filtro nativo foi aplicado com sucesso — esse reforço evita a tela
-    // ficar em branco nesse caso.
-    applyDomChatFilter();
-    ensureDomFilterObserver();
     ensureNativeTabWatcher();
   }
 
   function clearChatFilter() {
     activeFilter = null;
     closeDrawer();
-    // Limpa filtros visuais
-    const items = document.querySelectorAll('[data-item-id]');
-    items.forEach((el) => { el.style.display = ""; });
     void applyNativeChatList("all");
     renderTopbar();
   }
@@ -651,7 +491,7 @@
    * aparecia vazia até o usuário recarregar a página. */
   async function ensureFilterData(kind) {
     try {
-      if (kind === "label" && !(waData?.contacts?.length)) await loadWaData();
+      if (kind === "label") await loadWaData();
       // Funis: SEMPRE recarrega, não só na primeira vez. Diferente de
       // waData (que fica atualizado por outro caminho), os dados de
       // funnels[] só mudam quando alguém move/adiciona um card no CRM web
@@ -672,7 +512,8 @@
     closeDrawer();
     await ensureFilterData("label");
     if (activeFilter?.key !== key) return; // usuário trocou de filtro no meio
-    void applyNativeChatList("labels", [labelId]);
+    const waIds = [...(getActiveFilterWaIds() || [])];
+    void applyNativeChatList("custom", waIds);
   }
 
   /** Etapa de funil: filtra a lista nativa de conversas
