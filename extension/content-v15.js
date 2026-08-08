@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.35.12";
+  const CRM_VERSION = "0.35.13";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -520,9 +520,25 @@
   /** Aplica o filtro nativo do WhatsApp (WPP.chat.setChatList).
    * O WPP vive no MAIN world, então a chamada precisa passar pelo bridge —
    * era por isso que clicar na pílula não fazia nada. */
+  /** Espera até existir pelo menos uma conversa renderizada na tela — a API
+   * WPP.chat pode existir (waitForWpp já passou) mesmo com o React interno
+   * do WhatsApp ainda no meio de desenhar a lista. Disparar o filtro nesse
+   * meio-tempo é o que provavelmente causa o crash interno intermitente
+   * ("Cannot read properties of undefined (reading 'name')") — a API
+   * existir não garante que a tela terminou de montar. */
+  async function waitForChatListRendered() {
+    for (let i = 0; i < 20; i += 1) {
+      if (document.querySelectorAll("[data-item-id]").length > 0) return;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    // Não trava o fluxo se não achar nada (ex: inbox genuinamente vazio) —
+    // só deixa de esperar mais, segue com o filtro mesmo assim.
+  }
+
   async function applyNativeChatList(listType, ids) {
     try {
       await ensureWaScriptsInjected();
+      await waitForChatListRendered();
       await askBridge("chatlist_v350", "chatlist_done_v350", { listType, ids: ids || [] }, 15000);
     } catch (e) {
       console.warn("[CRM] falha ao aplicar filtro nativo de lista:", e?.message || e);
