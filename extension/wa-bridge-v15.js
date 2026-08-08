@@ -1,10 +1,11 @@
 (function () {
-  const BRIDGE_VERSION = "0.35.19";
+  const BRIDGE_VERSION = "0.35.20";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const handledActionIds = new Set();
+  let chatListEngineReady = false;
 
   function rememberAction(id) {
     if (!id || handledActionIds.has(id)) return false;
@@ -44,6 +45,32 @@
       await sleep(500);
     }
     throw new Error("WhatsApp ainda não carregou o motor interno. Atualize o WhatsApp Web e tente de novo.");
+  }
+
+  /** setChatList instala seu filtro customizado apenas no full-ready do wa-js.
+   * WPP.chat existir antes disso não significa que o patch da lista já está
+   * ativo; chamar cedo retorna sucesso sem alterar o resultado visual. */
+  async function waitForChatListEngine() {
+    for (let i = 0; i < 90; i += 1) {
+      const chats = window.WPP?.whatsapp?.ChatStore?.getModelsArray?.() || [];
+      if (
+        window.WPP?.isFullReady === true &&
+        typeof window.WPP?.chat?.setChatList === "function" &&
+        typeof window.WPP?.whatsapp?.functions?.getShouldAppearInList === "function" &&
+        chats.length > 0
+      ) {
+        // O wa-js agenda a instalação do patch de filtragem 1s depois de
+        // isFullReady. Esperar uma única vez elimina a corrida em que
+        // setChatList resolve, mas ainda usa o predicado original.
+        if (!chatListEngineReady) {
+          await sleep(1200);
+          chatListEngineReady = true;
+        }
+        return window.WPP.whatsapp.ChatStore.getModelsArray();
+      }
+      await sleep(500);
+    }
+    throw new Error("A lista de conversas do WhatsApp ainda não está pronta");
   }
 
   async function tryStep(label, fn) {
@@ -733,26 +760,26 @@
     // world — o content script precisa passar por esta ponte.
     if (d.__crm === "chatlist_v350") {
       try {
-        await waitForWpp();
-        // Fecha a conversa aberta antes de filtrar — se ela não pertencer
-        // à lista filtrada, o próprio WhatsApp quebra ao tentar renderizar
-        // uma conversa que "sumiu" do estado dele ('Cannot read properties
-        // of undefined (reading name)'), deixando a lista em branco mesmo
-        // com o filtro aplicado corretamente por baixo.
-        try {
-          await window.WPP?.chat?.closeChat?.();
-        } catch {}
-        console.info("[CRM][chatlist] listType=", d.listType, "ids=", d.ids?.length || 0);
-        if (typeof window.WPP?.chat?.setChatList !== "function") {
-          // Tenta descobrir métodos alternativos
-          const chatMethods = window.WPP?.chat ? Object.getOwnPropertyNames(Object.getPrototypeOf(window.WPP.chat)).filter(m => m.toLowerCase().includes("list") || m.toLowerCase().includes("filter") || m.toLowerCase().includes("chat")) : [];
-          console.warn("[CRM][chatlist] setChatList indisponível! Métodos disponíveis:", chatMethods);
-          throw new Error("setChatList indisponível nesta versão do WhatsApp. Métodos disponíveis: " + chatMethods.join(", "));
-        }
+        const chats = await waitForChatListEngine();
         if (d.listType === "all") await window.WPP.chat.setChatList("all");
         else await window.WPP.chat.setChatList(d.listType, d.ids || []);
-        console.info("[CRM][chatlist] filtrado com sucesso");
-        window.postMessage({ __crm: "chatlist_done_v350", id: d.id, ok: true, data: true }, "*");
+        await sleep(100);
+
+        const shouldAppear = window.WPP.whatsapp.functions.getShouldAppearInList;
+        const visible = chats.filter((chat) => {
+          try { return shouldAppear(chat); } catch { return false; }
+        }).length;
+        if (d.listType === "custom" && (d.ids || []).length > 0 && visible === 0) {
+          await window.WPP.chat.setChatList("all");
+          throw new Error("Nenhuma conversa corresponde aos IDs recebidos pelo filtro");
+        }
+        console.info(`[CRM][chatlist] ${d.listType}: ${visible} conversa(s) confirmada(s)`);
+        window.postMessage({
+          __crm: "chatlist_done_v350",
+          id: d.id,
+          ok: true,
+          data: { visible, total: chats.length },
+        }, "*");
       } catch (e) {
         console.warn("[CRM][chatlist] ERRO:", e?.message || e);
         window.postMessage({ __crm: "chatlist_done_v350", id: d.id, ok: false, error: e?.message || String(e) }, "*");
