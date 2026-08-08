@@ -11,6 +11,8 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import type { SendResult } from "@/lib/whatsapp/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 
 const MAX_JOBS_PER_SHOP_PER_RUN = 4;
 const DELAY_BETWEEN_SENDS_MS = 6000;
@@ -215,6 +217,24 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
                 severity: "info",
                 details: { job_id: job.id, provider_id: result.provider_message_id ?? null },
               });
+              // Ações de funil (adicionar/mover/remover) — mesma regra da
+              // extensão, aplicada direto no banco depois do envio, já que
+              // o disparo em massa via servidor não passa pela extensão.
+              const { data: customerRow } = await supabaseAdmin
+                .from("customers")
+                .select("name")
+                .eq("id", job.customer_id)
+                .eq("barbershop_id", inst.barbershop_id)
+                .maybeSingle();
+              try {
+                await applyFunnelActionsServer(supabaseAdmin, inst.barbershop_id, job.message_actions, {
+                  customerId: job.customer_id,
+                  title: customerRow?.name || phone,
+                  phone,
+                });
+              } catch (e) {
+                console.error("[dispatch-jobs] falha ao aplicar ação de funil:", e);
+              }
             } else {
               // Retry só até o teto; depois marca como falho pra fila não girar
               // eternamente com o provider fora do ar. Backoff cresce por tentativa.
@@ -262,4 +282,64 @@ function jsonOk(body: Record<string, unknown>) {
 
 function sleep(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));
+}
+
+/** Aplica as ações de funil (funnel_add/funnel_remove) de uma Resposta
+ * Rápida direto no banco — versão server-side da mesma regra usada pela
+ * extensão em applyFunnelActions (src/lib/wa-actions.ts): se o contato já
+ * tem card no funil, só move de coluna; senão cria um novo. */
+async function applyFunnelActionsServer(
+  supabaseAdmin: SupabaseClient<Database>,
+  barbershopId: string,
+  actions: unknown,
+  target: { customerId: string; title: string; phone: string },
+) {
+  if (!Array.isArray(actions)) return;
+  const list = (actions as Array<{ type?: string; funnel_id?: string; stage_id?: string }>).filter(
+    (a) => a?.type === "funnel_add" || a?.type === "funnel_remove",
+  );
+  if (list.length === 0) return;
+  const digits = String(target.phone || "").replace(/\D/g, "");
+
+  for (const a of list) {
+    if (a.type === "funnel_add" && a.funnel_id && a.stage_id) {
+      const { data: existing } = await supabaseAdmin
+        .from("funnel_cards")
+        .select("id, stage_id")
+        .eq("barbershop_id", barbershopId)
+        .eq("funnel_id", a.funnel_id)
+        .eq("phone", digits)
+        .maybeSingle();
+      if (existing) {
+        if (existing.stage_id !== a.stage_id) {
+          await supabaseAdmin
+            .from("funnel_cards")
+            .update({ stage_id: a.stage_id })
+            .eq("id", existing.id)
+            .eq("barbershop_id", barbershopId);
+        }
+        continue;
+      }
+      const { count } = await supabaseAdmin
+        .from("funnel_cards")
+        .select("id", { count: "exact", head: true })
+        .eq("stage_id", a.stage_id);
+      await supabaseAdmin.from("funnel_cards").insert({
+        barbershop_id: barbershopId,
+        funnel_id: a.funnel_id,
+        stage_id: a.stage_id,
+        title: target.title,
+        phone: digits,
+        customer_id: target.customerId,
+        sort_order: count ?? 0,
+      });
+    } else if (a.type === "funnel_remove" && a.funnel_id) {
+      await supabaseAdmin
+        .from("funnel_cards")
+        .delete()
+        .eq("barbershop_id", barbershopId)
+        .eq("funnel_id", a.funnel_id)
+        .eq("phone", digits);
+    }
+  }
 }
