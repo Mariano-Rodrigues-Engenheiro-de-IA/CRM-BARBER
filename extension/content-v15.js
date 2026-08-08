@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.35.14";
+  const CRM_VERSION = "0.35.15";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -569,7 +569,13 @@
   async function ensureFilterData(kind) {
     try {
       if (kind === "label" && !(waData?.contacts?.length)) await loadWaData();
-      if (kind === "stage" && !funnels.length) await loadFunnels();
+      // Funis: SEMPRE recarrega, não só na primeira vez. Diferente de
+      // waData (que fica atualizado por outro caminho), os dados de
+      // funnels[] só mudam quando alguém move/adiciona um card no CRM web
+      // — se a extensão não recarregar a cada clique, os wa_id ficam
+      // desatualizados e o filtro por etapa aplica uma lista vazia,
+      // mesmo com contatos reais na etapa.
+      if (kind === "stage") await loadFunnels();
     } catch { /* silencioso: o fallback já mostra tudo */ }
   }
 
@@ -591,7 +597,14 @@
   async function filterByStage(funnelId, stageId) {
     const key = `stage:${stageId}`;
     if (activeFilter?.key === key) return clearChatFilter();
+    // Reserva a intenção do clique antes de esperar os dados, com nome
+    // provisório — evita que um segundo clique concorrente (usuário troca
+    // de etapa rápido) aplique o filtro errado depois do await.
+    activeFilter = { key, kind: "stage", id: stageId, funnelId, name: "Etapa", funnelName: "" };
+    renderTopbar();
+    closeDrawer();
     await ensureFilterData("stage");
+    if (activeFilter?.key !== key) return; // usuário trocou de filtro no meio
     const funnel = funnels.find((f) => f.id === funnelId);
     if (!funnel) return;
     const stage = (funnel.stages || []).find((s) => s.id === stageId);
@@ -604,7 +617,6 @@
       funnelName: funnel.name,
     };
     renderTopbar();
-    closeDrawer();
     const waIds = (funnel.cards || [])
       .filter((c) => c.stage_id === stageId && c.wa_id)
       .map((c) => c.wa_id);
