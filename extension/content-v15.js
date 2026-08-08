@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.35.15";
+  const CRM_VERSION = "0.35.16";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -376,8 +376,25 @@
   let nativeTabWatcherReady = false;
 
   /** Mapeamento de wa_id → label_ids para o filtro visual via DOM */
+  /** Normaliza um wa_id/data-item-id pra comparação — extrai só os dígitos
+   * do telefone, ignorando o sufixo (@c.us, @lid, @s.whatsapp.net). O
+   * WhatsApp está migrando contatos pro novo formato "LID" (@lid), que
+   * coexiste com o formato antigo (@c.us) — o mesmo contato pode aparecer
+   * com IDs de formato diferente dependendo de onde veio (nosso banco vs
+   * o que o WhatsApp desenha na tela agora), fazendo a comparação direta
+   * de string falhar mesmo com os dados corretos. Grupos (@g.us) não têm
+   * "telefone", mantém o ID original nesse caso.
+   * https://github.com/wppconnect-team/wa-js/releases (chat: restore
+   * setChatList() for LID chats) */
+  function normalizeWaId(id) {
+    const s = String(id || "");
+    if (s.endsWith("@g.us")) return s;
+    const digits = s.split("@")[0].replace(/\D/g, "");
+    return digits || s;
+  }
+
   function getContactLabelMap() {
-    const map = new Map(); // wa_id → Set<label_id>
+    const map = new Map(); // wa_id normalizado → Set<label_id>
     if (waData?.contacts) {
       for (const c of waData.contacts) {
         if (!c.wa_id) continue;
@@ -386,7 +403,7 @@
         const labels = (c.label_ids || c.labels || []).map((l) =>
           String(typeof l === "object" ? (l.id ?? l.wa_label_id ?? "") : l),
         );
-        map.set(String(c.wa_id), new Set(labels));
+        map.set(normalizeWaId(c.wa_id), new Set(labels));
       }
     }
 
@@ -400,7 +417,7 @@
     return new Set(
       (funnel.cards || [])
         .filter((c) => c.stage_id === stageId && c.wa_id)
-        .map((c) => String(c.wa_id))
+        .map((c) => normalizeWaId(c.wa_id))
     );
   }
 
@@ -441,7 +458,7 @@
     document.querySelectorAll("[data-item-id]").forEach((el) => {
       const itemId = String(el.getAttribute("data-item-id") || "");
       if (!itemId) { el.style.display = ""; return; }
-      el.style.display = allowed.has(itemId) ? "" : "none";
+      el.style.display = allowed.has(normalizeWaId(itemId)) ? "" : "none";
     });
   }
 
