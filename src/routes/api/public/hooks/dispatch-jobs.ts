@@ -89,6 +89,14 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
           const provider = getWhatsAppProviderByName(providerName);
           const instanceToken = providerName === "meta" ? inst.meta_access_token ?? inst.instance_token : inst.instance_token;
           if (!instanceToken) continue;
+          // Busca uma amostra bem maior que o necessário — se não fizer
+          // isso, uma campanha antiga pausada/cancelada com muitos jobs
+          // pendentes sempre aparece entre "os mais antigos", o loop abaixo
+          // pula todos eles um a um sem sobrar nenhum na amostra, e a
+          // rodada inteira processa ZERO jobs, mesmo com campanhas novas e
+          // válidas esperando atrás na fila. (Evitamos filtrar campaign_id
+          // direto na query com NOT IN porque, em SQL, isso excluiria
+          // silenciosamente jobs com campaign_id nulo, se algum existir.)
           const { data: jobs } = await supabaseAdmin
             .from("message_jobs")
             .select("id, customer_id, rendered_body, campaign_id, attempts")
@@ -96,7 +104,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
             .eq("status", "pending")
             .lte("scheduled_for", nowIso)
             .order("scheduled_for", { ascending: true })
-            .limit(MAX_JOBS_PER_SHOP_PER_RUN * 2);
+            .limit(200);
 
           if (!jobs || jobs.length === 0) continue;
 
