@@ -10,6 +10,7 @@
 // Autenticação: header `apikey` = SUPABASE_PUBLISHABLE_KEY (padrão pg_cron).
 
 import { createFileRoute } from "@tanstack/react-router";
+import type { SendResult } from "@/lib/whatsapp/types";
 
 const MAX_JOBS_PER_SHOP_PER_RUN = 4;
 const DELAY_BETWEEN_SENDS_MS = 6000;
@@ -99,7 +100,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
           // silenciosamente jobs com campaign_id nulo, se algum existir.)
           const { data: jobs } = await supabaseAdmin
             .from("message_jobs")
-            .select("id, customer_id, rendered_body, campaign_id, attempts")
+            .select("id, customer_id, rendered_body, message_actions, campaign_id, attempts")
             .eq("barbershop_id", inst.barbershop_id)
             .eq("status", "pending")
             .lte("scheduled_for", nowIso)
@@ -158,19 +159,40 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
             }
 
             const attempts = (job.attempts ?? 0) + 1;
+            // Resposta Rápida com múltiplas mensagens sequenciais: envia
+            // cada texto, em ordem, pro mesmo contato. Antes disso, o
+            // disparo via servidor só mandava `rendered_body` (o primeiro
+            // texto da sequência) e ignorava o resto — as demais mensagens
+            // "sumiam" silenciosamente. Sem message_actions (caso comum,
+            // mensagem única), cai no comportamento de sempre.
+            const sequenceTexts = Array.isArray(job.message_actions)
+              ? (job.message_actions as Array<{ type?: string; text?: string }>)
+                  .filter((a) => a?.type === "text" && a.text?.trim())
+                  .map((a) => String(a.text).trim())
+              : [];
+            const textsToSend = sequenceTexts.length > 0 ? sequenceTexts : [job.rendered_body];
+
             // Nunca deixar uma exceção de rede matar a rodada com o job in_flight.
-            const result = await provider
-              .sendText({
-                instance_token: instanceToken,
-                phone_number_id: inst.phone_number_id ?? null,
-                to: phone,
-                text: job.rendered_body,
-              })
-              .catch((e: unknown) => ({
-                ok: false as const,
-                error: e instanceof Error ? e.message : "Falha de rede no envio",
-                retryable: true,
-              }));
+            let result: SendResult = { ok: true };
+            for (let i = 0; i < textsToSend.length; i += 1) {
+              result = await provider
+                .sendText({
+                  instance_token: instanceToken,
+                  phone_number_id: inst.phone_number_id ?? null,
+                  to: phone,
+                  text: textsToSend[i],
+                })
+                .catch((e: unknown) => ({
+                  ok: false as const,
+                  error: e instanceof Error ? e.message : "Falha de rede no envio",
+                  retryable: true,
+                }));
+              if (!result.ok) break;
+              // Pequena pausa entre as mensagens da MESMA sequência, pro
+              // mesmo contato — mais curta que a pausa entre contatos
+              // diferentes, só pra não chegar tudo colado instantaneamente.
+              if (i < textsToSend.length - 1) await sleep(1500 + Math.random() * 1500);
+            }
 
 
 
