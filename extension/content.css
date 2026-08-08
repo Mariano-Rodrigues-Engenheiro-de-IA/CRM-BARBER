@@ -44,7 +44,7 @@ html body.crm-shell {
    ele fazia esta reserva desaparecer em algumas versões do WhatsApp Web. */
 html body.crm-shell #app {
   position: absolute !important;
-  top: 40px !important;
+  top: 0 !important;
   left: 46px !important;
   right: 0 !important;
   bottom: 0 !important;
@@ -136,6 +136,13 @@ html body.crm-shell #app {
 .crm-rail-btn:hover::after { opacity: 1; }
 
 /* Barra de abas no topo — mesma identidade do trilho */
+/* Filtro de Listas/Funil temporariamente oculto — o WhatsApp mudou a
+   estrutura interna da página e quebrou a filtragem visual das
+   conversas. Código intacto por baixo, só escondido — pra reativar,
+   remove esse "display: none". Ver commits de investigação de
+   06-08/07-08 no histórico do git. */
+#crm-topbar { display: none !important; }
+
 #crm-topbar {
   position: fixed;
   top: 0;
