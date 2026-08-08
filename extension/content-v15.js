@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.35.16";
+  const CRM_VERSION = "0.35.17";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -451,15 +451,31 @@
     // o filtro escondia TODAS as conversas — era a "instabilidade" em que as
     // abas paravam de carregar contatos. Nesse caso não escondemos nada.
     if (!allowed || allowed.size === 0) {
+      console.warn("[CRM][diagnostico-filtro] allowed vazio — mostrando tudo sem filtrar. activeFilter:", activeFilter);
       showAllChatRows();
       return;
     }
 
-    document.querySelectorAll("[data-item-id]").forEach((el) => {
+    const rows = document.querySelectorAll("[data-item-id]");
+    let shown = 0;
+    let hidden = 0;
+    const domSample = [];
+    rows.forEach((el) => {
       const itemId = String(el.getAttribute("data-item-id") || "");
       if (!itemId) { el.style.display = ""; return; }
-      el.style.display = allowed.has(normalizeWaId(itemId)) ? "" : "none";
+      const normalized = normalizeWaId(itemId);
+      const isAllowed = allowed.has(normalized);
+      if (domSample.length < 5) domSample.push({ raw: itemId, normalized, isAllowed });
+      if (isAllowed) shown += 1; else hidden += 1;
+      el.style.display = isAllowed ? "" : "none";
     });
+    console.info(
+      "[CRM][diagnostico-filtro]",
+      "activeFilter:", activeFilter?.kind, activeFilter?.name,
+      "| allowed (normalizado), amostra:", [...allowed].slice(0, 5),
+      "| total no DOM:", rows.length, "| mostrados:", shown, "| escondidos:", hidden,
+      "| amostra do DOM (raw/normalizado/bateu):", domSample,
+    );
   }
 
 
@@ -545,9 +561,14 @@
    * existir não garante que a tela terminou de montar. */
   async function waitForChatListRendered() {
     for (let i = 0; i < 20; i += 1) {
-      if (document.querySelectorAll("[data-item-id]").length > 0) return;
+      const n = document.querySelectorAll("[data-item-id]").length;
+      if (n > 0) {
+        console.info(`[CRM][diagnostico-filtro] lista renderizada com ${n} conversa(s) após ${i * 250}ms de espera`);
+        return;
+      }
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
+    console.warn("[CRM][diagnostico-filtro] esgotou 5s de espera e não achou NENHUMA conversa renderizada no DOM");
     // Não trava o fluxo se não achar nada (ex: inbox genuinamente vazio) —
     // só deixa de esperar mais, segue com o filtro mesmo assim.
   }
