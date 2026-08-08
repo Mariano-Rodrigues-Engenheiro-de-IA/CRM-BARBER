@@ -166,10 +166,16 @@ export function DispatchCenter({
     const qr = replies.find((q) => q.id === id);
     if (!qr) return;
     setActions(qr.actions);
+    // Só pré-preenche "variantes" quando a Resposta Rápida tem 1 único
+    // texto — nesse caso faz sentido usar como base editável. Quando tem
+    // MÚLTIPLOS textos, são mensagens SEQUENCIAIS (devem ir todas, na
+    // ordem, pra cada contato) — não são alternativas entre si. Copiar
+    // pra "variantes" ativava o modo de rotacionar-uma-por-contato no
+    // disparo, fragmentando a sequência entre pessoas diferentes.
     const texts = qr.actions
       .filter((a) => a.type === "text" && a.text?.trim())
       .map((a) => (a.text as string).trim());
-    setVariants(texts.length ? texts.slice(0, 3) : [""]);
+    setVariants(texts.length === 1 ? texts : [""]);
     if (!name.trim()) setName(qr.title);
   }
 
