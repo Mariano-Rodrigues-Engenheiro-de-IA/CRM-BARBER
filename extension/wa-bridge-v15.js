@@ -5,6 +5,7 @@
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const handledActionIds = new Set();
+  let chatListEngineReady = false;
 
   function rememberAction(id) {
     if (!id || handledActionIds.has(id)) return false;
@@ -57,7 +58,16 @@
         typeof window.WPP?.chat?.setChatList === "function" &&
         typeof window.WPP?.whatsapp?.functions?.getShouldAppearInList === "function" &&
         chats.length > 0
-      ) return chats;
+      ) {
+        // O wa-js agenda a instalação do patch de filtragem 1s depois de
+        // isFullReady. Esperar uma única vez elimina a corrida em que
+        // setChatList resolve, mas ainda usa o predicado original.
+        if (!chatListEngineReady) {
+          await sleep(1200);
+          chatListEngineReady = true;
+        }
+        return window.WPP.whatsapp.ChatStore.getModelsArray();
+      }
       await sleep(500);
     }
     throw new Error("A lista de conversas do WhatsApp ainda não está pronta");
