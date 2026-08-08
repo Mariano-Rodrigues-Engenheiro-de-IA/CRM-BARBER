@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.35.17";
+  const CRM_VERSION = "0.35.18";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -559,6 +559,45 @@
    * meio-tempo é o que provavelmente causa o crash interno intermitente
    * ("Cannot read properties of undefined (reading 'name')") — a API
    * existir não garante que a tela terminou de montar. */
+  /** Testa vários seletores candidatos pra lista de conversas, já que
+   * [data-item-id] parou de achar qualquer elemento (0 sempre, mesmo com
+   * a lista visivelmente cheia na tela) — o WhatsApp deve ter trocado a
+   * estrutura interna. Roda automaticamente, sem precisar de comando
+   * manual no console do usuário. */
+  function scanChatListSelectors() {
+    const candidates = [
+      "[data-item-id]",
+      "[data-id]",
+      "[data-testid]",
+      "div[role='listitem']",
+      "div[role='row']",
+      "#pane-side [tabindex]",
+      "#pane-side li",
+      "#pane-side [role='gridcell']",
+      "[aria-label][data-tab]",
+    ];
+    const results = candidates.map((sel) => {
+      let count = 0;
+      let sample = null;
+      try {
+        const els = document.querySelectorAll(sel);
+        count = els.length;
+        if (count > 0) {
+          const first = els[0];
+          sample = {
+            tag: first.tagName,
+            attrs: [...first.attributes].map((a) => `${a.name}="${a.value.slice(0, 50)}"`),
+          };
+        }
+      } catch (e) {
+        sample = `erro: ${e?.message || e}`;
+      }
+      return { seletor: sel, encontrados: count, amostra: sample };
+    });
+    console.info("[CRM][diagnostico-seletor] varredura de seletores candidatos:", results);
+    return results;
+  }
+
   async function waitForChatListRendered() {
     for (let i = 0; i < 20; i += 1) {
       const n = document.querySelectorAll("[data-item-id]").length;
@@ -568,7 +607,8 @@
       }
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
-    console.warn("[CRM][diagnostico-filtro] esgotou 5s de espera e não achou NENHUMA conversa renderizada no DOM");
+    console.warn("[CRM][diagnostico-filtro] esgotou 5s de espera e não achou NENHUMA conversa renderizada no DOM — rodando varredura de seletores alternativos");
+    scanChatListSelectors();
     // Não trava o fluxo se não achar nada (ex: inbox genuinamente vazio) —
     // só deixa de esperar mais, segue com o filtro mesmo assim.
   }
