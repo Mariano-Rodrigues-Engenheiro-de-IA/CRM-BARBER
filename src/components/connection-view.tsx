@@ -215,8 +215,20 @@ export function ConnectionView({ api }: { api: Api }) {
     return () => window.removeEventListener("message", onMessage);
   }, []);
 
+  // Integração Zero (hosted embedded signup): link pronto da Meta, sem
+  // depender do SDK JS (FB.login) que só funcionava com a conta dona do
+  // app. https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/hosted-es
+  function openHostedSignup() {
+    window.open(
+      "https://business.facebook.com/messaging/whatsapp/onboard/?app_id=1608564974165087&config_id=1694345995171277",
+      "_blank",
+      "noopener,noreferrer",
+    );
+  }
+
   async function connect() {
     actionRef.current = "connect";
+
     operationSeqRef.current += 1;
     refreshSeqRef.current += 1;
     clearPoll();
@@ -455,11 +467,11 @@ export function ConnectionView({ api }: { api: Api }) {
           <div className="mt-6">
             <Button
               type="button"
-              onClick={() => void connect()}
+              onClick={openHostedSignup}
               disabled={busy}
               className="bg-brand text-white hover:bg-brand-strong"
             >
-              {busy ? "Preparando…" : "Conectar WhatsApp"}
+              Conectar WhatsApp
             </Button>
             <p className="mt-3 text-xs text-neutral-500">
               {needsManualCredentials
