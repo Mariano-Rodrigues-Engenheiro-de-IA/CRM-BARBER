@@ -384,6 +384,17 @@ export function ConnectionView({ api }: { api: Api }) {
       statusRef.current = next.status;
       setAuthMode(next.auth_mode ?? (next.provider === "meta" ? "embedded_signup" : null));
       setConn(next);
+      actionRef.current = null;
+      operationSeqRef.current += 1;
+      setBusy(false);
+      // Trocar o modo sozinho não conecta nada — dispara a ação de conectar
+      // correspondente na sequência, pra ficar tudo em um clique só.
+      if (provider === "meta") {
+        openHostedSignup();
+      } else {
+        void connect();
+      }
+      return;
     } else {
       setErr(res.error || "Falha ao trocar modo de conexão");
     }
@@ -480,15 +491,15 @@ export function ConnectionView({ api }: { api: Api }) {
                 }
                 className={`mt-5 w-full rounded-xl px-4 py-3 text-sm font-semibold transition ${
                   isMetaConnection && status === "connected"
-                    ? "bg-white text-red-600 ring-1 ring-inset ring-red-200 hover:bg-red-50"
+                    ? "bg-green-100 text-green-800"
                     : "bg-brand text-white hover:bg-brand-strong"
                 }`}
               >
-                {isMetaConnection && status === "connected" ? "Desconectar" : "Conectar"}
+                {isMetaConnection && status === "connected" ? "Conectado" : "Conectar API"}
               </button>
             </div>
 
-            {/* WhatsApp Web */}
+            {/* API não oficial */}
             <div
               className={`rounded-2xl border p-5 transition ${
                 !isMetaConnection ? "border-brand ring-1 ring-brand" : "border-neutral-200"
@@ -496,7 +507,9 @@ export function ConnectionView({ api }: { api: Api }) {
             >
               <div className="flex items-center gap-3">
                 <WhatsAppGlyph className="h-10 w-10 shrink-0 text-white" bg="#6366F1" />
-                <p className="text-lg font-semibold text-neutral-950">WhatsApp Web</p>
+                <p className="text-lg font-semibold text-neutral-950">
+                  WhatsApp <span className="text-brand">API não oficial</span>
+                </p>
               </div>
 
               <p className="mt-3 text-sm text-neutral-600">
@@ -517,37 +530,17 @@ export function ConnectionView({ api }: { api: Api }) {
                     ? setConfirmAction("disconnect")
                     : requestSwitchProvider("uazapi")
                 }
-                className={`mt-5 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+                className={`mt-5 w-full rounded-xl px-4 py-3 text-sm font-semibold transition ${
                   !isMetaConnection && status === "connected"
-                    ? "border-red-200 bg-white text-red-600 hover:bg-red-50"
-                    : "border-brand text-brand hover:bg-brand/5"
+                    ? "bg-green-100 text-green-800"
+                    : "bg-brand text-white hover:bg-brand-strong"
                 }`}
               >
-                {!isMetaConnection && status === "connected" ? "Desconectar" : "Conectar"}
+                {!isMetaConnection && status === "connected" ? "Conectado" : "Conectar API"}
               </button>
             </div>
           </div>
         </div>
-
-        {(status === "disconnected" || status === "hibernated") && (
-          <div className="mt-6">
-            <Button
-              type="button"
-              onClick={() => (isMetaConnection ? openHostedSignup() : void connect())}
-              disabled={busy}
-              className="bg-brand text-white hover:bg-brand-strong"
-            >
-              {busy ? "Preparando…" : "Conectar WhatsApp"}
-            </Button>
-            <p className="mt-3 text-xs text-neutral-500">
-              {needsManualCredentials
-                ? "Modo oficial selecionado, mas ainda falta salvar phone_number_id e access_token na tela admin. Se esta barbearia deve usar QR, selecione QR / não oficial acima."
-                : isMetaConnection
-                ? "Este número é configurado manualmente na API oficial; depois de salvar as credenciais, o status atualiza sozinho aqui."
-                : "Vai gerar um QR code pra você escanear com o WhatsApp da barbearia."}
-            </p>
-          </div>
-        )}
 
 
         {status === "connecting" && (
