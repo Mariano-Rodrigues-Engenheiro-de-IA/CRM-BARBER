@@ -438,47 +438,86 @@ export function ConnectionView({ api }: { api: Api }) {
 
         <div className="mt-5">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">Modo de conexão</p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => requestSwitchProvider("uazapi")}
-              className={`rounded-xl border p-4 text-left transition ${
-                !isMetaConnection
-                  ? "border-brand bg-brand/5 ring-1 ring-brand"
-                  : "border-neutral-200 bg-white hover:border-neutral-300"
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            {/* API Oficial */}
+            <div
+              className={`rounded-2xl border p-5 transition ${
+                isMetaConnection ? "border-brand ring-1 ring-brand" : "border-neutral-200"
               }`}
             >
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-neutral-950">WhatsApp Web</p>
-                {!isMetaConnection && status === "connected" && (
-                  <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-semibold text-white">Conectado</span>
-                )}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-3">
+                  <WhatsAppGlyph className="h-10 w-10 shrink-0 text-white" bg="#009e78" />
+                  <p className="text-lg font-semibold text-neutral-950">
+                    WhatsApp <span className="text-brand">API Oficial</span>
+                  </p>
+                </div>
+                <MetaBusinessPartnerBadge className="hidden shrink-0 sm:block" />
               </div>
-              <p className="mt-1 text-xs text-neutral-500">
-                Espelha o WhatsApp do celular via QR code. Simples, mas fica vinculado ao aparelho.
+
+              <span className="mt-3 inline-block rounded-full border border-green-300 px-3 py-1 text-xs font-medium text-green-700">
+                Recomendado
+              </span>
+
+              <p className="mt-3 text-sm text-neutral-600">
+                Conexão direta com os servidores da Meta. Para empresas que querem operar WhatsApp com
+                previsibilidade e escala.
               </p>
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => requestSwitchProvider("meta")}
-              className={`rounded-xl border p-4 text-left transition ${
-                isMetaConnection
-                  ? "border-brand bg-brand/5 ring-1 ring-brand"
-                  : "border-neutral-200 bg-white hover:border-neutral-300"
+
+              <ul className="mt-4 space-y-2">
+                <BenefitItem>Estabilidade direta com a Meta</BenefitItem>
+                <BenefitItem>Mensagens em massa, modelos e botões interativos</BenefitItem>
+                <BenefitItem>Operação independente de celular</BenefitItem>
+              </ul>
+
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => requestSwitchProvider("meta")}
+                className={`mt-5 w-full rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                  isMetaConnection
+                    ? "bg-green-100 text-green-800"
+                    : "bg-brand text-white hover:bg-brand-strong"
+                }`}
+              >
+                {isMetaConnection && status === "connected" ? "Conectado" : "Criar canal"}
+              </button>
+            </div>
+
+            {/* WhatsApp Web */}
+            <div
+              className={`rounded-2xl border p-5 transition ${
+                !isMetaConnection ? "border-brand ring-1 ring-brand" : "border-neutral-200"
               }`}
             >
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-neutral-950">API Oficial</p>
-                {isMetaConnection && status === "connected" && (
-                  <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-semibold text-white">Conectado</span>
-                )}
+              <div className="flex items-center gap-3">
+                <WhatsAppGlyph className="h-10 w-10 shrink-0 text-white" bg="#6366F1" />
+                <p className="text-lg font-semibold text-neutral-950">WhatsApp Web</p>
               </div>
-              <p className="mt-1 text-xs text-neutral-500">
-                Conexão direta com a Meta. Não depende do celular ligado, mais estável para volume alto.
+
+              <p className="mt-3 text-sm text-neutral-600">
+                Espelha o WhatsApp do celular. Indicada para testes ou cenários específicos.
               </p>
-            </button>
+
+              <ul className="mt-4 space-y-2">
+                <BulletItem>Vinculado ao celular</BulletItem>
+                <BulletItem>Ativação imediata</BulletItem>
+                <BulletItem>Conexão via QR Code</BulletItem>
+              </ul>
+
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => requestSwitchProvider("uazapi")}
+                className={`mt-5 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+                  !isMetaConnection
+                    ? "border-green-300 bg-green-100 text-green-800"
+                    : "border-brand text-brand hover:bg-brand/5"
+                }`}
+              >
+                {!isMetaConnection && status === "connected" ? "Conectado" : "Criar canal"}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -660,4 +699,68 @@ function QrImage({ qrcode }: { qrcode: string }) {
   // Fallback: texto cru → renderiza via serviço externo estático.
   const url = `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(qrcode)}`;
   return <img src={url} alt="QR code" className="h-64 w-64 rounded-lg border border-neutral-200 bg-white p-2" />;
+}
+
+/** Ícone do WhatsApp (balão de fala + telefone), em círculo colorido. */
+function WhatsAppGlyph({ className, bg }: { className?: string; bg: string }) {
+  return (
+    <span
+      className={`flex items-center justify-center rounded-full ${className ?? ""}`}
+      style={{ backgroundColor: bg }}
+    >
+      <svg viewBox="0 0 32 32" fill="none" className="h-[58%] w-[58%]">
+        <path
+          d="M16 4C9.373 4 4 9.373 4 16c0 2.24.617 4.34 1.688 6.135L4 28l6.03-1.653A11.94 11.94 0 0 0 16 28c6.627 0 12-5.373 12-12S22.627 4 16 4Z"
+          fill="white"
+        />
+        <path
+          d="M12.4 10.4c-.267-.6-.48-.614-.734-.626-.187-.008-.4-.007-.614-.007-.213 0-.56.08-.853.4-.293.32-1.12 1.093-1.12 2.667s1.147 3.093 1.307 3.307c.16.213 2.213 3.547 5.467 4.827 2.707 1.067 3.253.854 3.84.8.587-.053 1.894-.773 2.16-1.52.267-.746.267-1.386.187-1.52-.08-.133-.293-.213-.613-.373-.32-.16-1.894-.934-2.187-1.04-.293-.107-.507-.16-.72.16-.213.32-.827 1.04-1.014 1.253-.187.213-.373.24-.693.08-.32-.16-1.348-.497-2.567-1.586-.949-.847-1.59-1.894-1.777-2.214-.187-.32-.02-.493.14-.653.144-.144.32-.373.48-.56.16-.187.213-.32.32-.533.107-.213.053-.4-.027-.56-.08-.16-.708-1.76-.987-2.41Z"
+          fill={bg}
+        />
+      </svg>
+    </span>
+  );
+}
+
+/** Selo "Meta Business Partner" — símbolo infinito + texto, cinza discreto. */
+function MetaBusinessPartnerBadge({ className }: { className?: string }) {
+  return (
+    <div className={`flex items-center gap-1.5 text-neutral-500 ${className ?? ""}`}>
+      <svg viewBox="0 0 36 20" className="h-4 w-7" fill="none">
+        <path
+          d="M9 4C5 4 2 7.5 2 10.5S5 17 9 17c2.6 0 4.4-1.7 6-4 1.6 2.3 3.4 4 6 4 4 0 7-3 7-6.5S25 4 21 4c-2.6 0-4.4 1.7-6 4-1.6-2.3-3.4-4-6-4Zm0 3c1.4 0 2.6 1.1 4 3-1.4 1.9-2.6 3-4 3-1.9 0-3.5-1.5-3.5-3S7.1 7 9 7Zm12 0c1.9 0 3.5 1.5 3.5 3S22.9 13 21 13c-1.4 0-2.6-1.1-4-3 1.4-1.9 2.6-3 4-3Z"
+          fill="currentColor"
+        />
+      </svg>
+      <span className="text-[11px] font-semibold leading-tight">
+        Meta
+        <br />
+        Business Partner
+      </span>
+    </div>
+  );
+}
+
+function BenefitItem({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex items-start gap-2 text-sm text-neutral-700">
+      <svg viewBox="0 0 20 20" className="mt-0.5 h-4 w-4 shrink-0 text-green-500" fill="currentColor">
+        <path
+          fillRule="evenodd"
+          d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.707-9.293a1 1 0 0 0-1.414-1.414L9 10.586 7.707 9.293a1 1 0 0 0-1.414 1.414l2 2a1 1 0 0 0 1.414 0l4-4Z"
+          clipRule="evenodd"
+        />
+      </svg>
+      {children}
+    </li>
+  );
+}
+
+function BulletItem({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex items-center gap-2 text-sm text-neutral-600">
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-neutral-400" />
+      {children}
+    </li>
+  );
 }
