@@ -27,6 +27,8 @@ export type DispatchCustomer = { id: string; name: string; phone: string; status
 
 type Audience = "assinantes" | "funis" | "planilha";
 type MessageMode = "custom" | "quick";
+type DispatchType = "message" | "template";
+type TemplateOption = { name: string; language: string; status: string };
 
 const inputCls =
   "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-neutral-900";
@@ -94,6 +96,10 @@ export function DispatchCenter({
   const [replyId, setReplyId] = useState("");
   const [messageOpen, setMessageOpen] = useState(false);
   const [messageMode, setMessageMode] = useState<MessageMode>("custom");
+  const [dispatchType, setDispatchType] = useState<DispatchType>("message");
+  const [templates, setTemplates] = useState<TemplateOption[]>([]);
+  const [templatesLoaded, setTemplatesLoaded] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState("");
   const [paceMin, setPaceMin] = useState(20);
   const [paceMax, setPaceMax] = useState(60);
   const [accepted, setAccepted] = useState(false);
@@ -102,10 +108,11 @@ export function DispatchCenter({
 
   useEffect(() => {
     void (async () => {
-      const [f, q, w] = await Promise.all([
+      const [f, q, w, t] = await Promise.all([
         api("/api/public/extension/funnels"),
         api("/api/public/extension/quick-replies"),
         api("/api/public/extension/wa/data"),
+        api("/api/public/extension/whatsapp/templates"),
       ]);
       if (f?.ok) {
         const list = (f.funnels as Funnel[]) || [];
@@ -117,6 +124,19 @@ export function DispatchCenter({
         setLabels((w.labels as WaLabel[]) || []);
         setContacts((w.contacts as WaContact[]) || []);
       }
+      // Falha silenciosa aqui é aceitável: sem conexão via API oficial
+      // ainda, esse endpoint dá erro — a opção "Modelo aprovado" só
+      // aparece disponível se a lista carregar com sucesso.
+      if (t?.ok) {
+        setTemplates(
+          ((t.templates as Array<{ name: string; language: string; status: string }>) || []).map((tpl) => ({
+            name: tpl.name,
+            language: tpl.language,
+            status: tpl.status,
+          })),
+        );
+      }
+      setTemplatesLoaded(true);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -181,6 +201,54 @@ export function DispatchCenter({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (dispatchType === "template") {
+      if (!name.trim() || !selectedTemplate) {
+        setErr("Preencha o nome e escolha um modelo aprovado.");
+        return;
+      }
+      if (!accepted) {
+        setErr("Você precisa aceitar o termo de uso para disparar.");
+        return;
+      }
+      if (total === 0) {
+        setErr("Nenhum contato com telefone válido nesse público.");
+        return;
+      }
+      setBusy(true);
+      setErr(null);
+      const st = await api("/api/public/extension/whatsapp/status?sync=1");
+      const conn = st?.connection as { status?: string } | undefined;
+      if (!st?.ok || conn?.status !== "connected") {
+        setBusy(false);
+        onNeedConnection();
+        return;
+      }
+      const tpl = templates.find((x) => x.name === selectedTemplate);
+      const base = {
+        name: name.trim(),
+        template_name: selectedTemplate,
+        template_language: tpl?.language || "pt_BR",
+        pace_seconds_min: Math.min(paceMin, paceMax),
+        pace_seconds_max: Math.max(paceMin, paceMax),
+      };
+      const body =
+        audience === "assinantes"
+          ? { ...base, scope: "assinaturas", filter: status === "all" ? {} : { status } }
+          : audience === "planilha"
+            ? { ...base, scope: "funil", phone_targets: sheetContacts }
+            : { ...base, scope: "funil", phone_targets: funnelTargets };
+      const r = await api("/api/public/extension/campaigns", { method: "POST", body: JSON.stringify(body) });
+      setBusy(false);
+      if (!r?.ok) {
+        setErr((r?.error as string) || "Erro ao criar o disparo");
+        return;
+      }
+      nudgeExtensionPoll();
+      onDone();
+      return;
+    }
+
     const cleaned = variants.map((v) => v.trim()).filter(Boolean);
     const cleanActions = actions.filter((action) => {
       if (action.type === "text") return Boolean(action.text?.trim() || cleaned.length);
@@ -373,6 +441,66 @@ export function DispatchCenter({
       </div>
 
       <div>
+        <Label>Tipo de disparo</Label>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setDispatchType("message")}
+            className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${
+              dispatchType === "message"
+                ? "border-brand bg-brand/10 text-brand"
+                : "border-neutral-300 bg-white text-neutral-600"
+            }`}
+          >
+            Mensagem personalizada
+          </button>
+          <button
+            type="button"
+            onClick={() => setDispatchType("template")}
+            className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${
+              dispatchType === "template"
+                ? "border-brand bg-brand/10 text-brand"
+                : "border-neutral-300 bg-white text-neutral-600"
+            }`}
+          >
+            Modelo aprovado
+          </button>
+        </div>
+        <p className="mt-1 text-xs text-neutral-500">
+          {dispatchType === "template"
+            ? "Obrigatório para contatos que não te mandaram mensagem nas últimas 24h — a API oficial só permite modelo pré-aprovado nesse caso."
+            : "Para contatos que já conversaram com você recentemente (últimas 24h)."}
+        </p>
+      </div>
+
+      {dispatchType === "template" ? (
+        <div>
+          <Label>Modelo</Label>
+          {!templatesLoaded ? (
+            <p className="text-sm text-neutral-500">Carregando modelos…</p>
+          ) : templates.filter((t) => t.status === "APPROVED").length === 0 ? (
+            <p className="text-sm text-neutral-500">
+              Nenhum modelo aprovado ainda. Cria um na aba "Modelos" e espera a Meta aprovar.
+            </p>
+          ) : (
+            <select
+              value={selectedTemplate}
+              onChange={(e) => setSelectedTemplate(e.target.value)}
+              className={inputCls}
+            >
+              <option value="">Escolha um modelo…</option>
+              {templates
+                .filter((t) => t.status === "APPROVED")
+                .map((t) => (
+                  <option key={t.name} value={t.name}>
+                    {t.name} ({t.language})
+                  </option>
+                ))}
+            </select>
+          )}
+        </div>
+      ) : (
+      <div>
         <Label>Mensagem</Label>
         <button
           type="button"
@@ -392,6 +520,7 @@ export function DispatchCenter({
           </span>
         </button>
       </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div>
