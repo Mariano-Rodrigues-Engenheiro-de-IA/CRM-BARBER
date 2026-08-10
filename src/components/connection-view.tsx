@@ -110,7 +110,8 @@ export function ConnectionView({ api }: { api: Api }) {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<"connect" | "disconnect" | null>(null);
+  const [confirmAction, setConfirmAction] = useState<"connect" | "disconnect" | "switch_provider" | null>(null);
+  const [pendingProvider, setPendingProvider] = useState<"uazapi" | "meta" | null>(null);
   const [authMode, setAuthMode] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshSeqRef = useRef(0);
@@ -354,6 +355,19 @@ export function ConnectionView({ api }: { api: Api }) {
     setBusy(false);
   }
 
+  function requestSwitchProvider(provider: "uazapi" | "meta") {
+    const alreadyOnThisProvider = isMetaConnection ? provider === "meta" : provider === "uazapi";
+    if (alreadyOnThisProvider) return;
+    // Só pede confirmação se já tem uma conexão ativa em outro modo — trocar
+    // sem estar conectado a nada não desconecta nada de verdade.
+    if (status === "connected" || status === "connecting") {
+      setPendingProvider(provider);
+      setConfirmAction("switch_provider");
+    } else {
+      void switchProvider(provider);
+    }
+  }
+
   async function switchProvider(provider: "uazapi" | "meta") {
     actionRef.current = provider === "meta" ? "connect" : "disconnect";
     operationSeqRef.current += 1;
@@ -380,9 +394,12 @@ export function ConnectionView({ api }: { api: Api }) {
 
   async function runConfirmedAction() {
     const action = confirmAction;
+    const provider = pendingProvider;
     setConfirmAction(null);
+    setPendingProvider(null);
     if (action === "connect") await connect();
     if (action === "disconnect") await disconnect();
+    if (action === "switch_provider" && provider) await switchProvider(provider);
   }
 
 
@@ -419,29 +436,49 @@ export function ConnectionView({ api }: { api: Api }) {
           <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">{err}</div>
         )}
 
-        <div className="mt-5 rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+        <div className="mt-5">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">Modo de conexão</p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <Button
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <button
               type="button"
-              size="sm"
-              variant={isMetaConnection ? "outline" : "default"}
               disabled={busy}
-              onClick={() => void switchProvider("uazapi")}
-              className={isMetaConnection ? "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100" : "bg-brand text-white hover:bg-brand-strong"}
+              onClick={() => requestSwitchProvider("uazapi")}
+              className={`rounded-xl border p-4 text-left transition ${
+                !isMetaConnection
+                  ? "border-brand bg-brand/5 ring-1 ring-brand"
+                  : "border-neutral-200 bg-white hover:border-neutral-300"
+              }`}
             >
-              QR / não oficial
-            </Button>
-            <Button
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-neutral-950">WhatsApp Web</p>
+                {!isMetaConnection && status === "connected" && (
+                  <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-semibold text-white">Conectado</span>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-neutral-500">
+                Espelha o WhatsApp do celular via QR code. Simples, mas fica vinculado ao aparelho.
+              </p>
+            </button>
+            <button
               type="button"
-              size="sm"
-              variant={isMetaConnection ? "default" : "outline"}
               disabled={busy}
-              onClick={() => void switchProvider("meta")}
-              className={isMetaConnection ? "bg-brand text-white hover:bg-brand-strong" : "border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100"}
+              onClick={() => requestSwitchProvider("meta")}
+              className={`rounded-xl border p-4 text-left transition ${
+                isMetaConnection
+                  ? "border-brand bg-brand/5 ring-1 ring-brand"
+                  : "border-neutral-200 bg-white hover:border-neutral-300"
+              }`}
             >
-              API oficial / manual
-            </Button>
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-neutral-950">API Oficial</p>
+                {isMetaConnection && status === "connected" && (
+                  <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-semibold text-white">Conectado</span>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-neutral-500">
+                Conexão direta com a Meta. Não depende do celular ligado, mais estável para volume alto.
+              </p>
+            </button>
           </div>
         </div>
 
@@ -527,8 +564,9 @@ export function ConnectionView({ api }: { api: Api }) {
       </div>
       <ConnectionConfirmDialog
         action={confirmAction}
+        pendingProvider={pendingProvider}
         busy={busy}
-        onCancel={() => setConfirmAction(null)}
+        onCancel={() => { setConfirmAction(null); setPendingProvider(null); }}
         onConfirm={() => void runConfirmedAction()}
       />
     </div>
@@ -537,16 +575,29 @@ export function ConnectionView({ api }: { api: Api }) {
 
 function ConnectionConfirmDialog({
   action,
+  pendingProvider,
   busy,
   onCancel,
   onConfirm,
 }: {
-  action: "connect" | "disconnect" | null;
+  action: "connect" | "disconnect" | "switch_provider" | null;
+  pendingProvider: "uazapi" | "meta" | null;
   busy: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
   const isConnect = action === "connect";
+  const isSwitch = action === "switch_provider";
+  const targetLabel = pendingProvider === "meta" ? "API Oficial" : "WhatsApp Web";
+
+  const title = isConnect ? "Conectar WhatsApp?" : isSwitch ? "Trocar de modo de conexão?" : "Desconectar WhatsApp?";
+  const description = isConnect
+    ? "Vamos gerar um QR code para parear o WhatsApp da barbearia."
+    : isSwitch
+      ? `Isso desconecta o WhatsApp que está ativo agora, para conectar pelo modo "${targetLabel}" em seguida. Os disparos ficam parados até a nova conexão terminar.`
+      : "Os disparos vão parar até você conectar o WhatsApp novamente.";
+  const confirmLabel = isConnect ? "Conectar" : isSwitch ? "Trocar mesmo assim" : "Desconectar";
+
   return (
     <AlertDialog open={action !== null} onOpenChange={(open) => { if (!open && !busy) onCancel(); }}>
       <AlertDialogContent className="max-w-md rounded-2xl border-neutral-200 bg-white p-0 shadow-2xl">
@@ -554,13 +605,9 @@ function ConnectionConfirmDialog({
           <div className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-100 text-amber-900">
             <span className="text-lg font-bold">!</span>
           </div>
-          <AlertDialogTitle className="text-xl font-semibold text-neutral-950">
-            {isConnect ? "Conectar WhatsApp?" : "Desconectar WhatsApp?"}
-          </AlertDialogTitle>
+          <AlertDialogTitle className="text-xl font-semibold text-neutral-950">{title}</AlertDialogTitle>
           <AlertDialogDescription className="text-sm leading-6 text-neutral-600">
-            {isConnect
-              ? "Vamos gerar um QR code para parear o WhatsApp da barbearia."
-              : "Os disparos vão parar até você conectar o WhatsApp novamente."}
+            {description}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="gap-2 border-t border-neutral-100 bg-neutral-50 px-6 py-4 sm:space-x-0">
@@ -572,7 +619,7 @@ function ConnectionConfirmDialog({
             onClick={onConfirm}
             className="bg-brand text-white hover:bg-brand-strong"
           >
-            {isConnect ? "Conectar" : "Desconectar"}
+            {confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
