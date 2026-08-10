@@ -473,14 +473,18 @@ export function ConnectionView({ api }: { api: Api }) {
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => requestSwitchProvider("meta")}
+                onClick={() =>
+                  isMetaConnection && status === "connected"
+                    ? setConfirmAction("disconnect")
+                    : requestSwitchProvider("meta")
+                }
                 className={`mt-5 w-full rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                  isMetaConnection
-                    ? "bg-green-100 text-green-800"
+                  isMetaConnection && status === "connected"
+                    ? "bg-white text-red-600 ring-1 ring-inset ring-red-200 hover:bg-red-50"
                     : "bg-brand text-white hover:bg-brand-strong"
                 }`}
               >
-                {isMetaConnection && status === "connected" ? "Conectado" : "Criar canal"}
+                {isMetaConnection && status === "connected" ? "Desconectar" : "Conectar"}
               </button>
             </div>
 
@@ -508,36 +512,22 @@ export function ConnectionView({ api }: { api: Api }) {
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => requestSwitchProvider("uazapi")}
+                onClick={() =>
+                  !isMetaConnection && status === "connected"
+                    ? setConfirmAction("disconnect")
+                    : requestSwitchProvider("uazapi")
+                }
                 className={`mt-5 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
-                  !isMetaConnection
-                    ? "border-green-300 bg-green-100 text-green-800"
+                  !isMetaConnection && status === "connected"
+                    ? "border-red-200 bg-white text-red-600 hover:bg-red-50"
                     : "border-brand text-brand hover:bg-brand/5"
                 }`}
               >
-                {!isMetaConnection && status === "connected" ? "Conectado" : "Criar canal"}
+                {!isMetaConnection && status === "connected" ? "Desconectar" : "Conectar"}
               </button>
             </div>
           </div>
         </div>
-
-        {status === "connected" && (
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setConfirmAction("disconnect")}
-              disabled={busy}
-              className="border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
-            >
-              Desconectar
-            </Button>
-            <p className="text-xs text-neutral-500 sm:self-center">
-              WhatsApp conectado — pronto para disparar campanhas.
-            </p>
-
-          </div>
-        )}
 
         {(status === "disconnected" || status === "hibernated") && (
           <div className="mt-6">
@@ -722,22 +712,14 @@ function WhatsAppGlyph({ className, bg }: { className?: string; bg: string }) {
   );
 }
 
-/** Selo "Meta Business Partner" — símbolo infinito + texto, cinza discreto. */
+/** Selo oficial da Meta (imagem, recortada e redimensionada). */
 function MetaBusinessPartnerBadge({ className }: { className?: string }) {
   return (
-    <div className={`flex items-center gap-1.5 text-neutral-500 ${className ?? ""}`}>
-      <svg viewBox="0 0 36 20" className="h-4 w-7" fill="none">
-        <path
-          d="M9 4C5 4 2 7.5 2 10.5S5 17 9 17c2.6 0 4.4-1.7 6-4 1.6 2.3 3.4 4 6 4 4 0 7-3 7-6.5S25 4 21 4c-2.6 0-4.4 1.7-6 4-1.6-2.3-3.4-4-6-4Zm0 3c1.4 0 2.6 1.1 4 3-1.4 1.9-2.6 3-4 3-1.9 0-3.5-1.5-3.5-3S7.1 7 9 7Zm12 0c1.9 0 3.5 1.5 3.5 3S22.9 13 21 13c-1.4 0-2.6-1.1-4-3 1.4-1.9 2.6-3 4-3Z"
-          fill="currentColor"
-        />
-      </svg>
-      <span className="text-[11px] font-semibold leading-tight">
-        Meta
-        <br />
-        Business Partner
-      </span>
-    </div>
+    <img
+      src="/meta-badge.png"
+      alt="Meta"
+      className={`h-14 w-auto object-contain ${className ?? ""}`}
+    />
   );
 }
 
