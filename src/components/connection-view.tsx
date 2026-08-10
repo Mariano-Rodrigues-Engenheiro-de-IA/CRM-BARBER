@@ -560,11 +560,12 @@ export function ConnectionView({ api }: { api: Api }) {
                 </p>
               </div>
             ) : isMetaConnection ? (
-              <p className="text-sm text-neutral-500">
-                {needsManualCredentials
-                  ? "Modo oficial selecionado, mas faltam phone_number_id e access_token. Para usar QR nesta barbearia, selecione QR / não oficial acima."
-                  : "Este número usa a API oficial do WhatsApp — não há QR code. A conexão é liberada assim que o número estiver configurado e verificado. O status atualiza sozinho aqui."}
-              </p>
+              needsManualCredentials ? (
+                <p className="text-sm text-neutral-500">
+                  Modo oficial selecionado, mas faltam phone_number_id e access_token. Para usar QR nesta
+                  barbearia, selecione WhatsApp Web acima.
+                </p>
+              ) : null
             ) : (
               <p className="text-sm text-neutral-500">Gerando QR code…</p>
             )}
