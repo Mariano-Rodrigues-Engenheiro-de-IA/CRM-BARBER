@@ -103,7 +103,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
           // silenciosamente jobs com campaign_id nulo, se algum existir.)
           const { data: jobs } = await supabaseAdmin
             .from("message_jobs")
-            .select("id, customer_id, rendered_body, message_actions, campaign_id, attempts")
+            .select("id, customer_id, rendered_body, message_actions, template_name, template_language, campaign_id, attempts")
             .eq("barbershop_id", inst.barbershop_id)
             .eq("status", "pending")
             .lte("scheduled_for", nowIso)
@@ -162,6 +162,37 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
             }
 
             const attempts = (job.attempts ?? 0) + 1;
+
+            // Nunca deixar uma exceção de rede matar a rodada com o job in_flight.
+            let result: SendResult;
+
+            if (job.template_name) {
+              // Disparo via modelo aprovado (API oficial) — exige o
+              // provider "meta" com sendTemplate implementado. UAZAPI não
+              // suporta, dá erro claro em vez de mandar texto por engano
+              // (a Cloud API rejeitaria mesmo, fora da janela de 24h).
+              if (!provider.sendTemplate) {
+                result = {
+                  ok: false,
+                  error: "Este provedor não suporta disparo de modelo (só a API oficial da Meta suporta).",
+                  retryable: false,
+                };
+              } else {
+                result = await provider
+                  .sendTemplate({
+                    access_token: instanceToken,
+                    phone_number_id: inst.phone_number_id ?? null,
+                    to: phone,
+                    template_name: job.template_name,
+                    language_code: job.template_language ?? "pt_BR",
+                  })
+                  .catch((e: unknown) => ({
+                    ok: false as const,
+                    error: e instanceof Error ? e.message : "Falha de rede no envio",
+                    retryable: true,
+                  }));
+              }
+            } else {
             // Resposta Rápida com múltiplas mensagens sequenciais: envia
             // cada texto, em ordem, pro mesmo contato. Antes disso, o
             // disparo via servidor só mandava `rendered_body` (o primeiro
@@ -175,8 +206,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
               : [];
             const textsToSend = sequenceTexts.length > 0 ? sequenceTexts : [job.rendered_body];
 
-            // Nunca deixar uma exceção de rede matar a rodada com o job in_flight.
-            let result: SendResult = { ok: true };
+            result = { ok: true };
             for (let i = 0; i < textsToSend.length; i += 1) {
               result = await provider
                 .sendText({
@@ -195,6 +225,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
               // mesmo contato — mais curta que a pausa entre contatos
               // diferentes, só pra não chegar tudo colado instantaneamente.
               if (i < textsToSend.length - 1) await sleep(1500 + Math.random() * 1500);
+            }
             }
 
 

@@ -27,6 +27,10 @@ const bodySchema = z
     message: z.string().trim().min(1).max(4000).optional(),
     message_variants: z.array(z.string().trim().min(1).max(4000)).min(1).max(3).optional(),
     message_actions: z.array(quickReplyActionSchema).min(1).max(20).optional(),
+    // Disparo via modelo aprovado (API oficial) — obrigatório para contatos
+    // fora da janela de 24h de conversa ativa. Alternativa a message/actions.
+    template_name: z.string().trim().min(1).max(512).optional(),
+    template_language: z.string().trim().min(2).max(10).optional(),
     pace_seconds: z.number().int().min(5).max(600).optional(),
     pace_seconds_min: z.number().int().min(5).max(600).optional(),
     pace_seconds_max: z.number().int().min(5).max(600).optional(),
@@ -56,11 +60,15 @@ const bodySchema = z
     (v) =>
       v.message ||
       (v.message_variants && v.message_variants.length > 0) ||
-      v.message_actions?.length,
+      v.message_actions?.length ||
+      v.template_name,
     {
-      message: "Informe a mensagem ou as ações do disparo",
+      message: "Informe a mensagem, as ações do disparo, ou um modelo",
     },
   )
+  .refine((v) => !v.template_name || v.template_language, {
+    message: "Informe o idioma do modelo (ex: pt_BR)",
+  })
   .refine(
     (v) =>
       (v.customer_ids && v.customer_ids.length > 0) ||
@@ -104,6 +112,8 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
           message,
           message_variants,
           message_actions,
+          template_name,
+          template_language,
           pace_seconds,
           pace_seconds_min,
           pace_seconds_max,
@@ -284,6 +294,24 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
         let cursor = now;
         const jobs = targets.map((t, i) => {
           if (i > 0) cursor += nextDelayMs();
+
+          if (template_name) {
+            // Disparo via modelo aprovado — sem texto livre nem ações,
+            // o worker do lado do servidor manda o template pronto.
+            return {
+              barbershop_id: barbershopId,
+              campaign_id: campaign.id,
+              customer_id: t.id,
+              phone: t.phone,
+              rendered_body: `[Modelo: ${template_name}]`,
+              template_name,
+              template_language: template_language ?? "pt_BR",
+              status: "pending" as const,
+              scheduled_for: new Date(cursor).toISOString(),
+              expires_at: expiresAt,
+            };
+          }
+
           let variant: string;
           let actions: QuickReplyAction[];
           if (usingActionsAsVariants) {
