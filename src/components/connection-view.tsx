@@ -467,11 +467,11 @@ export function ConnectionView({ api }: { api: Api }) {
           <div className="mt-6">
             <Button
               type="button"
-              onClick={openHostedSignup}
+              onClick={() => (isMetaConnection ? openHostedSignup() : void connect())}
               disabled={busy}
               className="bg-brand text-white hover:bg-brand-strong"
             >
-              Conectar WhatsApp
+              {busy ? "Preparando…" : "Conectar WhatsApp"}
             </Button>
             <p className="mt-3 text-xs text-neutral-500">
               {needsManualCredentials
