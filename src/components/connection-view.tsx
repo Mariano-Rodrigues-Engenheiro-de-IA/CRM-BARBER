@@ -569,26 +569,6 @@ export function ConnectionView({ api }: { api: Api }) {
             ) : (
               <p className="text-sm text-neutral-500">Gerando QR code…</p>
             )}
-            <div className="mt-4 flex gap-3">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => void refresh(true)}
-                className="border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
-              >
-                Atualizar agora
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => setConfirmAction("disconnect")}
-                className="border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
-              >
-                Cancelar
-              </Button>
-            </div>
           </div>
         )}
       </div>
