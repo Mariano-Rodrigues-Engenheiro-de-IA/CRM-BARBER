@@ -111,6 +111,7 @@ export function ConnectionView({ api }: { api: Api }) {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmAction, setConfirmAction] = useState<"connect" | "disconnect" | "switch_provider" | null>(null);
+  const [showSwitcher, setShowSwitcher] = useState(false);
   const [pendingProvider, setPendingProvider] = useState<"uazapi" | "meta" | null>(null);
   const [authMode, setAuthMode] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -387,6 +388,7 @@ export function ConnectionView({ api }: { api: Api }) {
       actionRef.current = null;
       operationSeqRef.current += 1;
       setBusy(false);
+      setShowSwitcher(false);
       // Trocar o modo sozinho não conecta nada — dispara a ação de conectar
       // correspondente na sequência, pra ficar tudo em um clique só.
       if (provider === "meta") {
@@ -421,11 +423,11 @@ export function ConnectionView({ api }: { api: Api }) {
   const status = conn?.status ?? "disconnected";
   const isMetaConnection = conn?.provider === "meta" || conn?.auth_mode === "embedded_signup" || authMode === "embedded_signup";
   const needsManualCredentials = Boolean(conn?.needs_manual_credentials && isMetaConnection);
+  const activeLabel = isMetaConnection ? "WhatsApp API Oficial" : "WhatsApp API não oficial";
+  const activeBg = isMetaConnection ? "#009e78" : "#6366F1";
 
   return (
     <div className="space-y-4">
-
-
       <div className="rounded-2xl bg-white p-6 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -436,7 +438,7 @@ export function ConnectionView({ api }: { api: Api }) {
               {status === "disconnected" && "Desconectado"}
               {status === "hibernated" && "Hibernado"}
             </h2>
-            {conn?.phone && (
+            {conn?.phone && status === "connected" && (
               <p className="mt-1 text-sm text-neutral-500">Número: +{conn.phone}</p>
             )}
           </div>
@@ -447,8 +449,98 @@ export function ConnectionView({ api }: { api: Api }) {
           <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">{err}</div>
         )}
 
+        {/* CONECTADO: resumo único, sem as duas opções lado a lado */}
+        {status === "connected" && !showSwitcher && (
+          <div className="mt-5 rounded-2xl border border-green-200 bg-green-50/50 p-5">
+            <div className="flex items-center gap-3">
+              <WhatsAppGlyph className="h-10 w-10 shrink-0 text-white" bg={activeBg} />
+              <div>
+                <p className="text-base font-semibold text-neutral-950">{activeLabel}</p>
+                <p className="text-sm text-neutral-500">+{conn?.phone}</p>
+              </div>
+              <span className="ml-auto rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
+                Conectado
+              </span>
+            </div>
+            <div className="mt-4 flex gap-3">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setConfirmAction("disconnect")}
+                className="rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
+              >
+                Desconectar
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setShowSwitcher(true)}
+                className="rounded-xl px-4 py-2 text-sm font-semibold text-brand hover:bg-brand/5"
+              >
+                Trocar de modo de conexão
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* CONECTANDO: foco só no modo escolhido, esconde a outra opção */}
+        {status === "connecting" && (
+          <div className="mt-5">
+            <button
+              type="button"
+              onClick={() => setConfirmAction("disconnect")}
+              className="text-xs font-medium text-neutral-500 hover:text-neutral-700"
+            >
+              ← Cancelar e escolher outro modo
+            </button>
+            <div className="mt-3 rounded-2xl border border-brand p-5">
+              <div className="flex items-center gap-3">
+                <WhatsAppGlyph className="h-10 w-10 shrink-0 text-white" bg={activeBg} />
+                <p className="text-base font-semibold text-neutral-950">{activeLabel}</p>
+              </div>
+
+              {conn?.qrcode ? (
+                <div className="mt-4 flex flex-col items-center gap-3">
+                  <QrImage qrcode={conn.qrcode} />
+                  <p className="text-center text-sm text-neutral-600">
+                    Abra o WhatsApp da barbearia → Aparelhos conectados → Conectar aparelho → aponte a câmera pro
+                    código.
+                  </p>
+                </div>
+              ) : isMetaConnection ? (
+                needsManualCredentials ? (
+                  <p className="mt-4 text-sm text-neutral-500">
+                    Modo oficial selecionado, mas faltam phone_number_id e access_token configurados.
+                  </p>
+                ) : (
+                  <p className="mt-4 text-sm text-neutral-500">
+                    Completa o cadastro na aba que abriu com a Meta. O status atualiza sozinho aqui assim que
+                    terminar.
+                  </p>
+                )
+              ) : (
+                <p className="mt-4 text-sm text-neutral-500">Gerando QR code…</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ESCOLHER: as duas opções lado a lado — só quando ainda não há
+            conexão nenhuma, ou quando o usuário pediu pra trocar de modo. */}
+        {(status === "disconnected" || status === "hibernated" || showSwitcher) && (
         <div className="mt-5">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">Modo de conexão</p>
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">Modo de conexão</p>
+            {showSwitcher && (
+              <button
+                type="button"
+                onClick={() => setShowSwitcher(false)}
+                className="text-xs font-medium text-neutral-500 hover:text-neutral-700"
+              >
+                Cancelar
+              </button>
+            )}
+          </div>
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
             {/* API Oficial */}
             <div
@@ -541,28 +633,6 @@ export function ConnectionView({ api }: { api: Api }) {
             </div>
           </div>
         </div>
-
-
-        {status === "connecting" && (
-          <div className="mt-6">
-            {conn?.qrcode ? (
-              <div className="flex flex-col items-center gap-3">
-                <QrImage qrcode={conn.qrcode} />
-                <p className="text-center text-sm text-neutral-600">
-                  Abra o WhatsApp da barbearia → Aparelhos conectados → Conectar aparelho → aponte a câmera pro código.
-                </p>
-              </div>
-            ) : isMetaConnection ? (
-              needsManualCredentials ? (
-                <p className="text-sm text-neutral-500">
-                  Modo oficial selecionado, mas faltam phone_number_id e access_token. Para usar QR nesta
-                  barbearia, selecione WhatsApp Web acima.
-                </p>
-              ) : null
-            ) : (
-              <p className="text-sm text-neutral-500">Gerando QR code…</p>
-            )}
-          </div>
         )}
       </div>
       <ConnectionConfirmDialog
