@@ -14,7 +14,7 @@ import { TemplatesView } from "@/components/templates-view";
 import { FunnelsView } from "@/components/funnels-view";
 import { DispatchCenter } from "@/components/dispatch-view";
 import { sendWaAction, isRealPhone, openWhatsappChat, applyFunnelActions } from "@/lib/wa-actions";
-import zettaWordmark from "@/assets/zetta-wordmark.png.asset.json";
+
 import { sendableActions, type QuickReply } from "@/lib/quick-replies";
 import { FREE_LIMITS, PROMO_PRICE_LABEL, type BillingStatus } from "@/lib/billing";
 
@@ -472,25 +472,25 @@ function Painel() {
     "group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition " +
     (active
       ? "bg-brand text-white"
-      : "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950");
+      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground");
 
   return (
-    <div className="flex min-h-screen bg-neutral-100 text-neutral-900">
+    <div className="flex min-h-screen bg-background text-foreground">
       {/* Sidebar fixa */}
-      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-neutral-200 bg-white text-neutral-900">
+      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
         {/* Brand card — emoldura o nome pra não parecer "solto na tela" */}
         <div className="px-3 pt-4 pb-3">
-          <div className="flex items-center justify-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-3 shadow-sm">
+          <div className="flex items-center justify-center gap-3 rounded-2xl border border-sidebar-border bg-sidebar-accent/40 px-3 py-3 shadow-sm">
             <img
-              src={zettaWordmark.url}
-              alt="Zetta"
+              src="/brand/zaylo-logo.png"
+              alt="Zaylo"
               className="h-8 w-auto max-w-full object-contain"
             />
           </div>
         </div>
 
 
-        <div className="mx-3 mb-2 h-px bg-neutral-200" />
+        <div className="mx-3 mb-2 h-px bg-sidebar-border" />
 
 
         <nav className="flex-1 space-y-1 px-3">
@@ -517,12 +517,12 @@ function Painel() {
                   <IconChevron
                     className={
                       (open ? "rotate-90 " : "") +
-                      (active ? "text-white/70" : "text-neutral-400 group-hover:text-neutral-700")
+                      (active ? "text-white/70" : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/80")
                     }
                   />
                 </button>
                 {open && n.children && (
-                  <div className="mt-1 space-y-0.5 border-l border-neutral-200 pl-3 ml-4">
+                  <div className="mt-1 space-y-0.5 border-l border-sidebar-border pl-3 ml-4">
                     {n.children.map((sub) => (
                       <button
                         key={sub.key}
@@ -530,8 +530,8 @@ function Painel() {
                         className={
                           "block w-full rounded-lg px-3 py-1.5 text-left text-[13px] transition " +
                           (active && assinTab === sub.key
-                            ? "bg-neutral-100 font-semibold text-neutral-900"
-                            : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900")
+                            ? "bg-sidebar-accent font-semibold text-sidebar-foreground"
+                            : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground")
                         }
                       >
                         {sub.label}
@@ -569,16 +569,16 @@ function Painel() {
       </aside>
 
       {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-neutral-200 bg-white text-neutral-900 px-4 py-3">
-        <img src={zettaWordmark.url} alt="Zetta" className="h-7 w-auto object-contain" />
-        <div className="flex gap-1 rounded-lg bg-neutral-100 p-1">
+      <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-sidebar-border bg-sidebar text-sidebar-foreground px-4 py-3">
+        <img src="/brand/zaylo-logo.png" alt="Zaylo" className="h-7 w-auto object-contain" />
+        <div className="flex gap-1 rounded-lg bg-sidebar-accent/40 p-1">
           {NAV_TOP.map((n) => (
             <button
               key={n.key}
               onClick={() => setSection(n.key)}
               className={
                 "rounded-md px-2.5 py-1 text-[11px] font-medium " +
-                (section === n.key ? "bg-brand text-white" : "text-neutral-600")
+                (section === n.key ? "bg-brand text-white" : "text-sidebar-foreground/70")
               }
             >
               {n.label}
