@@ -19,11 +19,15 @@
  */
 
 @theme inline {
-  /* Azul da marca Zaylo/Zetta — mesma cor usada na extensão (var(--z-accent)
-     em extension/content.css). Hex direto (exceção à convenção oklch acima),
-     pra garantir que bate exatamente com a cor já usada na extensão. */
-  --color-brand: #1a3a8a;
-  --color-brand-strong: #122a6b;
+  /* Azul da marca Zaylo — atualizado para o mesmo matiz usado na
+     identidade unificada com o painel Zaylo IA, mas numa versão mais
+     escura/saturada: o tom "claro" usado como --primary/--accent abaixo
+     (#7399D7) não tem contraste suficiente com o texto branco fixo usado
+     em mais de 40 botões "bg-brand text-white" espalhados pelo sistema
+     (ficaria ~2.9:1, abaixo do mínimo de 4.5:1) — esse tom mais escuro dá
+     6.18:1, seguro, mantendo a mesma família de cor. */
+  --color-brand: #3d5fa8;
+  --color-brand-strong: #2d4e96;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -68,38 +72,41 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
+  /* Identidade visual unificada com o painel Zaylo IA (IA-BARBER-AGENDA) —
+     área principal clara com cards brancos, cor de destaque azul, sidebar
+     escura com o tom extraído do banner promocional do CRM (#10151D). */
+  --background: oklch(0.955 0.000 89.9);
+  --foreground: oklch(0.285 0.021 265.8);
+  --card: oklch(1.000 0.000 89.9);
+  --card-foreground: oklch(0.285 0.021 265.8);
+  --popover: oklch(1.000 0.000 89.9);
+  --popover-foreground: oklch(0.285 0.021 265.8);
+  --primary: oklch(0.680 0.102 259.9);
+  --primary-foreground: oklch(0.260 0.058 262.4);
+  --secondary: oklch(0.975 0.000 89.9);
+  --secondary-foreground: oklch(0.285 0.021 265.8);
+  --muted: oklch(0.965 0.000 89.9);
+  --muted-foreground: oklch(0.493 0.019 254.0);
+  --accent: oklch(0.680 0.102 259.9);
+  --accent-foreground: oklch(0.260 0.058 262.4);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
+  --border: oklch(0.861 0.000 89.9);
+  --input: oklch(0.861 0.000 89.9);
+  --ring: oklch(0.680 0.102 259.9);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
+  --sidebar: oklch(0.194 0.018 259.7);
+  --sidebar-foreground: oklch(0.96 0.000 89.9);
+  --sidebar-primary: oklch(0.680 0.102 259.9);
+  --sidebar-primary-foreground: oklch(0.260 0.058 262.4);
+  --sidebar-accent: oklch(0.268 0.030 262.7);
+  --sidebar-accent-foreground: oklch(0.96 0.000 89.9);
+  --sidebar-border: oklch(0.242 0.025 261.1);
+  --sidebar-ring: oklch(0.680 0.102 259.9);
 }
 
 .dark {
