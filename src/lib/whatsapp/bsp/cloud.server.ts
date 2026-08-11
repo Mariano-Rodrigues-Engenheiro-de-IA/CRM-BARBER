@@ -311,9 +311,18 @@ export const cloudAdapter: BspAdapter = {
       });
       const json = (await res.json().catch(() => ({}))) as Json;
       if (!res.ok) {
+        // Diagnóstico temporário: inclui um "raio-x" do token realmente
+        // usado nessa chamada (início/fim/tamanho, nunca o valor
+        // completo) — para confirmar, sem depender de logs de servidor,
+        // se o valor que chega até aqui bate com o que está salvo no
+        // banco, já que testes manuais com o mesmo token salvo passam,
+        // mas o sistema real reporta token inválido (code=190).
+        const tokenFingerprint = access_token
+          ? `len=${access_token.length} start=${access_token.slice(0, 8)} end=${access_token.slice(-8)}`
+          : "access_token vazio/undefined";
         return {
           ok: false,
-          error: extractErrorMessage(json, res.status),
+          error: `${extractErrorMessage(json, res.status)} | token_usado[${tokenFingerprint}]`,
           retryable: res.status === 429 || res.status >= 500,
         };
       }
