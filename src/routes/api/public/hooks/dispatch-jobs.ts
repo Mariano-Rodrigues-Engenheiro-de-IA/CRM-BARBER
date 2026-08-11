@@ -180,7 +180,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
               } else {
                 result = await provider
                   .sendTemplate({
-                    access_token: instanceToken,
+                    instance_token: instanceToken,
                     phone_number_id: inst.phone_number_id ?? null,
                     to: phone,
                     template_name: job.template_name,
