@@ -171,7 +171,7 @@ function AdminWhatsApp() {
           <select
             value={selected}
             onChange={(e) => setSelected(e.target.value)}
-            className="mt-2 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900"
+            className="mt-2 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900"
           >
             {(rows ?? []).map((r) => (
               <option key={r.barbershop_id} value={r.barbershop_id}>

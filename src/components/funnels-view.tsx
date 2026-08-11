@@ -27,7 +27,7 @@ import { sendableActions, type QuickReply } from "@/lib/quick-replies";
 type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
 
 const inputCls =
-  "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-brand";
+  "w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-brand";
 
 /** Cache entre navegações: voltar pra aba Funis não deve piscar esqueleto. */
 let funnelsCache: { funnels: Funnel[]; labels: WaLabel[]; contacts: WaContact[] } | null = null;
@@ -507,7 +507,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                         draggedContact.current = null;
                       }}
 
-                      className="cursor-grab rounded-lg border border-neutral-200 bg-white p-3 shadow-sm active:cursor-grabbing"
+                      className="cursor-grab rounded-xl border border-neutral-300 bg-white p-3 shadow-sm active:cursor-grabbing"
                     >
                       <div className="flex items-center gap-2 min-w-0 mb-1">
                         {c.profile_picture_url ? (
@@ -654,7 +654,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                           dragged.current = null;
                         }}
 
-                        className="cursor-grab rounded-lg border border-neutral-200 bg-white p-3 shadow-sm active:cursor-grabbing"
+                        className="cursor-grab rounded-xl border border-neutral-300 bg-white p-3 shadow-sm active:cursor-grabbing"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
@@ -833,7 +833,7 @@ function DotsMenu({
         </svg>
       </button>
       {open && (
-        <div className="absolute right-0 top-6 z-20 w-36 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 shadow-lg">
+        <div className="absolute right-0 top-6 z-20 w-36 overflow-hidden rounded-xl border border-neutral-300 bg-white py-1 shadow-lg">
           {items.map((it) => (
             <button
               key={it.label}
@@ -923,7 +923,7 @@ function FunnelPicker({
       )}
 
       {open && funnels.length > 0 && (
-        <div className="absolute left-0 top-7 z-30 w-56 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 shadow-lg">
+        <div className="absolute left-0 top-7 z-30 w-56 overflow-hidden rounded-xl border border-neutral-300 bg-white py-1 shadow-lg">
           {funnels.map((f) => (
             <button
               key={f.id}
@@ -975,7 +975,7 @@ function CardAction({
         e.stopPropagation();
         onClick();
       }}
-      className="rounded-md border border-neutral-200 bg-white p-1.5 text-neutral-600 hover:border-brand hover:text-brand disabled:opacity-40"
+      className="rounded-xl border border-neutral-300 bg-white p-1.5 text-neutral-600 hover:border-brand hover:text-brand disabled:opacity-40"
     >
       {children}
     </button>
@@ -1023,7 +1023,7 @@ function IconTag({ color, title }: { color: string | null; title: string }) {
   return (
     <span
       title={title}
-      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-neutral-200 bg-white"
+      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-xl border border-neutral-300 bg-white"
     >
       {color ? (
         <svg width="14" height="14" viewBox="0 0 24 24" fill={color} aria-hidden>
@@ -1059,7 +1059,7 @@ function Overlay({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
-      <div className="mt-16 w-full max-w-lg rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl">
+      <div className="mt-16 w-full max-w-lg rounded-xl border border-neutral-300 bg-white p-6 shadow-xl">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-neutral-900">{title}</h3>
           <button onClick={onClose} className="rounded p-1 text-neutral-400 hover:text-neutral-900">
@@ -1157,7 +1157,7 @@ function CardDrawer({
           {canOpenWhatsapp(card.phone, card.wa_id) && (
             <button
               onClick={() => void openWhatsappChat(card.phone || "", card.title, card.wa_id)}
-              className="ml-auto flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
+              className="ml-auto flex items-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
             >
               <IconWhatsapp /> WhatsApp
             </button>
@@ -1178,7 +1178,7 @@ function CardDrawer({
               <button
                 onClick={saveNotes}
                 disabled={busy}
-                className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50"
+                className="rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50"
               >
                 Salvar anotação
               </button>

@@ -31,7 +31,7 @@ type DispatchType = "message" | "template";
 type TemplateOption = { name: string; language: string; status: string };
 
 const inputCls =
-  "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-neutral-900";
+  "w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-neutral-900";
 
 function nudgeExtensionPoll() {
   if (typeof window === "undefined") return;
@@ -316,7 +316,7 @@ export function DispatchCenter({
   return (
     <form
       onSubmit={submit}
-      className="mx-auto w-full max-w-xl space-y-5 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm"
+      className="mx-auto w-full max-w-xl space-y-5 rounded-xl border border-neutral-300 bg-white p-6 shadow-sm"
     >
       <h2 className="text-center text-lg font-semibold text-neutral-900">Novo disparo</h2>
 
@@ -417,7 +417,7 @@ export function DispatchCenter({
                 setSheetErr("Não consegui ler esse arquivo.");
               }
             }}
-            className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-800 file:mr-3 file:rounded-md file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white"
+            className="w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-800 file:mr-3 file:rounded-md file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white"
           />
           {sheetName && sheetContacts.length > 0 && (
             <p className="mt-1 text-xs text-neutral-500">
@@ -505,7 +505,7 @@ export function DispatchCenter({
         <button
           type="button"
           onClick={() => setMessageOpen(true)}
-          className="flex w-full items-center justify-between rounded-lg border border-neutral-300 bg-white px-3 py-3 text-left text-sm text-neutral-900 hover:border-neutral-500"
+          className="flex w-full items-center justify-between rounded-xl border border-neutral-300 bg-white px-3 py-3 text-left text-sm text-neutral-900 hover:border-neutral-500"
         >
           <span className="min-w-0 truncate">
             {replyId
@@ -674,7 +674,7 @@ function MessageComposer({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="mt-8 w-full max-w-2xl rounded-xl border border-neutral-200 bg-white p-5 shadow-xl">
+      <div className="mt-8 w-full max-w-2xl rounded-xl border border-neutral-300 bg-white p-5 shadow-xl">
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-base font-semibold text-neutral-900">Mensagem do disparo</h3>
           <button
@@ -823,7 +823,7 @@ function MessageComposer({
                           fileInput.current.accept = acceptedFiles(action.type);
                         fileInput.current?.click();
                       }}
-                      className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold disabled:opacity-50"
+                      className="rounded-xl border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold disabled:opacity-50"
                     >
                       {action.path
                         ? action.filename || "Trocar arquivo"
@@ -846,7 +846,7 @@ function MessageComposer({
                   key={type}
                   type="button"
                   onClick={() => addAction(type)}
-                  className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-100"
+                  className="rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-100"
                 >
                   + {actionLabel(type)}
                 </button>

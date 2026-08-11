@@ -292,7 +292,7 @@ export function TeamView({ shopId, headerHost }: { shopId: string; headerHost?: 
       {tab === "ranking" && (
       <>
       {/* Header + KPIs */}
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-neutral-300 bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold text-neutral-900">Ranking da equipe</h2>
@@ -312,14 +312,14 @@ export function TeamView({ shopId, headerHost }: { shopId: string; headerHost?: 
             type="date"
             value={customFrom}
             onChange={(e) => setCustomFrom(e.target.value)}
-            className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-800"
+            className="rounded-xl border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-800"
           />
           <span className="text-xs text-neutral-500">até</span>
           <input
             type="date"
             value={customTo}
             onChange={(e) => setCustomTo(e.target.value)}
-            className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-800"
+            className="rounded-xl border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-800"
           />
         </div>
 
@@ -417,7 +417,7 @@ export function TeamView({ shopId, headerHost }: { shopId: string; headerHost?: 
                     </button>
                     <button
                       onClick={() => setShowPerf(row.member.id)}
-                      className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
+                      className="rounded-xl border border-neutral-300 bg-white px-3 py-2 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
                     >
                       Ver desempenho
                     </button>
@@ -444,7 +444,7 @@ export function TeamView({ shopId, headerHost }: { shopId: string; headerHost?: 
                             </div>
                             <button
                               onClick={() => deleteEntry(e.id)}
-                              className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-[11px] text-red-600 hover:bg-red-50 hover:border-red-300"
+                              className="rounded-xl border border-neutral-300 bg-white px-2 py-1 text-[11px] text-red-600 hover:bg-red-50 hover:border-red-300"
                               title="Excluir lançamento"
                             >
                               Excluir
@@ -563,7 +563,7 @@ function PerformanceModal({
               </div>
               <button
                 onClick={() => onDelete(e.id)}
-                className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-[11px] text-red-600 hover:bg-red-50 hover:border-red-300"
+                className="rounded-xl border border-neutral-300 bg-white px-2 py-1 text-[11px] text-red-600 hover:bg-red-50 hover:border-red-300"
               >
                 Excluir
               </button>
@@ -733,7 +733,7 @@ function AddEntryModal({
                 type="button"
                 onClick={createClient}
                 disabled={!newClientName.trim()}
-                className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold text-neutral-800 hover:bg-neutral-50 disabled:opacity-40"
+                className="rounded-xl border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold text-neutral-800 hover:bg-neutral-50 disabled:opacity-40"
               >
                 Cadastrar e selecionar
               </button>
@@ -837,7 +837,7 @@ function ClientsPanel({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+      <div className="rounded-xl border border-neutral-300 bg-white p-4 shadow-sm">
         <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do cliente" className={inputCls} />
           <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Telefone" inputMode="tel" className={inputCls} />
@@ -864,7 +864,7 @@ function ClientsPanel({
       )}
 
       {rows.map((r, i) => (
-        <div key={r.client.id} className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+        <div key={r.client.id} className="rounded-xl border border-neutral-300 bg-white p-4 shadow-sm">
           <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-100 text-sm">{medal(i)}</span>
             <div className="min-w-0">
@@ -878,13 +878,13 @@ function ClientsPanel({
             <div className="flex shrink-0 gap-2">
               <button
                 onClick={() => setOpenId(openId === r.client.id ? null : r.client.id)}
-                className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
+                className="rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
               >
                 Jornada
               </button>
               <button
                 onClick={() => onRemoveClient(r.client.id)}
-                className="rounded-lg border border-neutral-300 bg-white px-2 py-1.5 text-xs text-red-600 hover:border-red-300 hover:bg-red-50"
+                className="rounded-xl border border-neutral-300 bg-white px-2 py-1.5 text-xs text-red-600 hover:border-red-300 hover:bg-red-50"
                 title="Remover cliente"
               >
                 Excluir
@@ -1024,7 +1024,7 @@ function MembersTab({
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:border-neutral-400"
+              className="rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:border-neutral-400"
             >
               {photo ? "Trocar foto" : "Escolher foto"}
             </button>
@@ -1069,7 +1069,7 @@ function MembersTab({
         ) : (
           <ul className="space-y-2">
             {members.map((m) => (
-              <li key={m.id} className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3">
+              <li key={m.id} className="flex items-center gap-3 rounded-xl border border-neutral-300 bg-white p-3">
                 <Avatar member={m} size={36} />
                 <span className="flex-1 truncate text-sm font-medium text-neutral-900">{m.name}</span>
                 <button
@@ -1156,7 +1156,7 @@ function CatalogTab({
         ) : (
           <ul className="space-y-2">
             {items.map((it) => (
-              <li key={it.id} className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3">
+              <li key={it.id} className="flex items-center gap-3 rounded-xl border border-neutral-300 bg-white p-3">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-neutral-900">{it.name}</p>
                   <p className="text-xs text-neutral-500">{fmtBRL(it.priceCents)}</p>
@@ -1246,7 +1246,7 @@ function ModalShell({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/50 backdrop-blur-sm p-4">
-      <div className={"w-full rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto " + (wide ? "max-w-2xl" : "max-w-md")}>
+      <div className={"w-full rounded-xl border border-neutral-300 bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto " + (wide ? "max-w-2xl" : "max-w-md")}>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-neutral-900">{title}</h2>
           <button onClick={onClose} className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900">✕</button>
@@ -1258,4 +1258,4 @@ function ModalShell({
 }
 
 const inputCls =
-  "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10";
+  "w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900/10";

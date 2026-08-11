@@ -18,7 +18,7 @@ import {
 type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
 
 const inputCls =
-  "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-900";
+  "w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-900";
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -98,7 +98,7 @@ export function QuickRepliesView({ token, api }: { token: string; api: ApiFn }) 
       {err && <p className="text-sm text-red-500">{err}</p>}
       {loading && <p className="text-sm text-neutral-500">Carregando...</p>}
 
-      <div className="divide-y divide-neutral-200 rounded-xl border border-neutral-200 bg-white">
+      <div className="divide-y divide-neutral-200 rounded-xl border border-neutral-300 bg-white">
         {replies.map((qr) => (
           <div key={qr.id} className="flex items-center justify-between gap-3 px-4 py-3">
             <span className="min-w-0 truncate text-sm font-medium text-neutral-900">{qr.title}</span>
@@ -249,7 +249,7 @@ function QuickReplyEditor({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
-      <div className="mt-10 w-full max-w-2xl rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl">
+      <div className="mt-10 w-full max-w-2xl rounded-xl border border-neutral-300 bg-white p-6 shadow-xl">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-neutral-900">
             {initial ? "Editar resposta rápida" : "Nova resposta rápida"}
@@ -329,7 +329,7 @@ function QuickReplyEditor({
                           fileInput.current?.click();
                         }}
                         disabled={busy}
-                        className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium hover:bg-neutral-100 disabled:opacity-50"
+                        className="rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium hover:bg-neutral-100 disabled:opacity-50"
                       >
                         {a.path ? "Trocar arquivo" : "Escolher arquivo"}
                       </button>
@@ -367,7 +367,7 @@ function QuickReplyEditor({
               <button
                 key={t}
                 onClick={() => addAction(t)}
-                className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-100"
+                className="rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-100"
               >
                 + {actionLabel(t)}
               </button>

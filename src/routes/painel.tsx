@@ -478,15 +478,12 @@ function Painel() {
     <div className="flex min-h-screen bg-background text-foreground">
       {/* Sidebar fixa */}
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-        {/* Brand card — emoldura o nome pra não parecer "solto na tela" */}
-        <div className="px-3 pt-4 pb-3">
-          <div className="flex items-center justify-center gap-3 rounded-2xl border border-sidebar-border bg-sidebar-accent/40 px-3 py-3 shadow-sm">
-            <img
-              src="/brand/zaylo-logo.png"
-              alt="Zaylo"
-              className="h-8 w-auto max-w-full object-contain"
-            />
-          </div>
+        <div className="pl-6 pr-3 pt-5 pb-4">
+          <img
+            src="/brand/zaylo-logo.png"
+            alt="Zaylo"
+            className="h-5 w-auto object-contain"
+          />
         </div>
 
 
@@ -705,7 +702,7 @@ function Painel() {
             </header>
             <main className="px-4 py-4">
               {billing && !billing.premium ? (
-                <div className="mx-auto max-w-lg rounded-2xl border border-neutral-200 bg-white p-8 text-center">
+                <div className="mx-auto max-w-lg rounded-xl border border-neutral-300 bg-white p-8 text-center">
                   <p className="text-xs font-semibold uppercase tracking-widest text-yellow-600">
                     Recurso Premium
                   </p>
@@ -815,7 +812,7 @@ function CardAction({
       onPointerDown={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
-      className="grid h-7 w-7 place-items-center rounded-md border border-neutral-200 bg-white text-neutral-600 transition hover:border-brand hover:text-brand disabled:opacity-40"
+      className="grid h-7 w-7 place-items-center rounded-xl border border-neutral-300 bg-white text-neutral-600 transition hover:border-brand hover:text-brand disabled:opacity-40"
     >
       {children}
     </button>
@@ -955,7 +952,7 @@ function WhatsAppActionModal({
           <button
             onClick={() => run(true)}
             disabled={busy}
-            className="flex-1 rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50"
+            className="flex-1 rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50"
           >
             Abrir conversa
           </button>
@@ -1094,7 +1091,7 @@ function KanbanView({
         <button
           onClick={() => setNewCol("")}
           title="Adicionar kanban"
-          className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-800 shadow-sm transition hover:border-brand hover:bg-neutral-50"
+          className="rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-800 shadow-sm transition hover:border-brand hover:bg-neutral-50"
         >
           + Kanban
         </button>
@@ -1109,7 +1106,7 @@ function KanbanView({
               if (e.key === "Escape") setNewCol(null);
             }}
             placeholder="Nome do kanban"
-            className="w-44 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs text-neutral-900 outline-none focus:border-brand"
+            className="w-44 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs text-neutral-900 outline-none focus:border-brand"
           />
           <button
             onClick={() => { addColumn(newCol); setNewCol(null); }}
@@ -1125,7 +1122,7 @@ function KanbanView({
       <button
         onClick={() => setShowAdd(true)}
         title="Adicionar contato"
-        className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-800 shadow-sm transition hover:border-brand hover:bg-neutral-50"
+        className="rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-800 shadow-sm transition hover:border-brand hover:bg-neutral-50"
       >
         + Contato
       </button>
@@ -1436,7 +1433,7 @@ function CustomerDrawer({
           {onOpenWhatsapp && (
             <button
               onClick={onOpenWhatsapp}
-              className="ml-auto flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
+              className="ml-auto flex items-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
             >
               <IconWhatsapp /> WhatsApp
             </button>
@@ -1469,7 +1466,7 @@ function CustomerDrawer({
               <button
                 onClick={saveNotes}
                 disabled={busy}
-                className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50"
+                className="rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50"
               >
                 Salvar anotação
               </button>
@@ -1692,7 +1689,7 @@ function ImportModal({
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
+              className="rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
             >
               Escolher arquivo
             </button>
@@ -1802,7 +1799,7 @@ function CampaignsView({ token, scope }: { token: string; scope?: "assinaturas" 
         const isPaused = c.status === "paused";
         const isFinal = c.status === "canceled" || (total > 0 && c.stats.pending === 0);
         return (
-          <div key={c.id} className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+          <div key={c.id} className="rounded-xl border border-neutral-300 bg-white p-5 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h3 className="text-base font-semibold text-neutral-900">{c.name}</h3>
@@ -1832,7 +1829,7 @@ function CampaignsView({ token, scope }: { token: string; scope?: "assinaturas" 
                 {!isFinal && (
                   <button
                     onClick={() => cancelCamp(c)}
-                    className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-600 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                    className="rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-600 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
                   >
                     Cancelar
                   </button>
@@ -1866,7 +1863,7 @@ function CampaignsView({ token, scope }: { token: string; scope?: "assinaturas" 
 // --- Utils ---
 
 const inputCls =
-  "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10";
+  "w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -1888,7 +1885,7 @@ function Modal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl">
+      <div className="w-full max-w-md rounded-xl border border-neutral-300 bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-neutral-900">{title}</h2>
           <button onClick={onClose} className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900">✕</button>
@@ -1940,7 +1937,7 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
   return (
     <div className="mx-auto w-full max-w-4xl space-y-5">
       {/* Meta do mês — o número de assinantes é o herói do card */}
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-neutral-300 bg-white p-6 shadow-sm">
         <div className="flex items-start justify-between gap-6">
           <div className="min-w-0">
             <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
@@ -1975,7 +1972,7 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
       </div>
 
 
-      <div className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+      <div className="space-y-5 rounded-xl border border-neutral-300 bg-white p-5 shadow-sm">
 
 
         <div className="space-y-2">
@@ -2119,7 +2116,7 @@ function SettingsView({
     <div className="mx-auto max-w-2xl space-y-6">
       <h1 className="text-lg font-semibold text-neutral-900">Configurações</h1>
 
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm space-y-6">
+      <div className="rounded-xl border border-neutral-300 bg-white p-6 shadow-sm space-y-6">
         <div className="flex items-center gap-4">
           <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl bg-neutral-800 text-2xl font-semibold text-white shadow-sm">
             {logo ? <img src={logo} alt="logo" className="h-full w-full object-cover" /> : initial}
@@ -2128,7 +2125,7 @@ function SettingsView({
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
+              className="rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
             >
               {logo ? "Trocar logo" : "Enviar logo"}
             </button>

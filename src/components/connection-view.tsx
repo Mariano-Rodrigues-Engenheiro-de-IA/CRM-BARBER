@@ -719,20 +719,20 @@ function QrImage({ qrcode }: { qrcode: string }) {
   const isDataUrl = qrcode.startsWith("data:image");
   const isBase64Png = /^[A-Za-z0-9+/=]+$/.test(qrcode) && qrcode.length > 200;
   if (isDataUrl) {
-    return <img src={qrcode} alt="QR code" className="h-64 w-64 rounded-lg border border-neutral-200 bg-white p-2" />;
+    return <img src={qrcode} alt="QR code" className="h-64 w-64 rounded-xl border border-neutral-300 bg-white p-2" />;
   }
   if (isBase64Png) {
     return (
       <img
         src={`data:image/png;base64,${qrcode}`}
         alt="QR code"
-        className="h-64 w-64 rounded-lg border border-neutral-200 bg-white p-2"
+        className="h-64 w-64 rounded-xl border border-neutral-300 bg-white p-2"
       />
     );
   }
   // Fallback: texto cru → renderiza via serviço externo estático.
   const url = `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(qrcode)}`;
-  return <img src={url} alt="QR code" className="h-64 w-64 rounded-lg border border-neutral-200 bg-white p-2" />;
+  return <img src={url} alt="QR code" className="h-64 w-64 rounded-xl border border-neutral-300 bg-white p-2" />;
 }
 
 /** Ícone do WhatsApp (balão de fala + telefone), em círculo colorido. */

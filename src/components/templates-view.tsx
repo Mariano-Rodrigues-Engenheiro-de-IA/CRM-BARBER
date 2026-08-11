@@ -16,7 +16,7 @@ type Template = {
 };
 
 const inputCls =
-  "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-brand";
+  "w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-brand";
 
 const STATUS_STYLE: Record<string, string> = {
   APPROVED: "bg-emerald-100 text-emerald-800",
@@ -104,7 +104,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
       )}
 
       {showNew && (
-        <div className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+        <div className="space-y-3 rounded-xl border border-neutral-300 bg-white p-5 shadow-sm">
           <div>
             <label className="mb-1 block text-xs font-medium text-neutral-700">
               Nome (só letras minúsculas, números e _ — sem espaço/acento)
@@ -158,7 +158,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
         </div>
       )}
 
-      <div className="rounded-2xl border border-neutral-200 bg-white shadow-sm">
+      <div className="rounded-xl border border-neutral-300 bg-white shadow-sm">
         {loading ? (
           <div className="p-6 text-center text-xs text-neutral-500">Carregando…</div>
         ) : !templates || templates.length === 0 ? (
