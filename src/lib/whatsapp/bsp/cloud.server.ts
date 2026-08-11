@@ -25,6 +25,24 @@ function graphUrl(path: string): string {
   return `https://graph.facebook.com/${graphVersion()}/${path}`;
 }
 
+/** Extrai uma mensagem de erro detalhada da resposta da Meta — inclui
+ * código e detalhes extras (error_data.details), não só a mensagem curta.
+ * Sem isso, erros genéricos (tipo "Authentication Error", "(#100) Invalid
+ * parameter") ficavam sem contexto suficiente pra diagnosticar sem
+ * precisar de acesso aos logs de servidor. */
+function extractErrorMessage(json: Json, status: number): string {
+  const errObj = json.error as Json | undefined;
+  const message = typeof errObj?.message === "string" ? errObj.message : `HTTP ${status}`;
+  const code = errObj?.code;
+  const type = errObj?.type;
+  const details = (errObj?.error_data as Json | undefined)?.details;
+  const parts = [message];
+  if (code !== undefined) parts.push(`code=${code}`);
+  if (typeof type === "string") parts.push(`type=${type}`);
+  if (typeof details === "string") parts.push(`details="${details}"`);
+  return parts.join(" | ");
+}
+
 function requireEnv(name: string): string {
   const v = process.env[name];
   if (!v || !v.trim()) {
@@ -210,8 +228,7 @@ export const cloudAdapter: BspAdapter = {
       });
       const json = (await res.json().catch(() => ({}))) as Json;
       if (!res.ok) {
-        const error = (json.error as Json | undefined)?.message;
-        return { ok: false, error: typeof error === "string" ? error : `HTTP ${res.status}` };
+        return { ok: false, error: extractErrorMessage(json, res.status) };
       }
       return { ok: true };
     } catch (err) {
@@ -240,10 +257,9 @@ export const cloudAdapter: BspAdapter = {
       });
       const json = (await res.json().catch(() => ({}))) as Json;
       if (!res.ok) {
-        const error = (json.error as Json | undefined)?.message;
         return {
           ok: false,
-          error: typeof error === "string" ? error : `HTTP ${res.status}`,
+          error: extractErrorMessage(json, res.status),
           retryable: res.status === 429 || res.status >= 500,
         };
       }
@@ -295,10 +311,9 @@ export const cloudAdapter: BspAdapter = {
       });
       const json = (await res.json().catch(() => ({}))) as Json;
       if (!res.ok) {
-        const error = (json.error as Json | undefined)?.message;
         return {
           ok: false,
-          error: typeof error === "string" ? error : `HTTP ${res.status}`,
+          error: extractErrorMessage(json, res.status),
           retryable: res.status === 429 || res.status >= 500,
         };
       }
