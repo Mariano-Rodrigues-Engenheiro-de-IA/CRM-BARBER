@@ -527,6 +527,8 @@ export type Database = {
           scheduled_for: string
           sent_at: string | null
           status: string
+          template_language: string | null
+          template_name: string | null
           updated_at: string
         }
         Insert: {
@@ -547,6 +549,8 @@ export type Database = {
           scheduled_for?: string
           sent_at?: string | null
           status?: string
+          template_language?: string | null
+          template_name?: string | null
           updated_at?: string
         }
         Update: {
@@ -567,6 +571,8 @@ export type Database = {
           scheduled_for?: string
           sent_at?: string | null
           status?: string
+          template_language?: string | null
+          template_name?: string | null
           updated_at?: string
         }
         Relationships: [
