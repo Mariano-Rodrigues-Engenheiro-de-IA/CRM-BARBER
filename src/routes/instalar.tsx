@@ -7,13 +7,13 @@ import { CHROME_STORE_URL, hasChromeStore } from "@/lib/site-config";
 export const Route = createFileRoute("/instalar")({
   head: () => ({
     meta: [
-      { title: "Adicionar ao Chrome — CRM de Assinaturas" },
+      { title: "Adicionar ao Chrome — CRM Zaylo" },
       {
         name: "description",
         content:
           "Adicione a extensão ao Chrome e comece a usar o CRM de assinaturas dentro do WhatsApp Web.",
       },
-      { property: "og:title", content: "Adicionar ao Chrome — CRM de Assinaturas" },
+      { property: "og:title", content: "Adicionar ao Chrome — CRM Zaylo" },
       {
         property: "og:description",
         content:

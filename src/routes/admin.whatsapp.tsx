@@ -19,10 +19,10 @@ import { Input } from "@/components/ui/input";
 export const Route = createFileRoute("/admin/whatsapp")({
   head: () => ({
     meta: [
-      { title: "Admin — Conexão WhatsApp oficial" },
+      { title: "Admin — Conexão WhatsApp oficial — CRM Zaylo" },
       { name: "robots", content: "noindex, nofollow" },
       { name: "description", content: "Configuração manual do número WhatsApp oficial de cada barbearia." },
-      { property: "og:title", content: "Admin — Conexão WhatsApp oficial" },
+      { property: "og:title", content: "Admin — Conexão WhatsApp oficial — CRM Zaylo" },
       { property: "og:description", content: "Configuração manual do número WhatsApp oficial de cada barbearia." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

@@ -18,6 +18,7 @@ import { Route as AssinarRouteImport } from './routes/assinar'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AssinarRetornoRouteImport } from './routes/assinar.retorno'
 import { Route as AdminWhatsappRouteImport } from './routes/admin.whatsapp'
+import { Route as AdminTokensRouteImport } from './routes/admin.tokens'
 import { Route as ApiPublicSignupRouteImport } from './routes/api/public/signup'
 import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp.webhook'
 import { Route as ApiPublicWhatsappSignupCallbackRouteImport } from './routes/api/public/whatsapp.signup-callback'
@@ -31,6 +32,9 @@ import { Route as ApiPublicExtensionFunnelCardsRouteImport } from './routes/api/
 import { Route as ApiPublicExtensionCustomersRouteImport } from './routes/api/public/extension/customers'
 import { Route as ApiPublicExtensionCampaignsRouteImport } from './routes/api/public/extension/campaigns'
 import { Route as ApiPublicExtensionBillingRouteImport } from './routes/api/public/extension/billing'
+import { Route as ApiPublicAiMoveLeadRouteImport } from './routes/api/public/ai/move-lead'
+import { Route as ApiPublicAiFunnelsRouteImport } from './routes/api/public/ai/funnels'
+import { Route as ApiPublicAdminIssueTokenRouteImport } from './routes/api/public/admin/issue-token'
 import { Route as ApiPublicExtensionWhatsappTemplatesRouteImport } from './routes/api/public/extension/whatsapp.templates'
 import { Route as ApiPublicExtensionWhatsappStatusRouteImport } from './routes/api/public/extension/whatsapp.status'
 import { Route as ApiPublicExtensionWhatsappSendTemplateRouteImport } from './routes/api/public/extension/whatsapp.send-template'
@@ -92,6 +96,11 @@ const AssinarRetornoRoute = AssinarRetornoRouteImport.update({
 const AdminWhatsappRoute = AdminWhatsappRouteImport.update({
   id: '/admin/whatsapp',
   path: '/admin/whatsapp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminTokensRoute = AdminTokensRouteImport.update({
+  id: '/admin/tokens',
+  path: '/admin/tokens',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicSignupRoute = ApiPublicSignupRouteImport.update({
@@ -167,6 +176,22 @@ const ApiPublicExtensionBillingRoute =
   ApiPublicExtensionBillingRouteImport.update({
     id: '/api/public/extension/billing',
     path: '/api/public/extension/billing',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicAiMoveLeadRoute = ApiPublicAiMoveLeadRouteImport.update({
+  id: '/api/public/ai/move-lead',
+  path: '/api/public/ai/move-lead',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicAiFunnelsRoute = ApiPublicAiFunnelsRouteImport.update({
+  id: '/api/public/ai/funnels',
+  path: '/api/public/ai/funnels',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicAdminIssueTokenRoute =
+  ApiPublicAdminIssueTokenRouteImport.update({
+    id: '/api/public/admin/issue-token',
+    path: '/api/public/admin/issue-token',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicExtensionWhatsappTemplatesRoute =
@@ -280,9 +305,13 @@ export interface FileRoutesByFullPath {
   '/link': typeof LinkRoute
   '/painel': typeof PainelRoute
   '/politicas': typeof PoliticasRoute
+  '/admin/tokens': typeof AdminTokensRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/assinar/retorno': typeof AssinarRetornoRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
+  '/api/public/admin/issue-token': typeof ApiPublicAdminIssueTokenRoute
+  '/api/public/ai/funnels': typeof ApiPublicAiFunnelsRoute
+  '/api/public/ai/move-lead': typeof ApiPublicAiMoveLeadRoute
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
@@ -321,9 +350,13 @@ export interface FileRoutesByTo {
   '/link': typeof LinkRoute
   '/painel': typeof PainelRoute
   '/politicas': typeof PoliticasRoute
+  '/admin/tokens': typeof AdminTokensRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/assinar/retorno': typeof AssinarRetornoRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
+  '/api/public/admin/issue-token': typeof ApiPublicAdminIssueTokenRoute
+  '/api/public/ai/funnels': typeof ApiPublicAiFunnelsRoute
+  '/api/public/ai/move-lead': typeof ApiPublicAiMoveLeadRoute
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
@@ -363,9 +396,13 @@ export interface FileRoutesById {
   '/link': typeof LinkRoute
   '/painel': typeof PainelRoute
   '/politicas': typeof PoliticasRoute
+  '/admin/tokens': typeof AdminTokensRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/assinar/retorno': typeof AssinarRetornoRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
+  '/api/public/admin/issue-token': typeof ApiPublicAdminIssueTokenRoute
+  '/api/public/ai/funnels': typeof ApiPublicAiFunnelsRoute
+  '/api/public/ai/move-lead': typeof ApiPublicAiMoveLeadRoute
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
@@ -406,9 +443,13 @@ export interface FileRouteTypes {
     | '/link'
     | '/painel'
     | '/politicas'
+    | '/admin/tokens'
     | '/admin/whatsapp'
     | '/assinar/retorno'
     | '/api/public/signup'
+    | '/api/public/admin/issue-token'
+    | '/api/public/ai/funnels'
+    | '/api/public/ai/move-lead'
     | '/api/public/extension/billing'
     | '/api/public/extension/campaigns'
     | '/api/public/extension/customers'
@@ -447,9 +488,13 @@ export interface FileRouteTypes {
     | '/link'
     | '/painel'
     | '/politicas'
+    | '/admin/tokens'
     | '/admin/whatsapp'
     | '/assinar/retorno'
     | '/api/public/signup'
+    | '/api/public/admin/issue-token'
+    | '/api/public/ai/funnels'
+    | '/api/public/ai/move-lead'
     | '/api/public/extension/billing'
     | '/api/public/extension/campaigns'
     | '/api/public/extension/customers'
@@ -488,9 +533,13 @@ export interface FileRouteTypes {
     | '/link'
     | '/painel'
     | '/politicas'
+    | '/admin/tokens'
     | '/admin/whatsapp'
     | '/assinar/retorno'
     | '/api/public/signup'
+    | '/api/public/admin/issue-token'
+    | '/api/public/ai/funnels'
+    | '/api/public/ai/move-lead'
     | '/api/public/extension/billing'
     | '/api/public/extension/campaigns'
     | '/api/public/extension/customers'
@@ -530,8 +579,12 @@ export interface RootRouteChildren {
   LinkRoute: typeof LinkRoute
   PainelRoute: typeof PainelRoute
   PoliticasRoute: typeof PoliticasRoute
+  AdminTokensRoute: typeof AdminTokensRoute
   AdminWhatsappRoute: typeof AdminWhatsappRoute
   ApiPublicSignupRoute: typeof ApiPublicSignupRoute
+  ApiPublicAdminIssueTokenRoute: typeof ApiPublicAdminIssueTokenRoute
+  ApiPublicAiFunnelsRoute: typeof ApiPublicAiFunnelsRoute
+  ApiPublicAiMoveLeadRoute: typeof ApiPublicAiMoveLeadRoute
   ApiPublicExtensionBillingRoute: typeof ApiPublicExtensionBillingRoute
   ApiPublicExtensionCampaignsRoute: typeof ApiPublicExtensionCampaignsRouteWithChildren
   ApiPublicExtensionCustomersRoute: typeof ApiPublicExtensionCustomersRouteWithChildren
@@ -619,6 +672,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/whatsapp'
       fullPath: '/admin/whatsapp'
       preLoaderRoute: typeof AdminWhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/tokens': {
+      id: '/admin/tokens'
+      path: '/admin/tokens'
+      fullPath: '/admin/tokens'
+      preLoaderRoute: typeof AdminTokensRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/signup': {
@@ -710,6 +770,27 @@ declare module '@tanstack/react-router' {
       path: '/api/public/extension/billing'
       fullPath: '/api/public/extension/billing'
       preLoaderRoute: typeof ApiPublicExtensionBillingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/ai/move-lead': {
+      id: '/api/public/ai/move-lead'
+      path: '/api/public/ai/move-lead'
+      fullPath: '/api/public/ai/move-lead'
+      preLoaderRoute: typeof ApiPublicAiMoveLeadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/ai/funnels': {
+      id: '/api/public/ai/funnels'
+      path: '/api/public/ai/funnels'
+      fullPath: '/api/public/ai/funnels'
+      preLoaderRoute: typeof ApiPublicAiFunnelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/admin/issue-token': {
+      id: '/api/public/admin/issue-token'
+      path: '/api/public/admin/issue-token'
+      fullPath: '/api/public/admin/issue-token'
+      preLoaderRoute: typeof ApiPublicAdminIssueTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/extension/whatsapp/templates': {
@@ -931,8 +1012,12 @@ const rootRouteChildren: RootRouteChildren = {
   LinkRoute: LinkRoute,
   PainelRoute: PainelRoute,
   PoliticasRoute: PoliticasRoute,
+  AdminTokensRoute: AdminTokensRoute,
   AdminWhatsappRoute: AdminWhatsappRoute,
   ApiPublicSignupRoute: ApiPublicSignupRoute,
+  ApiPublicAdminIssueTokenRoute: ApiPublicAdminIssueTokenRoute,
+  ApiPublicAiFunnelsRoute: ApiPublicAiFunnelsRoute,
+  ApiPublicAiMoveLeadRoute: ApiPublicAiMoveLeadRoute,
   ApiPublicExtensionBillingRoute: ApiPublicExtensionBillingRoute,
   ApiPublicExtensionCampaignsRoute:
     ApiPublicExtensionCampaignsRouteWithChildren,

@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/admin/tokens")({
   head: () => ({
     meta: [
-      { title: "Admin — Tokens de integração" },
+      { title: "Admin — Tokens de integração — CRM Zaylo" },
       { name: "robots", content: "noindex, nofollow" },
       { name: "description", content: "Emissão de tokens de integração por barbearia." },
     ],
