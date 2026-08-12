@@ -45,10 +45,10 @@ import {
 export const Route = createFileRoute("/painel")({
   head: () => ({
     meta: [
-      { title: "Painel do CRM — Assinaturas" },
+      { title: "Painel — CRM Zaylo" },
       { name: "robots", content: "noindex" },
       { name: "description", content: "Painel de gestão de assinantes da barbearia." },
-      { property: "og:title", content: "Painel do CRM — Assinaturas" },
+      { property: "og:title", content: "Painel — CRM Zaylo" },
       { property: "og:description", content: "Painel de gestão de assinantes da barbearia." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -481,7 +481,7 @@ function Painel() {
         <div className="pl-6 pr-3 pt-5 pb-4">
           <img
             src="/brand/zaylo-logo.png"
-            alt="Zaylo"
+            alt="CRM Zaylo"
             className="h-5 w-auto object-contain"
           />
         </div>
@@ -567,7 +567,7 @@ function Painel() {
 
       {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-sidebar-border bg-sidebar text-sidebar-foreground px-4 py-3">
-        <img src="/brand/zaylo-logo.png" alt="Zaylo" className="h-7 w-auto object-contain" />
+        <img src="/brand/zaylo-logo.png" alt="CRM Zaylo" className="h-7 w-auto object-contain" />
         <div className="flex gap-1 rounded-lg bg-sidebar-accent/40 p-1">
           {NAV_TOP.map((n) => (
             <button

@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/assinar/retorno")({
   head: () => ({
     meta: [
-      { title: "Assinatura confirmada — CRM de Assinaturas" },
+      { title: "Assinatura confirmada — CRM Zaylo" },
       { name: "description", content: "Sua assinatura Premium do CRM foi processada." },
-      { property: "og:title", content: "Assinatura confirmada — CRM de Assinaturas" },
+      { property: "og:title", content: "Assinatura confirmada — CRM Zaylo" },
       { property: "og:description", content: "Sua assinatura Premium do CRM foi processada." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

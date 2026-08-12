@@ -12,9 +12,9 @@ import { Label } from "@/components/ui/label";
 export const Route = createFileRoute("/assinar")({
   head: () => ({
     meta: [
-      { title: "Assinar Premium — CRM para Barbearias" },
+      { title: "Assinar Premium — CRM Zaylo" },
       { name: "description", content: "Libere contatos, disparos e gestão de equipe ilimitados no CRM da sua barbearia." },
-      { property: "og:title", content: "Assinar Premium — CRM para Barbearias" },
+      { property: "og:title", content: "Assinar Premium — CRM Zaylo" },
       { property: "og:description", content: "Libere contatos, disparos e gestão de equipe ilimitados no CRM da sua barbearia." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

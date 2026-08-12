@@ -3,13 +3,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 export const Route = createFileRoute("/politicas")({
   head: () => ({
     meta: [
-      { title: "Política de Privacidade e Termos — Zetta CRM" },
+      { title: "Política de Privacidade e Termos — CRM Zaylo" },
       {
         name: "description",
         content:
           "Política de privacidade e termos de uso do Zetta CRM, extensão de Chrome para gestão de assinantes e campanhas no WhatsApp Web.",
       },
-      { property: "og:title", content: "Política de Privacidade e Termos — Zetta CRM" },
+      { property: "og:title", content: "Política de Privacidade e Termos — CRM Zaylo" },
       {
         property: "og:description",
         content:

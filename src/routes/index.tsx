@@ -11,17 +11,17 @@ import zettaLogo from "@/assets/zetta-logo.png.asset.json";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "CRM completo para barbearias dentro do WhatsApp" },
+      { title: "CRM Zaylo" },
       {
         name: "description",
         content:
-          "Assinaturas, vendas, funis, disparo em massa, respostas rápidas e gestão de equipe — tudo dentro do seu WhatsApp Web, em uma extensão de Chrome.",
+          "Gerencie assinaturas, vendas, funis, disparos em massa e sua equipe direto no WhatsApp Web, com a extensão de Chrome do CRM Zaylo para barbearias.",
       },
-      { property: "og:title", content: "CRM completo para barbearias dentro do WhatsApp" },
+      { property: "og:title", content: "CRM Zaylo" },
       {
         property: "og:description",
         content:
-          "Assinaturas, vendas, funis, disparo em massa, respostas rápidas e gestão de equipe — tudo dentro do seu WhatsApp Web, em uma extensão de Chrome.",
+          "Gerencie assinaturas, vendas, funis, disparos em massa e sua equipe direto no WhatsApp Web, com a extensão de Chrome do CRM Zaylo para barbearias.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

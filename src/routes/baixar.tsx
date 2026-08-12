@@ -4,7 +4,7 @@ import { useState } from "react";
 export const Route = createFileRoute("/baixar")({
   head: () => ({
     meta: [
-      { title: "Baixar pacote da extensão v0.35.21 | Zetta CRM" },
+      { title: "Baixar pacote da extensão v0.35.21 | CRM Zaylo" },
       {
         name: "description",
         content:
