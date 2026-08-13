@@ -22,16 +22,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 type Api = (path: string, opts?: RequestInit) => Promise<{ ok?: boolean; error?: string; [k: string]: unknown }>;
 
@@ -117,14 +107,6 @@ type Connection = {
 
 export function ConnectionView({ api }: { api: Api }) {
   const [conn, setConn] = useState<Connection | null>(null);
-  // Pede o número na primeira conexão (ainda sem instância salva) — usado
-  // só pra consultar se já existe uma instância ativa da IA pra esse
-  // mesmo número, evitando duas sessões WhatsApp Web concorrentes.
-  const [phoneHintDialog, setPhoneHintDialog] = useState<{ open: boolean; provider: "uazapi" | "meta" | null }>({
-    open: false,
-    provider: null,
-  });
-  const [phoneHintValue, setPhoneHintValue] = useState("");
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -246,7 +228,7 @@ export function ConnectionView({ api }: { api: Api }) {
     );
   }
 
-  async function connect(phoneHint?: string) {
+  async function connect() {
     actionRef.current = "connect";
 
     operationSeqRef.current += 1;
@@ -262,10 +244,7 @@ export function ConnectionView({ api }: { api: Api }) {
       provider: prev?.provider ?? "uazapi",
       auth_mode: prev?.auth_mode ?? authMode,
     }));
-    const res = await api("/api/public/extension/whatsapp/connect", {
-      method: "POST",
-      body: phoneHint ? JSON.stringify({ phone_hint: phoneHint }) : undefined,
-    });
+    const res = await api("/api/public/extension/whatsapp/connect", { method: "POST" });
     if (res.ok && res.connection) {
       const c = res.connection as Connection;
       statusRef.current = c.status;
@@ -380,14 +359,6 @@ export function ConnectionView({ api }: { api: Api }) {
   function requestSwitchProvider(provider: "uazapi" | "meta") {
     const alreadyOnThisProvider = isMetaConnection ? provider === "meta" : provider === "uazapi";
     if (alreadyOnThisProvider && status === "connected") return;
-    // Primeira conexão via UAZAPI, sem telefone conhecido ainda: pergunta o
-    // número antes de prosseguir, pra poder checar se já existe uma
-    // instância ativa (ex: da IA) pra esse mesmo número — evita duas
-    // sessões WhatsApp Web concorrentes no mesmo número.
-    if (provider === "uazapi" && !conn?.phone && status !== "connected" && status !== "connecting") {
-      setPhoneHintDialog({ open: true, provider });
-      return;
-    }
     // Só pede confirmação se já tem uma conexão ativa em outro modo — trocar
     // sem estar conectado a nada não desconecta nada de verdade.
     if (status === "connected" || status === "connecting") {
@@ -398,7 +369,7 @@ export function ConnectionView({ api }: { api: Api }) {
     }
   }
 
-  async function switchProvider(provider: "uazapi" | "meta", phoneHint?: string) {
+  async function switchProvider(provider: "uazapi" | "meta") {
     actionRef.current = provider === "meta" ? "connect" : "disconnect";
     operationSeqRef.current += 1;
     refreshSeqRef.current += 1;
@@ -423,7 +394,7 @@ export function ConnectionView({ api }: { api: Api }) {
       if (provider === "meta") {
         openHostedSignup();
       } else {
-        void connect(phoneHint);
+        void connect();
       }
       return;
     } else {
@@ -671,51 +642,6 @@ export function ConnectionView({ api }: { api: Api }) {
         onCancel={() => { setConfirmAction(null); setPendingProvider(null); }}
         onConfirm={() => void runConfirmedAction()}
       />
-      <Dialog open={phoneHintDialog.open} onOpenChange={(v) => !v && setPhoneHintDialog({ open: false, provider: null })}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Qual número você vai conectar?</DialogTitle>
-            <DialogDescription>
-              Se esse número já estiver ativo em outro sistema seu (como a IA de atendimento), a gente reaproveita a
-              mesma conexão automaticamente, sem precisar escanear o QR code de novo. Se não souber ou preferir
-              pular, é só continuar sem preencher.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-1.5">
-            <Label htmlFor="phone-hint">Número de WhatsApp (com DDD)</Label>
-            <Input
-              id="phone-hint"
-              placeholder="Ex: 44991234567"
-              value={phoneHintValue}
-              onChange={(e) => setPhoneHintValue(e.target.value)}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                const provider = phoneHintDialog.provider;
-                setPhoneHintDialog({ open: false, provider: null });
-                setPhoneHintValue("");
-                if (provider) void switchProvider(provider);
-              }}
-            >
-              Pular
-            </Button>
-            <Button
-              onClick={() => {
-                const provider = phoneHintDialog.provider;
-                const phone = phoneHintValue.trim();
-                setPhoneHintDialog({ open: false, provider: null });
-                setPhoneHintValue("");
-                if (provider) void switchProvider(provider, phone || undefined);
-              }}
-            >
-              Continuar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
