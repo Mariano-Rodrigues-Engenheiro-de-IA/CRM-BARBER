@@ -348,7 +348,7 @@ function Painel() {
   })();
   const [section, setSection] = useState<Section>(initialSection);
   const [assinTab, setAssinTab] = useState<AssinTab>("assinantes");
-  const [assinOpen, setAssinOpen] = useState(true);
+  const [assinOpen, setAssinOpen] = useState(false);
   // Menu lateral colapsável — lembra a preferência entre sessões.
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => typeof window !== "undefined" && localStorage.getItem("zaylo_sidebar_collapsed") === "1",
@@ -528,10 +528,11 @@ function Painel() {
               <div key={n.key}>
                 <button
                   onClick={() => {
-                    // Sanfona: no item com sub-abas, o clique alterna a expansão
-                    // (e leva pra seção quando ela ainda não está ativa).
+                    // Sanfona: o clique só alterna aberto/fechado — nunca
+                    // força abrir sozinho, mesmo navegando pra seção pela
+                    // primeira vez. Fica fechado até o usuário clicar.
                     if (n.children) {
-                      setAssinOpen((v) => (active ? !v : true));
+                      setAssinOpen((v) => !v);
                       if (!active) setSection(n.key);
                       return;
                     }
