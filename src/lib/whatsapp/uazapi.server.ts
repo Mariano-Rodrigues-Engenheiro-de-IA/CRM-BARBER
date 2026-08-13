@@ -211,6 +211,12 @@ async function initInstance(barbershop_id: string, fallbackInstanceId: string | 
   // cliente por causa dessa checagem.
   const bridgeSecret = process.env.CRM_BRIDGE_SHARED_SECRET;
   const bridgeUrl = process.env.AI_BRIDGE_URL; // ex: https://bazfkghkipqamnksbrdz.supabase.co/functions/v1/get-shared-uazapi-instance
+  // Log de diagnóstico incondicional — sem isso, não dava pra saber pelos
+  // logs se a ponte estava sendo pulada por falta de configuração, por
+  // falta de telefone, ou se realmente tentava e falhava.
+  console.log(
+    `[uazapi/init] diagnóstico da ponte: ownerPhone=${ownerPhone ? "presente" : "AUSENTE"} bridgeSecret=${bridgeSecret ? "configurado" : "AUSENTE"} bridgeUrl=${bridgeUrl || "AUSENTE"}`,
+  );
   if (ownerPhone && bridgeSecret && bridgeUrl) {
     try {
       const controller = new AbortController();
@@ -226,6 +232,7 @@ async function initInstance(barbershop_id: string, fallbackInstanceId: string | 
         console.log(`[uazapi/init] reaproveitando instância existente da IA para ${barbershop_id} (via ponte, por telefone)`);
         return { instance_id: fallbackInstanceId, instance_token: bridgeData.uazapi_token };
       }
+      console.log(`[uazapi/init] ponte respondeu mas não achou correspondência: status=${bridgeRes.status} body=${JSON.stringify(bridgeData)}`);
     } catch (e) {
       console.warn("[uazapi/init] ponte com a IA indisponível/lenta, seguindo com criação normal:", e instanceof Error ? e.message : e);
     }
