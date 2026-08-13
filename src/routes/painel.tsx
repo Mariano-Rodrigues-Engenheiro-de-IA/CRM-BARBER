@@ -349,6 +349,13 @@ function Painel() {
   const [section, setSection] = useState<Section>(initialSection);
   const [assinTab, setAssinTab] = useState<AssinTab>("assinantes");
   const [assinOpen, setAssinOpen] = useState(true);
+  // Menu lateral colapsável — lembra a preferência entre sessões.
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => typeof window !== "undefined" && localStorage.getItem("zaylo_sidebar_collapsed") === "1",
+  );
+  useEffect(() => {
+    localStorage.setItem("zaylo_sidebar_collapsed", sidebarCollapsed ? "1" : "0");
+  }, [sidebarCollapsed]);
 
   const [disparoTab, setDisparoTab] = useState<"novo" | "campanhas">("novo");
   // Host do cabeçalho dos funis: o seletor de funil + "novo funil" moram na
@@ -485,23 +492,38 @@ function Painel() {
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       {/* Sidebar fixa */}
-      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-        <div className="pl-6 pr-3 pt-5 pb-4">
-          <img
-            src="/brand/zaylo-logo.png"
-            alt="CRM Zaylo"
-            className="h-5 w-auto object-contain"
-          />
+      <aside className={"hidden md:flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-200 " + (sidebarCollapsed ? "w-[68px]" : "w-64")}>
+        <div className={"flex items-center pt-5 pb-4 " + (sidebarCollapsed ? "justify-center px-2" : "justify-between pl-6 pr-3")}>
+          {!sidebarCollapsed && (
+            <img
+              src="/brand/zaylo-logo.png"
+              alt="CRM Zaylo"
+              className="h-5 w-auto object-contain"
+            />
+          )}
+          <button
+            onClick={() => setSidebarCollapsed((v) => !v)}
+            title={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground/50 transition hover:bg-sidebar-accent hover:text-sidebar-foreground"
+          >
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              className={"h-4 w-4 transition-transform " + (sidebarCollapsed ? "rotate-180" : "")}
+            >
+              <path d="M12.5 4l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
         </div>
 
 
         <div className="mx-3 mb-2 h-px bg-sidebar-border" />
 
 
-        <nav className="flex-1 space-y-1 px-3">
+        <nav className={"flex-1 space-y-1 " + (sidebarCollapsed ? "px-2" : "px-3")}>
           {NAV_TOP.map((n) => {
             const active = section === n.key;
-            const open = Boolean(n.children) && assinOpen;
+            const open = Boolean(n.children) && assinOpen && !sidebarCollapsed;
             return (
               <div key={n.key}>
                 <button
@@ -515,16 +537,25 @@ function Painel() {
                     }
                     setSection(n.key);
                   }}
-                  className={navRowCls(active)}
+                  title={sidebarCollapsed ? n.label : undefined}
+                  className={navRowCls(active) + (sidebarCollapsed ? " justify-center px-0" : "")}
                 >
                   <span className="flex h-5 w-5 items-center justify-center">{n.icon}</span>
-                  <span className="flex-1 truncate">{n.label}</span>
-                  <IconChevron
-                    className={
-                      (open ? "rotate-90 " : "") +
-                      (active ? "text-white/70" : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/80")
-                    }
-                  />
+                  {!sidebarCollapsed && (
+                    <>
+                      <span className="flex-1 truncate">{n.label}</span>
+                      {/* Seta só aparece em itens que realmente têm sub-abas — os
+                          demais ficam sem seta, a pedido do Mariano. */}
+                      {n.children && (
+                        <IconChevron
+                          className={
+                            (open ? "rotate-90 " : "") +
+                            (active ? "text-white/70" : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/80")
+                          }
+                        />
+                      )}
+                    </>
+                  )}
                 </button>
                 {open && n.children && (
                   <div className="mt-1 space-y-0.5 border-l border-sidebar-border pl-3 ml-4">
