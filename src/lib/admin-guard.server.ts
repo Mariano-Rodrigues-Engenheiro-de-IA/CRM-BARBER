@@ -8,7 +8,13 @@
 // liberada pra clientes, essa checagem deve ser removida ou substituída
 // por um sistema de permissões de verdade.
 
+// Admins liberados diretamente no código (além dos que vierem por env).
+const HARDCODED_ADMIN_BARBERSHOP_IDS = [
+  "7348c9b5-b825-4e33-8705-3a41bca8d852", // Viver Bem Estética
+];
+
 export function isAdminBarbershop(barbershop_id: string): boolean {
+  if (HARDCODED_ADMIN_BARBERSHOP_IDS.includes(barbershop_id)) return true;
   const adminIds = process.env.ADMIN_BARBERSHOP_ID;
   if (!adminIds) return false;
   return adminIds
