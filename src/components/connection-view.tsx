@@ -358,7 +358,7 @@ export function ConnectionView({ api }: { api: Api }) {
 
   function requestSwitchProvider(provider: "uazapi" | "meta") {
     const alreadyOnThisProvider = isMetaConnection ? provider === "meta" : provider === "uazapi";
-    if (alreadyOnThisProvider) return;
+    if (alreadyOnThisProvider && status === "connected") return;
     // Só pede confirmação se já tem uma conexão ativa em outro modo — trocar
     // sem estar conectado a nada não desconecta nada de verdade.
     if (status === "connected" || status === "connecting") {
