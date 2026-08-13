@@ -353,10 +353,10 @@ function Painel() {
   // sistema), a menos que o usuário já tenha expandido explicitamente
   // numa sessão anterior (nesse caso lembra a preferência).
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
-    () => typeof window === "undefined" || localStorage.getItem("zaylo_sidebar_collapsed") !== "0",
+    () => typeof window === "undefined" || localStorage.getItem("zaylo_sidebar_v2") !== "0",
   );
   useEffect(() => {
-    localStorage.setItem("zaylo_sidebar_collapsed", sidebarCollapsed ? "1" : "0");
+    localStorage.setItem("zaylo_sidebar_v2", sidebarCollapsed ? "1" : "0");
   }, [sidebarCollapsed]);
 
   const [disparoTab, setDisparoTab] = useState<"novo" | "campanhas">("novo");
