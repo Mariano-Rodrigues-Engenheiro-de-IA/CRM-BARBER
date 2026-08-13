@@ -857,6 +857,8 @@ export type Database = {
           phone_number_id: string | null
           provider: string
           status: string
+          uazapi_instance_id: string | null
+          uazapi_instance_token: string | null
           updated_at: string
           waba_id: string | null
         }
@@ -875,6 +877,8 @@ export type Database = {
           phone_number_id?: string | null
           provider?: string
           status?: string
+          uazapi_instance_id?: string | null
+          uazapi_instance_token?: string | null
           updated_at?: string
           waba_id?: string | null
         }
@@ -893,6 +897,8 @@ export type Database = {
           phone_number_id?: string | null
           provider?: string
           status?: string
+          uazapi_instance_id?: string | null
+          uazapi_instance_token?: string | null
           updated_at?: string
           waba_id?: string | null
         }
