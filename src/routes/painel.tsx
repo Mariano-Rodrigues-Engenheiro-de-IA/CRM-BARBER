@@ -495,8 +495,14 @@ function Painel() {
     <div className="flex min-h-screen bg-background text-foreground">
       {/* Sidebar fixa */}
       <aside className={"hidden md:flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-200 " + (sidebarCollapsed ? "w-[68px]" : "w-64")}>
-        <div className={"flex items-center pt-5 pb-4 " + (sidebarCollapsed ? "justify-center px-2" : "justify-between pl-6 pr-3")}>
-          {!sidebarCollapsed && (
+        <div className={"flex pt-5 pb-4 " + (sidebarCollapsed ? "flex-col items-center gap-2 px-2" : "items-center justify-between pl-6 pr-3")}>
+          {sidebarCollapsed ? (
+            <img
+              src="/brand/zaylo-icon.png"
+              alt="CRM Zaylo"
+              className="h-4 w-auto object-contain"
+            />
+          ) : (
             <img
               src="/brand/zaylo-logo.png"
               alt="CRM Zaylo"
