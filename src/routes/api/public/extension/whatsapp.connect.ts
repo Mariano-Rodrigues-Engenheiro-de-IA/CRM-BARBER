@@ -19,6 +19,8 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/connect")({
         if (!auth.ok) {
           return jsonResponse(request, { ok: false, error: auth.error }, { status: auth.status });
         }
+        const body = await request.json().catch(() => ({}) as any);
+        const phoneHint = typeof body?.phone_hint === "string" ? body.phone_hint : null;
 
         const { data: existing } = await supabaseAdmin
           .from("whatsapp_instances")
@@ -47,6 +49,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/connect")({
             barbershop_id: auth.token.barbershop_id,
             existing_instance_id: existingInstanceId,
             existing_instance_token: existingInstanceToken,
+            phone_hint: phoneHint,
           });
 
           // No Embedded Signup as credenciais só nascem no callback: strings

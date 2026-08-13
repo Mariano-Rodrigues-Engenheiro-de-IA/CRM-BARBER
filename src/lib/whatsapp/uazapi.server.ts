@@ -196,7 +196,33 @@ function summarizeUaz(path: string, response: { status: number; data: UazRespons
   };
 }
 
-async function initInstance(barbershop_id: string, fallbackInstanceId: string | null) {
+async function initInstance(barbershop_id: string, fallbackInstanceId: string | null, phoneHint: string | null) {
+  // Antes de criar uma instância NOVA, consulta se a IA (projeto separado)
+  // já tem uma instância ativa pra esse mesmo número — se tiver, reaproveita
+  // em vez de criar uma segunda sessão WhatsApp Web pro mesmo número (isso
+  // estava causando uma derrubar a outra). Ponte protegida por chave
+  // secreta compartilhada; falha silenciosamente (segue criando normal) se
+  // a variável não estiver configurada ou a consulta falhar por qualquer
+  // motivo — nunca trava a conexão do cliente por causa dessa checagem.
+  const bridgeSecret = process.env.CRM_BRIDGE_SHARED_SECRET;
+  const bridgeUrl = process.env.AI_BRIDGE_URL; // ex: https://kfukwfuwqtiholmlaxdb.supabase.co/functions/v1/get-shared-uazapi-instance
+  if (phoneHint && bridgeSecret && bridgeUrl) {
+    try {
+      const bridgeRes = await fetch(bridgeUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-shared-secret": bridgeSecret },
+        body: JSON.stringify({ phone: phoneHint }),
+      });
+      const bridgeData = await bridgeRes.json().catch(() => null);
+      if (bridgeRes.ok && bridgeData?.found && bridgeData?.uazapi_token) {
+        console.log(`[uazapi/init] reaproveitando instância existente da IA para ${barbershop_id} (via ponte)`);
+        return { instance_id: fallbackInstanceId, instance_token: bridgeData.uazapi_token };
+      }
+    } catch (e) {
+      console.warn("[uazapi/init] ponte com a IA indisponível, seguindo com criação normal:", e instanceof Error ? e.message : e);
+    }
+  }
+
   const init = await uaz("/instance/init", {
     method: "POST",
     admin: true,
@@ -226,7 +252,7 @@ export const uazapiProvider: WhatsAppProvider = {
   authMode: "qr",
 
 
-  async connect({ barbershop_id, existing_instance_id, existing_instance_token }) {
+  async connect({ barbershop_id, existing_instance_id, existing_instance_token, phone_hint }) {
     let instance_id = existing_instance_id ?? null;
     let instance_token = existing_instance_token ?? null;
 
@@ -241,7 +267,7 @@ export const uazapiProvider: WhatsAppProvider = {
     // proteção anti-spam do próprio WhatsApp, revogando o token de cada
     // uma quase imediatamente.
     if (!instance_id || !instance_token) {
-      const fresh = await initInstance(barbershop_id, instance_id);
+      const fresh = await initInstance(barbershop_id, instance_id, phone_hint ?? null);
       instance_id = fresh.instance_id;
       instance_token = fresh.instance_token;
     }

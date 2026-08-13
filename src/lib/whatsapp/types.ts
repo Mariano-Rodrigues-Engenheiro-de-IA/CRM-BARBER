@@ -76,6 +76,10 @@ export interface WhatsAppProvider {
     barbershop_id: string;
     existing_instance_id?: string | null;
     existing_instance_token?: string | null;
+    /** Número informado pelo usuário na primeira conexão — usado só pra
+     * consultar se já existe uma instância ativa (ex: da IA) pra esse
+     * mesmo número, evitando duas sessões WhatsApp Web concorrentes. */
+    phone_hint?: string | null;
   }): Promise<ConnectResult>;
 
   /** Sincroniza status/QR/telefone atual da instância. */
