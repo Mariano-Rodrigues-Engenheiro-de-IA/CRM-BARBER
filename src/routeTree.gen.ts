@@ -32,6 +32,7 @@ import { Route as ApiPublicExtensionFunnelCardsRouteImport } from './routes/api/
 import { Route as ApiPublicExtensionCustomersRouteImport } from './routes/api/public/extension/customers'
 import { Route as ApiPublicExtensionCampaignsRouteImport } from './routes/api/public/extension/campaigns'
 import { Route as ApiPublicExtensionBillingRouteImport } from './routes/api/public/extension/billing'
+import { Route as ApiPublicExtensionAppointmentsRouteImport } from './routes/api/public/extension/appointments'
 import { Route as ApiPublicAiMoveLeadRouteImport } from './routes/api/public/ai/move-lead'
 import { Route as ApiPublicAiFunnelsRouteImport } from './routes/api/public/ai/funnels'
 import { Route as ApiPublicAdminIssueTokenRouteImport } from './routes/api/public/admin/issue-token'
@@ -52,6 +53,7 @@ import { Route as ApiPublicExtensionFunnelCardsScheduleRouteImport } from './rou
 import { Route as ApiPublicExtensionCustomersImportRouteImport } from './routes/api/public/extension/customers.import'
 import { Route as ApiPublicExtensionCustomersIdRouteImport } from './routes/api/public/extension/customers.$id'
 import { Route as ApiPublicExtensionCampaignsIdRouteImport } from './routes/api/public/extension/campaigns.$id'
+import { Route as ApiPublicExtensionAppointmentsIdRouteImport } from './routes/api/public/extension/appointments.$id'
 
 const PoliticasRoute = PoliticasRouteImport.update({
   id: '/politicas',
@@ -178,6 +180,12 @@ const ApiPublicExtensionBillingRoute =
     path: '/api/public/extension/billing',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicExtensionAppointmentsRoute =
+  ApiPublicExtensionAppointmentsRouteImport.update({
+    id: '/api/public/extension/appointments',
+    path: '/api/public/extension/appointments',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicAiMoveLeadRoute = ApiPublicAiMoveLeadRouteImport.update({
   id: '/api/public/ai/move-lead',
   path: '/api/public/ai/move-lead',
@@ -296,6 +304,12 @@ const ApiPublicExtensionCampaignsIdRoute =
     path: '/$id',
     getParentRoute: () => ApiPublicExtensionCampaignsRoute,
   } as any)
+const ApiPublicExtensionAppointmentsIdRoute =
+  ApiPublicExtensionAppointmentsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicExtensionAppointmentsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -312,6 +326,7 @@ export interface FileRoutesByFullPath {
   '/api/public/admin/issue-token': typeof ApiPublicAdminIssueTokenRoute
   '/api/public/ai/funnels': typeof ApiPublicAiFunnelsRoute
   '/api/public/ai/move-lead': typeof ApiPublicAiMoveLeadRoute
+  '/api/public/extension/appointments': typeof ApiPublicExtensionAppointmentsRouteWithChildren
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
@@ -324,6 +339,7 @@ export interface FileRoutesByFullPath {
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
+  '/api/public/extension/appointments/$id': typeof ApiPublicExtensionAppointmentsIdRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
@@ -357,6 +373,7 @@ export interface FileRoutesByTo {
   '/api/public/admin/issue-token': typeof ApiPublicAdminIssueTokenRoute
   '/api/public/ai/funnels': typeof ApiPublicAiFunnelsRoute
   '/api/public/ai/move-lead': typeof ApiPublicAiMoveLeadRoute
+  '/api/public/extension/appointments': typeof ApiPublicExtensionAppointmentsRouteWithChildren
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
@@ -369,6 +386,7 @@ export interface FileRoutesByTo {
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
+  '/api/public/extension/appointments/$id': typeof ApiPublicExtensionAppointmentsIdRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
@@ -403,6 +421,7 @@ export interface FileRoutesById {
   '/api/public/admin/issue-token': typeof ApiPublicAdminIssueTokenRoute
   '/api/public/ai/funnels': typeof ApiPublicAiFunnelsRoute
   '/api/public/ai/move-lead': typeof ApiPublicAiMoveLeadRoute
+  '/api/public/extension/appointments': typeof ApiPublicExtensionAppointmentsRouteWithChildren
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
@@ -415,6 +434,7 @@ export interface FileRoutesById {
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
+  '/api/public/extension/appointments/$id': typeof ApiPublicExtensionAppointmentsIdRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
@@ -450,6 +470,7 @@ export interface FileRouteTypes {
     | '/api/public/admin/issue-token'
     | '/api/public/ai/funnels'
     | '/api/public/ai/move-lead'
+    | '/api/public/extension/appointments'
     | '/api/public/extension/billing'
     | '/api/public/extension/campaigns'
     | '/api/public/extension/customers'
@@ -462,6 +483,7 @@ export interface FileRouteTypes {
     | '/api/public/payments/webhook'
     | '/api/public/whatsapp/signup-callback'
     | '/api/public/whatsapp/webhook'
+    | '/api/public/extension/appointments/$id'
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
@@ -495,6 +517,7 @@ export interface FileRouteTypes {
     | '/api/public/admin/issue-token'
     | '/api/public/ai/funnels'
     | '/api/public/ai/move-lead'
+    | '/api/public/extension/appointments'
     | '/api/public/extension/billing'
     | '/api/public/extension/campaigns'
     | '/api/public/extension/customers'
@@ -507,6 +530,7 @@ export interface FileRouteTypes {
     | '/api/public/payments/webhook'
     | '/api/public/whatsapp/signup-callback'
     | '/api/public/whatsapp/webhook'
+    | '/api/public/extension/appointments/$id'
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
@@ -540,6 +564,7 @@ export interface FileRouteTypes {
     | '/api/public/admin/issue-token'
     | '/api/public/ai/funnels'
     | '/api/public/ai/move-lead'
+    | '/api/public/extension/appointments'
     | '/api/public/extension/billing'
     | '/api/public/extension/campaigns'
     | '/api/public/extension/customers'
@@ -552,6 +577,7 @@ export interface FileRouteTypes {
     | '/api/public/payments/webhook'
     | '/api/public/whatsapp/signup-callback'
     | '/api/public/whatsapp/webhook'
+    | '/api/public/extension/appointments/$id'
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
@@ -585,6 +611,7 @@ export interface RootRouteChildren {
   ApiPublicAdminIssueTokenRoute: typeof ApiPublicAdminIssueTokenRoute
   ApiPublicAiFunnelsRoute: typeof ApiPublicAiFunnelsRoute
   ApiPublicAiMoveLeadRoute: typeof ApiPublicAiMoveLeadRoute
+  ApiPublicExtensionAppointmentsRoute: typeof ApiPublicExtensionAppointmentsRouteWithChildren
   ApiPublicExtensionBillingRoute: typeof ApiPublicExtensionBillingRoute
   ApiPublicExtensionCampaignsRoute: typeof ApiPublicExtensionCampaignsRouteWithChildren
   ApiPublicExtensionCustomersRoute: typeof ApiPublicExtensionCustomersRouteWithChildren
@@ -772,6 +799,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensionBillingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/extension/appointments': {
+      id: '/api/public/extension/appointments'
+      path: '/api/public/extension/appointments'
+      fullPath: '/api/public/extension/appointments'
+      preLoaderRoute: typeof ApiPublicExtensionAppointmentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/ai/move-lead': {
       id: '/api/public/ai/move-lead'
       path: '/api/public/ai/move-lead'
@@ -912,6 +946,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensionCampaignsIdRouteImport
       parentRoute: typeof ApiPublicExtensionCampaignsRoute
     }
+    '/api/public/extension/appointments/$id': {
+      id: '/api/public/extension/appointments/$id'
+      path: '/$id'
+      fullPath: '/api/public/extension/appointments/$id'
+      preLoaderRoute: typeof ApiPublicExtensionAppointmentsIdRouteImport
+      parentRoute: typeof ApiPublicExtensionAppointmentsRoute
+    }
   }
 }
 
@@ -925,6 +966,21 @@ const AssinarRouteChildren: AssinarRouteChildren = {
 
 const AssinarRouteWithChildren =
   AssinarRoute._addFileChildren(AssinarRouteChildren)
+
+interface ApiPublicExtensionAppointmentsRouteChildren {
+  ApiPublicExtensionAppointmentsIdRoute: typeof ApiPublicExtensionAppointmentsIdRoute
+}
+
+const ApiPublicExtensionAppointmentsRouteChildren: ApiPublicExtensionAppointmentsRouteChildren =
+  {
+    ApiPublicExtensionAppointmentsIdRoute:
+      ApiPublicExtensionAppointmentsIdRoute,
+  }
+
+const ApiPublicExtensionAppointmentsRouteWithChildren =
+  ApiPublicExtensionAppointmentsRoute._addFileChildren(
+    ApiPublicExtensionAppointmentsRouteChildren,
+  )
 
 interface ApiPublicExtensionCampaignsRouteChildren {
   ApiPublicExtensionCampaignsIdRoute: typeof ApiPublicExtensionCampaignsIdRoute
@@ -1018,6 +1074,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicAdminIssueTokenRoute: ApiPublicAdminIssueTokenRoute,
   ApiPublicAiFunnelsRoute: ApiPublicAiFunnelsRoute,
   ApiPublicAiMoveLeadRoute: ApiPublicAiMoveLeadRoute,
+  ApiPublicExtensionAppointmentsRoute:
+    ApiPublicExtensionAppointmentsRouteWithChildren,
   ApiPublicExtensionBillingRoute: ApiPublicExtensionBillingRoute,
   ApiPublicExtensionCampaignsRoute:
     ApiPublicExtensionCampaignsRouteWithChildren,
