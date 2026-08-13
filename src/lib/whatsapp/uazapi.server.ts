@@ -230,6 +230,16 @@ export const uazapiProvider: WhatsAppProvider = {
     let instance_id = existing_instance_id ?? null;
     let instance_token = existing_instance_token ?? null;
 
+    // Só cria uma instância nova UMA VEZ — na primeira conexão dessa
+    // barbearia, quando ainda não existe nada salvo. Depois disso, o
+    // sistema NUNCA cria outra automaticamente, mesmo se o token salvo
+    // falhar — só reaproveita o mesmo instance_id/token pra sempre
+    // (mesmo padrão usado no IA-BARBER-ATENDIMENTO). Antes, um token
+    // inválido disparava a criação de uma instância NOVA a cada
+    // tentativa — isso gerava várias instâncias diferentes pro mesmo
+    // número em pouco tempo, o que aparenta ter disparado alguma
+    // proteção anti-spam do próprio WhatsApp, revogando o token de cada
+    // uma quase imediatamente.
     if (!instance_id || !instance_token) {
       const fresh = await initInstance(barbershop_id, instance_id);
       instance_id = fresh.instance_id;
@@ -237,25 +247,18 @@ export const uazapiProvider: WhatsAppProvider = {
     }
 
     // Pede QR / abre conexão.
-    let connect = await uaz("/instance/connect", {
+    const connect = await uaz("/instance/connect", {
       method: "POST",
       token: instance_token,
       body: {},
     });
-    if (!connect.ok && connect.status === 401) {
-      console.warn("[uazapi/connect] token antigo inválido; criando nova instância", summarizeUaz("/instance/connect", connect));
-      const fresh = await initInstance(barbershop_id, null);
-      instance_id = fresh.instance_id;
-      instance_token = fresh.instance_token;
-      connect = await uaz("/instance/connect", {
-        method: "POST",
-        token: instance_token,
-        body: {},
-      });
-    }
     if (!connect.ok) {
+      // Token salvo não funciona mais — isso agora é um erro real, que
+      // precisa de atenção manual (ex: reconectar do zero apagando o
+      // registro no banco, com cuidado, não um retry automático
+      // silencioso). Mensagem clara, sem criar outra instância sozinho.
       throw new Error(
-        `UAZAPI connect falhou (${connect.status}): ${connect.data.error ?? connect.data.message ?? connect.raw.slice(0, 200)}`,
+        `UAZAPI connect falhou (${connect.status}): ${connect.data.error ?? connect.data.message ?? connect.raw.slice(0, 200)}. A instância existente (${instance_id}) não respondeu — não foi criada uma nova automaticamente, para evitar múltiplas instâncias pro mesmo número (isso já causou problemas antes). Verifique manualmente antes de recriar.`,
       );
     }
 
