@@ -214,7 +214,7 @@ async function initInstance(barbershop_id: string, fallbackInstanceId: string | 
   if (ownerPhone && bridgeSecret && bridgeUrl) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 2500);
+      const timeout = setTimeout(() => controller.abort(), 4000);
       const bridgeRes = await fetch(bridgeUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-shared-secret": bridgeSecret },
@@ -274,18 +274,35 @@ export const uazapiProvider: WhatsAppProvider = {
     // número em pouco tempo, o que aparenta ter disparado alguma
     // proteção anti-spam do próprio WhatsApp, revogando o token de cada
     // uma quase imediatamente.
+    let isFreshInstance = false;
     if (!instance_id || !instance_token) {
       const fresh = await initInstance(barbershop_id, instance_id, owner_phone ?? null);
       instance_id = fresh.instance_id;
       instance_token = fresh.instance_token;
+      isFreshInstance = true;
     }
 
     // Pede QR / abre conexão.
-    const connect = await uaz("/instance/connect", {
+    let connect = await uaz("/instance/connect", {
       method: "POST",
       token: instance_token,
       body: {},
     });
+    // Instância RECÉM-CRIADA agora mesmo: visto em produção que o primeiro
+    // /instance/connect pode falhar com "Invalid token" mesmo com o token
+    // correto — parece haver uma pequena demora de propagação do lado da
+    // UAZAPI. Uma segunda tentativa, poucos segundos depois, com o MESMO
+    // token, funcionou. Só faz esse retry quando a instância é nova nessa
+    // mesma chamada — nunca em instância antiga (aí sim é erro real).
+    if (!connect.ok && isFreshInstance) {
+      console.warn(`[uazapi/connect] instância recém-criada (${instance_id}) falhou na 1ª tentativa, aguardando e tentando de novo...`);
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+      connect = await uaz("/instance/connect", {
+        method: "POST",
+        token: instance_token,
+        body: {},
+      });
+    }
     if (!connect.ok) {
       // Token salvo não funciona mais — isso agora é um erro real, que
       // precisa de atenção manual (ex: reconectar do zero apagando o
