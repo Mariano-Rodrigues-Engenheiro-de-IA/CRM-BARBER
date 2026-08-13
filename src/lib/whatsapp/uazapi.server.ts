@@ -281,11 +281,15 @@ export const uazapiProvider: WhatsAppProvider = {
       instance_token = fresh.instance_token;
       isFreshInstance = true;
     }
+    if (!instance_token) {
+      throw new Error("UAZAPI: token da instância indisponível");
+    }
+    const token = instance_token;
 
     // Pede QR / abre conexão.
     let connect = await uaz("/instance/connect", {
       method: "POST",
-      token: instance_token,
+      token,
       body: {},
     });
     // Instância RECÉM-CRIADA agora mesmo: visto em produção que o primeiro
@@ -299,7 +303,7 @@ export const uazapiProvider: WhatsAppProvider = {
       await new Promise((resolve) => setTimeout(resolve, 2500));
       connect = await uaz("/instance/connect", {
         method: "POST",
-        token: instance_token,
+        token,
         body: {},
       });
     }
@@ -320,7 +324,7 @@ export const uazapiProvider: WhatsAppProvider = {
     let qrcode = extractQr(connect.data);
     let status = extractStatus(connect.data, qrcode);
     if (!qrcode && status !== "connected") {
-      const synced = await uaz("/instance/status", { method: "GET", token: instance_token });
+      const synced = await uaz("/instance/status", { method: "GET", token });
       if (synced.ok) {
         qrcode = extractQr(synced.data) ?? qrcode;
         status = extractStatus(synced.data, qrcode);
@@ -334,8 +338,8 @@ export const uazapiProvider: WhatsAppProvider = {
     }
 
     return {
-      instance_id: instance_id ?? instance_token,
-      instance_token,
+      instance_id: instance_id ?? token,
+      instance_token: token,
       status,
       qrcode,
     };
