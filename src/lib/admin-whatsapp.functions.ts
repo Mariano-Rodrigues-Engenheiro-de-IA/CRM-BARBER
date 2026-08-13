@@ -10,6 +10,12 @@ export const adminListShops = createServerFn({ method: "GET" }).handler(async ()
   return listShops(supabaseAdmin);
 });
 
+export const adminListClientsOverview = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { listClientsOverview } = await import("./admin-whatsapp.server");
+  return listClientsOverview(supabaseAdmin);
+});
+
 export const adminSaveMetaCredentials = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => saveSchema.parse(data))
   .handler(async ({ data }) => {

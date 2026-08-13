@@ -44,6 +44,59 @@ export type AdminShopRow = {
   last_synced_at: string | null;
 };
 
+/** Painel geral de clientes (visão do Mariano) — nome, contato, status de
+ * conexão e se a instância é compartilhada com a IA. Mais abrangente que
+ * AdminShopRow (que é focado só na config manual da Meta). */
+export type AdminClientOverviewRow = {
+  barbershop_id: string;
+  name: string;
+  owner_phone: string | null;
+  owner_email: string | null;
+  provider: string | null;
+  status: string | null;
+  connected_phone: string | null;
+  shared_with_ai: boolean;
+  customers_count: number;
+  created_at: string | null;
+};
+
+export async function listClientsOverview(supabaseAdmin: Admin): Promise<AdminClientOverviewRow[]> {
+  const { data: shops, error } = await supabaseAdmin
+    .from("barbershops")
+    .select("id, name, owner_phone, owner_email, created_at")
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
+
+  const { data: instances } = await supabaseAdmin
+    .from("whatsapp_instances")
+    .select("barbershop_id, provider, status, phone, shared_with_ai");
+  const byShop = new Map((instances ?? []).map((i) => [i.barbershop_id, i]));
+
+  // Contagem de clientes cadastrados por barbearia — dá contexto de uso
+  // real, não só status de conexão.
+  const { data: customerRows } = await supabaseAdmin.from("customers").select("barbershop_id");
+  const countsByShop = new Map<string, number>();
+  for (const c of customerRows ?? []) {
+    countsByShop.set(c.barbershop_id, (countsByShop.get(c.barbershop_id) ?? 0) + 1);
+  }
+
+  return (shops ?? []).map((s) => {
+    const i = byShop.get(s.id);
+    return {
+      barbershop_id: s.id,
+      name: s.name,
+      owner_phone: s.owner_phone,
+      owner_email: s.owner_email,
+      provider: i?.provider ?? null,
+      status: i?.status ?? null,
+      connected_phone: i?.phone ?? null,
+      shared_with_ai: i?.shared_with_ai ?? false,
+      customers_count: countsByShop.get(s.id) ?? 0,
+      created_at: s.created_at ?? null,
+    };
+  });
+}
+
 type Admin = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
 
 export async function listShops(supabaseAdmin: Admin): Promise<AdminShopRow[]> {
