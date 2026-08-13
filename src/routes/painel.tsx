@@ -527,7 +527,7 @@ function Painel() {
             const active = section === n.key;
             const open = Boolean(n.children) && assinOpen && !sidebarCollapsed;
             return (
-              <div key={n.key}>
+              <div key={n.key} className="group relative">
                 <button
                   onClick={() => {
                     // Sanfona: o clique só alterna aberto/fechado — nunca
@@ -540,7 +540,6 @@ function Painel() {
                     }
                     setSection(n.key);
                   }}
-                  title={sidebarCollapsed ? n.label : undefined}
                   className={navRowCls(active) + (sidebarCollapsed ? " justify-center px-0" : "")}
                 >
                   <span className="flex h-5 w-5 items-center justify-center">{n.icon}</span>
@@ -560,6 +559,11 @@ function Painel() {
                     </>
                   )}
                 </button>
+                {sidebarCollapsed && (
+                  <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-75 group-hover:opacity-100">
+                    {n.label}
+                  </span>
+                )}
                 {open && n.children && (
                   <div className="mt-1 space-y-0.5 border-l border-sidebar-border pl-3 ml-4">
                     {n.children.map((sub) => (
