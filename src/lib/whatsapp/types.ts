@@ -28,6 +28,11 @@ export type ConnectResult = {
   instance_token: string;
   status: InstanceStatus;
   qrcode?: string | null;
+  /** true quando essa instância foi reaproveitada da IA (via a ponte de
+   * unificação), não criada exclusivamente pelo CRM. Usado para decidir o
+   * comportamento de "Desconectar" — numa instância compartilhada, isso
+   * nunca deve derrubar a sessão real de WhatsApp. */
+  shared_with_ai?: boolean;
   /** Preenchido quando `authMode === "embedded_signup"`: URL/config do pop-up. */
   signup?: {
     /** URL a abrir no navegador do usuário (ou null se o SDK do BSP cuida disso). */
@@ -83,6 +88,10 @@ export interface WhatsAppProvider {
      * pareamento da extensão). Mais confiável que e-mail, que o usuário
      * pode digitar errado ou diferente entre os dois sistemas. */
     owner_phone?: string | null;
+    /** Se a instância JÁ salva (existing_instance_*) já era compartilhada
+     * com a IA numa chamada anterior — precisa ser repassado pra manter
+     * esse status consistente entre reconexões. */
+    existing_shared_with_ai?: boolean;
   }): Promise<ConnectResult>;
 
   /** Sincroniza status/QR/telefone atual da instância. */
@@ -131,6 +140,9 @@ export interface WhatsAppProvider {
   disconnect(input: {
     instance_id: string;
     instance_token: string;
+    /** Quando true, essa instância é compartilhada com a IA — desconectar
+     * não deve derrubar a sessão real de WhatsApp, só pausar o uso local. */
+    shared_with_ai?: boolean;
   }): Promise<void>;
 
   /**

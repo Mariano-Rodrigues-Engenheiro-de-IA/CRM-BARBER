@@ -230,7 +230,7 @@ async function initInstance(barbershop_id: string, fallbackInstanceId: string | 
       const bridgeData = await bridgeRes.json().catch(() => null);
       if (bridgeRes.ok && bridgeData?.found && bridgeData?.uazapi_token) {
         console.log(`[uazapi/init] reaproveitando instância existente da IA para ${barbershop_id} (via ponte, por telefone)`);
-        return { instance_id: fallbackInstanceId, instance_token: bridgeData.uazapi_token };
+        return { instance_id: fallbackInstanceId, instance_token: bridgeData.uazapi_token, sharedWithAi: true };
       }
       console.log(`[uazapi/init] ponte respondeu mas não achou correspondência: status=${bridgeRes.status} body=${JSON.stringify(bridgeData)}`);
     } catch (e) {
@@ -259,7 +259,7 @@ async function initInstance(barbershop_id: string, fallbackInstanceId: string | 
   if (!instance_token) {
     throw new Error("UAZAPI init: token da instância não retornado");
   }
-  return { instance_id, instance_token };
+  return { instance_id, instance_token, sharedWithAi: false };
 }
 
 export const uazapiProvider: WhatsAppProvider = {
@@ -267,9 +267,10 @@ export const uazapiProvider: WhatsAppProvider = {
   authMode: "qr",
 
 
-  async connect({ barbershop_id, existing_instance_id, existing_instance_token, owner_phone }) {
+  async connect({ barbershop_id, existing_instance_id, existing_instance_token, owner_phone, existing_shared_with_ai }) {
     let instance_id = existing_instance_id ?? null;
     let instance_token = existing_instance_token ?? null;
+    let sharedWithAi = existing_shared_with_ai ?? false;
 
     // Só cria uma instância nova UMA VEZ — na primeira conexão dessa
     // barbearia, quando ainda não existe nada salvo. Depois disso, o
@@ -286,6 +287,7 @@ export const uazapiProvider: WhatsAppProvider = {
       const fresh = await initInstance(barbershop_id, instance_id, owner_phone ?? null);
       instance_id = fresh.instance_id;
       instance_token = fresh.instance_token;
+      sharedWithAi = fresh.sharedWithAi;
       isFreshInstance = true;
     }
     if (!instance_token) {
@@ -349,6 +351,7 @@ export const uazapiProvider: WhatsAppProvider = {
       instance_token: token,
       status,
       qrcode,
+      shared_with_ai: sharedWithAi,
     };
   },
 
@@ -387,7 +390,17 @@ export const uazapiProvider: WhatsAppProvider = {
     return { ok: false, error: `UAZAPI ${res.status}: ${msg}`, retryable };
   },
 
-  async disconnect({ instance_token }) {
+  async disconnect({ instance_token, shared_with_ai }) {
+    // Instância COMPARTILHADA com a IA: nunca desconecta a sessão real de
+    // WhatsApp por aqui — isso derrubaria a IA junto, já que é a mesma
+    // sessão. "Desconectar" no CRM, nesse caso, só deve pausar o uso local
+    // (o chamador cuida disso, atualizando o status no banco) — a
+    // desconexão de verdade só deve acontecer pelo próprio WhatsApp
+    // (dispositivos vinculados) ou pela IA.
+    if (shared_with_ai) {
+      console.log("[uazapi/disconnect] instância compartilhada com a IA — pulando desconexão real, só pausa local");
+      return;
+    }
     await uaz("/instance/disconnect", { method: "POST", token: instance_token, body: {} });
   },
 };

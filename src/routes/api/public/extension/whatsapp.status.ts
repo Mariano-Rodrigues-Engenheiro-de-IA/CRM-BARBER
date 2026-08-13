@@ -28,7 +28,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/status")({
 
         const { data: inst } = await supabaseAdmin
           .from("whatsapp_instances")
-          .select("id, status, phone, last_qr, last_synced_at, instance_id, instance_token, provider, phone_number_id, meta_access_token")
+          .select("id, status, phone, last_qr, last_synced_at, instance_id, instance_token, provider, phone_number_id, meta_access_token, shared_with_ai")
           .eq("barbershop_id", auth.token.barbershop_id)
           .maybeSingle();
 
@@ -61,7 +61,12 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/status")({
         const staleMs = inst.status === "connected" ? 15000 : 0;
         const lastSync = inst.last_synced_at ? new Date(inst.last_synced_at).getTime() : 0;
         const ageMs = Date.now() - lastSync;
-        const disconnectCooldownMs = 30000;
+        // Instância COMPARTILHADA com a IA: um "disconnected" aqui é uma
+        // pausa INTENCIONAL do uso pelo CRM, não reflete a sessão real
+        // (que continua ativa do lado da IA) — sincronizar de volta
+        // reverteria a pausa sozinho, sem o usuário pedir. Por isso o
+        // "respeita local" é permanente nesse caso, não só por 30s.
+        const disconnectCooldownMs = inst.shared_with_ai ? Infinity : 30000;
         const shouldRespectLocalDisconnect = inst.status === "disconnected" && ageMs < disconnectCooldownMs;
         const shouldSync = !shouldRespectLocalDisconnect && (forceSync || ageMs > staleMs);
 

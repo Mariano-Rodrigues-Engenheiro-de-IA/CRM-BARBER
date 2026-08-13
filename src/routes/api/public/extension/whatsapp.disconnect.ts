@@ -21,7 +21,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/disconnect"
 
         const { data: inst } = await supabaseAdmin
           .from("whatsapp_instances")
-          .select("id, instance_id, instance_token, provider")
+          .select("id, instance_id, instance_token, provider, shared_with_ai")
           .eq("barbershop_id", auth.token.barbershop_id)
           .maybeSingle();
 
@@ -40,9 +40,14 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/disconnect"
           try {
             const { getWhatsAppProviderByName } = await import("@/lib/whatsapp/provider.server");
             const provider = getWhatsAppProviderByName(inst.provider === "meta" ? "meta" : "uazapi");
+            // shared_with_ai: o provider decide sozinho se isso desconecta
+            // a sessão real (instância própria) ou só pausa localmente
+            // (instância compartilhada com a IA) — nunca derruba a IA
+            // sem querer.
             await provider.disconnect({
               instance_id: inst.instance_id ?? inst.instance_token,
               instance_token: inst.instance_token,
+              shared_with_ai: inst.shared_with_ai ?? false,
             });
           } catch (err) {
             console.warn("[whatsapp/disconnect] provider retornou erro (ignorado)", err);

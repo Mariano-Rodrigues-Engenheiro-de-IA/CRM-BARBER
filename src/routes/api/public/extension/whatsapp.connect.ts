@@ -22,7 +22,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/connect")({
 
         const { data: existing } = await supabaseAdmin
           .from("whatsapp_instances")
-          .select("id, instance_id, instance_token, provider, phone_number_id, meta_access_token, phone")
+          .select("id, instance_id, instance_token, provider, phone_number_id, meta_access_token, phone, shared_with_ai")
           .eq("barbershop_id", auth.token.barbershop_id)
           .maybeSingle();
 
@@ -69,6 +69,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/connect")({
             existing_instance_id: existingInstanceId,
             existing_instance_token: existingInstanceToken,
             owner_phone: ownerPhone,
+            existing_shared_with_ai: existing?.shared_with_ai ?? false,
           });
 
           // No Embedded Signup as credenciais só nascem no callback: strings
@@ -83,6 +84,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/connect")({
             status: result.status,
             last_qr: result.qrcode ?? null,
             last_synced_at: new Date().toISOString(),
+            shared_with_ai: result.shared_with_ai ?? existing?.shared_with_ai ?? false,
           };
 
           if (existing) {
