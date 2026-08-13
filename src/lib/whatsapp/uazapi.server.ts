@@ -214,7 +214,7 @@ async function initInstance(barbershop_id: string, fallbackInstanceId: string | 
   if (ownerPhone && bridgeSecret && bridgeUrl) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 2500);
+      const timeout = setTimeout(() => controller.abort(), 4000);
       const bridgeRes = await fetch(bridgeUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-shared-secret": bridgeSecret },
@@ -324,7 +324,7 @@ export const uazapiProvider: WhatsAppProvider = {
     let qrcode = extractQr(connect.data);
     let status = extractStatus(connect.data, qrcode);
     if (!qrcode && status !== "connected") {
-      const synced = await uaz("/instance/status", { method: "GET", token: instance_token });
+      const synced = await uaz("/instance/status", { method: "GET", token });
       if (synced.ok) {
         qrcode = extractQr(synced.data) ?? qrcode;
         status = extractStatus(synced.data, qrcode);
@@ -338,8 +338,8 @@ export const uazapiProvider: WhatsAppProvider = {
     }
 
     return {
-      instance_id: instance_id ?? instance_token,
-      instance_token,
+      instance_id: instance_id ?? token,
+      instance_token: token,
       status,
       qrcode,
     };
