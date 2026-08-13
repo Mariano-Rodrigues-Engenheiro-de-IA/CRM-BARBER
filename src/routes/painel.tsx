@@ -19,6 +19,7 @@ import { sendableActions, type QuickReply } from "@/lib/quick-replies";
 import { FREE_LIMITS, PROMO_PRICE_LABEL, type BillingStatus } from "@/lib/billing";
 
 import { useConfirm } from "@/components/confirm-dialog";
+import { AgendaView } from "@/components/agenda-view";
 import { toast } from "sonner";
 
 
@@ -233,7 +234,7 @@ function nudgeExtensionPoll() {
   window.postMessage({ __crm: "poll_now_v180" }, window.location.origin);
 }
 
-type Section = "assinantes" | "funis" | "disparo" | "respostas" | "equipe" | "conexao" | "templates";
+type Section = "agenda" | "assinantes" | "funis" | "disparo" | "respostas" | "equipe" | "conexao" | "templates";
 /** Sub-abas da sanfona de Assinaturas. */
 type AssinTab = "visao" | "assinantes";
 
@@ -296,6 +297,13 @@ function IconSend() {
     </svg>
   );
 }
+function IconCalendar() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
+  );
+}
 /** Plug — seção de Conexão (não repetir o ícone de Assinaturas). */
 function IconPlug() {
   return (
@@ -343,7 +351,7 @@ function Painel() {
   const initialSection: Section = (() => {
     if (typeof window === "undefined") return "assinantes";
     const s = new URLSearchParams(window.location.search).get("section");
-    if (s === "equipe" || s === "conexao" || s === "respostas" || s === "funis" || s === "disparo" || s === "templates") return s;
+    if (s === "agenda" || s === "equipe" || s === "conexao" || s === "respostas" || s === "funis" || s === "disparo" || s === "templates") return s;
     return "assinantes";
   })();
   const [section, setSection] = useState<Section>(initialSection);
@@ -467,6 +475,7 @@ function Painel() {
     icon: React.ReactNode;
     children?: Array<{ key: AssinTab; label: string }>;
   }> = [
+    { key: "agenda", label: "Agenda", icon: <IconCalendar /> },
     {
       key: "assinantes",
       label: "Assinaturas",
@@ -641,6 +650,21 @@ function Painel() {
 
       {/* Content */}
       <div className="flex-1 min-w-0">
+        {section === "agenda" && token && (
+          <>
+            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
+              <div className="flex items-center gap-3 px-5 py-2">
+                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
+                  Agenda
+                </h1>
+              </div>
+            </header>
+            <main className="px-4 py-4">
+              <AgendaView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+            </main>
+          </>
+        )}
+
         {section === "assinantes" && (
           <>
             <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
