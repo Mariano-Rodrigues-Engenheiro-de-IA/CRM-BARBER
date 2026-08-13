@@ -432,12 +432,14 @@ export function ConnectionView({ api }: { api: Api }) {
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[10px] font-semibold tracking-[0.22em] text-neutral-500">CONEXÃO WHATSAPP</p>
-            <h2 className="mt-1 text-xl font-semibold text-neutral-950">
-              {status === "connected" && "Conectado"}
-              {status === "connecting" && "Aguardando pareamento…"}
-              {status === "disconnected" && "Desconectado"}
-              {status === "hibernated" && "Hibernado"}
-            </h2>
+            {!(status === "connected" && !showSwitcher) && (
+              <h2 className="mt-1 text-xl font-semibold text-neutral-950">
+                {status === "connected" && "Conectado"}
+                {status === "connecting" && "Aguardando pareamento…"}
+                {status === "disconnected" && "Desconectado"}
+                {status === "hibernated" && "Hibernado"}
+              </h2>
+            )}
             {conn?.phone && status === "connected" && showSwitcher && (
               <p className="mt-1 text-sm text-neutral-500">Número: {conn.phone}</p>
             )}
