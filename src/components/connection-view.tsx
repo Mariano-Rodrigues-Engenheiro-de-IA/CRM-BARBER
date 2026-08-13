@@ -438,11 +438,11 @@ export function ConnectionView({ api }: { api: Api }) {
               {status === "disconnected" && "Desconectado"}
               {status === "hibernated" && "Hibernado"}
             </h2>
-            {conn?.phone && status === "connected" && (
-              <p className="mt-1 text-sm text-neutral-500">Número: +{conn.phone}</p>
+            {conn?.phone && status === "connected" && showSwitcher && (
+              <p className="mt-1 text-sm text-neutral-500">Número: {conn.phone}</p>
             )}
           </div>
-          <StatusPill status={status} />
+          {!(status === "connected" && !showSwitcher) && <StatusPill status={status} />}
         </div>
 
         {err && (
@@ -456,7 +456,7 @@ export function ConnectionView({ api }: { api: Api }) {
               <WhatsAppGlyph className="h-10 w-10 shrink-0 text-white" bg={activeBg} />
               <div>
                 <p className="text-base font-semibold text-neutral-950">{activeLabel}</p>
-                <p className="text-sm text-neutral-500">+{conn?.phone}</p>
+                <p className="text-sm text-neutral-500">{conn?.phone}</p>
               </div>
               <span className="ml-auto rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
                 Conectado
