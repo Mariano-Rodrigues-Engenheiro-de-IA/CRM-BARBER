@@ -113,9 +113,19 @@ export async function setProviderMode(
 ): Promise<{ ok: true }> {
   const { data: existing } = await supabaseAdmin
     .from("whatsapp_instances")
-    .select("id, phone_number_id, meta_access_token")
+    .select("id, provider, phone_number_id, meta_access_token, instance_id, instance_token, uazapi_instance_id, uazapi_instance_token")
     .eq("barbershop_id", input.barbershop_id)
     .maybeSingle();
+
+  // Se os campos genéricos (instance_id/instance_token) ainda guardam dados
+  // da UAZAPI (ou seja, o modo ativo ANTES dessa troca já era uazapi),
+  // preserva esses valores nas colunas dedicadas antes de trocar — sem
+  // isso, trocar pra "meta" e depois de volta pra "uazapi" perdia a
+  // instância, forçando criar uma nova a cada troca.
+  const preservedUazapiId =
+    (existing?.provider === "uazapi" ? existing.instance_id : null) ?? existing?.uazapi_instance_id ?? null;
+  const preservedUazapiToken =
+    (existing?.provider === "uazapi" ? existing.instance_token : null) ?? existing?.uazapi_instance_token ?? null;
 
   const now = new Date().toISOString();
   const payload = input.provider === "meta"
@@ -128,16 +138,23 @@ export async function setProviderMode(
         phone: null,
         last_qr: null,
         last_synced_at: now,
+        uazapi_instance_id: preservedUazapiId,
+        uazapi_instance_token: preservedUazapiToken,
       }
     : {
         barbershop_id: input.barbershop_id,
         provider: "uazapi",
-        instance_id: null,
-        instance_token: null,
+        // Reaproveita a instância UAZAPI já existente (preservada mesmo que
+        // o modo ativo antes fosse "meta") — só fica null se realmente
+        // nunca existiu uma instância UAZAPI pra essa barbearia ainda.
+        instance_id: preservedUazapiId,
+        instance_token: preservedUazapiToken,
         status: "disconnected",
         phone: null,
         last_qr: null,
         last_synced_at: now,
+        uazapi_instance_id: preservedUazapiId,
+        uazapi_instance_token: preservedUazapiToken,
       };
 
   const { error } = existing
