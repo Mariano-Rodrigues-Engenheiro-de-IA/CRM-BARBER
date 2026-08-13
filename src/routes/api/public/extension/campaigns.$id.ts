@@ -1,3 +1,7 @@
+// GET    /api/public/extension/campaigns/:id -> detalhe da campanha + lista
+//        de jobs individuais (nome, telefone, status) — usado pela tela de
+//        progresso de envio, pra listar quem já recebeu / falhou / ainda
+//        está pendente, em vez de só a barra de porcentagem.
 // PATCH  /api/public/extension/campaigns/:id -> status: running|paused|canceled
 // DELETE /api/public/extension/campaigns/:id -> apaga campanha + jobs + targets
 // Enquanto 'paused', /jobs/next não devolve jobs desta campanha.
@@ -15,6 +19,65 @@ export const Route = createFileRoute("/api/public/extension/campaigns/$id")({
   server: {
     handlers: {
       OPTIONS: async ({ request }) => preflight(request),
+
+      GET: async ({ request, params }) => {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const auth = await authenticateExtension(request, supabaseAdmin);
+        if (!auth.ok) {
+          return jsonResponse(request, { ok: false, error: auth.error }, { status: auth.status });
+        }
+        const { data: campaign, error: campErr } = await supabaseAdmin
+          .from("campaigns")
+          .select("id, name, status, created_at")
+          .eq("id", params.id)
+          .eq("barbershop_id", auth.token.barbershop_id)
+          .maybeSingle();
+        if (campErr) {
+          return jsonResponse(request, { ok: false, error: campErr.message }, { status: 500 });
+        }
+        if (!campaign) {
+          return jsonResponse(request, { ok: false, error: "Not found" }, { status: 404 });
+        }
+
+        const { data: jobs, error: jobsErr } = await supabaseAdmin
+          .from("message_jobs")
+          .select("id, phone, status, last_error, customer_id, created_at")
+          .eq("campaign_id", params.id)
+          .eq("barbershop_id", auth.token.barbershop_id)
+          .order("created_at", { ascending: true });
+        if (jobsErr) {
+          return jsonResponse(request, { ok: false, error: jobsErr.message }, { status: 500 });
+        }
+
+        // Busca os nomes dos clientes num segundo passo (evita depender de
+        // FK/join automático, que pode não estar configurado na tabela).
+        const customerIds = Array.from(new Set((jobs ?? []).map((j) => j.customer_id).filter(Boolean)));
+        const namesByCustomerId = new Map<string, string>();
+        if (customerIds.length > 0) {
+          const { data: customers } = await supabaseAdmin
+            .from("customers")
+            .select("id, name")
+            .in("id", customerIds);
+          for (const c of customers ?? []) namesByCustomerId.set(c.id, c.name || "");
+        }
+
+        const jobRows = (jobs ?? []).map((j) => ({
+          id: j.id,
+          name: (j.customer_id && namesByCustomerId.get(j.customer_id)) || null,
+          phone: j.phone,
+          status: j.status,
+          error: j.last_error || null,
+        }));
+
+        const stats = {
+          total: jobRows.length,
+          sent: jobRows.filter((j) => j.status === "sent").length,
+          failed: jobRows.filter((j) => j.status === "failed").length,
+          pending: jobRows.filter((j) => j.status === "pending" || j.status === "in_flight").length,
+        };
+
+        return jsonResponse(request, { ok: true, campaign, stats, jobs: jobRows });
+      },
 
       PATCH: async ({ request, params }) => {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
