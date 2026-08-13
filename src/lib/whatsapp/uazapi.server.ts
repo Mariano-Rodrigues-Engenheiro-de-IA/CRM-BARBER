@@ -214,7 +214,7 @@ async function initInstance(barbershop_id: string, fallbackInstanceId: string | 
   if (ownerPhone && bridgeSecret && bridgeUrl) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
+      const timeout = setTimeout(() => controller.abort(), 2500);
       const bridgeRes = await fetch(bridgeUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-shared-secret": bridgeSecret },
