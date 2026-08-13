@@ -1847,7 +1847,9 @@ function CampaignsView({ token, scope }: { token: string; scope?: "assinaturas" 
               <div>
                 <h3 className="text-base font-semibold text-neutral-900">{c.name}</h3>
                 <p className="text-xs uppercase tracking-wide text-neutral-500">
-                  {c.status === "running" ? "Em andamento" : c.status === "paused" ? "Pausada" : c.status === "canceled" ? "Cancelada" : c.status}
+                  {isFinal && c.status !== "canceled"
+                    ? "Finalizada"
+                    : c.status === "running" ? "Em andamento" : c.status === "paused" ? "Pausada" : c.status === "canceled" ? "Cancelada" : c.status}
                 </p>
                 {c.created_at && (
                   <p className="mt-0.5 text-[11px] text-neutral-400">
