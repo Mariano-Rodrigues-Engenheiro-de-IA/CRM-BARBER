@@ -256,10 +256,14 @@ export const uazapiProvider: WhatsAppProvider = {
       // Token salvo não funciona mais — isso agora é um erro real, que
       // precisa de atenção manual (ex: reconectar do zero apagando o
       // registro no banco, com cuidado, não um retry automático
-      // silencioso). Mensagem clara, sem criar outra instância sozinho.
-      throw new Error(
-        `UAZAPI connect falhou (${connect.status}): ${connect.data.error ?? connect.data.message ?? connect.raw.slice(0, 200)}. A instância existente (${instance_id}) não respondeu — não foi criada uma nova automaticamente, para evitar múltiplas instâncias pro mesmo número (isso já causou problemas antes). Verifique manualmente antes de recriar.`,
+      // silencioso). O erro TÉCNICO completo vai só pro log do servidor —
+      // o CRM é usado pelos clientes finais, não só pelo Mariano, então a
+      // mensagem que sobe pra tela precisa ser simples, sem detalhe
+      // técnico que o usuário não vai saber interpretar.
+      console.error(
+        `[uazapi/connect] falha ao reconectar instância existente (${instance_id}): status=${connect.status} ${connect.data.error ?? connect.data.message ?? connect.raw.slice(0, 200)}`,
       );
+      throw new Error("Não conseguimos conectar agora. Tente novamente em alguns minutos ou fale com o suporte.");
     }
 
     let qrcode = extractQr(connect.data);
