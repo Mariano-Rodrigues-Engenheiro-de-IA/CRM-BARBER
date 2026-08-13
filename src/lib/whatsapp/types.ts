@@ -76,11 +76,13 @@ export interface WhatsAppProvider {
     barbershop_id: string;
     existing_instance_id?: string | null;
     existing_instance_token?: string | null;
-    /** E-mail do dono da barbearia — usado automaticamente pra consultar
+    /** Telefone do dono da barbearia — usado automaticamente pra consultar
      * se já existe uma instância ativa (ex: da IA) pra esse mesmo cliente,
      * evitando duas sessões WhatsApp Web concorrentes. Nunca pedido ao
-     * usuário: já vem do cadastro da barbearia. */
-    owner_email?: string | null;
+     * usuário: já vem do cadastro da barbearia (mesmo campo usado pro
+     * pareamento da extensão). Mais confiável que e-mail, que o usuário
+     * pode digitar errado ou diferente entre os dois sistemas. */
+    owner_phone?: string | null;
   }): Promise<ConnectResult>;
 
   /** Sincroniza status/QR/telefone atual da instância. */

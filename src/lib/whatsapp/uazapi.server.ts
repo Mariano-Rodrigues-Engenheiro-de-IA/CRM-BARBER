@@ -196,32 +196,34 @@ function summarizeUaz(path: string, response: { status: number; data: UazRespons
   };
 }
 
-async function initInstance(barbershop_id: string, fallbackInstanceId: string | null, ownerEmail: string | null) {
+async function initInstance(barbershop_id: string, fallbackInstanceId: string | null, ownerPhone: string | null) {
   // Antes de criar uma instância NOVA, consulta se a IA (projeto separado)
-  // já tem uma instância ativa pra esse mesmo cliente (casando pelo e-mail
-  // do dono, que já sabemos automaticamente — não precisa perguntar nada
-  // ao usuário) — se tiver, reaproveita em vez de criar uma segunda sessão
-  // WhatsApp Web pro mesmo número (isso estava causando uma derrubar a
-  // outra). Ponte protegida por chave secreta compartilhada; timeout curto
-  // e falha silenciosa (segue criando normal) se a variável não estiver
+  // já tem uma instância ativa pra esse mesmo cliente (casando pelo
+  // telefone do dono, que já sabemos automaticamente — não precisa
+  // perguntar nada ao usuário) — se tiver, reaproveita em vez de criar uma
+  // segunda sessão WhatsApp Web pro mesmo número (isso estava causando uma
+  // derrubar a outra). Telefone é mais confiável que e-mail como critério:
+  // o usuário pode digitar um e-mail diferente/errado em cada sistema, mas
+  // o número que efetivamente conecta no WhatsApp não tem essa ambiguidade.
+  // Ponte protegida por chave secreta compartilhada; timeout curto e falha
+  // silenciosa (segue criando normal) se a variável não estiver
   // configurada ou a consulta demorar/falhar — nunca trava a conexão do
-  // cliente por causa dessa checagem (um 502 relatado pode ter vindo
-  // justamente de uma chamada sem timeout travando a resposta).
+  // cliente por causa dessa checagem.
   const bridgeSecret = process.env.CRM_BRIDGE_SHARED_SECRET;
   const bridgeUrl = process.env.AI_BRIDGE_URL; // ex: https://bazfkghkipqamnksbrdz.supabase.co/functions/v1/get-shared-uazapi-instance
-  if (ownerEmail && bridgeSecret && bridgeUrl) {
+  if (ownerPhone && bridgeSecret && bridgeUrl) {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5000);
       const bridgeRes = await fetch(bridgeUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-shared-secret": bridgeSecret },
-        body: JSON.stringify({ email: ownerEmail }),
+        body: JSON.stringify({ phone: ownerPhone }),
         signal: controller.signal,
       }).finally(() => clearTimeout(timeout));
       const bridgeData = await bridgeRes.json().catch(() => null);
       if (bridgeRes.ok && bridgeData?.found && bridgeData?.uazapi_token) {
-        console.log(`[uazapi/init] reaproveitando instância existente da IA para ${barbershop_id} (via ponte, por e-mail)`);
+        console.log(`[uazapi/init] reaproveitando instância existente da IA para ${barbershop_id} (via ponte, por telefone)`);
         return { instance_id: fallbackInstanceId, instance_token: bridgeData.uazapi_token };
       }
     } catch (e) {
@@ -258,7 +260,7 @@ export const uazapiProvider: WhatsAppProvider = {
   authMode: "qr",
 
 
-  async connect({ barbershop_id, existing_instance_id, existing_instance_token, owner_email }) {
+  async connect({ barbershop_id, existing_instance_id, existing_instance_token, owner_phone }) {
     let instance_id = existing_instance_id ?? null;
     let instance_token = existing_instance_token ?? null;
 
@@ -273,7 +275,7 @@ export const uazapiProvider: WhatsAppProvider = {
     // proteção anti-spam do próprio WhatsApp, revogando o token de cada
     // uma quase imediatamente.
     if (!instance_id || !instance_token) {
-      const fresh = await initInstance(barbershop_id, instance_id, owner_email ?? null);
+      const fresh = await initInstance(barbershop_id, instance_id, owner_phone ?? null);
       instance_id = fresh.instance_id;
       instance_token = fresh.instance_token;
     }

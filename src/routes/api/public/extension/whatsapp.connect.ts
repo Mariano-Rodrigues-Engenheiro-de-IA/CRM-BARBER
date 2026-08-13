@@ -20,17 +20,21 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/connect")({
           return jsonResponse(request, { ok: false, error: auth.error }, { status: auth.status });
         }
 
-        // Casa automaticamente com a instância da IA pelo e-mail do dono da
-        // barbearia — já sabemos isso (usuário está logado), não precisa
-        // perguntar nada. Busca só quando ainda não existe instância salva
-        // (primeira conexão) — resultado é passado como "hint" opcional
-        // pro provider, nunca bloqueia a conexão se não achar nada.
+        // Casa automaticamente com a instância da IA pelo telefone do dono
+        // da barbearia — já sabemos isso (já usado pro pareamento da
+        // extensão), não precisa perguntar nada. E-mail foi descartado
+        // como critério: o usuário pode digitar um e-mail diferente ou
+        // errado no cadastro; o telefone que efetivamente conecta no
+        // WhatsApp não tem essa ambiguidade. Busca só quando ainda não
+        // existe instância salva (primeira conexão) — resultado é passado
+        // como "hint" opcional pro provider, nunca bloqueia a conexão se
+        // não achar nada.
         const { data: shop } = await supabaseAdmin
           .from("barbershops")
-          .select("owner_email")
+          .select("owner_phone")
           .eq("id", auth.token.barbershop_id)
           .maybeSingle();
-        const ownerEmail = shop?.owner_email ?? null;
+        const ownerPhone = shop?.owner_phone ?? null;
 
         const { data: existing } = await supabaseAdmin
           .from("whatsapp_instances")
@@ -59,7 +63,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/connect")({
             barbershop_id: auth.token.barbershop_id,
             existing_instance_id: existingInstanceId,
             existing_instance_token: existingInstanceToken,
-            owner_email: ownerEmail,
+            owner_phone: ownerPhone,
           });
 
           // No Embedded Signup as credenciais só nascem no callback: strings
