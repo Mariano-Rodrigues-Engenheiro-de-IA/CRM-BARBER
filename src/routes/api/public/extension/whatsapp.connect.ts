@@ -20,27 +20,32 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/connect")({
           return jsonResponse(request, { ok: false, error: auth.error }, { status: auth.status });
         }
 
-        // Casa automaticamente com a instância da IA pelo telefone do dono
-        // da barbearia — já sabemos isso (já usado pro pareamento da
-        // extensão), não precisa perguntar nada. E-mail foi descartado
-        // como critério: o usuário pode digitar um e-mail diferente ou
-        // errado no cadastro; o telefone que efetivamente conecta no
-        // WhatsApp não tem essa ambiguidade. Busca só quando ainda não
-        // existe instância salva (primeira conexão) — resultado é passado
-        // como "hint" opcional pro provider, nunca bloqueia a conexão se
-        // não achar nada.
-        const { data: shop } = await supabaseAdmin
-          .from("barbershops")
-          .select("owner_phone")
-          .eq("id", auth.token.barbershop_id)
-          .maybeSingle();
-        const ownerPhone = shop?.owner_phone ?? null;
-
         const { data: existing } = await supabaseAdmin
           .from("whatsapp_instances")
-          .select("id, instance_id, instance_token, provider, phone_number_id, meta_access_token")
+          .select("id, instance_id, instance_token, provider, phone_number_id, meta_access_token, phone")
           .eq("barbershop_id", auth.token.barbershop_id)
           .maybeSingle();
+
+        // Casa automaticamente com a instância da IA pelo telefone — nunca
+        // pedido ao usuário. Prioridade: (1) o número REAL de uma conexão
+        // já confirmada antes aqui no CRM (o dado mais confiável possível,
+        // é literalmente o WhatsApp que conectou); (2) só na ausência
+        // disso (primeiríssima conexão, nunca conectou nada ainda) cai
+        // pro telefone informado no cadastro da barbearia (owner_phone) —
+        // menos confiável (pode estar errado/desatualizado), mas é o
+        // único dado disponível nesse momento. Busca só quando ainda não
+        // existe instância UTILIZÁVEL salva — resultado é passado como
+        // "hint" opcional pro provider, nunca bloqueia a conexão se não
+        // achar nada.
+        let ownerPhone = existing?.phone ?? null;
+        if (!ownerPhone) {
+          const { data: shop } = await supabaseAdmin
+            .from("barbershops")
+            .select("owner_phone")
+            .eq("id", auth.token.barbershop_id)
+            .maybeSingle();
+          ownerPhone = shop?.owner_phone ?? null;
+        }
 
         try {
           const { getWhatsAppProviderByName } = await import("@/lib/whatsapp/provider.server");
