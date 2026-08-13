@@ -349,9 +349,11 @@ function Painel() {
   const [section, setSection] = useState<Section>(initialSection);
   const [assinTab, setAssinTab] = useState<AssinTab>("assinantes");
   const [assinOpen, setAssinOpen] = useState(false);
-  // Menu lateral colapsável — lembra a preferência entre sessões.
+  // Menu lateral colapsável — recolhido por padrão (dá mais espaço pro
+  // sistema), a menos que o usuário já tenha expandido explicitamente
+  // numa sessão anterior (nesse caso lembra a preferência).
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
-    () => typeof window !== "undefined" && localStorage.getItem("zaylo_sidebar_collapsed") === "1",
+    () => typeof window === "undefined" || localStorage.getItem("zaylo_sidebar_collapsed") !== "0",
   );
   useEffect(() => {
     localStorage.setItem("zaylo_sidebar_collapsed", sidebarCollapsed ? "1" : "0");
