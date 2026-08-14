@@ -4,13 +4,13 @@ import { useState } from "react";
 export const Route = createFileRoute("/baixar")({
   head: () => ({
     meta: [
-      { title: "Baixar pacote da extensão v0.35.21 | CRM Zaylo" },
+      { title: "Baixar pacote da extensão v0.35.22 | CRM Zaylo" },
       {
         name: "description",
         content:
-          "Download direto do pacote .zip da extensão Zetta CRM v0.35.21, pronto para upload no Chrome Web Store Developer Dashboard.",
+          "Download direto do pacote .zip da extensão Zetta CRM v0.35.22, pronto para upload no Chrome Web Store Developer Dashboard.",
       },
-      { property: "og:title", content: "Baixar pacote da extensão v0.35.21" },
+      { property: "og:title", content: "Baixar pacote da extensão v0.35.22" },
       {
         property: "og:description",
         content:
@@ -24,7 +24,7 @@ export const Route = createFileRoute("/baixar")({
 });
 
 const VERSION = "0.35.21";
-const FILE = "/zetta-crm-v3521.zip";
+const FILE = "/zetta-crm-v3522.zip";
 
 function BaixarPage() {
   const [status, setStatus] = useState<string | null>(null);
@@ -39,7 +39,7 @@ function BaixarPage() {
       .then((blob) => {
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `zetta-crm-v3521.zip`;
+        a.download = `zetta-crm-v3522.zip`;
         a.click();
         URL.revokeObjectURL(a.href);
         setStatus("Download iniciado.");
@@ -69,7 +69,7 @@ function BaixarPage() {
           onClick={download}
           className="w-full rounded-md bg-primary px-6 py-4 text-sm font-medium text-primary-foreground transition hover:opacity-90"
         >
-          Baixar zetta-crm-v3521.zip
+          Baixar zetta-crm-v3522.zip
         </button>
 
         {status && (
