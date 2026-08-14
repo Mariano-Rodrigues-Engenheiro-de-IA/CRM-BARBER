@@ -483,17 +483,6 @@ function Painel() {
   }> = [
     { key: "agenda", label: "Agenda", icon: <IconCalendar /> },
     {
-      key: "configuracoes",
-      label: "Configurações",
-      icon: <IconGear />,
-      children: [
-        { key: "servicos", label: "Serviços" },
-        { key: "profissionais", label: "Profissionais" },
-        { key: "clientes", label: "Clientes" },
-        { key: "gerais", label: "Gerais" },
-      ],
-    },
-    {
       key: "assinantes",
       label: "Assinaturas",
       icon: <IconUsers />,
@@ -509,6 +498,17 @@ function Painel() {
     ...(isAdmin ? [{ key: "templates" as Section, label: "Modelos", icon: <IconNote /> }] : []),
 
     { key: "conexao", label: "Conexão", icon: <IconPlug /> },
+    {
+      key: "configuracoes",
+      label: "Configurações",
+      icon: <IconGear />,
+      children: [
+        { key: "servicos", label: "Serviços" },
+        { key: "profissionais", label: "Profissionais" },
+        { key: "clientes", label: "Clientes" },
+        { key: "gerais", label: "Gerais" },
+      ],
+    },
   ];
 
   const navRowCls = (active: boolean) =>
@@ -598,20 +598,27 @@ function Painel() {
                 )}
                 {open && n.children && (
                   <div className="mt-1 space-y-0.5 border-l border-sidebar-border pl-3 ml-4">
-                    {n.children.map((sub) => (
-                      <button
-                        key={sub.key}
-                        onClick={() => { setSection(n.key); setAssinTab(sub.key); }}
-                        className={
-                          "block w-full rounded-lg px-3 py-1.5 text-left text-[13px] transition " +
-                          (active && assinTab === sub.key
-                            ? "bg-sidebar-accent font-semibold text-sidebar-foreground"
-                            : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground")
-                        }
-                      >
-                        {sub.label}
-                      </button>
-                    ))}
+                    {n.children.map((sub) => {
+                      const isSubActive = n.key === "assinantes" ? assinTab === sub.key : n.key === "configuracoes" ? configTab === sub.key : false;
+                      return (
+                        <button
+                          key={sub.key}
+                          onClick={() => {
+                            setSection(n.key);
+                            if (n.key === "assinantes") setAssinTab(sub.key as AssinTab);
+                            else if (n.key === "configuracoes") setConfigTab(sub.key as ConfigTab);
+                          }}
+                          className={
+                            "block w-full rounded-lg px-3 py-1.5 text-left text-[13px] transition " +
+                            (active && isSubActive
+                              ? "bg-sidebar-accent font-semibold text-sidebar-foreground"
+                              : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground")
+                          }
+                        >
+                          {sub.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
