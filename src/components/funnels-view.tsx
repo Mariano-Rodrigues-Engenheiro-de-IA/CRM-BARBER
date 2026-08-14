@@ -1102,8 +1102,10 @@ function CardDrawer({
     setAiSummaryLoading(true);
     api(`/api/public/extension/customers?phone=${encodeURIComponent(card.phone || "")}`)
       .then((r) => {
-        const c = r?.customers?.[0];
-        if (c?.ai_summary) setAiSummary({ text: c.ai_summary, updatedAt: c.ai_summary_updated_at ?? null });
+        const customers = (r as Record<string, unknown>).customers;
+        if (!Array.isArray(customers) || customers.length === 0) return;
+        const c = customers[0] as Record<string, unknown>;
+        if (c?.ai_summary) setAiSummary({ text: c.ai_summary as string, updatedAt: (c.ai_summary_updated_at ?? null) as string | null });
       })
       .finally(() => setAiSummaryLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
