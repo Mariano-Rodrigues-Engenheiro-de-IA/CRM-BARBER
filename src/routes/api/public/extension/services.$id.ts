@@ -1,4 +1,4 @@
-// PATCH  /api/public/extension/services/:id -> edita
+// PATCH  /api/public/extension/services/:id -> edita, aceita professional_ids opcional (substitui vinculos)
 // DELETE /api/public/extension/services/:id -> desativa (soft delete)
 
 import { createFileRoute } from "@tanstack/react-router";
@@ -14,6 +14,7 @@ const patchSchema = z.object({
   price: z.number().min(0).max(1000000).optional().nullable(),
   active: z.boolean().optional(),
   sort_order: z.number().int().optional(),
+  professional_ids: z.array(z.string().uuid()).optional(),
 });
 
 export const Route = createFileRoute("/api/public/extension/services/$id")({
@@ -31,9 +32,10 @@ export const Route = createFileRoute("/api/public/extension/services/$id")({
         if (!parsed.success) {
           return jsonResponse(request, { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" }, { status: 400 });
         }
+        const { professional_ids, ...serviceFields } = parsed.data;
         const { data, error } = await supabaseAdmin
           .from("services")
-          .update(parsed.data)
+          .update(serviceFields)
           .eq("id", params.id)
           .eq("barbershop_id", auth.token.barbershop_id)
           .select("id, name, category, description, duration_minutes, price, active, sort_order")
@@ -42,7 +44,19 @@ export const Route = createFileRoute("/api/public/extension/services/$id")({
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
         }
         if (!data) return jsonResponse(request, { ok: false, error: "Not found" }, { status: 404 });
-        return jsonResponse(request, { ok: true, service: data });
+
+        // professional_ids presente (mesmo vazio []) substitui os vínculos
+        // por completo — omitido significa "não mexer nos vínculos".
+        if (professional_ids !== undefined) {
+          await supabaseAdmin.from("professional_services").delete().eq("service_id", params.id);
+          if (professional_ids.length > 0) {
+            await supabaseAdmin
+              .from("professional_services")
+              .insert(professional_ids.map((pid) => ({ service_id: params.id, professional_id: pid })));
+          }
+        }
+
+        return jsonResponse(request, { ok: true, service: { ...data, professional_ids: professional_ids ?? undefined } });
       },
 
       DELETE: async ({ request, params }) => {

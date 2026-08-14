@@ -1,5 +1,5 @@
-// GET  /api/public/extension/services -> lista (ativos por padrão)
-// POST /api/public/extension/services -> cria
+// GET  /api/public/extension/services -> lista (ativos por padrão), com professional_ids vinculados
+// POST /api/public/extension/services -> cria, aceita professional_ids opcional
 
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
@@ -12,6 +12,9 @@ const createSchema = z.object({
   description: z.string().trim().max(500).optional(),
   duration_minutes: z.number().int().min(5).max(480).default(30),
   price: z.number().min(0).max(1000000).optional(),
+  // Quais profissionais realizam esse serviço. Se omitido/vazio, o
+  // serviço fica disponível para TODOS os profissionais (sem restrição).
+  professional_ids: z.array(z.string().uuid()).optional(),
 });
 
 export const Route = createFileRoute("/api/public/extension/services")({
@@ -38,7 +41,20 @@ export const Route = createFileRoute("/api/public/extension/services")({
         if (error) {
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
         }
-        return jsonResponse(request, { ok: true, services: data ?? [] });
+        const services = data ?? [];
+        // Busca todos os vínculos de uma vez (evita N+1) e agrupa por serviço.
+        const { data: links } = await supabaseAdmin
+          .from("professional_services")
+          .select("service_id, professional_id")
+          .in("service_id", services.map((s) => s.id));
+        const linksByService = new Map<string, string[]>();
+        for (const l of links ?? []) {
+          const arr = linksByService.get(l.service_id) ?? [];
+          arr.push(l.professional_id);
+          linksByService.set(l.service_id, arr);
+        }
+        const withLinks = services.map((s) => ({ ...s, professional_ids: linksByService.get(s.id) ?? [] }));
+        return jsonResponse(request, { ok: true, services: withLinks });
       },
 
       POST: async ({ request }) => {
@@ -51,15 +67,21 @@ export const Route = createFileRoute("/api/public/extension/services")({
         if (!parsed.success) {
           return jsonResponse(request, { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" }, { status: 400 });
         }
+        const { professional_ids, ...serviceFields } = parsed.data;
         const { data, error } = await supabaseAdmin
           .from("services")
-          .insert({ barbershop_id: auth.token.barbershop_id, ...parsed.data })
+          .insert({ barbershop_id: auth.token.barbershop_id, ...serviceFields })
           .select("id, name, category, description, duration_minutes, price, active, sort_order")
           .single();
         if (error) {
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
         }
-        return jsonResponse(request, { ok: true, service: data });
+        if (professional_ids && professional_ids.length > 0) {
+          await supabaseAdmin
+            .from("professional_services")
+            .insert(professional_ids.map((pid) => ({ service_id: data.id, professional_id: pid })));
+        }
+        return jsonResponse(request, { ok: true, service: { ...data, professional_ids: professional_ids ?? [] } });
       },
     },
   },
