@@ -11,6 +11,8 @@
 // Admins liberados diretamente no código (além dos que vierem por env).
 const HARDCODED_ADMIN_BARBERSHOP_IDS = [
   "7348c9b5-b825-4e33-8705-3a41bca8d852", // Viver Bem Estética
+  "3c1d0a88-be18-4e33-8bb5-ea7bd800ac3a",
+  "3d9dc380-9341-4d4d-8874-e32e2643ae36",
 ];
 
 export function isAdminBarbershop(barbershop_id: string): boolean {
