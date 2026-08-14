@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      agenda_settings: {
+        Row: {
+          barbershop_id: string
+          business_hours: Json
+          slot_duration_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          barbershop_id: string
+          business_hours?: Json
+          slot_duration_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          barbershop_id?: string
+          business_hours?: Json
+          slot_duration_minutes?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agenda_settings_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: true
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           barbershop_id: string
@@ -22,7 +51,9 @@ export type Database = {
           duration_minutes: number
           id: string
           notes: string | null
+          professional_id: string | null
           scheduled_at: string
+          service_id: string | null
           status: string
           title: string
           updated_at: string
@@ -34,7 +65,9 @@ export type Database = {
           duration_minutes?: number
           id?: string
           notes?: string | null
+          professional_id?: string | null
           scheduled_at: string
+          service_id?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -46,7 +79,9 @@ export type Database = {
           duration_minutes?: number
           id?: string
           notes?: string | null
+          professional_id?: string | null
           scheduled_at?: string
+          service_id?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -57,6 +92,20 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
             referencedColumns: ["id"]
           },
         ]
@@ -243,8 +292,12 @@ export type Database = {
       }
       customers: {
         Row: {
+          address: string | null
+          ai_summary: string | null
+          ai_summary_updated_at: string | null
           archived_at: string | null
           barbershop_id: string
+          birth_date: string | null
           created_at: string
           email: string | null
           id: string
@@ -260,8 +313,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          address?: string | null
+          ai_summary?: string | null
+          ai_summary_updated_at?: string | null
           archived_at?: string | null
           barbershop_id: string
+          birth_date?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -277,8 +334,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          address?: string | null
+          ai_summary?: string | null
+          ai_summary_updated_at?: string | null
           archived_at?: string | null
           barbershop_id?: string
+          birth_date?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -684,6 +745,59 @@ export type Database = {
           },
         ]
       }
+      professionals: {
+        Row: {
+          active: boolean
+          barbershop_id: string
+          bio: string | null
+          color: string
+          commission_percent: number | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          barbershop_id: string
+          bio?: string | null
+          color?: string
+          commission_percent?: number | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          barbershop_id?: string
+          bio?: string | null
+          color?: string
+          commission_percent?: number | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professionals_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quick_replies: {
         Row: {
           actions: Json
@@ -715,6 +829,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "quick_replies_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          active: boolean
+          barbershop_id: string
+          category: string | null
+          created_at: string
+          description: string | null
+          duration_minutes: number
+          id: string
+          name: string
+          price: number | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          barbershop_id: string
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          name: string
+          price?: number | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          barbershop_id?: string
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          name?: string
+          price?: number | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_barbershop_id_fkey"
             columns: ["barbershop_id"]
             isOneToOne: false
             referencedRelation: "barbershops"
@@ -903,6 +1067,7 @@ export type Database = {
           phone: string | null
           phone_number_id: string | null
           provider: string
+          shared_with_ai: boolean
           status: string
           uazapi_instance_id: string | null
           uazapi_instance_token: string | null
@@ -923,6 +1088,7 @@ export type Database = {
           phone?: string | null
           phone_number_id?: string | null
           provider?: string
+          shared_with_ai?: boolean
           status?: string
           uazapi_instance_id?: string | null
           uazapi_instance_token?: string | null
@@ -943,6 +1109,7 @@ export type Database = {
           phone?: string | null
           phone_number_id?: string | null
           provider?: string
+          shared_with_ai?: boolean
           status?: string
           uazapi_instance_id?: string | null
           uazapi_instance_token?: string | null
