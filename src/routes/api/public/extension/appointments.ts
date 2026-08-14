@@ -10,6 +10,8 @@ const createSchema = z.object({
   title: z.string().trim().min(1).max(160),
   notes: z.string().trim().max(2000).optional(),
   customer_id: z.string().uuid().optional().nullable(),
+  professional_id: z.string().uuid().optional().nullable(),
+  service_id: z.string().uuid().optional().nullable(),
   scheduled_at: z.string().min(4).max(40),
   duration_minutes: z.number().int().min(5).max(480).optional(),
 });
@@ -31,7 +33,9 @@ export const Route = createFileRoute("/api/public/extension/appointments")({
 
         let query = supabaseAdmin
           .from("appointments")
-          .select("id, title, notes, customer_id, scheduled_at, duration_minutes, status, customers(name, phone)")
+          .select(
+            "id, title, notes, customer_id, professional_id, service_id, scheduled_at, duration_minutes, status, customers(name, phone)",
+          )
           .eq("barbershop_id", auth.token.barbershop_id)
           .neq("status", "canceled")
           .order("scheduled_at", { ascending: true });
@@ -62,10 +66,12 @@ export const Route = createFileRoute("/api/public/extension/appointments")({
             title: parsed.data.title,
             notes: parsed.data.notes ?? null,
             customer_id: parsed.data.customer_id ?? null,
+            professional_id: parsed.data.professional_id ?? null,
+            service_id: parsed.data.service_id ?? null,
             scheduled_at: parsed.data.scheduled_at,
             duration_minutes: parsed.data.duration_minutes ?? 30,
           })
-          .select("id, title, notes, customer_id, scheduled_at, duration_minutes, status")
+          .select("id, title, notes, customer_id, professional_id, service_id, scheduled_at, duration_minutes, status")
           .single();
         if (error) {
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
