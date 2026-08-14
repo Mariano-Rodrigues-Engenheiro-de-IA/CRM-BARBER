@@ -6,8 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { AgendaSettingsDialog, type AgendaSettings } from "@/components/agenda-settings-dialog";
-import { ProfessionalsServicesDialog, type Professional, type Service } from "@/components/professionals-services-dialog";
+import { type AgendaSettings } from "@/components/agenda-settings-dialog";
+import { type Professional, type Service } from "@/components/professionals-services-dialog";
 
 type Api = (path: string, opts?: RequestInit) => Promise<any>;
 
@@ -48,8 +48,6 @@ export function AgendaView({ api }: { api: Api }) {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [loading, setLoading] = useState(true);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [teamOpen, setTeamOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [formPrefill, setFormPrefill] = useState<{ time: string; professionalId: string | null } | null>(null);
@@ -217,12 +215,18 @@ export function AgendaView({ api }: { api: Api }) {
           </span>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setTeamOpen(true)}>
+          <a
+            href="/painel?section=configuracoes"
+            className="inline-flex items-center rounded-lg border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50"
+          >
             Profissionais e serviços
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}>
+          </a>
+          <a
+            href="/painel?section=configuracoes"
+            className="inline-flex items-center rounded-lg border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50"
+          >
             ⚙️ Configurações
-          </Button>
+          </a>
         </div>
       </div>
 
@@ -233,9 +237,12 @@ export function AgendaView({ api }: { api: Api }) {
           <p className="text-sm text-neutral-500">
             {hours?.closed ? "Fechado nesse dia da semana." : "Horário de funcionamento não configurado."}
           </p>
-          <Button variant="outline" size="sm" className="mt-3" onClick={() => setSettingsOpen(true)}>
+          <a
+            href="/painel?section=configuracoes"
+            className="mt-3 inline-flex items-center rounded-lg border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50"
+          >
             Configurar horário de funcionamento
-          </Button>
+          </a>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-neutral-300 bg-white">
@@ -319,8 +326,7 @@ export function AgendaView({ api }: { api: Api }) {
         onMarkDone={editing && editing.status === "scheduled" ? () => handleMarkDone(editing) : undefined}
       />
 
-      <AgendaSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} api={api} onSaved={setSettings} />
-      <ProfessionalsServicesDialog open={teamOpen} onOpenChange={setTeamOpen} api={api} onChanged={loadProfessionals} />
+
     </div>
   );
 }

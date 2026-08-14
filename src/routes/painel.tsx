@@ -20,6 +20,9 @@ import { FREE_LIMITS, PROMO_PRICE_LABEL, type BillingStatus } from "@/lib/billin
 
 import { useConfirm } from "@/components/confirm-dialog";
 import { AgendaView } from "@/components/agenda-view";
+import { ServicesTab, ProfessionalsTab } from "@/components/professionals-services-dialog";
+import { GeneralSettingsTab } from "@/components/agenda-settings-dialog";
+import { CustomersTab } from "@/components/customers-tab";
 import { toast } from "sonner";
 
 
@@ -234,9 +237,11 @@ function nudgeExtensionPoll() {
   window.postMessage({ __crm: "poll_now_v180" }, window.location.origin);
 }
 
-type Section = "agenda" | "assinantes" | "funis" | "disparo" | "respostas" | "equipe" | "conexao" | "templates";
+type Section = "agenda" | "configuracoes" | "assinantes" | "funis" | "disparo" | "respostas" | "equipe" | "conexao" | "templates";
 /** Sub-abas da sanfona de Assinaturas. */
 type AssinTab = "visao" | "assinantes";
+/** Sub-abas da sanfona de Configurações. */
+type ConfigTab = "servicos" | "profissionais" | "clientes" | "gerais";
 
 function IconUsers() {
   return (
@@ -351,11 +356,12 @@ function Painel() {
   const initialSection: Section = (() => {
     if (typeof window === "undefined") return "assinantes";
     const s = new URLSearchParams(window.location.search).get("section");
-    if (s === "agenda" || s === "equipe" || s === "conexao" || s === "respostas" || s === "funis" || s === "disparo" || s === "templates") return s;
+    if (s === "agenda" || s === "configuracoes" || s === "equipe" || s === "conexao" || s === "respostas" || s === "funis" || s === "disparo" || s === "templates") return s;
     return "assinantes";
   })();
   const [section, setSection] = useState<Section>(initialSection);
   const [assinTab, setAssinTab] = useState<AssinTab>("assinantes");
+  const [configTab, setConfigTab] = useState<ConfigTab>("servicos");
   const [assinOpen, setAssinOpen] = useState(false);
   // Menu lateral colapsável — recolhido por padrão (dá mais espaço pro
   // sistema), a menos que o usuário já tenha expandido explicitamente
@@ -473,9 +479,20 @@ function Painel() {
     key: Section;
     label: string;
     icon: React.ReactNode;
-    children?: Array<{ key: AssinTab; label: string }>;
+    children?: Array<{ key: AssinTab | ConfigTab; label: string }>;
   }> = [
     { key: "agenda", label: "Agenda", icon: <IconCalendar /> },
+    {
+      key: "configuracoes",
+      label: "Configurações",
+      icon: <IconGear />,
+      children: [
+        { key: "servicos", label: "Serviços" },
+        { key: "profissionais", label: "Profissionais" },
+        { key: "clientes", label: "Clientes" },
+        { key: "gerais", label: "Gerais" },
+      ],
+    },
     {
       key: "assinantes",
       label: "Assinaturas",
@@ -661,6 +678,43 @@ function Painel() {
             </header>
             <main className="px-4 py-4">
               <AgendaView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+            </main>
+          </>
+        )}
+
+        {section === "configuracoes" && token && (
+          <>
+            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
+              <div className="flex items-center gap-3 px-5 py-2">
+                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
+                  Configurações
+                </h1>
+              </div>
+            </header>
+            <main className="px-4 py-4">
+              <div className="mb-4 flex gap-2">
+                {([
+                  { key: "servicos", label: "Serviços" },
+                  { key: "profissionais", label: "Profissionais" },
+                  { key: "clientes", label: "Clientes" },
+                  { key: "gerais", label: "Gerais" },
+                ] as { key: ConfigTab; label: string }[]).map((t) => (
+                  <button
+                    key={t.key}
+                    onClick={() => setConfigTab(t.key)}
+                    className={
+                      "rounded-lg px-3 py-1.5 text-sm font-medium " +
+                      (configTab === t.key ? "bg-brand text-white" : "border border-neutral-300 text-neutral-600 hover:bg-neutral-50")
+                    }
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              {configTab === "servicos" && <ServicesTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
+              {configTab === "profissionais" && <ProfessionalsTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
+              {configTab === "clientes" && <CustomersTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
+              {configTab === "gerais" && <GeneralSettingsTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
             </main>
           </>
         )}
