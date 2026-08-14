@@ -19,12 +19,15 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AssinarRetornoRouteImport } from './routes/assinar.retorno'
 import { Route as AdminWhatsappRouteImport } from './routes/admin.whatsapp'
 import { Route as AdminTokensRouteImport } from './routes/admin.tokens'
+import { Route as AdminClientsRouteImport } from './routes/admin.clients'
 import { Route as ApiPublicSignupRouteImport } from './routes/api/public/signup'
 import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp.webhook'
 import { Route as ApiPublicWhatsappSignupCallbackRouteImport } from './routes/api/public/whatsapp.signup-callback'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksDispatchJobsRouteImport } from './routes/api/public/hooks/dispatch-jobs'
+import { Route as ApiPublicExtensionServicesRouteImport } from './routes/api/public/extension/services'
 import { Route as ApiPublicExtensionQuickRepliesRouteImport } from './routes/api/public/extension/quick-replies'
+import { Route as ApiPublicExtensionProfessionalsRouteImport } from './routes/api/public/extension/professionals'
 import { Route as ApiPublicExtensionPairRouteImport } from './routes/api/public/extension/pair'
 import { Route as ApiPublicExtensionMetaRouteImport } from './routes/api/public/extension/meta'
 import { Route as ApiPublicExtensionFunnelsRouteImport } from './routes/api/public/extension/funnels'
@@ -33,6 +36,8 @@ import { Route as ApiPublicExtensionCustomersRouteImport } from './routes/api/pu
 import { Route as ApiPublicExtensionCampaignsRouteImport } from './routes/api/public/extension/campaigns'
 import { Route as ApiPublicExtensionBillingRouteImport } from './routes/api/public/extension/billing'
 import { Route as ApiPublicExtensionAppointmentsRouteImport } from './routes/api/public/extension/appointments'
+import { Route as ApiPublicExtensionAgendaSettingsRouteImport } from './routes/api/public/extension/agenda-settings'
+import { Route as ApiPublicAiUpdateSummaryRouteImport } from './routes/api/public/ai/update-summary'
 import { Route as ApiPublicAiMoveLeadRouteImport } from './routes/api/public/ai/move-lead'
 import { Route as ApiPublicAiFunnelsRouteImport } from './routes/api/public/ai/funnels'
 import { Route as ApiPublicAdminIssueTokenRouteImport } from './routes/api/public/admin/issue-token'
@@ -44,8 +49,10 @@ import { Route as ApiPublicExtensionWhatsappDisconnectRouteImport } from './rout
 import { Route as ApiPublicExtensionWhatsappConnectRouteImport } from './routes/api/public/extension/whatsapp.connect'
 import { Route as ApiPublicExtensionWaSyncRouteImport } from './routes/api/public/extension/wa.sync'
 import { Route as ApiPublicExtensionWaDataRouteImport } from './routes/api/public/extension/wa.data'
+import { Route as ApiPublicExtensionServicesIdRouteImport } from './routes/api/public/extension/services.$id'
 import { Route as ApiPublicExtensionQuickRepliesUploadRouteImport } from './routes/api/public/extension/quick-replies.upload'
 import { Route as ApiPublicExtensionQuickRepliesIdRouteImport } from './routes/api/public/extension/quick-replies.$id'
+import { Route as ApiPublicExtensionProfessionalsIdRouteImport } from './routes/api/public/extension/professionals.$id'
 import { Route as ApiPublicExtensionJobsNextRouteImport } from './routes/api/public/extension/jobs.next'
 import { Route as ApiPublicExtensionJobsIdRouteImport } from './routes/api/public/extension/jobs.$id'
 import { Route as ApiPublicExtensionFunnelsIdRouteImport } from './routes/api/public/extension/funnels.$id'
@@ -105,6 +112,11 @@ const AdminTokensRoute = AdminTokensRouteImport.update({
   path: '/admin/tokens',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminClientsRoute = AdminClientsRouteImport.update({
+  id: '/admin/clients',
+  path: '/admin/clients',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicSignupRoute = ApiPublicSignupRouteImport.update({
   id: '/api/public/signup',
   path: '/api/public/signup',
@@ -134,10 +146,22 @@ const ApiPublicHooksDispatchJobsRoute =
     path: '/api/public/hooks/dispatch-jobs',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicExtensionServicesRoute =
+  ApiPublicExtensionServicesRouteImport.update({
+    id: '/api/public/extension/services',
+    path: '/api/public/extension/services',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicExtensionQuickRepliesRoute =
   ApiPublicExtensionQuickRepliesRouteImport.update({
     id: '/api/public/extension/quick-replies',
     path: '/api/public/extension/quick-replies',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionProfessionalsRoute =
+  ApiPublicExtensionProfessionalsRouteImport.update({
+    id: '/api/public/extension/professionals',
+    path: '/api/public/extension/professionals',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicExtensionPairRoute = ApiPublicExtensionPairRouteImport.update({
@@ -184,6 +208,18 @@ const ApiPublicExtensionAppointmentsRoute =
   ApiPublicExtensionAppointmentsRouteImport.update({
     id: '/api/public/extension/appointments',
     path: '/api/public/extension/appointments',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionAgendaSettingsRoute =
+  ApiPublicExtensionAgendaSettingsRouteImport.update({
+    id: '/api/public/extension/agenda-settings',
+    path: '/api/public/extension/agenda-settings',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicAiUpdateSummaryRoute =
+  ApiPublicAiUpdateSummaryRouteImport.update({
+    id: '/api/public/ai/update-summary',
+    path: '/api/public/ai/update-summary',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicAiMoveLeadRoute = ApiPublicAiMoveLeadRouteImport.update({
@@ -250,6 +286,12 @@ const ApiPublicExtensionWaDataRoute =
     path: '/api/public/extension/wa/data',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicExtensionServicesIdRoute =
+  ApiPublicExtensionServicesIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicExtensionServicesRoute,
+  } as any)
 const ApiPublicExtensionQuickRepliesUploadRoute =
   ApiPublicExtensionQuickRepliesUploadRouteImport.update({
     id: '/upload',
@@ -261,6 +303,12 @@ const ApiPublicExtensionQuickRepliesIdRoute =
     id: '/$id',
     path: '/$id',
     getParentRoute: () => ApiPublicExtensionQuickRepliesRoute,
+  } as any)
+const ApiPublicExtensionProfessionalsIdRoute =
+  ApiPublicExtensionProfessionalsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicExtensionProfessionalsRoute,
   } as any)
 const ApiPublicExtensionJobsNextRoute =
   ApiPublicExtensionJobsNextRouteImport.update({
@@ -319,6 +367,7 @@ export interface FileRoutesByFullPath {
   '/link': typeof LinkRoute
   '/painel': typeof PainelRoute
   '/politicas': typeof PoliticasRoute
+  '/admin/clients': typeof AdminClientsRoute
   '/admin/tokens': typeof AdminTokensRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/assinar/retorno': typeof AssinarRetornoRoute
@@ -326,6 +375,8 @@ export interface FileRoutesByFullPath {
   '/api/public/admin/issue-token': typeof ApiPublicAdminIssueTokenRoute
   '/api/public/ai/funnels': typeof ApiPublicAiFunnelsRoute
   '/api/public/ai/move-lead': typeof ApiPublicAiMoveLeadRoute
+  '/api/public/ai/update-summary': typeof ApiPublicAiUpdateSummaryRoute
+  '/api/public/extension/agenda-settings': typeof ApiPublicExtensionAgendaSettingsRoute
   '/api/public/extension/appointments': typeof ApiPublicExtensionAppointmentsRouteWithChildren
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
@@ -334,7 +385,9 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRouteWithChildren
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
+  '/api/public/extension/professionals': typeof ApiPublicExtensionProfessionalsRouteWithChildren
   '/api/public/extension/quick-replies': typeof ApiPublicExtensionQuickRepliesRouteWithChildren
+  '/api/public/extension/services': typeof ApiPublicExtensionServicesRouteWithChildren
   '/api/public/hooks/dispatch-jobs': typeof ApiPublicHooksDispatchJobsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
@@ -347,8 +400,10 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/funnels/$id': typeof ApiPublicExtensionFunnelsIdRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
+  '/api/public/extension/professionals/$id': typeof ApiPublicExtensionProfessionalsIdRoute
   '/api/public/extension/quick-replies/$id': typeof ApiPublicExtensionQuickRepliesIdRoute
   '/api/public/extension/quick-replies/upload': typeof ApiPublicExtensionQuickRepliesUploadRoute
+  '/api/public/extension/services/$id': typeof ApiPublicExtensionServicesIdRoute
   '/api/public/extension/wa/data': typeof ApiPublicExtensionWaDataRoute
   '/api/public/extension/wa/sync': typeof ApiPublicExtensionWaSyncRoute
   '/api/public/extension/whatsapp/connect': typeof ApiPublicExtensionWhatsappConnectRoute
@@ -366,6 +421,7 @@ export interface FileRoutesByTo {
   '/link': typeof LinkRoute
   '/painel': typeof PainelRoute
   '/politicas': typeof PoliticasRoute
+  '/admin/clients': typeof AdminClientsRoute
   '/admin/tokens': typeof AdminTokensRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/assinar/retorno': typeof AssinarRetornoRoute
@@ -373,6 +429,8 @@ export interface FileRoutesByTo {
   '/api/public/admin/issue-token': typeof ApiPublicAdminIssueTokenRoute
   '/api/public/ai/funnels': typeof ApiPublicAiFunnelsRoute
   '/api/public/ai/move-lead': typeof ApiPublicAiMoveLeadRoute
+  '/api/public/ai/update-summary': typeof ApiPublicAiUpdateSummaryRoute
+  '/api/public/extension/agenda-settings': typeof ApiPublicExtensionAgendaSettingsRoute
   '/api/public/extension/appointments': typeof ApiPublicExtensionAppointmentsRouteWithChildren
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
@@ -381,7 +439,9 @@ export interface FileRoutesByTo {
   '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRouteWithChildren
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
+  '/api/public/extension/professionals': typeof ApiPublicExtensionProfessionalsRouteWithChildren
   '/api/public/extension/quick-replies': typeof ApiPublicExtensionQuickRepliesRouteWithChildren
+  '/api/public/extension/services': typeof ApiPublicExtensionServicesRouteWithChildren
   '/api/public/hooks/dispatch-jobs': typeof ApiPublicHooksDispatchJobsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
@@ -394,8 +454,10 @@ export interface FileRoutesByTo {
   '/api/public/extension/funnels/$id': typeof ApiPublicExtensionFunnelsIdRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
+  '/api/public/extension/professionals/$id': typeof ApiPublicExtensionProfessionalsIdRoute
   '/api/public/extension/quick-replies/$id': typeof ApiPublicExtensionQuickRepliesIdRoute
   '/api/public/extension/quick-replies/upload': typeof ApiPublicExtensionQuickRepliesUploadRoute
+  '/api/public/extension/services/$id': typeof ApiPublicExtensionServicesIdRoute
   '/api/public/extension/wa/data': typeof ApiPublicExtensionWaDataRoute
   '/api/public/extension/wa/sync': typeof ApiPublicExtensionWaSyncRoute
   '/api/public/extension/whatsapp/connect': typeof ApiPublicExtensionWhatsappConnectRoute
@@ -414,6 +476,7 @@ export interface FileRoutesById {
   '/link': typeof LinkRoute
   '/painel': typeof PainelRoute
   '/politicas': typeof PoliticasRoute
+  '/admin/clients': typeof AdminClientsRoute
   '/admin/tokens': typeof AdminTokensRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/assinar/retorno': typeof AssinarRetornoRoute
@@ -421,6 +484,8 @@ export interface FileRoutesById {
   '/api/public/admin/issue-token': typeof ApiPublicAdminIssueTokenRoute
   '/api/public/ai/funnels': typeof ApiPublicAiFunnelsRoute
   '/api/public/ai/move-lead': typeof ApiPublicAiMoveLeadRoute
+  '/api/public/ai/update-summary': typeof ApiPublicAiUpdateSummaryRoute
+  '/api/public/extension/agenda-settings': typeof ApiPublicExtensionAgendaSettingsRoute
   '/api/public/extension/appointments': typeof ApiPublicExtensionAppointmentsRouteWithChildren
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
@@ -429,7 +494,9 @@ export interface FileRoutesById {
   '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRouteWithChildren
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
+  '/api/public/extension/professionals': typeof ApiPublicExtensionProfessionalsRouteWithChildren
   '/api/public/extension/quick-replies': typeof ApiPublicExtensionQuickRepliesRouteWithChildren
+  '/api/public/extension/services': typeof ApiPublicExtensionServicesRouteWithChildren
   '/api/public/hooks/dispatch-jobs': typeof ApiPublicHooksDispatchJobsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
@@ -442,8 +509,10 @@ export interface FileRoutesById {
   '/api/public/extension/funnels/$id': typeof ApiPublicExtensionFunnelsIdRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
+  '/api/public/extension/professionals/$id': typeof ApiPublicExtensionProfessionalsIdRoute
   '/api/public/extension/quick-replies/$id': typeof ApiPublicExtensionQuickRepliesIdRoute
   '/api/public/extension/quick-replies/upload': typeof ApiPublicExtensionQuickRepliesUploadRoute
+  '/api/public/extension/services/$id': typeof ApiPublicExtensionServicesIdRoute
   '/api/public/extension/wa/data': typeof ApiPublicExtensionWaDataRoute
   '/api/public/extension/wa/sync': typeof ApiPublicExtensionWaSyncRoute
   '/api/public/extension/whatsapp/connect': typeof ApiPublicExtensionWhatsappConnectRoute
@@ -463,6 +532,7 @@ export interface FileRouteTypes {
     | '/link'
     | '/painel'
     | '/politicas'
+    | '/admin/clients'
     | '/admin/tokens'
     | '/admin/whatsapp'
     | '/assinar/retorno'
@@ -470,6 +540,8 @@ export interface FileRouteTypes {
     | '/api/public/admin/issue-token'
     | '/api/public/ai/funnels'
     | '/api/public/ai/move-lead'
+    | '/api/public/ai/update-summary'
+    | '/api/public/extension/agenda-settings'
     | '/api/public/extension/appointments'
     | '/api/public/extension/billing'
     | '/api/public/extension/campaigns'
@@ -478,7 +550,9 @@ export interface FileRouteTypes {
     | '/api/public/extension/funnels'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
+    | '/api/public/extension/professionals'
     | '/api/public/extension/quick-replies'
+    | '/api/public/extension/services'
     | '/api/public/hooks/dispatch-jobs'
     | '/api/public/payments/webhook'
     | '/api/public/whatsapp/signup-callback'
@@ -491,8 +565,10 @@ export interface FileRouteTypes {
     | '/api/public/extension/funnels/$id'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
+    | '/api/public/extension/professionals/$id'
     | '/api/public/extension/quick-replies/$id'
     | '/api/public/extension/quick-replies/upload'
+    | '/api/public/extension/services/$id'
     | '/api/public/extension/wa/data'
     | '/api/public/extension/wa/sync'
     | '/api/public/extension/whatsapp/connect'
@@ -510,6 +586,7 @@ export interface FileRouteTypes {
     | '/link'
     | '/painel'
     | '/politicas'
+    | '/admin/clients'
     | '/admin/tokens'
     | '/admin/whatsapp'
     | '/assinar/retorno'
@@ -517,6 +594,8 @@ export interface FileRouteTypes {
     | '/api/public/admin/issue-token'
     | '/api/public/ai/funnels'
     | '/api/public/ai/move-lead'
+    | '/api/public/ai/update-summary'
+    | '/api/public/extension/agenda-settings'
     | '/api/public/extension/appointments'
     | '/api/public/extension/billing'
     | '/api/public/extension/campaigns'
@@ -525,7 +604,9 @@ export interface FileRouteTypes {
     | '/api/public/extension/funnels'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
+    | '/api/public/extension/professionals'
     | '/api/public/extension/quick-replies'
+    | '/api/public/extension/services'
     | '/api/public/hooks/dispatch-jobs'
     | '/api/public/payments/webhook'
     | '/api/public/whatsapp/signup-callback'
@@ -538,8 +619,10 @@ export interface FileRouteTypes {
     | '/api/public/extension/funnels/$id'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
+    | '/api/public/extension/professionals/$id'
     | '/api/public/extension/quick-replies/$id'
     | '/api/public/extension/quick-replies/upload'
+    | '/api/public/extension/services/$id'
     | '/api/public/extension/wa/data'
     | '/api/public/extension/wa/sync'
     | '/api/public/extension/whatsapp/connect'
@@ -557,6 +640,7 @@ export interface FileRouteTypes {
     | '/link'
     | '/painel'
     | '/politicas'
+    | '/admin/clients'
     | '/admin/tokens'
     | '/admin/whatsapp'
     | '/assinar/retorno'
@@ -564,6 +648,8 @@ export interface FileRouteTypes {
     | '/api/public/admin/issue-token'
     | '/api/public/ai/funnels'
     | '/api/public/ai/move-lead'
+    | '/api/public/ai/update-summary'
+    | '/api/public/extension/agenda-settings'
     | '/api/public/extension/appointments'
     | '/api/public/extension/billing'
     | '/api/public/extension/campaigns'
@@ -572,7 +658,9 @@ export interface FileRouteTypes {
     | '/api/public/extension/funnels'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
+    | '/api/public/extension/professionals'
     | '/api/public/extension/quick-replies'
+    | '/api/public/extension/services'
     | '/api/public/hooks/dispatch-jobs'
     | '/api/public/payments/webhook'
     | '/api/public/whatsapp/signup-callback'
@@ -585,8 +673,10 @@ export interface FileRouteTypes {
     | '/api/public/extension/funnels/$id'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
+    | '/api/public/extension/professionals/$id'
     | '/api/public/extension/quick-replies/$id'
     | '/api/public/extension/quick-replies/upload'
+    | '/api/public/extension/services/$id'
     | '/api/public/extension/wa/data'
     | '/api/public/extension/wa/sync'
     | '/api/public/extension/whatsapp/connect'
@@ -605,12 +695,15 @@ export interface RootRouteChildren {
   LinkRoute: typeof LinkRoute
   PainelRoute: typeof PainelRoute
   PoliticasRoute: typeof PoliticasRoute
+  AdminClientsRoute: typeof AdminClientsRoute
   AdminTokensRoute: typeof AdminTokensRoute
   AdminWhatsappRoute: typeof AdminWhatsappRoute
   ApiPublicSignupRoute: typeof ApiPublicSignupRoute
   ApiPublicAdminIssueTokenRoute: typeof ApiPublicAdminIssueTokenRoute
   ApiPublicAiFunnelsRoute: typeof ApiPublicAiFunnelsRoute
   ApiPublicAiMoveLeadRoute: typeof ApiPublicAiMoveLeadRoute
+  ApiPublicAiUpdateSummaryRoute: typeof ApiPublicAiUpdateSummaryRoute
+  ApiPublicExtensionAgendaSettingsRoute: typeof ApiPublicExtensionAgendaSettingsRoute
   ApiPublicExtensionAppointmentsRoute: typeof ApiPublicExtensionAppointmentsRouteWithChildren
   ApiPublicExtensionBillingRoute: typeof ApiPublicExtensionBillingRoute
   ApiPublicExtensionCampaignsRoute: typeof ApiPublicExtensionCampaignsRouteWithChildren
@@ -619,7 +712,9 @@ export interface RootRouteChildren {
   ApiPublicExtensionFunnelsRoute: typeof ApiPublicExtensionFunnelsRouteWithChildren
   ApiPublicExtensionMetaRoute: typeof ApiPublicExtensionMetaRoute
   ApiPublicExtensionPairRoute: typeof ApiPublicExtensionPairRoute
+  ApiPublicExtensionProfessionalsRoute: typeof ApiPublicExtensionProfessionalsRouteWithChildren
   ApiPublicExtensionQuickRepliesRoute: typeof ApiPublicExtensionQuickRepliesRouteWithChildren
+  ApiPublicExtensionServicesRoute: typeof ApiPublicExtensionServicesRouteWithChildren
   ApiPublicHooksDispatchJobsRoute: typeof ApiPublicHooksDispatchJobsRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiPublicWhatsappSignupCallbackRoute: typeof ApiPublicWhatsappSignupCallbackRoute
@@ -708,6 +803,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminTokensRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/clients': {
+      id: '/admin/clients'
+      path: '/admin/clients'
+      fullPath: '/admin/clients'
+      preLoaderRoute: typeof AdminClientsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/signup': {
       id: '/api/public/signup'
       path: '/api/public/signup'
@@ -743,11 +845,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksDispatchJobsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/extension/services': {
+      id: '/api/public/extension/services'
+      path: '/api/public/extension/services'
+      fullPath: '/api/public/extension/services'
+      preLoaderRoute: typeof ApiPublicExtensionServicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/extension/quick-replies': {
       id: '/api/public/extension/quick-replies'
       path: '/api/public/extension/quick-replies'
       fullPath: '/api/public/extension/quick-replies'
       preLoaderRoute: typeof ApiPublicExtensionQuickRepliesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/professionals': {
+      id: '/api/public/extension/professionals'
+      path: '/api/public/extension/professionals'
+      fullPath: '/api/public/extension/professionals'
+      preLoaderRoute: typeof ApiPublicExtensionProfessionalsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/extension/pair': {
@@ -804,6 +920,20 @@ declare module '@tanstack/react-router' {
       path: '/api/public/extension/appointments'
       fullPath: '/api/public/extension/appointments'
       preLoaderRoute: typeof ApiPublicExtensionAppointmentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/agenda-settings': {
+      id: '/api/public/extension/agenda-settings'
+      path: '/api/public/extension/agenda-settings'
+      fullPath: '/api/public/extension/agenda-settings'
+      preLoaderRoute: typeof ApiPublicExtensionAgendaSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/ai/update-summary': {
+      id: '/api/public/ai/update-summary'
+      path: '/api/public/ai/update-summary'
+      fullPath: '/api/public/ai/update-summary'
+      preLoaderRoute: typeof ApiPublicAiUpdateSummaryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/ai/move-lead': {
@@ -883,6 +1013,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensionWaDataRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/extension/services/$id': {
+      id: '/api/public/extension/services/$id'
+      path: '/$id'
+      fullPath: '/api/public/extension/services/$id'
+      preLoaderRoute: typeof ApiPublicExtensionServicesIdRouteImport
+      parentRoute: typeof ApiPublicExtensionServicesRoute
+    }
     '/api/public/extension/quick-replies/upload': {
       id: '/api/public/extension/quick-replies/upload'
       path: '/upload'
@@ -896,6 +1033,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/public/extension/quick-replies/$id'
       preLoaderRoute: typeof ApiPublicExtensionQuickRepliesIdRouteImport
       parentRoute: typeof ApiPublicExtensionQuickRepliesRoute
+    }
+    '/api/public/extension/professionals/$id': {
+      id: '/api/public/extension/professionals/$id'
+      path: '/$id'
+      fullPath: '/api/public/extension/professionals/$id'
+      preLoaderRoute: typeof ApiPublicExtensionProfessionalsIdRouteImport
+      parentRoute: typeof ApiPublicExtensionProfessionalsRoute
     }
     '/api/public/extension/jobs/next': {
       id: '/api/public/extension/jobs/next'
@@ -1042,6 +1186,21 @@ const ApiPublicExtensionFunnelsRouteWithChildren =
     ApiPublicExtensionFunnelsRouteChildren,
   )
 
+interface ApiPublicExtensionProfessionalsRouteChildren {
+  ApiPublicExtensionProfessionalsIdRoute: typeof ApiPublicExtensionProfessionalsIdRoute
+}
+
+const ApiPublicExtensionProfessionalsRouteChildren: ApiPublicExtensionProfessionalsRouteChildren =
+  {
+    ApiPublicExtensionProfessionalsIdRoute:
+      ApiPublicExtensionProfessionalsIdRoute,
+  }
+
+const ApiPublicExtensionProfessionalsRouteWithChildren =
+  ApiPublicExtensionProfessionalsRoute._addFileChildren(
+    ApiPublicExtensionProfessionalsRouteChildren,
+  )
+
 interface ApiPublicExtensionQuickRepliesRouteChildren {
   ApiPublicExtensionQuickRepliesIdRoute: typeof ApiPublicExtensionQuickRepliesIdRoute
   ApiPublicExtensionQuickRepliesUploadRoute: typeof ApiPublicExtensionQuickRepliesUploadRoute
@@ -1060,6 +1219,20 @@ const ApiPublicExtensionQuickRepliesRouteWithChildren =
     ApiPublicExtensionQuickRepliesRouteChildren,
   )
 
+interface ApiPublicExtensionServicesRouteChildren {
+  ApiPublicExtensionServicesIdRoute: typeof ApiPublicExtensionServicesIdRoute
+}
+
+const ApiPublicExtensionServicesRouteChildren: ApiPublicExtensionServicesRouteChildren =
+  {
+    ApiPublicExtensionServicesIdRoute: ApiPublicExtensionServicesIdRoute,
+  }
+
+const ApiPublicExtensionServicesRouteWithChildren =
+  ApiPublicExtensionServicesRoute._addFileChildren(
+    ApiPublicExtensionServicesRouteChildren,
+  )
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AssinarRoute: AssinarRouteWithChildren,
@@ -1068,12 +1241,15 @@ const rootRouteChildren: RootRouteChildren = {
   LinkRoute: LinkRoute,
   PainelRoute: PainelRoute,
   PoliticasRoute: PoliticasRoute,
+  AdminClientsRoute: AdminClientsRoute,
   AdminTokensRoute: AdminTokensRoute,
   AdminWhatsappRoute: AdminWhatsappRoute,
   ApiPublicSignupRoute: ApiPublicSignupRoute,
   ApiPublicAdminIssueTokenRoute: ApiPublicAdminIssueTokenRoute,
   ApiPublicAiFunnelsRoute: ApiPublicAiFunnelsRoute,
   ApiPublicAiMoveLeadRoute: ApiPublicAiMoveLeadRoute,
+  ApiPublicAiUpdateSummaryRoute: ApiPublicAiUpdateSummaryRoute,
+  ApiPublicExtensionAgendaSettingsRoute: ApiPublicExtensionAgendaSettingsRoute,
   ApiPublicExtensionAppointmentsRoute:
     ApiPublicExtensionAppointmentsRouteWithChildren,
   ApiPublicExtensionBillingRoute: ApiPublicExtensionBillingRoute,
@@ -1086,8 +1262,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicExtensionFunnelsRoute: ApiPublicExtensionFunnelsRouteWithChildren,
   ApiPublicExtensionMetaRoute: ApiPublicExtensionMetaRoute,
   ApiPublicExtensionPairRoute: ApiPublicExtensionPairRoute,
+  ApiPublicExtensionProfessionalsRoute:
+    ApiPublicExtensionProfessionalsRouteWithChildren,
   ApiPublicExtensionQuickRepliesRoute:
     ApiPublicExtensionQuickRepliesRouteWithChildren,
+  ApiPublicExtensionServicesRoute: ApiPublicExtensionServicesRouteWithChildren,
   ApiPublicHooksDispatchJobsRoute: ApiPublicHooksDispatchJobsRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiPublicWhatsappSignupCallbackRoute: ApiPublicWhatsappSignupCallbackRoute,
