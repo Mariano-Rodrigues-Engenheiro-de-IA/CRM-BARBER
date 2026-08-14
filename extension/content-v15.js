@@ -3,7 +3,7 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.35.21";
+  const CRM_VERSION = "0.35.22";
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -1175,7 +1175,7 @@
       const raw = String(node.getAttribute("data-id") || "");
       const parts = raw.split("_");
       const candidate = parts.length >= 3 ? parts[1] : raw;
-      if (/@(c\.us|g\.us|lid)$/.test(candidate)) return candidate;
+      if (/@(c\.us|g\.us|lid|s\.whatsapp\.net)$/.test(candidate)) return candidate;
     }
     return null;
   }
@@ -1214,8 +1214,25 @@
     // Ler o cabeçalho é instantâneo e não carrega o wa-js. O motor interno só
     // é necessário para sincronizar e enviar mensagens; injetá-lo ao clicar no
     // funil era a origem do atraso e dos erros de módulos vistos no console.
-    return activeChatFromDom();
+    const dom = activeChatFromDom();
+    if (dom && (dom.wa_id || dom.phone)) return dom;
+
+    // Fallback determinístico: conversa nova/sem mensagens carregadas, ou o
+    // WhatsApp mudou o data-id das linhas — aí o DOM não devolve o wa_id e o
+    // envio falhava com "Contato sem telefone". A ponte lê o ID direto do
+    // ChatStore, que é a fonte de verdade.
+    const fromBridge = await askBridge("active_chat_v290", "active_chat_done_v290", {}, 8000);
+    if (fromBridge && (fromBridge.wa_id || fromBridge.phone)) {
+      return {
+        wa_id: fromBridge.wa_id || null,
+        phone: fromBridge.phone || null,
+        name: fromBridge.name || dom?.name || "Contato",
+        is_group: !!fromBridge.is_group,
+      };
+    }
+    return dom;
   }
+
 
   function crmToast(text, kind = "ok") {
     const el = document.createElement("div");
