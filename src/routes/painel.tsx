@@ -694,30 +694,14 @@ function Painel() {
             <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
               <div className="flex items-center gap-3 px-5 py-2">
                 <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
-                  Configurações
+                  {configTab === "servicos" && "Configurações · Serviços"}
+                  {configTab === "profissionais" && "Configurações · Profissionais"}
+                  {configTab === "clientes" && "Configurações · Clientes"}
+                  {configTab === "gerais" && "Configurações · Gerais"}
                 </h1>
               </div>
             </header>
             <main className="px-4 py-4">
-              <div className="mb-4 flex gap-2">
-                {([
-                  { key: "servicos", label: "Serviços" },
-                  { key: "profissionais", label: "Profissionais" },
-                  { key: "clientes", label: "Clientes" },
-                  { key: "gerais", label: "Gerais" },
-                ] as { key: ConfigTab; label: string }[]).map((t) => (
-                  <button
-                    key={t.key}
-                    onClick={() => setConfigTab(t.key)}
-                    className={
-                      "rounded-lg px-3 py-1.5 text-sm font-medium " +
-                      (configTab === t.key ? "bg-brand text-white" : "border border-neutral-300 text-neutral-600 hover:bg-neutral-50")
-                    }
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
               {configTab === "servicos" && <ServicesTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
               {configTab === "profissionais" && <ProfessionalsTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
               {configTab === "clientes" && <CustomersTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}

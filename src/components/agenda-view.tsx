@@ -214,20 +214,6 @@ export function AgendaView({ api }: { api: Api }) {
             {isToday && <span className="ml-1 text-brand">(hoje)</span>}
           </span>
         </div>
-        <div className="flex gap-2">
-          <a
-            href="/painel?section=configuracoes"
-            className="inline-flex items-center rounded-lg border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50"
-          >
-            Profissionais e serviços
-          </a>
-          <a
-            href="/painel?section=configuracoes"
-            className="inline-flex items-center rounded-lg border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50"
-          >
-            ⚙️ Configurações
-          </a>
-        </div>
       </div>
 
       {!settings ? (
@@ -235,14 +221,10 @@ export function AgendaView({ api }: { api: Api }) {
       ) : hours?.closed || slots.length === 0 ? (
         <div className="rounded-xl border border-neutral-300 bg-white p-8 text-center">
           <p className="text-sm text-neutral-500">
-            {hours?.closed ? "Fechado nesse dia da semana." : "Horário de funcionamento não configurado."}
+            {hours?.closed
+              ? "Fechado nesse dia da semana."
+              : "Horário de funcionamento não configurado. Configure em Configurações → Gerais."}
           </p>
-          <a
-            href="/painel?section=configuracoes"
-            className="mt-3 inline-flex items-center rounded-lg border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50"
-          >
-            Configurar horário de funcionamento
-          </a>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-neutral-300 bg-white">
