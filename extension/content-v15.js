@@ -1175,7 +1175,7 @@
       const raw = String(node.getAttribute("data-id") || "");
       const parts = raw.split("_");
       const candidate = parts.length >= 3 ? parts[1] : raw;
-      if (/@(c\.us|g\.us|lid)$/.test(candidate)) return candidate;
+      if (/@(c\.us|g\.us|lid|s\.whatsapp\.net)$/.test(candidate)) return candidate;
     }
     return null;
   }
