@@ -1092,6 +1092,22 @@ function CardDrawer({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  // Resumo gerado pela IA (projeto IA-BARBER-AGENDA) — busca separada,
+  // pra não pesar a lista geral de clientes com esse campo toda vez.
+  const [aiSummary, setAiSummary] = useState<{ text: string; updatedAt: string | null } | null>(null);
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isRealPhone(card.phone)) return;
+    setAiSummaryLoading(true);
+    api(`/api/public/extension/customers?phone=${encodeURIComponent(card.phone || "")}`)
+      .then((r) => {
+        const c = r?.customers?.[0];
+        if (c?.ai_summary) setAiSummary({ text: c.ai_summary, updatedAt: c.ai_summary_updated_at ?? null });
+      })
+      .finally(() => setAiSummaryLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [card.phone]);
 
   async function saveNotes() {
     setBusy(true);
@@ -1136,6 +1152,25 @@ function CardDrawer({
         <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-700">
           {isRealPhone(card.phone) ? card.phone : "sem telefone"}
         </div>
+
+        {aiSummaryLoading && (
+          <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-3 text-xs text-neutral-400">
+            Carregando resumo da IA...
+          </div>
+        )}
+        {aiSummary && (
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+            <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-blue-700">
+              <span>✨</span> Resumo da IA
+            </div>
+            <p className="whitespace-pre-wrap text-xs text-neutral-700">{aiSummary.text}</p>
+            {aiSummary.updatedAt && (
+              <p className="mt-1.5 text-[10px] text-neutral-400">
+                Atualizado {new Date(aiSummary.updatedAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="flex items-center gap-2">
           <div className="flex gap-1 rounded-lg bg-neutral-100 p-1">

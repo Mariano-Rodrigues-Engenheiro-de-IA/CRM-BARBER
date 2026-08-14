@@ -32,12 +32,19 @@ export const Route = createFileRoute("/api/public/extension/customers")({
         }
         const url = new URL(request.url);
         const includeArchived = url.searchParams.get("include_archived") === "1";
+        const phoneFilter = url.searchParams.get("phone");
         let query = supabaseAdmin
           .from("customers")
-          .select("id, name, phone, notes, tags, status, source, spreadsheet_batch_id, archived_at, created_at, updated_at")
+          .select("id, name, phone, notes, tags, status, source, spreadsheet_batch_id, archived_at, created_at, updated_at, ai_summary, ai_summary_updated_at")
           .eq("barbershop_id", auth.token.barbershop_id)
-          .order("created_at", { ascending: false })
-          .limit(2000);
+          .order("created_at", { ascending: false });
+        if (phoneFilter) {
+          // Consulta leve por um cliente especifico (ex: pra mostrar o
+          // resumo da IA num card do funil) — não pagina os 2000.
+          query = query.eq("phone", phoneFilter.replace(/\D/g, "")).limit(1);
+        } else {
+          query = query.limit(2000);
+        }
         if (!includeArchived) query = query.is("archived_at", null);
         const { data, error } = await query;
         if (error) {
