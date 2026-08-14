@@ -8,6 +8,8 @@ import { authenticateExtension } from "@/lib/extension-auth";
 
 const createSchema = z.object({
   name: z.string().trim().min(1).max(120),
+  category: z.string().trim().max(60).optional(),
+  description: z.string().trim().max(500).optional(),
   duration_minutes: z.number().int().min(5).max(480).default(30),
   price: z.number().min(0).max(1000000).optional(),
 });
@@ -27,7 +29,7 @@ export const Route = createFileRoute("/api/public/extension/services")({
         const includeInactive = url.searchParams.get("include_inactive") === "1";
         let query = supabaseAdmin
           .from("services")
-          .select("id, name, duration_minutes, price, active, sort_order")
+          .select("id, name, category, description, duration_minutes, price, active, sort_order")
           .eq("barbershop_id", auth.token.barbershop_id)
           .order("sort_order", { ascending: true })
           .order("created_at", { ascending: true });
@@ -52,7 +54,7 @@ export const Route = createFileRoute("/api/public/extension/services")({
         const { data, error } = await supabaseAdmin
           .from("services")
           .insert({ barbershop_id: auth.token.barbershop_id, ...parsed.data })
-          .select("id, name, duration_minutes, price, active, sort_order")
+          .select("id, name, category, description, duration_minutes, price, active, sort_order")
           .single();
         if (error) {
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });

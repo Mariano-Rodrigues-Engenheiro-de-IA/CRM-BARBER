@@ -9,6 +9,9 @@ import { authenticateExtension } from "@/lib/extension-auth";
 const createSchema = z.object({
   name: z.string().trim().min(1).max(120),
   phone: z.string().trim().max(20).optional(),
+  email: z.string().trim().email().max(160).optional().or(z.literal("")),
+  bio: z.string().trim().max(500).optional(),
+  commission_percent: z.number().min(0).max(100).optional(),
   color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/).optional(),
 });
 
@@ -27,7 +30,7 @@ export const Route = createFileRoute("/api/public/extension/professionals")({
         const includeInactive = url.searchParams.get("include_inactive") === "1";
         let query = supabaseAdmin
           .from("professionals")
-          .select("id, name, phone, color, active, sort_order")
+          .select("id, name, phone, email, bio, commission_percent, color, active, sort_order")
           .eq("barbershop_id", auth.token.barbershop_id)
           .order("sort_order", { ascending: true })
           .order("created_at", { ascending: true });
@@ -52,7 +55,7 @@ export const Route = createFileRoute("/api/public/extension/professionals")({
         const { data, error } = await supabaseAdmin
           .from("professionals")
           .insert({ barbershop_id: auth.token.barbershop_id, ...parsed.data })
-          .select("id, name, phone, color, active, sort_order")
+          .select("id, name, phone, email, bio, commission_percent, color, active, sort_order")
           .single();
         if (error) {
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });

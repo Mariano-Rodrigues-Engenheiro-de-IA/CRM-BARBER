@@ -8,6 +8,8 @@ import { authenticateExtension } from "@/lib/extension-auth";
 
 const patchSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
+  category: z.string().trim().max(60).optional().nullable(),
+  description: z.string().trim().max(500).optional().nullable(),
   duration_minutes: z.number().int().min(5).max(480).optional(),
   price: z.number().min(0).max(1000000).optional().nullable(),
   active: z.boolean().optional(),
@@ -34,7 +36,7 @@ export const Route = createFileRoute("/api/public/extension/services/$id")({
           .update(parsed.data)
           .eq("id", params.id)
           .eq("barbershop_id", auth.token.barbershop_id)
-          .select("id, name, duration_minutes, price, active, sort_order")
+          .select("id, name, category, description, duration_minutes, price, active, sort_order")
           .maybeSingle();
         if (error) {
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });

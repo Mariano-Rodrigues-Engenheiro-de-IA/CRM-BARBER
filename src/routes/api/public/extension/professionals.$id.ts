@@ -9,6 +9,9 @@ import { authenticateExtension } from "@/lib/extension-auth";
 const patchSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   phone: z.string().trim().max(20).optional().nullable(),
+  email: z.string().trim().email().max(160).optional().nullable(),
+  bio: z.string().trim().max(500).optional().nullable(),
+  commission_percent: z.number().min(0).max(100).optional().nullable(),
   color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   active: z.boolean().optional(),
   sort_order: z.number().int().optional(),
@@ -34,7 +37,7 @@ export const Route = createFileRoute("/api/public/extension/professionals/$id")(
           .update(parsed.data)
           .eq("id", params.id)
           .eq("barbershop_id", auth.token.barbershop_id)
-          .select("id, name, phone, color, active, sort_order")
+          .select("id, name, phone, email, bio, commission_percent, color, active, sort_order")
           .maybeSingle();
         if (error) {
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });

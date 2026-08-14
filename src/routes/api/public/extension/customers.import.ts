@@ -22,6 +22,9 @@ import { customerStatusSchema } from "@/lib/customer-presets";
 const rowSchema = z.object({
   name: z.string().trim().min(1).max(120),
   phone: z.string().trim().min(3).max(40),
+  email: z.string().trim().max(160).optional(),
+  birth_date: z.string().trim().max(20).optional(),
+  address: z.string().trim().max(300).optional(),
   notes: z.string().max(1000).optional(),
   tags: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
   status: customerStatusSchema.optional(),
@@ -82,6 +85,9 @@ export const Route = createFileRoute("/api/public/extension/customers/import")({
           barbershop_id: string;
           name: string;
           phone: string;
+          email: string | null;
+          birth_date: string | null;
+          address: string | null;
           notes: string | null;
           tags: string[];
           status: string;
@@ -93,6 +99,9 @@ export const Route = createFileRoute("/api/public/extension/customers/import")({
           status?: string;
           notes?: string | null;
           name?: string;
+          email?: string | null;
+          birth_date?: string | null;
+          address?: string | null;
           source?: string;
           spreadsheet_batch_id?: string | null;
           archived_at?: null;
@@ -108,6 +117,9 @@ export const Route = createFileRoute("/api/public/extension/customers/import")({
             if (r.status) patch.status = r.status;
             if (r.notes !== undefined) patch.notes = r.notes;
             if (r.name) patch.name = r.name;
+            if (r.email) patch.email = r.email;
+            if (r.birth_date) patch.birth_date = r.birth_date;
+            if (r.address) patch.address = r.address;
             if (isReplace) {
               patch.source = "spreadsheet";
               patch.spreadsheet_batch_id = batchId;
@@ -118,6 +130,9 @@ export const Route = createFileRoute("/api/public/extension/customers/import")({
               barbershop_id: barbershopId,
               name: r.name,
               phone: r.phone,
+              email: r.email || null,
+              birth_date: r.birth_date || null,
+              address: r.address || null,
               notes: r.notes ?? null,
               tags: r.tags ?? [],
               status: r.status ?? "active",

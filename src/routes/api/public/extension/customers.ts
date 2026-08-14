@@ -14,6 +14,9 @@ import { customerStatusSchema } from "@/lib/customer-presets";
 const createSchema = z.object({
   name: z.string().min(1).max(120),
   phone: z.string().min(3).max(40),
+  email: z.string().trim().email().max(160).optional().or(z.literal("")),
+  birth_date: z.string().max(20).optional().or(z.literal("")),
+  address: z.string().trim().max(300).optional(),
   notes: z.string().max(1000).optional(),
   tags: z.array(z.string().min(1).max(40)).max(20).optional(),
   status: customerStatusSchema.optional(),
@@ -35,7 +38,7 @@ export const Route = createFileRoute("/api/public/extension/customers")({
         const phoneFilter = url.searchParams.get("phone");
         let query = supabaseAdmin
           .from("customers")
-          .select("id, name, phone, notes, tags, status, source, spreadsheet_batch_id, archived_at, created_at, updated_at, ai_summary, ai_summary_updated_at")
+          .select("id, name, phone, email, birth_date, address, notes, tags, status, source, spreadsheet_batch_id, archived_at, created_at, updated_at, ai_summary, ai_summary_updated_at")
           .eq("barbershop_id", auth.token.barbershop_id)
           .order("created_at", { ascending: false });
         if (phoneFilter) {
@@ -90,13 +93,16 @@ export const Route = createFileRoute("/api/public/extension/customers")({
             barbershop_id: auth.token.barbershop_id, // tenant from token, NEVER from body
             name: parsed.data.name,
             phone: parsed.data.phone,
+            email: parsed.data.email || null,
+            birth_date: parsed.data.birth_date || null,
+            address: parsed.data.address || null,
             notes: parsed.data.notes ?? null,
             tags: parsed.data.tags ?? [],
             status: parsed.data.status ?? "active",
             source: "manual",
             spreadsheet_batch_id: null,
           })
-          .select("id, name, phone, notes, tags, status, source, created_at")
+          .select("id, name, phone, email, birth_date, address, notes, tags, status, source, created_at")
           .single();
         if (error) {
           return jsonResponse(
