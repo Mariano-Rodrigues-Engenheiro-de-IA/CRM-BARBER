@@ -27,6 +27,7 @@ import { Route as ApiPublicWhatsappSignupCallbackRouteImport } from './routes/ap
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksDispatchJobsRouteImport } from './routes/api/public/hooks/dispatch-jobs'
 import { Route as ApiPublicExtensionTimeBlocksRouteImport } from './routes/api/public/extension/time-blocks'
+import { Route as ApiPublicExtensionShopRouteImport } from './routes/api/public/extension/shop'
 import { Route as ApiPublicExtensionServicesRouteImport } from './routes/api/public/extension/services'
 import { Route as ApiPublicExtensionQuickRepliesRouteImport } from './routes/api/public/extension/quick-replies'
 import { Route as ApiPublicExtensionProfessionalsRouteImport } from './routes/api/public/extension/professionals'
@@ -161,6 +162,11 @@ const ApiPublicExtensionTimeBlocksRoute =
     path: '/api/public/extension/time-blocks',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicExtensionShopRoute = ApiPublicExtensionShopRouteImport.update({
+  id: '/api/public/extension/shop',
+  path: '/api/public/extension/shop',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicExtensionServicesRoute =
   ApiPublicExtensionServicesRouteImport.update({
     id: '/api/public/extension/services',
@@ -416,6 +422,7 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/professionals': typeof ApiPublicExtensionProfessionalsRouteWithChildren
   '/api/public/extension/quick-replies': typeof ApiPublicExtensionQuickRepliesRouteWithChildren
   '/api/public/extension/services': typeof ApiPublicExtensionServicesRouteWithChildren
+  '/api/public/extension/shop': typeof ApiPublicExtensionShopRoute
   '/api/public/extension/time-blocks': typeof ApiPublicExtensionTimeBlocksRouteWithChildren
   '/api/public/hooks/dispatch-jobs': typeof ApiPublicHooksDispatchJobsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -474,6 +481,7 @@ export interface FileRoutesByTo {
   '/api/public/extension/professionals': typeof ApiPublicExtensionProfessionalsRouteWithChildren
   '/api/public/extension/quick-replies': typeof ApiPublicExtensionQuickRepliesRouteWithChildren
   '/api/public/extension/services': typeof ApiPublicExtensionServicesRouteWithChildren
+  '/api/public/extension/shop': typeof ApiPublicExtensionShopRoute
   '/api/public/extension/time-blocks': typeof ApiPublicExtensionTimeBlocksRouteWithChildren
   '/api/public/hooks/dispatch-jobs': typeof ApiPublicHooksDispatchJobsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -533,6 +541,7 @@ export interface FileRoutesById {
   '/api/public/extension/professionals': typeof ApiPublicExtensionProfessionalsRouteWithChildren
   '/api/public/extension/quick-replies': typeof ApiPublicExtensionQuickRepliesRouteWithChildren
   '/api/public/extension/services': typeof ApiPublicExtensionServicesRouteWithChildren
+  '/api/public/extension/shop': typeof ApiPublicExtensionShopRoute
   '/api/public/extension/time-blocks': typeof ApiPublicExtensionTimeBlocksRouteWithChildren
   '/api/public/hooks/dispatch-jobs': typeof ApiPublicHooksDispatchJobsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -593,6 +602,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/professionals'
     | '/api/public/extension/quick-replies'
     | '/api/public/extension/services'
+    | '/api/public/extension/shop'
     | '/api/public/extension/time-blocks'
     | '/api/public/hooks/dispatch-jobs'
     | '/api/public/payments/webhook'
@@ -651,6 +661,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/professionals'
     | '/api/public/extension/quick-replies'
     | '/api/public/extension/services'
+    | '/api/public/extension/shop'
     | '/api/public/extension/time-blocks'
     | '/api/public/hooks/dispatch-jobs'
     | '/api/public/payments/webhook'
@@ -709,6 +720,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/professionals'
     | '/api/public/extension/quick-replies'
     | '/api/public/extension/services'
+    | '/api/public/extension/shop'
     | '/api/public/extension/time-blocks'
     | '/api/public/hooks/dispatch-jobs'
     | '/api/public/payments/webhook'
@@ -767,6 +779,7 @@ export interface RootRouteChildren {
   ApiPublicExtensionProfessionalsRoute: typeof ApiPublicExtensionProfessionalsRouteWithChildren
   ApiPublicExtensionQuickRepliesRoute: typeof ApiPublicExtensionQuickRepliesRouteWithChildren
   ApiPublicExtensionServicesRoute: typeof ApiPublicExtensionServicesRouteWithChildren
+  ApiPublicExtensionShopRoute: typeof ApiPublicExtensionShopRoute
   ApiPublicExtensionTimeBlocksRoute: typeof ApiPublicExtensionTimeBlocksRouteWithChildren
   ApiPublicHooksDispatchJobsRoute: typeof ApiPublicHooksDispatchJobsRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -910,6 +923,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/extension/time-blocks'
       fullPath: '/api/public/extension/time-blocks'
       preLoaderRoute: typeof ApiPublicExtensionTimeBlocksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/shop': {
+      id: '/api/public/extension/shop'
+      path: '/api/public/extension/shop'
+      fullPath: '/api/public/extension/shop'
+      preLoaderRoute: typeof ApiPublicExtensionShopRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/extension/services': {
@@ -1364,6 +1384,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicExtensionQuickRepliesRoute:
     ApiPublicExtensionQuickRepliesRouteWithChildren,
   ApiPublicExtensionServicesRoute: ApiPublicExtensionServicesRouteWithChildren,
+  ApiPublicExtensionShopRoute: ApiPublicExtensionShopRoute,
   ApiPublicExtensionTimeBlocksRoute:
     ApiPublicExtensionTimeBlocksRouteWithChildren,
   ApiPublicHooksDispatchJobsRoute: ApiPublicHooksDispatchJobsRoute,
