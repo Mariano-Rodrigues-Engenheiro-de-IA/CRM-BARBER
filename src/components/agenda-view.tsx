@@ -550,28 +550,9 @@ function AppointmentFormDialog({
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label>Título</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Corte + barba" />
+            <Label>Cliente</Label>
+            <CustomerPicker customers={customers} value={customerId} onChange={setCustomerId} api={api} />
           </div>
-
-          {professionals.length > 0 && (
-            <div className="space-y-1.5">
-              <Label>Profissional</Label>
-              <Select value={professionalId} onValueChange={setProfessionalId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sem profissional vinculado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem profissional vinculado</SelectItem>
-                  {professionals.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
 
           {services.length > 0 && (
             <div className="space-y-1.5">
@@ -595,20 +576,47 @@ function AppointmentFormDialog({
             </div>
           )}
 
-          <div className="space-y-1.5">
-            <Label>Cliente (opcional)</Label>
-            <CustomerPicker customers={customers} value={customerId} onChange={setCustomerId} api={api} />
-          </div>
+          {professionals.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>Profissional</Label>
+              <Select value={professionalId} onValueChange={setProfessionalId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sem profissional vinculado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem profissional vinculado</SelectItem>
+                  {professionals.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Horário</Label>
+              <Label>Data</Label>
+              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Hora</Label>
               <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Duração (min)</Label>
               <Input type="number" min={5} step={5} value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
             </div>
+            <div className="space-y-1.5">
+              <Label>Valor (R$)</Label>
+              <Input type="number" min={0} step={0.01} placeholder="0,00" value={price} onChange={(e) => setPrice(e.target.value)} />
+            </div>
           </div>
+
           <div className="space-y-1.5">
             <Label>Notas (opcional)</Label>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
@@ -646,16 +654,17 @@ function AppointmentFormDialog({
           <Button
             onClick={() =>
               onSave({
-                title: title.trim(),
+                title: buildTitle(services, serviceId, customers, customerId),
                 customer_id: customerId === "none" ? null : customerId,
                 professional_id: professionalId === "none" ? null : professionalId,
                 service_id: serviceId === "none" ? null : serviceId,
+                date,
                 time,
                 duration_minutes: duration,
+                price: price.trim() === "" ? null : Number(price),
                 notes,
               })
             }
-            disabled={!title.trim()}
           >
             {editing ? "Salvar" : "Criar"}
           </Button>
