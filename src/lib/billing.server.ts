@@ -4,6 +4,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { FREE_LIMITS, type BillingStatus } from "@/lib/billing";
+import { isAdminBarbershop } from "@/lib/admin-guard.server";
 
 const ACTIVE_STATUSES = ["active", "trialing", "past_due"];
 
