@@ -69,6 +69,7 @@ type Customer = {
   status: string;
   tags: string[] | null;
   source: string;
+  is_subscriber?: boolean;
   archived_at: string | null;
   notes?: string | null;
 
@@ -363,7 +364,9 @@ function Painel() {
   const [section, setSection] = useState<Section>(initialSection);
   const [assinTab, setAssinTab] = useState<AssinTab>("assinantes");
   const [configTab, setConfigTab] = useState<ConfigTab>("servicos");
-  const [assinOpen, setAssinOpen] = useState(false);
+  // Sanfona do menu: guarda QUAL seção está aberta — antes era um booleano
+  // único, o que abria as sub-abas de Assinaturas e Configurações juntas.
+  const [openMenu, setOpenMenu] = useState<Section | null>(null);
   // Menu lateral colapsável — recolhido por padrão (dá mais espaço pro
   // sistema), a menos que o usuário já tenha expandido explicitamente
   // numa sessão anterior (nesse caso lembra a preferência).
@@ -417,6 +420,10 @@ function Painel() {
     }
     setLoading(false);
   }
+
+  // Assinantes = contatos marcados como assinantes. Clientes cadastrados em
+  // Configurações → Clientes não entram nos kanbans de assinatura.
+  const subscribers = useMemo(() => customers.filter((c) => c.is_subscriber), [customers]);
 
   useEffect(() => {
     if (!token) return;
@@ -564,14 +571,17 @@ function Painel() {
               <div key={n.key} className="group relative">
                 <button
                   onClick={() => {
-                    // Sanfona: o clique só alterna aberto/fechado — nunca
-                    // força abrir sozinho, mesmo navegando pra seção pela
-                    // primeira vez. Fica fechado até o usuário clicar.
+                    // Menu recolhido: clicar num ícone expande o menu, pra o
+                    // usuário enxergar as sub-abas da seção.
+                    const wasCollapsed = sidebarCollapsed;
+                    if (wasCollapsed) setSidebarCollapsed(false);
                     if (n.children) {
-                      setAssinOpen((v) => !v);
+                      // Sanfona individual: abre só a seção clicada.
+                      setOpenMenu((cur) => (cur === n.key && !wasCollapsed ? null : n.key));
                       if (!active) setSection(n.key);
                       return;
                     }
+                    setOpenMenu(null);
                     setSection(n.key);
                   }}
                   className={navRowCls(active) + (sidebarCollapsed ? " justify-center px-0" : "")}
@@ -727,11 +737,11 @@ function Painel() {
 
             <main className="px-4 py-3">
               {assinTab === "visao" && (
-                <OverviewView customers={customers} shopId={shop?.id ?? "default"} />
+                <OverviewView customers={subscribers} shopId={shop?.id ?? "default"} />
               )}
               {assinTab === "assinantes" && (
                 <KanbanView
-                  customers={customers}
+                  customers={subscribers}
                   loading={loading}
                   token={token}
                   reload={reload}
@@ -1654,7 +1664,7 @@ function AddModal({ token, cols, onClose }: { token: string; cols: Array<{ key: 
     setErr(null);
     const r = await api(token, "/api/public/extension/customers", {
       method: "POST",
-      body: JSON.stringify({ name: name.trim(), phone: phone.trim(), status, tags: [] }),
+      body: JSON.stringify({ name: name.trim(), phone: phone.trim(), status, tags: [], is_subscriber: true }),
     });
     setBusy(false);
     if (!r?.ok) { setErr(r?.error || "Erro"); return; }
@@ -1736,7 +1746,7 @@ function ImportModal({
       }
       const r = await api(token, "/api/public/extension/customers/import", {
         method: "POST",
-        body: JSON.stringify({ customers: report.rows, mode: "replace_spreadsheet" }),
+        body: JSON.stringify({ customers: report.rows, mode: "replace_spreadsheet", is_subscriber: true }),
       });
       if (!r?.ok) throw new Error(r?.error || "Erro na importação");
 
