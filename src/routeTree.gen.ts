@@ -38,6 +38,7 @@ import { Route as ApiPublicExtensionCampaignsRouteImport } from './routes/api/pu
 import { Route as ApiPublicExtensionBillingRouteImport } from './routes/api/public/extension/billing'
 import { Route as ApiPublicExtensionAppointmentsRouteImport } from './routes/api/public/extension/appointments'
 import { Route as ApiPublicExtensionAgendaSettingsRouteImport } from './routes/api/public/extension/agenda-settings'
+import { Route as ApiPublicBookingSlugRouteImport } from './routes/api/public/booking.$slug'
 import { Route as ApiPublicAiUpdateSummaryRouteImport } from './routes/api/public/ai/update-summary'
 import { Route as ApiPublicAiMoveLeadRouteImport } from './routes/api/public/ai/move-lead'
 import { Route as ApiPublicAiFunnelsRouteImport } from './routes/api/public/ai/funnels'
@@ -224,6 +225,11 @@ const ApiPublicExtensionAgendaSettingsRoute =
     path: '/api/public/extension/agenda-settings',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicBookingSlugRoute = ApiPublicBookingSlugRouteImport.update({
+  id: '/api/public/booking/$slug',
+  path: '/api/public/booking/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicAiUpdateSummaryRoute =
   ApiPublicAiUpdateSummaryRouteImport.update({
     id: '/api/public/ai/update-summary',
@@ -390,6 +396,7 @@ export interface FileRoutesByFullPath {
   '/api/public/ai/funnels': typeof ApiPublicAiFunnelsRoute
   '/api/public/ai/move-lead': typeof ApiPublicAiMoveLeadRoute
   '/api/public/ai/update-summary': typeof ApiPublicAiUpdateSummaryRoute
+  '/api/public/booking/$slug': typeof ApiPublicBookingSlugRoute
   '/api/public/extension/agenda-settings': typeof ApiPublicExtensionAgendaSettingsRoute
   '/api/public/extension/appointments': typeof ApiPublicExtensionAppointmentsRouteWithChildren
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
@@ -446,6 +453,7 @@ export interface FileRoutesByTo {
   '/api/public/ai/funnels': typeof ApiPublicAiFunnelsRoute
   '/api/public/ai/move-lead': typeof ApiPublicAiMoveLeadRoute
   '/api/public/ai/update-summary': typeof ApiPublicAiUpdateSummaryRoute
+  '/api/public/booking/$slug': typeof ApiPublicBookingSlugRoute
   '/api/public/extension/agenda-settings': typeof ApiPublicExtensionAgendaSettingsRoute
   '/api/public/extension/appointments': typeof ApiPublicExtensionAppointmentsRouteWithChildren
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
@@ -503,6 +511,7 @@ export interface FileRoutesById {
   '/api/public/ai/funnels': typeof ApiPublicAiFunnelsRoute
   '/api/public/ai/move-lead': typeof ApiPublicAiMoveLeadRoute
   '/api/public/ai/update-summary': typeof ApiPublicAiUpdateSummaryRoute
+  '/api/public/booking/$slug': typeof ApiPublicBookingSlugRoute
   '/api/public/extension/agenda-settings': typeof ApiPublicExtensionAgendaSettingsRoute
   '/api/public/extension/appointments': typeof ApiPublicExtensionAppointmentsRouteWithChildren
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
@@ -561,6 +570,7 @@ export interface FileRouteTypes {
     | '/api/public/ai/funnels'
     | '/api/public/ai/move-lead'
     | '/api/public/ai/update-summary'
+    | '/api/public/booking/$slug'
     | '/api/public/extension/agenda-settings'
     | '/api/public/extension/appointments'
     | '/api/public/extension/billing'
@@ -617,6 +627,7 @@ export interface FileRouteTypes {
     | '/api/public/ai/funnels'
     | '/api/public/ai/move-lead'
     | '/api/public/ai/update-summary'
+    | '/api/public/booking/$slug'
     | '/api/public/extension/agenda-settings'
     | '/api/public/extension/appointments'
     | '/api/public/extension/billing'
@@ -673,6 +684,7 @@ export interface FileRouteTypes {
     | '/api/public/ai/funnels'
     | '/api/public/ai/move-lead'
     | '/api/public/ai/update-summary'
+    | '/api/public/booking/$slug'
     | '/api/public/extension/agenda-settings'
     | '/api/public/extension/appointments'
     | '/api/public/extension/billing'
@@ -729,6 +741,7 @@ export interface RootRouteChildren {
   ApiPublicAiFunnelsRoute: typeof ApiPublicAiFunnelsRoute
   ApiPublicAiMoveLeadRoute: typeof ApiPublicAiMoveLeadRoute
   ApiPublicAiUpdateSummaryRoute: typeof ApiPublicAiUpdateSummaryRoute
+  ApiPublicBookingSlugRoute: typeof ApiPublicBookingSlugRoute
   ApiPublicExtensionAgendaSettingsRoute: typeof ApiPublicExtensionAgendaSettingsRoute
   ApiPublicExtensionAppointmentsRoute: typeof ApiPublicExtensionAppointmentsRouteWithChildren
   ApiPublicExtensionBillingRoute: typeof ApiPublicExtensionBillingRoute
@@ -961,6 +974,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/extension/agenda-settings'
       fullPath: '/api/public/extension/agenda-settings'
       preLoaderRoute: typeof ApiPublicExtensionAgendaSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/booking/$slug': {
+      id: '/api/public/booking/$slug'
+      path: '/api/public/booking/$slug'
+      fullPath: '/api/public/booking/$slug'
+      preLoaderRoute: typeof ApiPublicBookingSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/ai/update-summary': {
@@ -1304,6 +1324,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicAiFunnelsRoute: ApiPublicAiFunnelsRoute,
   ApiPublicAiMoveLeadRoute: ApiPublicAiMoveLeadRoute,
   ApiPublicAiUpdateSummaryRoute: ApiPublicAiUpdateSummaryRoute,
+  ApiPublicBookingSlugRoute: ApiPublicBookingSlugRoute,
   ApiPublicExtensionAgendaSettingsRoute: ApiPublicExtensionAgendaSettingsRoute,
   ApiPublicExtensionAppointmentsRoute:
     ApiPublicExtensionAppointmentsRouteWithChildren,
