@@ -416,6 +416,7 @@ export function AgendaView({ api }: { api: Api }) {
         }}
         editing={editing}
         prefill={formPrefill}
+        day={day}
         customers={customers}
         professionals={professionals}
         services={services}
@@ -471,6 +472,7 @@ function AppointmentFormDialog({
   onOpenChange,
   editing,
   prefill,
+  day,
   customers,
   professionals,
   services,
@@ -483,6 +485,7 @@ function AppointmentFormDialog({
   onOpenChange: (v: boolean) => void;
   editing: Appointment | null;
   prefill: { time: string; professionalId: string | null } | null;
+  day: Date;
   customers: CustomerOption[];
   professionals: Professional[];
   services: Service[];
@@ -502,42 +505,34 @@ function AppointmentFormDialog({
   onStatusChange?: (status: AppointmentStatus) => void;
 }) {
 
-  const [title, setTitle] = useState("");
   const [customerId, setCustomerId] = useState<string>("none");
   const [professionalId, setProfessionalId] = useState<string>("none");
   const [serviceId, setServiceId] = useState<string>("none");
+  const [date, setDate] = useState(() => ymd(new Date()));
   const [time, setTime] = useState("09:00");
   const [duration, setDuration] = useState(30);
+  const [price, setPrice] = useState("");
   const [notes, setNotes] = useState("");
-  const [services, setServices] = useState<Service[]>([]);
 
   useEffect(() => {
     if (open) {
-      api("/api/public/extension/services").then((r) => {
-        if (r?.ok) setServices(r.services);
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  useEffect(() => {
-    if (open) {
-      setTitle(editing?.title ?? "");
       setCustomerId(editing?.customer_id ?? "none");
       setProfessionalId(editing?.professional_id ?? prefill?.professionalId ?? "none");
       setServiceId(editing?.service_id ?? "none");
+      setDate(editing ? ymd(new Date(editing.scheduled_at)) : ymd(day));
       setTime(editing ? new Date(editing.scheduled_at).toTimeString().slice(0, 5) : prefill?.time ?? "09:00");
       setDuration(editing?.duration_minutes ?? 30);
+      setPrice(editing?.price != null ? String(editing.price) : "");
       setNotes(editing?.notes ?? "");
     }
-  }, [open, editing, prefill]);
+  }, [open, editing, prefill, day]);
 
   function handleServiceChange(id: string) {
     setServiceId(id);
     const svc = services.find((s) => s.id === id);
     if (svc) {
       setDuration(svc.duration_minutes);
-      if (!title.trim()) setTitle(svc.name);
+      if (svc.price != null) setPrice(String(svc.price));
     }
   }
 
