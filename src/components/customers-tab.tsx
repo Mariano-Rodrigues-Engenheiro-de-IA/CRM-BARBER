@@ -86,6 +86,8 @@ function CustomerListView({ api }: { api: Api }) {
   const [editing, setEditing] = useState<Customer | null>(null);
   const [pageSize, setPageSize] = useState(50);
   const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
 
   async function load() {
     const r = await api("/api/public/extension/customers");
@@ -108,9 +110,43 @@ function CustomerListView({ api }: { api: Api }) {
     setPage(1);
   }, [search, pageSize]);
 
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  /** Exclui um ou vários clientes. A API arquiva (soft delete) cada um,
+   * então mandamos uma chamada por cliente e só recarregamos no fim. */
+  async function deleteMany(ids: string[]) {
+    if (ids.length === 0) return;
+    const msg =
+      ids.length === 1
+        ? "Excluir esse cliente?"
+        : `Excluir ${ids.length} cliente(s) selecionado(s)?`;
+    if (!confirm(msg)) return;
+    setDeleting(true);
+    try {
+      const results = await Promise.all(
+        ids.map((id) => api(`/api/public/extension/customers/${id}`, { method: "DELETE" }).catch(() => null)),
+      );
+      const failed = results.filter((r) => !r?.ok).length;
+      if (failed > 0) toast.error(`${failed} cliente(s) não puderam ser excluídos.`);
+      else toast.success(ids.length === 1 ? "Cliente excluído" : `${ids.length} clientes excluídos`);
+      setSelected(new Set());
+      await load();
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const pageItems = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const allPageSelected = pageItems.length > 0 && pageItems.every((c) => selected.has(c.id));
 
   return (
     <div className="space-y-3">
@@ -135,6 +171,28 @@ function CustomerListView({ api }: { api: Api }) {
           </Select>
           <span>por página</span>
         </div>
+        {selected.size > 0 && (
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-neutral-500">{selected.size} selecionado(s)</span>
+            <Button variant="outline" size="sm" className="h-8 text-red-600" disabled={deleting} onClick={() => deleteMany([...selected])}>
+              {deleting ? "Excluindo..." : "Excluir selecionados"}
+            </Button>
+            <Button variant="ghost" size="sm" className="h-8" onClick={() => setSelected(new Set())}>
+              Limpar seleção
+            </Button>
+          </div>
+        )}
+        {filtered.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs text-red-600"
+            disabled={deleting}
+            onClick={() => deleteMany(filtered.map((c) => c.id))}
+          >
+            Excluir todos os {filtered.length} listados
+          </Button>
+        )}
       </div>
 
       {!customers ? (
@@ -148,6 +206,23 @@ function CustomerListView({ api }: { api: Api }) {
           <table className="w-full text-sm">
             <thead className="bg-neutral-50 text-left text-[11px] uppercase tracking-wide text-neutral-500">
               <tr>
+                <th className="w-8 px-3 py-2">
+                  <input
+                    type="checkbox"
+                    aria-label="Selecionar todos desta página"
+                    checked={allPageSelected}
+                    onChange={(e) =>
+                      setSelected((prev) => {
+                        const next = new Set(prev);
+                        for (const c of pageItems) {
+                          if (e.target.checked) next.add(c.id);
+                          else next.delete(c.id);
+                        }
+                        return next;
+                      })
+                    }
+                  />
+                </th>
                 <th className="px-3 py-2 font-medium">Nome</th>
                 <th className="px-3 py-2 font-medium">Telefone</th>
                 <th className="px-3 py-2 font-medium">E-mail</th>
@@ -157,12 +232,23 @@ function CustomerListView({ api }: { api: Api }) {
             <tbody className="divide-y divide-neutral-100">
               {pageItems.map((c) => (
                 <tr key={c.id}>
+                  <td className="px-3 py-2">
+                    <input
+                      type="checkbox"
+                      aria-label={`Selecionar ${c.name}`}
+                      checked={selected.has(c.id)}
+                      onChange={() => toggleOne(c.id)}
+                    />
+                  </td>
                   <td className="px-3 py-2 font-medium text-neutral-900">{c.name}</td>
                   <td className="px-3 py-2 text-neutral-600">{c.phone}</td>
                   <td className="px-3 py-2 text-neutral-500">{c.email || "—"}</td>
                   <td className="px-3 py-2 text-right">
                     <Button variant="ghost" size="sm" onClick={() => setEditing(c)}>
                       Editar
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-red-600" disabled={deleting} onClick={() => deleteMany([c.id])}>
+                      Excluir
                     </Button>
                   </td>
                 </tr>
