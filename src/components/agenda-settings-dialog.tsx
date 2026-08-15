@@ -138,7 +138,7 @@ function OnlineBookingSection({
   setSettings,
 }: {
   settings: AgendaSettings;
-  setSettings: React.Dispatch<React.SetStateAction<AgendaSettings | null>>;
+  setSettings: (updater: (prev: AgendaSettings | null) => AgendaSettings | null) => void;
 }) {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const slug = settings.public_slug || "";
