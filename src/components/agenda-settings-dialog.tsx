@@ -13,7 +13,10 @@ type DayHours = { closed: boolean; open?: string; close?: string };
 export type AgendaSettings = {
   slot_duration_minutes: number;
   business_hours: Record<string, DayHours>;
+  online_booking_enabled?: boolean;
+  public_slug?: string | null;
 };
+
 
 const DIAS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 const SLOT_OPTIONS = [10, 15, 20, 30, 40, 45, 60];

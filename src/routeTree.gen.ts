@@ -17,6 +17,7 @@ import { Route as BaixarRouteImport } from './routes/baixar'
 import { Route as AssinarRouteImport } from './routes/assinar'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AssinarRetornoRouteImport } from './routes/assinar.retorno'
+import { Route as AgendarSlugRouteImport } from './routes/agendar.$slug'
 import { Route as AdminWhatsappRouteImport } from './routes/admin.whatsapp'
 import { Route as AdminTokensRouteImport } from './routes/admin.tokens'
 import { Route as AdminClientsRouteImport } from './routes/admin.clients'
@@ -104,6 +105,11 @@ const AssinarRetornoRoute = AssinarRetornoRouteImport.update({
   id: '/retorno',
   path: '/retorno',
   getParentRoute: () => AssinarRoute,
+} as any)
+const AgendarSlugRoute = AgendarSlugRouteImport.update({
+  id: '/agendar/$slug',
+  path: '/agendar/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AdminWhatsappRoute = AdminWhatsappRouteImport.update({
   id: '/admin/whatsapp',
@@ -390,6 +396,7 @@ export interface FileRoutesByFullPath {
   '/admin/clients': typeof AdminClientsRoute
   '/admin/tokens': typeof AdminTokensRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
+  '/agendar/$slug': typeof AgendarSlugRoute
   '/assinar/retorno': typeof AssinarRetornoRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/api/public/admin/issue-token': typeof ApiPublicAdminIssueTokenRoute
@@ -447,6 +454,7 @@ export interface FileRoutesByTo {
   '/admin/clients': typeof AdminClientsRoute
   '/admin/tokens': typeof AdminTokensRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
+  '/agendar/$slug': typeof AgendarSlugRoute
   '/assinar/retorno': typeof AssinarRetornoRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/api/public/admin/issue-token': typeof ApiPublicAdminIssueTokenRoute
@@ -505,6 +513,7 @@ export interface FileRoutesById {
   '/admin/clients': typeof AdminClientsRoute
   '/admin/tokens': typeof AdminTokensRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
+  '/agendar/$slug': typeof AgendarSlugRoute
   '/assinar/retorno': typeof AssinarRetornoRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/api/public/admin/issue-token': typeof ApiPublicAdminIssueTokenRoute
@@ -564,6 +573,7 @@ export interface FileRouteTypes {
     | '/admin/clients'
     | '/admin/tokens'
     | '/admin/whatsapp'
+    | '/agendar/$slug'
     | '/assinar/retorno'
     | '/api/public/signup'
     | '/api/public/admin/issue-token'
@@ -621,6 +631,7 @@ export interface FileRouteTypes {
     | '/admin/clients'
     | '/admin/tokens'
     | '/admin/whatsapp'
+    | '/agendar/$slug'
     | '/assinar/retorno'
     | '/api/public/signup'
     | '/api/public/admin/issue-token'
@@ -678,6 +689,7 @@ export interface FileRouteTypes {
     | '/admin/clients'
     | '/admin/tokens'
     | '/admin/whatsapp'
+    | '/agendar/$slug'
     | '/assinar/retorno'
     | '/api/public/signup'
     | '/api/public/admin/issue-token'
@@ -736,6 +748,7 @@ export interface RootRouteChildren {
   AdminClientsRoute: typeof AdminClientsRoute
   AdminTokensRoute: typeof AdminTokensRoute
   AdminWhatsappRoute: typeof AdminWhatsappRoute
+  AgendarSlugRoute: typeof AgendarSlugRoute
   ApiPublicSignupRoute: typeof ApiPublicSignupRoute
   ApiPublicAdminIssueTokenRoute: typeof ApiPublicAdminIssueTokenRoute
   ApiPublicAiFunnelsRoute: typeof ApiPublicAiFunnelsRoute
@@ -828,6 +841,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/assinar/retorno'
       preLoaderRoute: typeof AssinarRetornoRouteImport
       parentRoute: typeof AssinarRoute
+    }
+    '/agendar/$slug': {
+      id: '/agendar/$slug'
+      path: '/agendar/$slug'
+      fullPath: '/agendar/$slug'
+      preLoaderRoute: typeof AgendarSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/admin/whatsapp': {
       id: '/admin/whatsapp'
@@ -1319,6 +1339,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminClientsRoute: AdminClientsRoute,
   AdminTokensRoute: AdminTokensRoute,
   AdminWhatsappRoute: AdminWhatsappRoute,
+  AgendarSlugRoute: AgendarSlugRoute,
   ApiPublicSignupRoute: ApiPublicSignupRoute,
   ApiPublicAdminIssueTokenRoute: ApiPublicAdminIssueTokenRoute,
   ApiPublicAiFunnelsRoute: ApiPublicAiFunnelsRoute,
