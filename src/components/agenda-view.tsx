@@ -295,7 +295,8 @@ export function AgendaView({ api }: { api: Api }) {
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-neutral-300 bg-white">
+        <div className={"relative overflow-x-auto rounded-xl border border-neutral-300 bg-white transition-opacity " + (loading ? "opacity-60" : "opacity-100")}>
+
           <div className="flex" style={{ minWidth: 80 + columns.length * 220 }}>
             <div className="w-20 shrink-0 border-r border-neutral-200">
               <div className="h-14 border-b border-neutral-200" />
