@@ -13,6 +13,9 @@ const createSchema = z.object({
   bio: z.string().trim().max(500).optional(),
   commission_percent: z.number().min(0).max(100).optional(),
   color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  // Foto do profissional guardada como data URL (o cliente já redimensiona
+  // pra um quadrado pequeno antes de enviar).
+  avatar_url: z.string().max(400000).optional().nullable(),
 });
 
 export const Route = createFileRoute("/api/public/extension/professionals")({
@@ -30,7 +33,7 @@ export const Route = createFileRoute("/api/public/extension/professionals")({
         const includeInactive = url.searchParams.get("include_inactive") === "1";
         let query = supabaseAdmin
           .from("professionals")
-          .select("id, name, phone, email, bio, commission_percent, color, active, sort_order")
+          .select("id, name, phone, email, bio, commission_percent, color, avatar_url, active, sort_order")
           .eq("barbershop_id", auth.token.barbershop_id)
           .order("sort_order", { ascending: true })
           .order("created_at", { ascending: true });
@@ -55,7 +58,7 @@ export const Route = createFileRoute("/api/public/extension/professionals")({
         const { data, error } = await supabaseAdmin
           .from("professionals")
           .insert({ barbershop_id: auth.token.barbershop_id, ...parsed.data })
-          .select("id, name, phone, email, bio, commission_percent, color, active, sort_order")
+          .select("id, name, phone, email, bio, commission_percent, color, avatar_url, active, sort_order")
           .single();
         if (error) {
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
