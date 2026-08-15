@@ -89,27 +89,27 @@ export function AgendaView({ api }: { api: Api }) {
     const r = await api("/api/public/extension/professionals");
     if (r?.ok) setProfessionals(r.professionals);
   }
-  async function loadAppointments() {
-    setLoading(true);
+  /** Carrega agendamentos e bloqueios do dia JUNTOS, para a agenda trocar
+   * de dia de uma vez só (sem informação aparecendo em partes). */
+  async function loadDay(showLoader = true) {
+    if (showLoader) setLoading(true);
     try {
       const from = new Date(day);
       from.setHours(0, 0, 0, 0);
       const to = new Date(day);
       to.setHours(23, 59, 59, 999);
-      const r = await api(`/api/public/extension/appointments?from=${from.toISOString()}&to=${to.toISOString()}`);
-      if (r?.ok) setAppointments(r.appointments || []);
+      const [ap, tb] = await Promise.all([
+        api(`/api/public/extension/appointments?from=${from.toISOString()}&to=${to.toISOString()}`),
+        api(`/api/public/extension/time-blocks?from=${from.toISOString()}&to=${to.toISOString()}`),
+      ]);
+      if (ap?.ok) setAppointments(ap.appointments || []);
+      if (tb?.ok) setTimeBlocks(tb.time_blocks || []);
     } finally {
       setLoading(false);
     }
   }
-  async function loadTimeBlocks() {
-    const from = new Date(day);
-    from.setHours(0, 0, 0, 0);
-    const to = new Date(day);
-    to.setHours(23, 59, 59, 999);
-    const r = await api(`/api/public/extension/time-blocks?from=${from.toISOString()}&to=${to.toISOString()}`);
-    if (r?.ok) setTimeBlocks(r.time_blocks || []);
-  }
+  const loadAppointments = () => loadDay(false);
+  const loadTimeBlocks = () => loadDay(false);
 
   useEffect(() => {
     void loadSettings();
@@ -121,8 +121,7 @@ export function AgendaView({ api }: { api: Api }) {
   }, []);
 
   useEffect(() => {
-    void loadAppointments();
-    void loadTimeBlocks();
+    void loadDay();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [day]);
 
@@ -276,7 +275,7 @@ export function AgendaView({ api }: { api: Api }) {
           ) : (
             <button
               onClick={() => setDay(new Date())}
-              className="ml-2 text-sm font-medium text-neutral-700 underline decoration-dotted hover:text-brand"
+              className="ml-2 text-sm font-medium text-neutral-700 hover:text-brand"
               title="Voltar para hoje"
             >
               {day.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
@@ -296,7 +295,8 @@ export function AgendaView({ api }: { api: Api }) {
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-neutral-300 bg-white">
+        <div className={"relative overflow-x-auto rounded-xl border border-neutral-300 bg-white transition-opacity " + (loading ? "opacity-60" : "opacity-100")}>
+
           <div className="flex" style={{ minWidth: 80 + columns.length * 220 }}>
             <div className="w-20 shrink-0 border-r border-neutral-200">
               <div className="h-14 border-b border-neutral-200" />

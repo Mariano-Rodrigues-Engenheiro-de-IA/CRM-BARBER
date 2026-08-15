@@ -22,6 +22,7 @@ import { useConfirm } from "@/components/confirm-dialog";
 import { AgendaView } from "@/components/agenda-view";
 import { ServicesTab, ProfessionalsTab } from "@/components/professionals-services-dialog";
 import { GeneralSettingsTab } from "@/components/agenda-settings-dialog";
+import { AccountTab } from "@/components/account-tab";
 import { CustomersTab } from "@/components/customers-tab";
 import { toast } from "sonner";
 
@@ -241,7 +242,7 @@ type Section = "agenda" | "configuracoes" | "assinantes" | "funis" | "disparo" |
 /** Sub-abas da sanfona de Assinaturas. */
 type AssinTab = "visao" | "assinantes";
 /** Sub-abas da sanfona de Configurações. */
-type ConfigTab = "servicos" | "profissionais" | "clientes" | "gerais";
+type ConfigTab = "servicos" | "profissionais" | "clientes" | "gerais" | "conta";
 
 function IconUsers() {
   return (
@@ -507,6 +508,7 @@ function Painel() {
         { key: "profissionais", label: "Profissionais" },
         { key: "clientes", label: "Clientes" },
         { key: "gerais", label: "Gerais" },
+        { key: "conta", label: "Minha conta" },
       ],
     },
   ];
@@ -698,6 +700,7 @@ function Painel() {
                   {configTab === "profissionais" && "Configurações · Profissionais"}
                   {configTab === "clientes" && "Configurações · Clientes"}
                   {configTab === "gerais" && "Configurações · Gerais"}
+                  {configTab === "conta" && "Configurações · Minha conta"}
                 </h1>
               </div>
             </header>
@@ -706,6 +709,7 @@ function Painel() {
               {configTab === "profissionais" && <ProfessionalsTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
               {configTab === "clientes" && <CustomersTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
               {configTab === "gerais" && <GeneralSettingsTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
+              {configTab === "conta" && <AccountTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
             </main>
           </>
         )}

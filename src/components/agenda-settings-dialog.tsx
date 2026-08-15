@@ -27,6 +27,7 @@ const SLOT_OPTIONS = [10, 15, 20, 30, 40, 45, 60];
 export function GeneralSettingsTab({ api, onSaved }: { api: Api; onSaved?: (s: AgendaSettings) => void }) {
   const [settings, setSettings] = useState<AgendaSettings | null>(null);
   const [saving, setSaving] = useState(false);
+  const [hoursOpen, setHoursOpen] = useState(false);
 
   useEffect(() => {
     api("/api/public/extension/agenda-settings").then((r) => {
@@ -68,6 +69,9 @@ export function GeneralSettingsTab({ api, onSaved }: { api: Api; onSaved?: (s: A
 
   if (!settings) return <p className="text-sm text-neutral-500">Carregando...</p>;
 
+  const abertos = DIAS.filter((_, i) => !(settings.business_hours[String(i)] ?? { closed: true }).closed).length;
+  const hoursSummary = abertos === 0 ? "Nenhum dia aberto" : `${abertos} dia(s) aberto(s)`;
+
   return (
     <div className="space-y-5">
       <div className="space-y-1.5">
@@ -90,9 +94,19 @@ export function GeneralSettingsTab({ api, onSaved }: { api: Api; onSaved?: (s: A
         <p className="text-xs text-neutral-400">Define de quanto em quanto tempo a agenda mostra um novo horário.</p>
       </div>
 
-      <div className="space-y-2">
-        <Label>Horário de funcionamento</Label>
-        {DIAS.map((label, idx) => {
+      <div className="space-y-2 rounded-lg border border-neutral-200 p-3">
+        <button
+          type="button"
+          onClick={() => setHoursOpen((v) => !v)}
+          className="flex w-full items-center justify-between text-left"
+        >
+          <span>
+            <Label className="cursor-pointer">Horário de funcionamento</Label>
+            <span className="block text-xs text-neutral-400">{hoursSummary}</span>
+          </span>
+          <span className="text-xs font-medium text-brand">{hoursOpen ? "Recolher" : "Expandir"}</span>
+        </button>
+        {hoursOpen && DIAS.map((label, idx) => {
           const day = settings.business_hours[String(idx)] ?? { closed: true };
           return (
             <div key={idx} className="flex items-center gap-3 rounded-lg border border-neutral-200 px-3 py-2">
