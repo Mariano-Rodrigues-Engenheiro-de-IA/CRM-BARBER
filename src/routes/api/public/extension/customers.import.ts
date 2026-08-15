@@ -32,6 +32,7 @@ const rowSchema = z.object({
 
 const bodySchema = z.object({
   customers: z.array(rowSchema).min(1).max(2000),
+  is_subscriber: z.boolean().optional(),
   mode: z.enum(["merge", "replace_spreadsheet"]).optional(),
   source: z.enum(["manual", "spreadsheet", "whatsapp_contacts"]).optional(),
 });
@@ -68,6 +69,7 @@ export const Route = createFileRoute("/api/public/extension/customers/import")({
         const mode = parsed.data.mode ?? "merge";
         const isReplace = mode === "replace_spreadsheet";
         const source = parsed.data.source ?? (isReplace ? "spreadsheet" : "manual");
+        const isSubscriber = parsed.data.is_subscriber ?? false;
         const batchId = isReplace ? crypto.randomUUID() : null;
 
         const phones = Array.from(new Set(rows.map((r) => r.phone)));
@@ -92,6 +94,7 @@ export const Route = createFileRoute("/api/public/extension/customers/import")({
           tags: string[];
           status: string;
           source: string;
+          is_subscriber: boolean;
           spreadsheet_batch_id: string | null;
         };
         type UpdatePatch = {
@@ -103,6 +106,7 @@ export const Route = createFileRoute("/api/public/extension/customers/import")({
           birth_date?: string | null;
           address?: string | null;
           source?: string;
+          is_subscriber?: boolean;
           spreadsheet_batch_id?: string | null;
           archived_at?: null;
         };
@@ -114,6 +118,7 @@ export const Route = createFileRoute("/api/public/extension/customers/import")({
           if (found) {
             const merged = Array.from(new Set([...(found.tags ?? []), ...(r.tags ?? [])]));
             const patch: UpdatePatch = { tags: merged, archived_at: null };
+            if (isSubscriber) patch.is_subscriber = true;
             if (r.status) patch.status = r.status;
             if (r.notes !== undefined) patch.notes = r.notes;
             if (r.name) patch.name = r.name;
@@ -137,6 +142,7 @@ export const Route = createFileRoute("/api/public/extension/customers/import")({
               tags: r.tags ?? [],
               status: r.status ?? "active",
               source,
+              is_subscriber: isSubscriber,
               spreadsheet_batch_id: batchId,
             });
           }

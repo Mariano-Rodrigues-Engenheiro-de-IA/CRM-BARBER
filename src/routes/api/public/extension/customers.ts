@@ -20,6 +20,7 @@ const createSchema = z.object({
   notes: z.string().max(1000).optional(),
   tags: z.array(z.string().min(1).max(40)).max(20).optional(),
   status: customerStatusSchema.optional(),
+  is_subscriber: z.boolean().optional(),
 });
 
 export const Route = createFileRoute("/api/public/extension/customers")({
@@ -38,7 +39,7 @@ export const Route = createFileRoute("/api/public/extension/customers")({
         const phoneFilter = url.searchParams.get("phone");
         let query = supabaseAdmin
           .from("customers")
-          .select("id, name, phone, email, birth_date, address, notes, tags, status, source, spreadsheet_batch_id, archived_at, created_at, updated_at, ai_summary, ai_summary_updated_at")
+          .select("id, name, phone, email, birth_date, address, notes, tags, status, source, is_subscriber, spreadsheet_batch_id, archived_at, created_at, updated_at, ai_summary, ai_summary_updated_at")
           .eq("barbershop_id", auth.token.barbershop_id)
           .order("created_at", { ascending: false });
         if (phoneFilter) {
@@ -99,10 +100,11 @@ export const Route = createFileRoute("/api/public/extension/customers")({
             notes: parsed.data.notes ?? null,
             tags: parsed.data.tags ?? [],
             status: parsed.data.status ?? "active",
+            is_subscriber: parsed.data.is_subscriber ?? false,
             source: "manual",
             spreadsheet_batch_id: null,
           })
-          .select("id, name, phone, email, birth_date, address, notes, tags, status, source, created_at")
+          .select("id, name, phone, email, birth_date, address, notes, tags, status, source, is_subscriber, created_at")
           .single();
         if (error) {
           return jsonResponse(
