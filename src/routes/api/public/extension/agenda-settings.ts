@@ -14,6 +14,7 @@ const dayHours = z.object({
 const patchSchema = z.object({
   slot_duration_minutes: z.number().int().min(10).max(120).optional(),
   business_hours: z.record(z.string(), dayHours).optional(),
+  online_booking_enabled: z.boolean().optional(),
 });
 
 export const Route = createFileRoute("/api/public/extension/agenda-settings")({
@@ -29,7 +30,7 @@ export const Route = createFileRoute("/api/public/extension/agenda-settings")({
         }
         const { data: existing } = await supabaseAdmin
           .from("agenda_settings")
-          .select("barbershop_id, slot_duration_minutes, business_hours")
+          .select("barbershop_id, slot_duration_minutes, business_hours, online_booking_enabled, public_slug")
           .eq("barbershop_id", auth.token.barbershop_id)
           .maybeSingle();
         if (existing) {
@@ -39,7 +40,7 @@ export const Route = createFileRoute("/api/public/extension/agenda-settings")({
         const { data: created, error } = await supabaseAdmin
           .from("agenda_settings")
           .insert({ barbershop_id: auth.token.barbershop_id })
-          .select("barbershop_id, slot_duration_minutes, business_hours")
+          .select("barbershop_id, slot_duration_minutes, business_hours, online_booking_enabled, public_slug")
           .single();
         if (error) {
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
@@ -60,7 +61,7 @@ export const Route = createFileRoute("/api/public/extension/agenda-settings")({
         const { data, error } = await supabaseAdmin
           .from("agenda_settings")
           .upsert({ barbershop_id: auth.token.barbershop_id, ...parsed.data }, { onConflict: "barbershop_id" })
-          .select("barbershop_id, slot_duration_minutes, business_hours")
+          .select("barbershop_id, slot_duration_minutes, business_hours, online_booking_enabled, public_slug")
           .single();
         if (error) {
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
