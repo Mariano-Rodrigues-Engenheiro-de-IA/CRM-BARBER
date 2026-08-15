@@ -1,4 +1,4 @@
-// Página pública de agendamento online (mobile + desktop).
+// Página pública de agendamento online (mobile + desktop), em etapas.
 // Acessada pelo link que a barbearia compartilha: /agendar/<slug>
 
 import { useEffect, useMemo, useState } from "react";
@@ -28,6 +28,7 @@ type Service = { id: string; name: string; duration_minutes: number; price: numb
 type Busy = { professional_id: string | null; start: string; end: string };
 type Config = {
   shop_name: string;
+  shop_logo: string | null;
   slot_duration_minutes: number;
   business_hours: Record<string, { closed: boolean; open?: string; close?: string }>;
   professionals: Professional[];
@@ -46,10 +47,14 @@ function toTime(mins: number) {
   return `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
 }
 
+const STEPS = ["Serviço", "Profissional", "Data e horário", "Seus dados"];
+
 function BookingPage() {
   const { slug } = Route.useParams();
+  const tz = typeof window !== "undefined" ? new Date().getTimezoneOffset() : 0;
   const [config, setConfig] = useState<Config | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState(0);
   const [date, setDate] = useState(() => ymd(new Date()));
   const [professionalId, setProfessionalId] = useState<string | null>(null);
   const [serviceId, setServiceId] = useState<string | null>(null);
@@ -62,7 +67,7 @@ function BookingPage() {
 
   useEffect(() => {
     setTime(null);
-    fetch(`/api/public/booking/${slug}?date=${date}`)
+    fetch(`/api/public/booking/${slug}?date=${date}&tz=${tz}`)
       .then((r) => r.json())
       .then((r) => {
         if (r?.ok) {
@@ -73,6 +78,7 @@ function BookingPage() {
         }
       })
       .catch(() => setError("Não foi possível carregar a agenda"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, date]);
 
   const service = config?.services.find((s) => s.id === serviceId) ?? null;
@@ -100,8 +106,8 @@ function BookingPage() {
   }, [config, date, professionalId, service]);
 
   async function submit() {
-    if (!serviceId || !time || name.trim().length < 2 || phone.replace(/\D/g, "").length < 8) {
-      toast.error("Preencha nome, telefone, serviço e horário");
+    if (name.trim().length < 2 || phone.replace(/\D/g, "").length < 8) {
+      toast.error("Preencha nome e telefone");
       return;
     }
     setSending(true);
@@ -109,7 +115,7 @@ function BookingPage() {
       const r = await fetch(`/api/public/booking/${slug}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, phone, professional_id: professionalId, service_id: serviceId, date, time, notes }),
+        body: JSON.stringify({ name, phone, professional_id: professionalId, service_id: serviceId, date, time, notes, tz_offset: tz }),
       }).then((x) => x.json());
       if (!r?.ok) throw new Error(r?.error || "Erro ao agendar");
       setDone(true);
@@ -136,41 +142,81 @@ function BookingPage() {
   }
   if (done) {
     return (
-      <main className="flex min-h-screen items-center justify-center p-6">
-        <div className="w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-8 text-center shadow-sm">
-          <h1 className="text-xl font-semibold text-neutral-900">Agendamento enviado!</h1>
-          <p className="mt-2 text-sm text-neutral-500">
-            {config.shop_name} recebeu seu pedido para {new Date(`${date}T${time}:00`).toLocaleString("pt-BR")}. Você receberá a
-            confirmação pelo WhatsApp.
-          </p>
+      <main className="flex min-h-screen items-center justify-center bg-neutral-50 p-6">
+        <div className="w-full max-w-sm rounded-2xl border border-brand/30 bg-brand/5 p-8 text-center shadow-sm">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand text-2xl text-white">✓</div>
+          <h1 className="mt-4 text-xl font-semibold text-brand">Agendamento confirmado</h1>
+          <p className="mt-1 text-sm text-brand/80">Obrigado pela preferência!</p>
         </div>
       </main>
     );
   }
 
+  const canGoNext =
+    (step === 0 && !!serviceId) || step === 1 || (step === 2 && !!time) || step === 3;
+
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold text-neutral-900">{config.shop_name}</h1>
-        <p className="text-sm text-neutral-500">Escolha profissional, serviço e horário.</p>
+    <main className="mx-auto w-full max-w-xl px-4 py-8">
+      <header className="mb-6 flex items-center gap-3">
+        {config.shop_logo ? (
+          <img src={config.shop_logo} alt={`Logo de ${config.shop_name}`} className="h-12 w-12 rounded-xl object-cover" />
+        ) : null}
+        <div>
+          <h1 className="text-xl font-semibold text-neutral-900">{config.shop_name}</h1>
+          <p className="text-sm text-neutral-500">
+            Etapa {step + 1} de {STEPS.length} · {STEPS[step]}
+          </p>
+        </div>
       </header>
 
-      <section className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
-        <div className="space-y-1.5">
-          <Label>Data</Label>
-          <Input type="date" value={date} min={ymd(new Date())} onChange={(e) => setDate(e.target.value)} className="w-48" />
-        </div>
+      <div className="mb-4 flex gap-1.5">
+        {STEPS.map((s, i) => (
+          <span key={s} className={"h-1.5 flex-1 rounded-full " + (i <= step ? "bg-brand" : "bg-neutral-200")} />
+        ))}
+      </div>
 
-        {config.professionals.length > 0 && (
-          <div className="space-y-1.5">
-            <Label>Profissional</Label>
-            <div className="flex flex-wrap gap-2">
+      <section className="space-y-5 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+        {step === 0 && (
+          <div className="space-y-2">
+            <Label>Escolha o serviço</Label>
+            <div className="grid gap-2">
+              {config.services.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => {
+                    setServiceId(s.id);
+                    setStep(1);
+                  }}
+                  className={
+                    "rounded-xl border px-3 py-3 text-left text-sm transition " +
+                    (serviceId === s.id ? "border-brand bg-brand/5" : "border-neutral-200 hover:border-brand/50")
+                  }
+                >
+                  <span className="block font-medium text-neutral-800">{s.name}</span>
+                  <span className="text-xs text-neutral-500">
+                    {s.duration_minutes} min{s.price != null ? ` · R$ ${Number(s.price).toFixed(2)}` : ""}
+                  </span>
+                </button>
+              ))}
+              {config.services.length === 0 && <p className="text-sm text-neutral-500">Nenhum serviço cadastrado.</p>}
+            </div>
+          </div>
+        )}
+
+        {step === 1 && (
+          <div className="space-y-2">
+            <Label>Escolha o profissional</Label>
+            <div className="grid gap-2">
               <button
                 type="button"
-                onClick={() => setProfessionalId(null)}
+                onClick={() => {
+                  setProfessionalId(null);
+                  setStep(2);
+                }}
                 className={
-                  "rounded-full border px-3 py-1.5 text-sm " +
-                  (professionalId === null ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300 text-neutral-600")
+                  "rounded-xl border px-3 py-3 text-left text-sm transition " +
+                  (professionalId === null ? "border-brand bg-brand/5" : "border-neutral-200 hover:border-brand/50")
                 }
               >
                 Sem preferência
@@ -179,88 +225,97 @@ function BookingPage() {
                 <button
                   key={p.id}
                   type="button"
-                  onClick={() => setProfessionalId(p.id)}
+                  onClick={() => {
+                    setProfessionalId(p.id);
+                    setStep(2);
+                  }}
                   className={
-                    "flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm " +
-                    (professionalId === p.id ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300 text-neutral-600")
+                    "flex items-center gap-3 rounded-xl border px-3 py-3 text-left text-sm transition " +
+                    (professionalId === p.id ? "border-brand bg-brand/5" : "border-neutral-200 hover:border-brand/50")
                   }
                 >
                   {p.avatar_url ? (
-                    <img src={p.avatar_url} alt={`Foto de ${p.name}`} className="h-6 w-6 rounded-full object-cover" />
+                    <img src={p.avatar_url} alt={`Foto de ${p.name}`} className="h-9 w-9 rounded-full object-cover" />
                   ) : (
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: p.color }} />
+                    <span className="h-9 w-9 rounded-full" style={{ backgroundColor: p.color }} />
                   )}
-                  {p.name}
+                  <span>
+                    <span className="block font-medium text-neutral-800">{p.name}</span>
+                    {p.bio && <span className="text-xs text-neutral-500">{p.bio}</span>}
+                  </span>
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        <div className="space-y-1.5">
-          <Label>Serviço</Label>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {config.services.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setServiceId(s.id)}
-                className={
-                  "rounded-xl border px-3 py-2 text-left text-sm " +
-                  (serviceId === s.id ? "border-neutral-900 bg-neutral-50" : "border-neutral-200")
-                }
-              >
-                <span className="block font-medium text-neutral-800">{s.name}</span>
-                <span className="text-xs text-neutral-500">
-                  {s.duration_minutes} min{s.price != null ? ` · R$ ${Number(s.price).toFixed(2)}` : ""}
-                </span>
-              </button>
-            ))}
-            {config.services.length === 0 && <p className="text-sm text-neutral-500">Nenhum serviço cadastrado.</p>}
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>Horário</Label>
-          {slots.length === 0 ? (
-            <p className="text-sm text-neutral-500">Sem horários disponíveis nesse dia.</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {slots.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setTime(t)}
-                  className={
-                    "rounded-lg border px-3 py-1.5 text-sm " +
-                    (time === t ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300 text-neutral-700")
-                  }
-                >
-                  {t}
-                </button>
-              ))}
+        {step === 2 && (
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Data</Label>
+              <Input type="date" value={date} min={ymd(new Date())} onChange={(e) => setDate(e.target.value)} className="w-48" />
             </div>
+            <div className="space-y-1.5">
+              <Label>Horário</Label>
+              {slots.length === 0 ? (
+                <p className="text-sm text-neutral-500">Sem horários disponíveis nesse dia.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {slots.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setTime(t)}
+                      className={
+                        "rounded-lg border px-3 py-1.5 text-sm transition " +
+                        (time === t ? "border-brand bg-brand text-white" : "border-neutral-300 text-neutral-700 hover:border-brand")
+                      }
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="space-y-3">
+            <div className="rounded-xl bg-neutral-50 p-3 text-sm text-neutral-600">
+              {service?.name} · {new Date(`${date}T${time ?? "00:00"}:00`).toLocaleString("pt-BR", { day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit" })}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Seu nome</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome completo" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>WhatsApp</Label>
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999" inputMode="tel" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Observação (opcional)</Label>
+              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          {step > 0 && (
+            <Button variant="outline" className="flex-1" onClick={() => setStep((s) => s - 1)}>
+              Voltar
+            </Button>
+          )}
+          {step < 3 ? (
+            <Button className="flex-1 bg-brand text-white hover:bg-brand-strong" disabled={!canGoNext} onClick={() => setStep((s) => s + 1)}>
+              Continuar
+            </Button>
+          ) : (
+            <Button className="flex-1 bg-brand text-white hover:bg-brand-strong" onClick={submit} disabled={sending}>
+              {sending ? "Enviando..." : "Confirmar agendamento"}
+            </Button>
           )}
         </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label>Seu nome</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome completo" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>WhatsApp</Label>
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999" inputMode="tel" />
-          </div>
-        </div>
-        <div className="space-y-1.5">
-          <Label>Observação (opcional)</Label>
-          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
-        </div>
-
-        <Button className="w-full" onClick={submit} disabled={sending}>
-          {sending ? "Enviando..." : "Confirmar agendamento"}
-        </Button>
       </section>
     </main>
   );
