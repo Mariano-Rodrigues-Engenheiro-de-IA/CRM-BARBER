@@ -462,7 +462,7 @@ function AppointmentFormDialog({
   api,
   onSave,
   onCancelAppointment,
-  onMarkDone,
+  onStatusChange,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -481,8 +481,9 @@ function AppointmentFormDialog({
     notes: string;
   }) => void;
   onCancelAppointment?: () => void;
-  onMarkDone?: () => void;
+  onStatusChange?: (status: AppointmentStatus) => void;
 }) {
+
   const [title, setTitle] = useState("");
   const [customerId, setCustomerId] = useState<string>("none");
   const [professionalId, setProfessionalId] = useState<string>("none");
