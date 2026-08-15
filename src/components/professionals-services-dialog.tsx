@@ -17,6 +17,7 @@ export type Professional = {
   bio: string | null;
   commission_percent: number | null;
   color: string;
+  avatar_url: string | null;
   active: boolean;
 };
 export type Service = {
@@ -29,6 +30,42 @@ export type Service = {
   active: boolean;
   professional_ids?: string[];
 };
+
+/** Redimensiona a imagem escolhida pra um quadrado pequeno e devolve um
+ * data URL leve — evita subir arquivo e mantém a foto junto do cadastro. */
+async function fileToSquareDataUrl(file: File, size = 160): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Não consegui processar a imagem");
+  const side = Math.min(bitmap.width, bitmap.height);
+  ctx.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, size, size);
+  return canvas.toDataURL("image/jpeg", 0.82);
+}
+
+/** Bolinha do profissional: foto quando existe, senão a cor de identificação. */
+export function ProfessionalAvatar({ professional, size = 24 }: { professional: { name: string; color: string; avatar_url?: string | null }; size?: number }) {
+  if (professional.avatar_url) {
+    return (
+      <img
+        src={professional.avatar_url}
+        alt={`Foto de ${professional.name}`}
+        className="shrink-0 rounded-full object-cover"
+        style={{ width: size, height: size, borderColor: professional.color, borderWidth: 2, borderStyle: "solid" }}
+      />
+    );
+  }
+  return (
+    <span
+      className="flex shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+      style={{ width: size, height: size, backgroundColor: professional.color }}
+    >
+      {professional.name.trim().charAt(0).toUpperCase()}
+    </span>
+  );
+}
 
 const COLORS = ["#7399D7", "#E8998D", "#8FB996", "#D7B26D", "#B589C4", "#6EC4D0"];
 
@@ -86,7 +123,7 @@ export function ProfessionalsTab({ api, onChanged }: { api: Api; onChanged?: () 
         <div className="space-y-2">
           {professionals.map((p) => (
             <div key={p.id} className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3">
-              <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: p.color }} />
+              <ProfessionalAvatar professional={p} size={32} />
               <div className="min-w-0 flex-1">
                 <p className={"truncate text-sm font-medium " + (p.active ? "text-neutral-900" : "text-neutral-400 line-through")}>
                   {p.name}
@@ -150,6 +187,7 @@ function ProfessionalFormDialog({
   const [bio, setBio] = useState("");
   const [commission, setCommission] = useState("");
   const [color, setColor] = useState(nextColor);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -160,6 +198,7 @@ function ProfessionalFormDialog({
       setBio(editing?.bio ?? "");
       setCommission(editing?.commission_percent != null ? String(editing.commission_percent) : "");
       setColor(editing?.color ?? nextColor);
+      setAvatarUrl(editing?.avatar_url ?? null);
     }
   }, [open, editing, nextColor]);
 
@@ -174,6 +213,7 @@ function ProfessionalFormDialog({
         bio: bio.trim() || undefined,
         commission_percent: commission ? Number(commission) : undefined,
         color,
+        avatar_url: avatarUrl,
       };
       const r = editing
         ? await api(`/api/public/extension/professionals/${editing.id}`, { method: "PATCH", body: JSON.stringify(payload) })
@@ -211,7 +251,35 @@ function ProfessionalFormDialog({
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label>Bio / especialidades (opcional)</Label>
+            <Label>Foto (opcional)</Label>
+            <div className="flex items-center gap-3">
+              <ProfessionalAvatar professional={{ name: name || "?", color, avatar_url: avatarUrl }} size={56} />
+              <div className="flex gap-2">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  className="max-w-[220px]"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    try {
+                      setAvatarUrl(await fileToSquareDataUrl(file));
+                    } catch {
+                      toast.error("Não consegui usar essa imagem.");
+                    }
+                  }}
+                />
+                {avatarUrl && (
+                  <Button variant="outline" size="sm" onClick={() => setAvatarUrl(null)}>
+                    Remover
+                  </Button>
+                )}
+              </div>
+            </div>
+            <p className="text-[11px] text-neutral-400">A foto aparece na agenda no lugar da bolinha colorida.</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Especialidades (opcional)</Label>
             <Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={2} placeholder="Ex: especialista em degradê e barba" />
           </div>
           <div className="grid grid-cols-2 gap-3">
