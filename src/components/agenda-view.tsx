@@ -281,10 +281,11 @@ export function AgendaView({ api }: { api: Api }) {
 
             {columns.map((prof) => (
               <div key={prof.id} className="relative flex-1 border-r border-neutral-100 last:border-r-0" style={{ minWidth: 220 }}>
-                <div className="flex h-12 items-center gap-1.5 border-b border-neutral-200 px-2">
-                  <ProfessionalAvatar professional={prof} size={26} />
+                <div className="flex h-14 items-center gap-2 border-b border-neutral-200 px-2">
+                  <ProfessionalAvatar professional={prof} size={40} />
                   <span className="truncate text-xs font-semibold text-neutral-700">{prof.name}</span>
                 </div>
+
 
                 <div className="relative">
                   {slots.map((t) => (
