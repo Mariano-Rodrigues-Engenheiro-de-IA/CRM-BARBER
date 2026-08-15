@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { User, Phone, Scissors, Clock, CircleCheck, StickyNote, DollarSign } from "lucide-react";
 import { type AgendaSettings } from "@/components/agenda-settings-dialog";
 import { type Professional, type Service, ProfessionalAvatar } from "@/components/professionals-services-dialog";
 
@@ -42,6 +43,7 @@ type Appointment = {
   service_id: string | null;
   scheduled_at: string;
   duration_minutes: number;
+  price?: number | null;
   status: AppointmentStatus;
   customers?: { name: string; phone: string } | null;
 };
@@ -71,6 +73,7 @@ export function AgendaView({ api }: { api: Api }) {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Appointment | null>(null);
@@ -117,6 +120,11 @@ export function AgendaView({ api }: { api: Api }) {
     api("/api/public/extension/customers").then((r) => {
       if (r?.ok) setCustomers((r.customers || []).map((c: any) => ({ id: c.id, name: c.name, phone: c.phone })));
     });
+    // Serviços carregados junto com a agenda para o formulário de novo
+    // agendamento já abrir completo (sem o campo Serviço chegando depois).
+    api("/api/public/extension/services").then((r) => {
+      if (r?.ok) setServices(r.services || []);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -162,12 +170,14 @@ export function AgendaView({ api }: { api: Api }) {
     customer_id: string | null;
     professional_id: string | null;
     service_id: string | null;
+    date?: string;
     time: string;
     duration_minutes: number;
+    price: number | null;
     notes: string;
     status?: AppointmentStatus;
   }) {
-    const scheduled_at = new Date(`${ymd(day)}T${data.time}:00`).toISOString();
+    const scheduled_at = new Date(`${data.date || ymd(day)}T${data.time}:00`).toISOString();
     try {
       if (editing) {
         const r = await api(`/api/public/extension/appointments/${editing.id}`, {
@@ -179,6 +189,7 @@ export function AgendaView({ api }: { api: Api }) {
             service_id: data.service_id,
             scheduled_at,
             duration_minutes: data.duration_minutes,
+            price: data.price,
             notes: data.notes || null,
             ...(data.status ? { status: data.status } : {}),
           }),
@@ -196,6 +207,7 @@ export function AgendaView({ api }: { api: Api }) {
             service_id: data.service_id,
             scheduled_at,
             duration_minutes: data.duration_minutes,
+            price: data.price,
             notes: data.notes || undefined,
           }),
         });
@@ -476,8 +488,10 @@ function AppointmentFormDialog({
     customer_id: string | null;
     professional_id: string | null;
     service_id: string | null;
+    date?: string;
     time: string;
     duration_minutes: number;
+    price: number | null;
     notes: string;
   }) => void;
   onCancelAppointment?: () => void;
@@ -681,8 +695,10 @@ function SlotActionDialog({
     customer_id: string | null;
     professional_id: string | null;
     service_id: string | null;
+    date?: string;
     time: string;
     duration_minutes: number;
+    price: number | null;
     notes: string;
   }) => void;
   onBlockSaved: () => void;
@@ -781,8 +797,10 @@ function SlotAppointmentForm({
     customer_id: string | null;
     professional_id: string | null;
     service_id: string | null;
+    date?: string;
     time: string;
     duration_minutes: number;
+    price: number | null;
     notes: string;
   }) => void;
 }) {
