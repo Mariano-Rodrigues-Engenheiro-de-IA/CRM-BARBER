@@ -38,9 +38,12 @@ export async function getBillingStatus(
     return false;
   });
 
+  // Barbearias admin (cortesia) têm acesso liberado sem assinatura.
+  const courtesy = isAdminBarbershop(barbershopId);
+
   return {
-    premium: Boolean(active),
-    status: active?.status ?? null,
+    premium: courtesy || Boolean(active),
+    status: active?.status ?? (courtesy ? "courtesy" : null),
     current_period_end: active?.current_period_end ?? null,
     usage: { customers: customersRes.count ?? 0, messages: messagesRes.count ?? 0 },
     limits: { customers: FREE_LIMITS.customers, dispatchBatch: FREE_LIMITS.dispatchBatch },
