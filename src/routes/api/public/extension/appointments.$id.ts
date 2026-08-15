@@ -14,6 +14,7 @@ const patchSchema = z.object({
   service_id: z.string().uuid().optional().nullable(),
   scheduled_at: z.string().min(4).max(40).optional(),
   duration_minutes: z.number().int().min(5).max(480).optional(),
+  price: z.number().min(0).max(1000000).optional().nullable(),
   status: z.enum(["scheduled", "confirmed", "done", "canceled"]).optional(),
 });
 
@@ -37,7 +38,7 @@ export const Route = createFileRoute("/api/public/extension/appointments/$id")({
           .update(parsed.data)
           .eq("id", params.id)
           .eq("barbershop_id", auth.token.barbershop_id)
-          .select("id, title, notes, customer_id, professional_id, service_id, scheduled_at, duration_minutes, status")
+          .select("id, title, notes, customer_id, professional_id, service_id, scheduled_at, duration_minutes, price, status")
           .maybeSingle();
         if (error) {
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });

@@ -57,6 +57,7 @@ export type Database = {
           duration_minutes: number
           id: string
           notes: string | null
+          price: number | null
           professional_id: string | null
           scheduled_at: string
           service_id: string | null
@@ -71,6 +72,7 @@ export type Database = {
           duration_minutes?: number
           id?: string
           notes?: string | null
+          price?: number | null
           professional_id?: string | null
           scheduled_at: string
           service_id?: string | null
@@ -85,6 +87,7 @@ export type Database = {
           duration_minutes?: number
           id?: string
           notes?: string | null
+          price?: number | null
           professional_id?: string | null
           scheduled_at?: string
           service_id?: string | null
