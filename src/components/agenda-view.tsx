@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { type AgendaSettings } from "@/components/agenda-settings-dialog";
 import { type Professional, type Service } from "@/components/professionals-services-dialog";
@@ -53,7 +54,8 @@ export function AgendaView({ api }: { api: Api }) {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [formPrefill, setFormPrefill] = useState<{ time: string; professionalId: string | null } | null>(null);
-  const [blockFormOpen, setBlockFormOpen] = useState(false);
+  const [slotDialogOpen, setSlotDialogOpen] = useState(false);
+  const [slotPrefill, setSlotPrefill] = useState<{ time: string; professionalId: string | null } | null>(null);
 
   async function loadSettings() {
     const r = await api("/api/public/extension/agenda-settings");
@@ -128,9 +130,8 @@ export function AgendaView({ api }: { api: Api }) {
   }
 
   function openNewAppointment(time: string, professionalId: string) {
-    setEditing(null);
-    setFormPrefill({ time, professionalId: professionalId === "__none__" ? null : professionalId });
-    setFormOpen(true);
+    setSlotPrefill({ time, professionalId: professionalId === "__none__" ? null : professionalId });
+    setSlotDialogOpen(true);
   }
 
   async function handleSave(data: {
@@ -251,9 +252,6 @@ export function AgendaView({ api }: { api: Api }) {
             </button>
           )}
         </div>
-        <Button variant="outline" size="sm" onClick={() => setBlockFormOpen(true)}>
-          🚫 Bloquear horário
-        </Button>
       </div>
 
       {!settings ? (
@@ -375,16 +373,28 @@ export function AgendaView({ api }: { api: Api }) {
         onMarkDone={editing && editing.status === "scheduled" ? () => handleMarkDone(editing) : undefined}
       />
 
-      <TimeBlockFormDialog
-        open={blockFormOpen}
-        onOpenChange={setBlockFormOpen}
+      <SlotActionDialog
+        open={slotDialogOpen}
+        onOpenChange={(v) => {
+          setSlotDialogOpen(v);
+          if (!v) setSlotPrefill(null);
+        }}
         day={day}
+        prefill={slotPrefill}
+        customers={customers}
         professionals={professionals}
+        timeBlocks={timeBlocks}
         api={api}
-        onSaved={() => {
-          setBlockFormOpen(false);
+        onAppointmentSaved={async (data) => {
+          await handleSave(data);
+          setSlotDialogOpen(false);
+        }}
+        onBlockSaved={() => {
+          setSlotDialogOpen(false);
           void loadTimeBlocks();
         }}
+        onBlockDeleted={() => void loadTimeBlocks()}
+        deleteBlock={handleDeleteBlock}
       />
 
     </div>
@@ -587,35 +597,296 @@ function AppointmentFormDialog({
   );
 }
 
-function TimeBlockFormDialog({
+/** Dialog unificado ao clicar num horário vazio: Agendar | Bloquear |
+ * Desbloquear, lado a lado em abas — pedido do Mariano baseado no padrão
+ * de apps como AppBarber. */
+function SlotActionDialog({
   open,
   onOpenChange,
   day,
+  prefill,
+  customers,
   professionals,
+  timeBlocks,
   api,
-  onSaved,
+  onAppointmentSaved,
+  onBlockSaved,
+  deleteBlock,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   day: Date;
+  prefill: { time: string; professionalId: string | null } | null;
+  customers: CustomerOption[];
+  professionals: Professional[];
+  timeBlocks: TimeBlock[];
+  api: Api;
+  onAppointmentSaved: (data: {
+    title: string;
+    customer_id: string | null;
+    professional_id: string | null;
+    service_id: string | null;
+    time: string;
+    duration_minutes: number;
+    notes: string;
+  }) => void;
+  onBlockSaved: () => void;
+  onBlockDeleted: () => void;
+  deleteBlock: (b: TimeBlock) => void;
+}) {
+  const [tab, setTab] = useState<"agendar" | "bloquear" | "desbloquear">("agendar");
+
+  useEffect(() => {
+    if (open) setTab("agendar");
+  }, [open]);
+
+  const dayBlocks = timeBlocks.filter((b) => {
+    if (!prefill?.professionalId) return true;
+    return b.professional_id === null || b.professional_id === prefill.professionalId;
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{prefill?.time ? `Horário ${prefill.time}` : "Ação na agenda"}</DialogTitle>
+        </DialogHeader>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
+          <TabsList className="w-full">
+            <TabsTrigger value="agendar" className="flex-1">
+              Agendar
+            </TabsTrigger>
+            <TabsTrigger value="bloquear" className="flex-1">
+              Bloquear
+            </TabsTrigger>
+            <TabsTrigger value="desbloquear" className="flex-1">
+              Desbloquear
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="agendar">
+            <SlotAppointmentForm
+              prefill={prefill}
+              customers={customers}
+              professionals={professionals}
+              api={api}
+              onSave={onAppointmentSaved}
+            />
+          </TabsContent>
+
+          <TabsContent value="bloquear">
+            <SlotBlockForm day={day} prefill={prefill} professionals={professionals} api={api} onSaved={onBlockSaved} />
+          </TabsContent>
+
+          <TabsContent value="desbloquear" className="space-y-2">
+            {dayBlocks.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-neutral-300 p-4 text-center text-sm text-neutral-400">
+                Nenhum bloqueio nesse dia.
+              </p>
+            ) : (
+              dayBlocks.map((b) => {
+                const prof = professionals.find((p) => p.id === b.professional_id);
+                return (
+                  <div key={b.id} className="flex items-center gap-3 rounded-lg border border-neutral-200 p-3">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-neutral-800">
+                        {new Date(b.starts_at).toTimeString().slice(0, 5)} – {new Date(b.ends_at).toTimeString().slice(0, 5)}
+                        {" · "}
+                        {prof ? prof.name : "Toda a loja"}
+                      </p>
+                      {b.reason && <p className="text-xs text-neutral-400">{b.reason}</p>}
+                    </div>
+                    <Button variant="outline" size="sm" className="text-red-600" onClick={() => deleteBlock(b)}>
+                      Desbloquear
+                    </Button>
+                  </div>
+                );
+              })
+            )}
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SlotAppointmentForm({
+  prefill,
+  customers,
+  professionals,
+  api,
+  onSave,
+}: {
+  prefill: { time: string; professionalId: string | null } | null;
+  customers: CustomerOption[];
+  professionals: Professional[];
+  api: Api;
+  onSave: (data: {
+    title: string;
+    customer_id: string | null;
+    professional_id: string | null;
+    service_id: string | null;
+    time: string;
+    duration_minutes: number;
+    notes: string;
+  }) => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [customerId, setCustomerId] = useState("none");
+  const [professionalId, setProfessionalId] = useState(prefill?.professionalId ?? "none");
+  const [serviceId, setServiceId] = useState("none");
+  const [time, setTime] = useState(prefill?.time ?? "09:00");
+  const [duration, setDuration] = useState(30);
+  const [notes, setNotes] = useState("");
+  const [services, setServices] = useState<Service[]>([]);
+
+  useEffect(() => {
+    api("/api/public/extension/services").then((r) => {
+      if (r?.ok) setServices(r.services);
+    });
+    setTitle("");
+    setCustomerId("none");
+    setProfessionalId(prefill?.professionalId ?? "none");
+    setServiceId("none");
+    setTime(prefill?.time ?? "09:00");
+    setDuration(30);
+    setNotes("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefill]);
+
+  function handleServiceChange(id: string) {
+    setServiceId(id);
+    const svc = services.find((s) => s.id === id);
+    if (svc) {
+      setDuration(svc.duration_minutes);
+      if (!title.trim()) setTitle(svc.name);
+    }
+  }
+
+  const availableServices = services.filter(
+    (s) => professionalId === "none" || !s.professional_ids || s.professional_ids.length === 0 || s.professional_ids.includes(professionalId),
+  );
+
+  return (
+    <div className="space-y-3 py-2">
+      <div className="space-y-1.5">
+        <Label>Título</Label>
+        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Corte + barba" />
+      </div>
+      {professionals.length > 0 && (
+        <div className="space-y-1.5">
+          <Label>Profissional</Label>
+          <Select value={professionalId} onValueChange={setProfessionalId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Sem profissional vinculado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sem profissional vinculado</SelectItem>
+              {professionals.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      {services.length > 0 && (
+        <div className="space-y-1.5">
+          <Label>Serviço</Label>
+          <Select value={serviceId} onValueChange={handleServiceChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Sem serviço vinculado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sem serviço vinculado</SelectItem>
+              {availableServices.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name} ({s.duration_minutes}min)
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      <div className="space-y-1.5">
+        <Label>Cliente (opcional)</Label>
+        <Select value={customerId} onValueChange={setCustomerId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Sem cliente vinculado" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Sem cliente vinculado</SelectItem>
+            {customers.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name} ({c.phone})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label>Horário</Label>
+          <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Duração (min)</Label>
+          <Input type="number" min={5} step={5} value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <Label>Notas (opcional)</Label>
+        <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+      </div>
+      <div className="flex justify-end pt-2">
+        <Button
+          onClick={() =>
+            onSave({
+              title: title.trim(),
+              customer_id: customerId === "none" ? null : customerId,
+              professional_id: professionalId === "none" ? null : professionalId,
+              service_id: serviceId === "none" ? null : serviceId,
+              time,
+              duration_minutes: duration,
+              notes,
+            })
+          }
+          disabled={!title.trim()}
+        >
+          Criar agendamento
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function SlotBlockForm({
+  day,
+  prefill,
+  professionals,
+  api,
+  onSaved,
+}: {
+  day: Date;
+  prefill: { time: string; professionalId: string | null } | null;
   professionals: Professional[];
   api: Api;
   onSaved: () => void;
 }) {
-  const [professionalId, setProfessionalId] = useState<string>("all");
-  const [startTime, setStartTime] = useState("12:00");
+  const [professionalId, setProfessionalId] = useState(prefill?.professionalId ?? "all");
+  const [startTime, setStartTime] = useState(prefill?.time ?? "12:00");
   const [endTime, setEndTime] = useState("13:00");
   const [reason, setReason] = useState("");
+  const [recurrenceType, setRecurrenceType] = useState<"unico" | "recorrente">("unico");
+  const [countDays, setCountDays] = useState(30);
+  const [periodicityDays, setPeriodicityDays] = useState(1);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      setProfessionalId("all");
-      setStartTime("12:00");
-      setEndTime("13:00");
-      setReason("");
-    }
-  }, [open]);
+    setProfessionalId(prefill?.professionalId ?? "all");
+    setStartTime(prefill?.time ?? "12:00");
+  }, [prefill]);
 
   async function handleSave() {
     setSaving(true);
@@ -629,10 +900,11 @@ function TimeBlockFormDialog({
           starts_at,
           ends_at,
           reason: reason.trim() || undefined,
+          recurrence: recurrenceType === "recorrente" ? { count_days: countDays, periodicity_days: periodicityDays } : undefined,
         }),
       });
       if (!r?.ok) throw new Error(r?.error || "Erro ao bloquear horário");
-      toast.success("Horário bloqueado");
+      toast.success(recurrenceType === "recorrente" ? `${r.created_count} bloqueios criados` : "Horário bloqueado");
       onSaved();
     } catch (e: any) {
       toast.error(e?.message || "Erro ao bloquear horário");
@@ -642,58 +914,71 @@ function TimeBlockFormDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Bloquear horário</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          <p className="text-xs text-neutral-400">
-            Para o dia {day.toLocaleDateString("pt-BR", { day: "2-digit", month: "long" })}. Use para almoço, folga,
-            feriado ou qualquer indisponibilidade — o período fica sem poder receber novos agendamentos.
-          </p>
-          {professionals.length > 0 && (
-            <div className="space-y-1.5">
-              <Label>Quem fica indisponível</Label>
-              <Select value={professionalId} onValueChange={setProfessionalId}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Toda a loja</SelectItem>
-                  {professionals.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Das</Label>
-              <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Até</Label>
-              <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
-            </div>
+    <div className="space-y-3 py-2">
+      <div className="space-y-1.5">
+        <Label>Tipo</Label>
+        <Select value={recurrenceType} onValueChange={(v) => setRecurrenceType(v as any)}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="unico">Bloqueio único (só esse dia)</SelectItem>
+            <SelectItem value="recorrente">Recorrente (repete a cada X dias)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {recurrenceType === "recorrente" && (
+        <div className="grid grid-cols-2 gap-3 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Repetir por quantos dias</Label>
+            <Input type="number" min={1} max={180} value={countDays} onChange={(e) => setCountDays(Number(e.target.value))} />
           </div>
           <div className="space-y-1.5">
-            <Label>Motivo (opcional)</Label>
-            <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Ex: Almoço, Folga, Feriado" />
+            <Label className="text-xs">A cada quantos dias</Label>
+            <Input type="number" min={1} max={30} value={periodicityDays} onChange={(e) => setPeriodicityDays(Number(e.target.value))} />
+            <p className="text-[10px] text-neutral-400">1 = todo dia. Ex: almoço todo dia = 1.</p>
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSave} disabled={saving || startTime >= endTime}>
-            {saving ? "Bloqueando..." : "Bloquear"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      )}
+
+      {professionals.length > 0 && (
+        <div className="space-y-1.5">
+          <Label>Quem fica indisponível</Label>
+          <Select value={professionalId} onValueChange={setProfessionalId}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toda a loja</SelectItem>
+              {professionals.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label>Das</Label>
+          <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Até</Label>
+          <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <Label>Motivo (opcional)</Label>
+        <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Ex: Almoço, Folga, Feriado" />
+      </div>
+      <div className="flex justify-end pt-2">
+        <Button onClick={handleSave} disabled={saving || startTime >= endTime}>
+          {saving ? "Bloqueando..." : "Bloquear"}
+        </Button>
+      </div>
+    </div>
   );
 }
