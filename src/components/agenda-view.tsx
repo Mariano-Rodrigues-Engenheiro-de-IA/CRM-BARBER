@@ -12,6 +12,27 @@ import { type Professional, type Service, ProfessionalAvatar } from "@/component
 
 type Api = (path: string, opts?: RequestInit) => Promise<any>;
 
+export type AppointmentStatus = "scheduled" | "confirmed" | "done" | "canceled";
+
+/** Rótulos em português usados no seletor de status e no resumo. */
+const STATUS_OPTIONS: { value: AppointmentStatus; label: string }[] = [
+  { value: "scheduled", label: "Aguardando confirmação" },
+  { value: "confirmed", label: "Confirmado" },
+  { value: "done", label: "Finalizado" },
+  { value: "canceled", label: "Cancelado" },
+];
+const statusLabelOf = (s: string) => STATUS_OPTIONS.find((o) => o.value === s)?.label ?? "Agendado";
+const statusClassOf = (s: string) =>
+  s === "done"
+    ? "border-emerald-300 bg-emerald-50"
+    : s === "confirmed"
+      ? "border-sky-300 bg-sky-50"
+      : s === "canceled"
+        ? "border-neutral-300 bg-neutral-100 line-through opacity-70"
+        : "border-brand/40 bg-brand/10";
+
+
+
 type Appointment = {
   id: string;
   title: string;
