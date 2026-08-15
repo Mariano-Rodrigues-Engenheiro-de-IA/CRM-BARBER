@@ -584,7 +584,7 @@ function AppointmentFormDialog({
 
           <div className="space-y-1.5">
             <Label>Cliente (opcional)</Label>
-            <CustomerPicker customers={customers} value={customerId} onChange={setCustomerId} />
+            <CustomerPicker customers={customers} value={customerId} onChange={setCustomerId} api={api} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -866,7 +866,7 @@ function SlotAppointmentForm({
       )}
       <div className="space-y-1.5">
         <Label>Cliente (opcional)</Label>
-        <CustomerPicker customers={customers} value={customerId} onChange={setCustomerId} />
+        <CustomerPicker customers={customers} value={customerId} onChange={setCustomerId} api={api} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
