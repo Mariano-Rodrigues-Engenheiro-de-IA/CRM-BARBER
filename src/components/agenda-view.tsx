@@ -584,7 +584,7 @@ function AppointmentFormDialog({
 
           <div className="space-y-1.5">
             <Label>Cliente (opcional)</Label>
-            <CustomerPicker customers={customers} value={customerId} onChange={setCustomerId} />
+            <CustomerPicker customers={customers} value={customerId} onChange={setCustomerId} api={api} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -866,7 +866,7 @@ function SlotAppointmentForm({
       )}
       <div className="space-y-1.5">
         <Label>Cliente (opcional)</Label>
-        <CustomerPicker customers={customers} value={customerId} onChange={setCustomerId} />
+        <CustomerPicker customers={customers} value={customerId} onChange={setCustomerId} api={api} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
@@ -1090,38 +1090,71 @@ function AppointmentTooltip({
   );
 }
 
-/** Seletor de cliente com busca por nome ou telefone — evita rolar a lista
- * inteira quando a barbearia tem centenas de clientes. */
+/** Seletor de cliente: só uma barra de busca (nome, telefone ou e-mail) e um
+ * botão "+" pra cadastrar na hora. Nada de lista aberta ocupando a tela —
+ * os resultados só aparecem enquanto o gestor digita. */
 function CustomerPicker({
   customers,
   value,
   onChange,
+  api,
 }: {
   customers: CustomerOption[];
   value: string;
   onChange: (v: string) => void;
+  api: Api;
 }) {
   const [query, setQuery] = useState("");
-  const [open, setOpen] = useState(false);
-  const selected = customers.find((c) => c.id === value) ?? null;
+  const [created, setCreated] = useState<CustomerOption[]>([]);
+  const [newOpen, setNewOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const all = useMemo(() => [...created, ...customers], [created, customers]);
+  const selected = all.find((c) => c.id === value) ?? null;
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = q
-      ? customers.filter((c) => c.name.toLowerCase().includes(q) || (c.phone || "").replace(/\D/g, "").includes(q.replace(/\D/g, "")))
-      : customers;
-    return list.slice(0, 50);
-  }, [customers, query]);
+    if (!q) return [];
+    const digits = q.replace(/\D/g, "");
+    return all
+      .filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          (digits.length > 0 && (c.phone || "").replace(/\D/g, "").includes(digits)),
+      )
+      .slice(0, 20);
+  }, [all, query]);
 
-  if (selected && !open) {
+  async function createCustomer() {
+    if (!newName.trim() || !newPhone.trim()) return;
+    setSaving(true);
+    const r = await api("/api/public/extension/customers", {
+      method: "POST",
+      body: JSON.stringify({ name: newName.trim(), phone: newPhone.trim() }),
+    });
+    setSaving(false);
+    if (!r?.ok) {
+      toast.error(r?.error || "Não foi possível cadastrar o cliente.");
+      return;
+    }
+    const c: CustomerOption = { id: r.customer.id, name: r.customer.name, phone: r.customer.phone };
+    setCreated((prev) => [c, ...prev]);
+    onChange(c.id);
+    setNewOpen(false);
+    setNewName("");
+    setNewPhone("");
+    setQuery("");
+    toast.success("Cliente cadastrado.");
+  }
+
+  if (selected) {
     return (
       <div className="flex items-center gap-2 rounded-md border border-neutral-300 px-3 py-2 text-sm">
         <span className="flex-1 truncate">
           {selected.name} <span className="text-neutral-400">({selected.phone})</span>
         </span>
-        <button type="button" className="text-xs text-neutral-500 underline" onClick={() => { setQuery(""); setOpen(true); }}>
-          trocar
-        </button>
         <button type="button" className="text-xs text-red-600 underline" onClick={() => onChange("none")}>
           remover
         </button>
@@ -1130,32 +1163,60 @@ function CustomerPicker({
   }
 
   return (
-    <div className="space-y-1">
-      <Input
-        autoFocus={open}
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar cliente por nome ou telefone..."
-      />
-      <div className="max-h-44 overflow-y-auto rounded-md border border-neutral-200">
-        {results.length === 0 ? (
-          <p className="p-3 text-center text-xs text-neutral-400">Nenhum cliente encontrado.</p>
-        ) : (
-          results.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => {
-                onChange(c.id);
-                setOpen(false);
-              }}
-              className="block w-full truncate px-3 py-1.5 text-left text-sm hover:bg-neutral-50"
-            >
-              {c.name} <span className="text-neutral-400">({c.phone})</span>
-            </button>
-          ))
-        )}
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar cliente por nome ou telefone..."
+        />
+        <button
+          type="button"
+          title="Cadastrar novo cliente"
+          onClick={() => setNewOpen((v) => !v)}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-neutral-300 text-lg font-semibold text-brand transition hover:bg-neutral-50"
+        >
+          +
+        </button>
       </div>
+
+      {query.trim() !== "" && (
+        <div className="max-h-44 overflow-y-auto rounded-md border border-neutral-200">
+          {results.length === 0 ? (
+            <p className="p-3 text-center text-xs text-neutral-400">Nenhum cliente encontrado.</p>
+          ) : (
+            results.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => {
+                  onChange(c.id);
+                  setQuery("");
+                }}
+                className="block w-full truncate px-3 py-1.5 text-left text-sm hover:bg-neutral-50"
+              >
+                {c.name} <span className="text-neutral-400">({c.phone})</span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+
+      {newOpen && (
+        <div className="space-y-2 rounded-md border border-neutral-200 bg-neutral-50 p-3">
+          <p className="text-xs font-semibold text-neutral-600">Novo cliente</p>
+          <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nome" />
+          <Input value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="Telefone (com DDD)" />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setNewOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="button" size="sm" disabled={saving || !newName.trim() || !newPhone.trim()} onClick={createCustomer}>
+              {saving ? "Salvando..." : "Cadastrar"}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
