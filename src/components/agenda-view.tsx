@@ -409,7 +409,9 @@ export function AgendaView({ api }: { api: Api }) {
         api={api}
         onSave={handleSave}
         onCancelAppointment={editing ? () => handleCancel(editing) : undefined}
+        onStatusChange={editing ? (s) => handleStatusChange(editing, s) : undefined}
       />
+
 
 
       {hovered && (
