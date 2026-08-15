@@ -1049,8 +1049,8 @@ function AppointmentTooltip({
   y: number;
 }) {
   const endMin = startMin + appointment.duration_minutes;
-  const statusLabel =
-    appointment.status === "done" ? "Concluído" : appointment.status === "canceled" ? "Cancelado" : "Agendado";
+  const statusLabel = statusLabelOf(appointment.status);
+
   return (
     <div
       className="pointer-events-none fixed z-50 w-64 -translate-x-1/2 translate-y-2 rounded-lg border border-neutral-200 bg-white p-3 text-left shadow-xl"
