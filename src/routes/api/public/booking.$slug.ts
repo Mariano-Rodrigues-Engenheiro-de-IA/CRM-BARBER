@@ -16,7 +16,18 @@ const bookSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   time: z.string().regex(/^\d{2}:\d{2}$/),
   notes: z.string().trim().max(500).optional(),
+  // Diferença de fuso do navegador do cliente (Date#getTimezoneOffset).
+  tz_offset: z.number().int().min(-840).max(840).optional(),
 });
+
+/** Converte data+hora locais do cliente em instante UTC real.
+ * Sem isso o servidor (UTC) grava o horário 3h à frente e o agendamento
+ * "some" da agenda da barbearia. */
+function localToUtc(date: string, time: string, tzOffsetMinutes: number) {
+  const [y, m, d] = date.split("-").map(Number);
+  const [hh, mm] = time.split(":").map(Number);
+  return new Date(Date.UTC(y, m - 1, d, hh, mm) + tzOffsetMinutes * 60000);
+}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -45,11 +56,12 @@ export const Route = createFileRoute("/api/public/booking/$slug")({
 
         const url = new URL(request.url);
         const date = url.searchParams.get("date") || new Date().toISOString().slice(0, 10);
-        const from = new Date(`${date}T00:00:00`);
-        const to = new Date(`${date}T23:59:59`);
+        const tz = Number(url.searchParams.get("tz") ?? "0") || 0;
+        const from = localToUtc(date, "00:00", tz);
+        const to = new Date(localToUtc(date, "23:59", tz).getTime() + 59_000);
 
         const [shop, professionals, services, appointments, blocks] = await Promise.all([
-          supabaseAdmin.from("barbershops").select("name").eq("id", settings.barbershop_id).maybeSingle(),
+          supabaseAdmin.from("barbershops").select("name, logo_url").eq("id", settings.barbershop_id).maybeSingle(),
           supabaseAdmin
             .from("professionals")
             .select("id, name, color, avatar_url, bio")
@@ -80,6 +92,7 @@ export const Route = createFileRoute("/api/public/booking/$slug")({
         return json({
           ok: true,
           shop_name: shop.data?.name ?? "Barbearia",
+          shop_logo: shop.data?.logo_url ?? null,
           slot_duration_minutes: settings.slot_duration_minutes,
           business_hours: settings.business_hours,
           professionals: professionals.data ?? [],
@@ -113,7 +126,8 @@ export const Route = createFileRoute("/api/public/booking/$slug")({
           .maybeSingle();
         if (!service) return json({ ok: false, error: "Serviço indisponível" }, 400);
 
-        const start = new Date(`${input.date}T${input.time}:00`);
+        const tz = input.tz_offset ?? 0;
+        const start = localToUtc(input.date, input.time, tz);
         const end = new Date(start.getTime() + service.duration_minutes * 60000);
         if (start.getTime() < Date.now()) return json({ ok: false, error: "Horário já passou" }, 400);
 
@@ -123,8 +137,8 @@ export const Route = createFileRoute("/api/public/booking/$slug")({
           .select("professional_id, scheduled_at, duration_minutes")
           .eq("barbershop_id", settings.barbershop_id)
           .neq("status", "canceled")
-          .gte("scheduled_at", new Date(`${input.date}T00:00:00`).toISOString())
-          .lte("scheduled_at", new Date(`${input.date}T23:59:59`).toISOString());
+          .gte("scheduled_at", localToUtc(input.date, "00:00", tz).toISOString())
+          .lte("scheduled_at", localToUtc(input.date, "23:59", tz).toISOString());
         const conflict = (sameDay ?? []).some((a) => {
           if ((a.professional_id ?? null) !== (input.professional_id ?? null)) return false;
           const s = new Date(a.scheduled_at).getTime();
