@@ -418,6 +418,7 @@ export function AgendaView({ api }: { api: Api }) {
         prefill={formPrefill}
         customers={customers}
         professionals={professionals}
+        services={services}
         api={api}
         onSave={handleSave}
         onCancelAppointment={editing ? () => handleCancel(editing) : undefined}
@@ -446,6 +447,7 @@ export function AgendaView({ api }: { api: Api }) {
         prefill={slotPrefill}
         customers={customers}
         professionals={professionals}
+        services={services}
         timeBlocks={timeBlocks}
         api={api}
         onAppointmentSaved={async (data) => {
@@ -471,6 +473,7 @@ function AppointmentFormDialog({
   prefill,
   customers,
   professionals,
+  services,
   api,
   onSave,
   onCancelAppointment,
@@ -482,6 +485,7 @@ function AppointmentFormDialog({
   prefill: { time: string; professionalId: string | null } | null;
   customers: CustomerOption[];
   professionals: Professional[];
+  services: Service[];
   api: Api;
   onSave: (data: {
     title: string;
