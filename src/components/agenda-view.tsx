@@ -600,6 +600,25 @@ function AppointmentFormDialog({
             <Label>Notas (opcional)</Label>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
           </div>
+
+          {editing && onStatusChange && (
+            <div className="space-y-1.5">
+              <Label>Status do agendamento</Label>
+              <Select value={editing.status} onValueChange={(v) => onStatusChange(v as AppointmentStatus)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-neutral-400">A alteração de status é salva na hora.</p>
+            </div>
+          )}
         </div>
         <DialogFooter className="flex-wrap gap-2">
           {onCancelAppointment && (
@@ -607,11 +626,7 @@ function AppointmentFormDialog({
               Cancelar agendamento
             </Button>
           )}
-          {onMarkDone && (
-            <Button variant="outline" onClick={onMarkDone}>
-              Concluir
-            </Button>
-          )}
+
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Fechar
           </Button>
