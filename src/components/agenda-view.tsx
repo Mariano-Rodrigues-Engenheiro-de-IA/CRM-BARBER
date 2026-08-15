@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { type AgendaSettings } from "@/components/agenda-settings-dialog";
-import { type Professional, type Service } from "@/components/professionals-services-dialog";
+import { type Professional, type Service, ProfessionalAvatar } from "@/components/professionals-services-dialog";
 
 type Api = (path: string, opts?: RequestInit) => Promise<any>;
 
@@ -56,6 +56,9 @@ export function AgendaView({ api }: { api: Api }) {
   const [formPrefill, setFormPrefill] = useState<{ time: string; professionalId: string | null } | null>(null);
   const [slotDialogOpen, setSlotDialogOpen] = useState(false);
   const [slotPrefill, setSlotPrefill] = useState<{ time: string; professionalId: string | null } | null>(null);
+  // Resumo em popup ao passar o mouse. Posição fixa na tela pra não ser
+  // cortada pelo scroll horizontal da grade.
+  const [hovered, setHovered] = useState<{ appointment: Appointment; professional: Professional; startMin: number; x: number; y: number } | null>(null);
 
   async function loadSettings() {
     const r = await api("/api/public/extension/agenda-settings");
@@ -116,7 +119,7 @@ export function AgendaView({ api }: { api: Api }) {
   }, [hours, slotDuration]);
 
   const gridStartMin = slots.length > 0 ? timeToMinutes(slots[0]) : 0;
-  const columns = professionals.length > 0 ? professionals : [{ id: "__none__", name: "Geral", phone: null, color: "#7399D7", active: true } as Professional];
+  const columns = professionals.length > 0 ? professionals : [{ id: "__none__", name: "Geral", phone: null, color: "#7399D7", avatar_url: null, active: true } as Professional];
 
   function appointmentsFor(professionalId: string) {
     return appointments.filter((a) => (a.professional_id ?? "__none__") === professionalId);
@@ -279,7 +282,7 @@ export function AgendaView({ api }: { api: Api }) {
             {columns.map((prof) => (
               <div key={prof.id} className="relative flex-1 border-r border-neutral-100 last:border-r-0" style={{ minWidth: 220 }}>
                 <div className="flex h-12 items-center gap-1.5 border-b border-neutral-200 px-2">
-                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: prof.color }} />
+                  <ProfessionalAvatar professional={prof} size={26} />
                   <span className="truncate text-xs font-semibold text-neutral-700">{prof.name}</span>
                 </div>
 
@@ -334,16 +337,23 @@ export function AgendaView({ api }: { api: Api }) {
                           setFormPrefill(null);
                           setFormOpen(true);
                         }}
+                        onMouseEnter={(e) => {
+                          const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                          setHovered({ appointment: a, professional: prof, startMin, x: r.left + r.width / 2, y: r.bottom });
+                        }}
+                        onMouseLeave={() => setHovered(null)}
                         className={
-                          "absolute left-1 right-1 z-20 cursor-pointer overflow-hidden rounded-md border px-2 py-1 text-[11px] shadow-sm " +
+                          "absolute left-1 right-1 z-20 cursor-pointer rounded-md border px-2 py-1 text-[11px] shadow-sm " +
                           (isDone ? "border-emerald-300 bg-emerald-50" : "border-brand/40 bg-brand/10")
                         }
                         style={{ top, height }}
                       >
-                        <p className="truncate font-semibold text-neutral-800">
-                          {minutesToTime(startMin)} · {a.title}
-                        </p>
-                        {a.customers?.name && <p className="truncate text-neutral-500">{a.customers.name}</p>}
+                        <div className="h-full overflow-hidden">
+                          <p className="truncate font-semibold text-neutral-800">
+                            {minutesToTime(startMin)} · {a.title}
+                          </p>
+                          {a.customers?.name && <p className="truncate text-neutral-500">{a.customers.name}</p>}
+                        </div>
                       </div>
                     );
                   })}
@@ -372,6 +382,16 @@ export function AgendaView({ api }: { api: Api }) {
         onCancelAppointment={editing ? () => handleCancel(editing) : undefined}
         onMarkDone={editing && editing.status === "scheduled" ? () => handleMarkDone(editing) : undefined}
       />
+
+      {hovered && (
+        <AppointmentTooltip
+          appointment={hovered.appointment}
+          professional={hovered.professional}
+          startMin={hovered.startMin}
+          x={hovered.x}
+          y={hovered.y}
+        />
+      )}
 
       <SlotActionDialog
         open={slotDialogOpen}
@@ -532,19 +552,7 @@ function AppointmentFormDialog({
 
           <div className="space-y-1.5">
             <Label>Cliente (opcional)</Label>
-            <Select value={customerId} onValueChange={setCustomerId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Sem cliente vinculado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sem cliente vinculado</SelectItem>
-                {customers.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name} ({c.phone})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CustomerPicker customers={customers} value={customerId} onChange={setCustomerId} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -811,19 +819,7 @@ function SlotAppointmentForm({
       )}
       <div className="space-y-1.5">
         <Label>Cliente (opcional)</Label>
-        <Select value={customerId} onValueChange={setCustomerId}>
-          <SelectTrigger>
-            <SelectValue placeholder="Sem cliente vinculado" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Sem cliente vinculado</SelectItem>
-            {customers.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name} ({c.phone})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <CustomerPicker customers={customers} value={customerId} onChange={setCustomerId} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
@@ -932,7 +928,14 @@ function SlotBlockForm({
         <div className="grid grid-cols-2 gap-3 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
           <div className="space-y-1.5">
             <Label className="text-xs">Repetir por quantos dias</Label>
-            <Input type="number" min={1} max={180} value={countDays} onChange={(e) => setCountDays(Number(e.target.value))} />
+            <Input
+              type="number"
+              min={1}
+              max={180}
+              value={countDays}
+              onChange={(e) => setCountDays(Math.min(180, Math.max(1, Number(e.target.value) || 1)))}
+            />
+            <p className="text-[10px] text-neutral-400">Máximo de 180 dias.</p>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">A cada quantos dias</Label>
@@ -978,6 +981,133 @@ function SlotBlockForm({
         <Button onClick={handleSave} disabled={saving || startTime >= endTime}>
           {saving ? "Bloqueando..." : "Bloquear"}
         </Button>
+      </div>
+    </div>
+  );
+}
+
+
+/** Resumo do agendamento que aparece ao passar o mouse por cima do card. */
+function AppointmentTooltip({
+  appointment,
+  professional,
+  startMin,
+  x,
+  y,
+}: {
+  appointment: Appointment;
+  professional: Professional;
+  startMin: number;
+  x: number;
+  y: number;
+}) {
+  const endMin = startMin + appointment.duration_minutes;
+  const statusLabel =
+    appointment.status === "done" ? "Concluído" : appointment.status === "canceled" ? "Cancelado" : "Agendado";
+  return (
+    <div
+      className="pointer-events-none fixed z-50 w-64 -translate-x-1/2 translate-y-2 rounded-lg border border-neutral-200 bg-white p-3 text-left shadow-xl"
+      style={{ left: x, top: y }}
+    >
+      <p className="text-sm font-semibold text-neutral-900">{appointment.title}</p>
+      <p className="mt-0.5 text-xs text-neutral-500">
+        {minutesToTime(startMin)} – {minutesToTime(endMin)} · {appointment.duration_minutes} min
+      </p>
+      <dl className="mt-2 space-y-1 text-xs">
+        <div className="flex gap-1.5">
+          <dt className="text-neutral-400">Cliente:</dt>
+          <dd className="flex-1 truncate text-neutral-700">{appointment.customers?.name || "Sem cliente"}</dd>
+        </div>
+        {appointment.customers?.phone && (
+          <div className="flex gap-1.5">
+            <dt className="text-neutral-400">Telefone:</dt>
+            <dd className="flex-1 truncate text-neutral-700">{appointment.customers.phone}</dd>
+          </div>
+        )}
+        <div className="flex gap-1.5">
+          <dt className="text-neutral-400">Profissional:</dt>
+          <dd className="flex-1 truncate text-neutral-700">{professional.id === "__none__" ? "Sem profissional" : professional.name}</dd>
+        </div>
+        <div className="flex gap-1.5">
+          <dt className="text-neutral-400">Status:</dt>
+          <dd className="flex-1 text-neutral-700">{statusLabel}</dd>
+        </div>
+        {appointment.notes && (
+          <div className="pt-1 text-neutral-500">
+            <span className="text-neutral-400">Notas: </span>
+            {appointment.notes}
+          </div>
+        )}
+      </dl>
+    </div>
+  );
+}
+
+/** Seletor de cliente com busca por nome ou telefone — evita rolar a lista
+ * inteira quando a barbearia tem centenas de clientes. */
+function CustomerPicker({
+  customers,
+  value,
+  onChange,
+}: {
+  customers: CustomerOption[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const selected = customers.find((c) => c.id === value) ?? null;
+
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const list = q
+      ? customers.filter((c) => c.name.toLowerCase().includes(q) || (c.phone || "").replace(/\D/g, "").includes(q.replace(/\D/g, "")))
+      : customers;
+    return list.slice(0, 50);
+  }, [customers, query]);
+
+  if (selected && !open) {
+    return (
+      <div className="flex items-center gap-2 rounded-md border border-neutral-300 px-3 py-2 text-sm">
+        <span className="flex-1 truncate">
+          {selected.name} <span className="text-neutral-400">({selected.phone})</span>
+        </span>
+        <button type="button" className="text-xs text-neutral-500 underline" onClick={() => { setQuery(""); setOpen(true); }}>
+          trocar
+        </button>
+        <button type="button" className="text-xs text-red-600 underline" onClick={() => onChange("none")}>
+          remover
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      <Input
+        autoFocus={open}
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Buscar cliente por nome ou telefone..."
+      />
+      <div className="max-h-44 overflow-y-auto rounded-md border border-neutral-200">
+        {results.length === 0 ? (
+          <p className="p-3 text-center text-xs text-neutral-400">Nenhum cliente encontrado.</p>
+        ) : (
+          results.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => {
+                onChange(c.id);
+                setOpen(false);
+              }}
+              className="block w-full truncate px-3 py-1.5 text-left text-sm hover:bg-neutral-50"
+            >
+              {c.name} <span className="text-neutral-400">({c.phone})</span>
+            </button>
+          ))
+        )}
       </div>
     </div>
   );

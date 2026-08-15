@@ -13,6 +13,7 @@ const patchSchema = z.object({
   bio: z.string().trim().max(500).optional().nullable(),
   commission_percent: z.number().min(0).max(100).optional().nullable(),
   color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  avatar_url: z.string().max(400000).optional().nullable(),
   active: z.boolean().optional(),
   sort_order: z.number().int().optional(),
 });
@@ -37,7 +38,7 @@ export const Route = createFileRoute("/api/public/extension/professionals/$id")(
           .update(parsed.data)
           .eq("id", params.id)
           .eq("barbershop_id", auth.token.barbershop_id)
-          .select("id, name, phone, email, bio, commission_percent, color, active, sort_order")
+          .select("id, name, phone, email, bio, commission_percent, color, avatar_url, active, sort_order")
           .maybeSingle();
         if (error) {
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });

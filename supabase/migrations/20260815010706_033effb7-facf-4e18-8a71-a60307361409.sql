@@ -1,0 +1,1 @@
+ALTER TABLE public.professionals ADD COLUMN IF NOT EXISTS avatar_url TEXT;

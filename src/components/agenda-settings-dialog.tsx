@@ -16,7 +16,7 @@ export type AgendaSettings = {
 };
 
 const DIAS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
-const SLOT_OPTIONS = [15, 20, 30, 40, 45, 60];
+const SLOT_OPTIONS = [10, 15, 20, 30, 40, 45, 60];
 
 /** Aba "Gerais" — standalone, horário de funcionamento + duração do slot.
  * Reaproveitada tanto na tela de Configurações quanto (via dialog) dentro
