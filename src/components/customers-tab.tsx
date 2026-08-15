@@ -84,6 +84,8 @@ function CustomerListView({ api }: { api: Api }) {
   const [customers, setCustomers] = useState<Customer[] | null>(null);
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Customer | null>(null);
+  const [pageSize, setPageSize] = useState(50);
+  const [page, setPage] = useState(1);
 
   async function load() {
     const r = await api("/api/public/extension/customers");
@@ -101,14 +103,39 @@ function CustomerListView({ api }: { api: Api }) {
     return c.name.toLowerCase().includes(q) || c.phone.includes(q);
   });
 
+  // Volta pra página 1 sempre que a busca ou o tamanho de página mudar.
+  useEffect(() => {
+    setPage(1);
+  }, [search, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageItems = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   return (
     <div className="space-y-3">
-      <Input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Buscar por nome ou telefone..."
-        className="max-w-sm"
-      />
+      <div className="flex flex-wrap items-center gap-3">
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar por nome ou telefone..."
+          className="max-w-sm"
+        />
+        <div className="flex items-center gap-1.5 text-xs text-neutral-500">
+          <span>Mostrar</span>
+          <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+            <SelectTrigger className="h-8 w-20">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+              <SelectItem value="200">200</SelectItem>
+            </SelectContent>
+          </Select>
+          <span>por página</span>
+        </div>
+      </div>
 
       {!customers ? (
         <p className="text-sm text-neutral-500">Carregando...</p>
@@ -128,7 +155,7 @@ function CustomerListView({ api }: { api: Api }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {filtered.map((c) => (
+              {pageItems.map((c) => (
                 <tr key={c.id}>
                   <td className="px-3 py-2 font-medium text-neutral-900">{c.name}</td>
                   <td className="px-3 py-2 text-neutral-600">{c.phone}</td>
@@ -142,9 +169,26 @@ function CustomerListView({ api }: { api: Api }) {
               ))}
             </tbody>
           </table>
-          <p className="border-t border-neutral-100 px-3 py-2 text-[11px] text-neutral-400">
-            {filtered.length} cliente(s){search ? ` (de ${customers.length} no total)` : ""}
-          </p>
+          <div className="flex items-center justify-between border-t border-neutral-100 px-3 py-2 text-[11px] text-neutral-400">
+            <span>
+              {filtered.length} cliente(s){search ? ` (de ${customers.length} no total)` : ""} · página {currentPage} de{" "}
+              {totalPages}
+            </span>
+            <div className="flex gap-1">
+              <Button variant="outline" size="sm" className="h-6 px-2 text-[11px]" disabled={currentPage <= 1} onClick={() => setPage((p) => p - 1)}>
+                Anterior
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 px-2 text-[11px]"
+                disabled={currentPage >= totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Próxima
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
