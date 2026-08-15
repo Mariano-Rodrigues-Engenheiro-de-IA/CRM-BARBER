@@ -350,7 +350,6 @@ export function AgendaView({ api }: { api: Api }) {
                     const startMin = start.getHours() * 60 + start.getMinutes();
                     const top = ((startMin - gridStartMin) / slotDuration) * SLOT_HEIGHT_PX;
                     const height = Math.max((a.duration_minutes / slotDuration) * SLOT_HEIGHT_PX - 2, 20);
-                    const isDone = a.status === "done";
                     return (
                       <div
                         key={a.id}
@@ -366,8 +365,9 @@ export function AgendaView({ api }: { api: Api }) {
                         onMouseLeave={() => setHovered(null)}
                         className={
                           "absolute left-1 right-1 z-20 cursor-pointer rounded-md border px-2 py-1 text-[11px] shadow-sm " +
-                          (isDone ? "border-emerald-300 bg-emerald-50" : "border-brand/40 bg-brand/10")
+                          statusClassOf(a.status)
                         }
+
                         style={{ top, height }}
                       >
                         <div className="h-full overflow-hidden">
