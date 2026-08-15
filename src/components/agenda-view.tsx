@@ -56,6 +56,9 @@ export function AgendaView({ api }: { api: Api }) {
   const [formPrefill, setFormPrefill] = useState<{ time: string; professionalId: string | null } | null>(null);
   const [slotDialogOpen, setSlotDialogOpen] = useState(false);
   const [slotPrefill, setSlotPrefill] = useState<{ time: string; professionalId: string | null } | null>(null);
+  // Resumo em popup ao passar o mouse. Posição fixa na tela pra não ser
+  // cortada pelo scroll horizontal da grade.
+  const [hovered, setHovered] = useState<{ appointment: Appointment; professional: Professional; startMin: number; x: number; y: number } | null>(null);
 
   async function loadSettings() {
     const r = await api("/api/public/extension/agenda-settings");
@@ -334,8 +337,13 @@ export function AgendaView({ api }: { api: Api }) {
                           setFormPrefill(null);
                           setFormOpen(true);
                         }}
+                        onMouseEnter={(e) => {
+                          const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                          setHovered({ appointment: a, professional: prof, startMin, x: r.left + r.width / 2, y: r.bottom });
+                        }}
+                        onMouseLeave={() => setHovered(null)}
                         className={
-                          "group absolute left-1 right-1 z-20 cursor-pointer rounded-md border px-2 py-1 text-[11px] shadow-sm " +
+                          "absolute left-1 right-1 z-20 cursor-pointer rounded-md border px-2 py-1 text-[11px] shadow-sm " +
                           (isDone ? "border-emerald-300 bg-emerald-50" : "border-brand/40 bg-brand/10")
                         }
                         style={{ top, height }}
@@ -346,7 +354,6 @@ export function AgendaView({ api }: { api: Api }) {
                           </p>
                           {a.customers?.name && <p className="truncate text-neutral-500">{a.customers.name}</p>}
                         </div>
-                        <AppointmentTooltip appointment={a} professional={prof} startMin={startMin} />
                       </div>
                     );
                   })}
@@ -375,6 +382,16 @@ export function AgendaView({ api }: { api: Api }) {
         onCancelAppointment={editing ? () => handleCancel(editing) : undefined}
         onMarkDone={editing && editing.status === "scheduled" ? () => handleMarkDone(editing) : undefined}
       />
+
+      {hovered && (
+        <AppointmentTooltip
+          appointment={hovered.appointment}
+          professional={hovered.professional}
+          startMin={hovered.startMin}
+          x={hovered.x}
+          y={hovered.y}
+        />
+      )}
 
       <SlotActionDialog
         open={slotDialogOpen}
@@ -968,16 +985,23 @@ function AppointmentTooltip({
   appointment,
   professional,
   startMin,
+  x,
+  y,
 }: {
   appointment: Appointment;
   professional: Professional;
   startMin: number;
+  x: number;
+  y: number;
 }) {
   const endMin = startMin + appointment.duration_minutes;
   const statusLabel =
     appointment.status === "done" ? "Concluído" : appointment.status === "canceled" ? "Cancelado" : "Agendado";
   return (
-    <div className="pointer-events-none absolute left-1/2 top-full z-50 hidden w-64 -translate-x-1/2 translate-y-1 rounded-lg border border-neutral-200 bg-white p-3 text-left shadow-xl group-hover:block">
+    <div
+      className="pointer-events-none fixed z-50 w-64 -translate-x-1/2 translate-y-2 rounded-lg border border-neutral-200 bg-white p-3 text-left shadow-xl"
+      style={{ left: x, top: y }}
+    >
       <p className="text-sm font-semibold text-neutral-900">{appointment.title}</p>
       <p className="mt-0.5 text-xs text-neutral-500">
         {minutesToTime(startMin)} – {minutesToTime(endMin)} · {appointment.duration_minutes} min
