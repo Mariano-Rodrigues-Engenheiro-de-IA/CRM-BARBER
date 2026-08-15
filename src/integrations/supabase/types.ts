@@ -778,6 +778,7 @@ export type Database = {
       professionals: {
         Row: {
           active: boolean
+          avatar_url: string | null
           barbershop_id: string
           bio: string | null
           color: string
@@ -792,6 +793,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          avatar_url?: string | null
           barbershop_id: string
           bio?: string | null
           color?: string
@@ -806,6 +808,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          avatar_url?: string | null
           barbershop_id?: string
           bio?: string | null
           color?: string
