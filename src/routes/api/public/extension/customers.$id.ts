@@ -15,6 +15,9 @@ const patchSchema = z.object({
   status: customerStatusSchema.optional(),
   name: z.string().trim().min(1).max(120).optional(),
   phone: z.string().trim().min(8).max(25).optional(),
+  email: z.string().trim().email().max(160).nullable().optional(),
+  birth_date: z.string().trim().max(20).nullable().optional(),
+  address: z.string().trim().max(300).nullable().optional(),
   tags: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
   notes: z.string().max(1000).nullable().optional(),
 });
@@ -44,7 +47,16 @@ export const Route = createFileRoute("/api/public/extension/customers/$id")({
             { status: 400 },
           );
         }
-        const patch: { status?: string; name?: string; phone?: string; tags?: string[]; notes?: string | null } = { ...parsed.data };
+        const patch: {
+          status?: string;
+          name?: string;
+          phone?: string;
+          email?: string | null;
+          birth_date?: string | null;
+          address?: string | null;
+          tags?: string[];
+          notes?: string | null;
+        } = { ...parsed.data };
         // Telefone informado à mão substitui o placeholder "sem-tel-..." da planilha.
         if (parsed.data.phone !== undefined) {
           const digits = normalizePhone(parsed.data.phone);
@@ -67,7 +79,7 @@ export const Route = createFileRoute("/api/public/extension/customers/$id")({
           .update(patch)
           .eq("id", params.id)
           .eq("barbershop_id", auth.token.barbershop_id)
-          .select("id, name, phone, status, tags, notes")
+          .select("id, name, phone, email, birth_date, address, status, tags, notes")
           .maybeSingle();
         if (error) {
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
