@@ -222,18 +222,22 @@ export function AgendaView({ api }: { api: Api }) {
     }
   }
 
-  async function handleMarkDone(a: Appointment) {
+  /** Altera o status direto no card aberto (confirmado, finalizado, etc). */
+  async function handleStatusChange(a: Appointment, status: AppointmentStatus) {
     const r = await api(`/api/public/extension/appointments/${a.id}`, {
       method: "PATCH",
-      body: JSON.stringify({ status: "done" }),
+      body: JSON.stringify({ status }),
     });
     if (r?.ok) {
-      toast.success("Marcado como concluído");
-      void loadAppointments();
+      setEditing((prev) => (prev && prev.id === a.id ? { ...prev, status } : prev));
+      setAppointments((prev) => prev.map((x) => (x.id === a.id ? { ...x, status } : x)));
+      toast.success(`Status: ${statusLabelOf(status)}`);
     } else {
-      toast.error(r?.error || "Erro ao atualizar");
+      toast.error(r?.error || "Erro ao atualizar status");
     }
   }
+
+
 
   async function handleDeleteBlock(b: TimeBlock) {
     if (!confirm("Remover esse bloqueio de horário?")) return;
