@@ -1,5 +1,5 @@
 // GET    /api/public/extension/time-blocks?from=&to= -> lista bloqueios no periodo
-// POST   /api/public/extension/time-blocks -> cria bloqueio
+// POST   /api/public/extension/time-blocks -> cria bloqueio (unico ou recorrente)
 
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
@@ -11,6 +11,16 @@ const createSchema = z.object({
   starts_at: z.string().min(4).max(40),
   ends_at: z.string().min(4).max(40),
   reason: z.string().trim().max(200).optional(),
+  // Recorrência: repete o MESMO horário (starts_at/ends_at) a cada
+  // `periodicity_days` dias, por `count_days` ocorrências no total
+  // (incluindo a primeira). Ex: todo dia (periodicity_days=1) por 30
+  // ocorrências = bloqueia o mesmo horário nos próximos 30 dias.
+  recurrence: z
+    .object({
+      count_days: z.number().int().min(1).max(180),
+      periodicity_days: z.number().int().min(1).max(30),
+    })
+    .optional(),
 });
 
 export const Route = createFileRoute("/api/public/extension/time-blocks")({
@@ -51,24 +61,35 @@ export const Route = createFileRoute("/api/public/extension/time-blocks")({
         if (!parsed.success) {
           return jsonResponse(request, { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" }, { status: 400 });
         }
-        if (new Date(parsed.data.ends_at) <= new Date(parsed.data.starts_at)) {
+        const startsAt = new Date(parsed.data.starts_at);
+        const endsAt = new Date(parsed.data.ends_at);
+        if (endsAt <= startsAt) {
           return jsonResponse(request, { ok: false, error: "O horário final precisa ser depois do inicial." }, { status: 400 });
         }
-        const { data, error } = await supabaseAdmin
-          .from("time_blocks")
-          .insert({
+
+        const count = parsed.data.recurrence?.count_days ?? 1;
+        const periodicity = parsed.data.recurrence?.periodicity_days ?? 1;
+        const durationMs = endsAt.getTime() - startsAt.getTime();
+        const rows = Array.from({ length: count }, (_, i) => {
+          const occurrenceStart = new Date(startsAt.getTime() + i * periodicity * 86400000);
+          const occurrenceEnd = new Date(occurrenceStart.getTime() + durationMs);
+          return {
             barbershop_id: auth.token.barbershop_id,
             professional_id: parsed.data.professional_id ?? null,
-            starts_at: parsed.data.starts_at,
-            ends_at: parsed.data.ends_at,
+            starts_at: occurrenceStart.toISOString(),
+            ends_at: occurrenceEnd.toISOString(),
             reason: parsed.data.reason ?? null,
-          })
-          .select("id, professional_id, starts_at, ends_at, reason")
-          .single();
+          };
+        });
+
+        const { data, error } = await supabaseAdmin
+          .from("time_blocks")
+          .insert(rows)
+          .select("id, professional_id, starts_at, ends_at, reason");
         if (error) {
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
         }
-        return jsonResponse(request, { ok: true, time_block: data });
+        return jsonResponse(request, { ok: true, time_blocks: data, created_count: data?.length ?? 0 });
       },
     },
   },
