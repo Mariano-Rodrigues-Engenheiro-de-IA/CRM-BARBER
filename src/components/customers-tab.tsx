@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 type Api = (path: string, opts?: RequestInit) => Promise<any>;
@@ -24,11 +25,20 @@ const SYSTEM_FIELDS = [
  * usado por sistemas profissionais como Trinks (upload → mapear colunas →
  * conferir → confirmar). */
 export function CustomersTab({ api }: { api: Api }) {
-  const [mode, setMode] = useState<"individual" | "bulk">("individual");
+  const [mode, setMode] = useState<"list" | "individual" | "bulk">("list");
 
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
+        <button
+          onClick={() => setMode("list")}
+          className={
+            "rounded-lg px-3 py-1.5 text-sm font-medium " +
+            (mode === "list" ? "bg-brand text-white" : "border border-neutral-300 text-neutral-600")
+          }
+        >
+          Ver clientes
+        </button>
         <button
           onClick={() => setMode("individual")}
           className={
@@ -49,8 +59,205 @@ export function CustomersTab({ api }: { api: Api }) {
         </button>
       </div>
 
-      {mode === "individual" ? <IndividualForm api={api} /> : <SpreadsheetImportWizard api={api} />}
+      {mode === "list" && <CustomerListView api={api} />}
+      {mode === "individual" && <IndividualForm api={api} />}
+      {mode === "bulk" && <SpreadsheetImportWizard api={api} />}
     </div>
+  );
+}
+
+type Customer = {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  birth_date: string | null;
+  address: string | null;
+  notes: string | null;
+  status: string;
+  archived_at: string | null;
+};
+
+/** Listagem de clientes já cadastrados — busca por nome/telefone, edição
+ * via dialog. */
+function CustomerListView({ api }: { api: Api }) {
+  const [customers, setCustomers] = useState<Customer[] | null>(null);
+  const [search, setSearch] = useState("");
+  const [editing, setEditing] = useState<Customer | null>(null);
+
+  async function load() {
+    const r = await api("/api/public/extension/customers");
+    if (r?.ok) setCustomers(r.customers);
+  }
+
+  useEffect(() => {
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const filtered = (customers ?? []).filter((c) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return c.name.toLowerCase().includes(q) || c.phone.includes(q);
+  });
+
+  return (
+    <div className="space-y-3">
+      <Input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Buscar por nome ou telefone..."
+        className="max-w-sm"
+      />
+
+      {!customers ? (
+        <p className="text-sm text-neutral-500">Carregando...</p>
+      ) : filtered.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-neutral-300 p-6 text-center text-sm text-neutral-400">
+          {customers.length === 0 ? "Nenhum cliente cadastrado ainda." : "Nenhum cliente encontrado com essa busca."}
+        </p>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
+          <table className="w-full text-sm">
+            <thead className="bg-neutral-50 text-left text-[11px] uppercase tracking-wide text-neutral-500">
+              <tr>
+                <th className="px-3 py-2 font-medium">Nome</th>
+                <th className="px-3 py-2 font-medium">Telefone</th>
+                <th className="px-3 py-2 font-medium">E-mail</th>
+                <th className="px-3 py-2 font-medium"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-100">
+              {filtered.map((c) => (
+                <tr key={c.id}>
+                  <td className="px-3 py-2 font-medium text-neutral-900">{c.name}</td>
+                  <td className="px-3 py-2 text-neutral-600">{c.phone}</td>
+                  <td className="px-3 py-2 text-neutral-500">{c.email || "—"}</td>
+                  <td className="px-3 py-2 text-right">
+                    <Button variant="ghost" size="sm" onClick={() => setEditing(c)}>
+                      Editar
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="border-t border-neutral-100 px-3 py-2 text-[11px] text-neutral-400">
+            {filtered.length} cliente(s){search ? ` (de ${customers.length} no total)` : ""}
+          </p>
+        </div>
+      )}
+
+      <CustomerEditDialog
+        customer={editing}
+        onOpenChange={(v) => !v && setEditing(null)}
+        api={api}
+        onSaved={async () => {
+          setEditing(null);
+          await load();
+        }}
+      />
+    </div>
+  );
+}
+
+function CustomerEditDialog({
+  customer,
+  onOpenChange,
+  api,
+  onSaved,
+}: {
+  customer: Customer | null;
+  onOpenChange: (v: boolean) => void;
+  api: Api;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [address, setAddress] = useState("");
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (customer) {
+      setName(customer.name);
+      setPhone(customer.phone);
+      setEmail(customer.email ?? "");
+      setBirthDate(customer.birth_date ?? "");
+      setAddress(customer.address ?? "");
+      setNotes(customer.notes ?? "");
+    }
+  }, [customer]);
+
+  async function handleSave() {
+    if (!customer || !name.trim() || !phone.trim()) return;
+    setSaving(true);
+    try {
+      const r = await api(`/api/public/extension/customers/${customer.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          name: name.trim(),
+          phone: phone.trim(),
+          email: email.trim() || null,
+          birth_date: birthDate || null,
+          address: address.trim() || null,
+          notes: notes.trim() || null,
+        }),
+      });
+      if (!r?.ok) throw new Error(r?.error || "Erro ao salvar");
+      toast.success("Cliente atualizado");
+      onSaved();
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao salvar");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={!!customer} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Editar cliente</DialogTitle>
+        </DialogHeader>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2 space-y-1.5">
+            <Label>Nome</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Telefone</Label>
+            <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>E-mail</Label>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Data de nascimento</Label>
+            <Input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Endereço</Label>
+            <Input value={address} onChange={(e) => setAddress(e.target.value)} />
+          </div>
+          <div className="col-span-2 space-y-1.5">
+            <Label>Observações</Label>
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={!name.trim() || !phone.trim() || saving}>
+            {saving ? "Salvando..." : "Salvar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
