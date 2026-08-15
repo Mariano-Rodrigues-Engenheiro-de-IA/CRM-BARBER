@@ -27,6 +27,7 @@ export type Service = {
   duration_minutes: number;
   price: number | null;
   active: boolean;
+  professional_ids?: string[];
 };
 
 const COLORS = ["#7399D7", "#E8998D", "#8FB996", "#D7B26D", "#B589C4", "#6EC4D0"];
@@ -250,12 +251,17 @@ function ProfessionalFormDialog({
  * duração, preço). */
 export function ServicesTab({ api, onChanged }: { api: Api; onChanged?: () => void }) {
   const [services, setServices] = useState<Service[]>([]);
+  const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
 
   async function load() {
-    const r = await api("/api/public/extension/services?include_inactive=1");
-    if (r?.ok) setServices(r.services);
+    const [sr, pr] = await Promise.all([
+      api("/api/public/extension/services?include_inactive=1"),
+      api("/api/public/extension/professionals"),
+    ]);
+    if (sr?.ok) setServices(sr.services);
+    if (pr?.ok) setProfessionals(pr.professionals);
   }
 
   useEffect(() => {
@@ -275,6 +281,11 @@ export function ServicesTab({ api, onChanged }: { api: Api; onChanged?: () => vo
   }
 
   const editing = services.find((s) => s.id === editingId) ?? null;
+
+  function professionalNames(ids?: string[]) {
+    if (!ids || ids.length === 0) return "Todos os profissionais";
+    return ids.map((id) => professionals.find((p) => p.id === id)?.name).filter(Boolean).join(", ") || "—";
+  }
 
   return (
     <div className="space-y-3">
@@ -308,6 +319,9 @@ export function ServicesTab({ api, onChanged }: { api: Api; onChanged?: () => vo
                   {s.duration_minutes}min{s.price ? ` · R$ ${s.price.toFixed(2)}` : ""}
                   {s.description ? ` · ${s.description}` : ""}
                 </p>
+                {professionals.length > 0 && (
+                  <p className="truncate text-[11px] text-brand">{professionalNames(s.professional_ids)}</p>
+                )}
               </div>
               <Button
                 variant="ghost"
@@ -331,6 +345,7 @@ export function ServicesTab({ api, onChanged }: { api: Api; onChanged?: () => vo
         open={formOpen}
         onOpenChange={setFormOpen}
         editing={editing}
+        professionals={professionals}
         api={api}
         onSaved={async () => {
           await load();
@@ -345,12 +360,14 @@ function ServiceFormDialog({
   open,
   onOpenChange,
   editing,
+  professionals,
   api,
   onSaved,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   editing: Service | null;
+  professionals: Professional[];
   api: Api;
   onSaved: () => void;
 }) {
@@ -359,6 +376,7 @@ function ServiceFormDialog({
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState(30);
   const [price, setPrice] = useState("");
+  const [selectedPros, setSelectedPros] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -368,8 +386,13 @@ function ServiceFormDialog({
       setDescription(editing?.description ?? "");
       setDuration(editing?.duration_minutes ?? 30);
       setPrice(editing?.price != null ? String(editing.price) : "");
+      setSelectedPros(editing?.professional_ids ?? []);
     }
   }, [open, editing]);
+
+  function toggleProf(id: string) {
+    setSelectedPros((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
+  }
 
   async function handleSave() {
     if (!name.trim()) return;
@@ -381,6 +404,7 @@ function ServiceFormDialog({
         description: description.trim() || undefined,
         duration_minutes: duration,
         price: price ? Number(price) : undefined,
+        professional_ids: selectedPros,
       };
       const r = editing
         ? await api(`/api/public/extension/services/${editing.id}`, { method: "PATCH", body: JSON.stringify(payload) })
@@ -425,6 +449,30 @@ function ServiceFormDialog({
               <Input type="number" min={0} step={0.01} placeholder="R$" value={price} onChange={(e) => setPrice(e.target.value)} />
             </div>
           </div>
+          {professionals.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>Quem realiza esse serviço</Label>
+              <p className="text-xs text-neutral-400">Deixe todos desmarcados para liberar pra qualquer profissional.</p>
+              <div className="flex flex-wrap gap-2">
+                {professionals.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => toggleProf(p.id)}
+                    className={
+                      "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs " +
+                      (selectedPros.includes(p.id)
+                        ? "border-brand bg-brand/10 text-brand"
+                        : "border-neutral-300 text-neutral-600 hover:bg-neutral-50")
+                    }
+                  >
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

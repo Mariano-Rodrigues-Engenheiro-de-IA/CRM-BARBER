@@ -25,6 +25,7 @@ type Appointment = {
 };
 
 type CustomerOption = { id: string; name: string; phone: string };
+type TimeBlock = { id: string; professional_id: string | null; starts_at: string; ends_at: string; reason: string | null };
 
 const SLOT_HEIGHT_PX = 56;
 
@@ -46,11 +47,13 @@ export function AgendaView({ api }: { api: Api }) {
   const [settings, setSettings] = useState<AgendaSettings | null>(null);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [formPrefill, setFormPrefill] = useState<{ time: string; professionalId: string | null } | null>(null);
+  const [blockFormOpen, setBlockFormOpen] = useState(false);
 
   async function loadSettings() {
     const r = await api("/api/public/extension/agenda-settings");
@@ -73,6 +76,14 @@ export function AgendaView({ api }: { api: Api }) {
       setLoading(false);
     }
   }
+  async function loadTimeBlocks() {
+    const from = new Date(day);
+    from.setHours(0, 0, 0, 0);
+    const to = new Date(day);
+    to.setHours(23, 59, 59, 999);
+    const r = await api(`/api/public/extension/time-blocks?from=${from.toISOString()}&to=${to.toISOString()}`);
+    if (r?.ok) setTimeBlocks(r.time_blocks || []);
+  }
 
   useEffect(() => {
     void loadSettings();
@@ -85,6 +96,7 @@ export function AgendaView({ api }: { api: Api }) {
 
   useEffect(() => {
     void loadAppointments();
+    void loadTimeBlocks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [day]);
 
@@ -106,6 +118,13 @@ export function AgendaView({ api }: { api: Api }) {
 
   function appointmentsFor(professionalId: string) {
     return appointments.filter((a) => (a.professional_id ?? "__none__") === professionalId);
+  }
+
+  function blocksFor(professionalId: string) {
+    // Bloqueio sem profissional (professional_id null) = loja toda fechada
+    // naquele período — aparece em TODAS as colunas. Bloqueio com
+    // profissional só aparece na coluna dele.
+    return timeBlocks.filter((b) => b.professional_id === null || b.professional_id === professionalId);
   }
 
   function openNewAppointment(time: string, professionalId: string) {
@@ -188,6 +207,17 @@ export function AgendaView({ api }: { api: Api }) {
     }
   }
 
+  async function handleDeleteBlock(b: TimeBlock) {
+    if (!confirm("Remover esse bloqueio de horário?")) return;
+    const r = await api(`/api/public/extension/time-blocks/${b.id}`, { method: "DELETE" });
+    if (r?.ok) {
+      toast.success("Bloqueio removido");
+      void loadTimeBlocks();
+    } else {
+      toast.error(r?.error || "Erro ao remover");
+    }
+  }
+
   const isToday = ymd(day) === ymd(new Date());
 
   return (
@@ -214,6 +244,9 @@ export function AgendaView({ api }: { api: Api }) {
             {isToday && <span className="ml-1 text-brand">(hoje)</span>}
           </span>
         </div>
+        <Button variant="outline" size="sm" onClick={() => setBlockFormOpen(true)}>
+          🚫 Bloquear horário
+        </Button>
       </div>
 
       {!settings ? (
@@ -255,6 +288,33 @@ export function AgendaView({ api }: { api: Api }) {
                     />
                   ))}
 
+                  {blocksFor(prof.id).map((b) => {
+                    const blockStart = new Date(b.starts_at);
+                    const blockEnd = new Date(b.ends_at);
+                    const dayStart = new Date(day);
+                    dayStart.setHours(0, 0, 0, 0);
+                    const startMin = Math.max((blockStart.getTime() - dayStart.getTime()) / 60000, gridStartMin);
+                    const endMin = Math.min((blockEnd.getTime() - dayStart.getTime()) / 60000, gridStartMin + slots.length * slotDuration);
+                    if (endMin <= startMin) return null;
+                    const top = ((startMin - gridStartMin) / slotDuration) * SLOT_HEIGHT_PX;
+                    const height = ((endMin - startMin) / slotDuration) * SLOT_HEIGHT_PX;
+                    return (
+                      <div
+                        key={b.id}
+                        onClick={() => handleDeleteBlock(b)}
+                        title="Clique para remover esse bloqueio"
+                        className="absolute left-0 right-0 z-10 cursor-pointer overflow-hidden border-y border-neutral-300 bg-neutral-200/70 px-2 py-1 text-[11px] text-neutral-500"
+                        style={{
+                          top,
+                          height,
+                          backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(0,0,0,0.05) 6px, rgba(0,0,0,0.05) 12px)",
+                        }}
+                      >
+                        <p className="truncate font-medium">🚫 {b.reason || "Bloqueado"}</p>
+                      </div>
+                    );
+                  })}
+
                   {appointmentsFor(prof.id).map((a) => {
                     const start = new Date(a.scheduled_at);
                     const startMin = start.getHours() * 60 + start.getMinutes();
@@ -270,7 +330,7 @@ export function AgendaView({ api }: { api: Api }) {
                           setFormOpen(true);
                         }}
                         className={
-                          "absolute left-1 right-1 cursor-pointer overflow-hidden rounded-md border px-2 py-1 text-[11px] shadow-sm " +
+                          "absolute left-1 right-1 z-20 cursor-pointer overflow-hidden rounded-md border px-2 py-1 text-[11px] shadow-sm " +
                           (isDone ? "border-emerald-300 bg-emerald-50" : "border-brand/40 bg-brand/10")
                         }
                         style={{ top, height }}
@@ -308,6 +368,17 @@ export function AgendaView({ api }: { api: Api }) {
         onMarkDone={editing && editing.status === "scheduled" ? () => handleMarkDone(editing) : undefined}
       />
 
+      <TimeBlockFormDialog
+        open={blockFormOpen}
+        onOpenChange={setBlockFormOpen}
+        day={day}
+        professionals={professionals}
+        api={api}
+        onSaved={() => {
+          setBlockFormOpen(false);
+          void loadTimeBlocks();
+        }}
+      />
 
     </div>
   );
@@ -383,6 +454,12 @@ function AppointmentFormDialog({
     }
   }
 
+  // Se o serviço tiver vínculos configurados, só mostra pra profissionais
+  // vinculados a ele; serviço sem vínculo nenhum fica disponível pra todos.
+  const availableServices = services.filter(
+    (s) => professionalId === "none" || !s.professional_ids || s.professional_ids.length === 0 || s.professional_ids.includes(professionalId),
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -423,13 +500,16 @@ function AppointmentFormDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Sem serviço vinculado</SelectItem>
-                  {services.map((s) => (
+                  {availableServices.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.name} ({s.duration_minutes}min)
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {professionalId !== "none" && availableServices.length < services.length && (
+                <p className="text-[11px] text-neutral-400">Mostrando só os serviços que esse profissional realiza.</p>
+              )}
             </div>
           )}
 
@@ -493,6 +573,117 @@ function AppointmentFormDialog({
             disabled={!title.trim()}
           >
             {editing ? "Salvar" : "Criar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TimeBlockFormDialog({
+  open,
+  onOpenChange,
+  day,
+  professionals,
+  api,
+  onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  day: Date;
+  professionals: Professional[];
+  api: Api;
+  onSaved: () => void;
+}) {
+  const [professionalId, setProfessionalId] = useState<string>("all");
+  const [startTime, setStartTime] = useState("12:00");
+  const [endTime, setEndTime] = useState("13:00");
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setProfessionalId("all");
+      setStartTime("12:00");
+      setEndTime("13:00");
+      setReason("");
+    }
+  }, [open]);
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const starts_at = new Date(`${ymd(day)}T${startTime}:00`).toISOString();
+      const ends_at = new Date(`${ymd(day)}T${endTime}:00`).toISOString();
+      const r = await api("/api/public/extension/time-blocks", {
+        method: "POST",
+        body: JSON.stringify({
+          professional_id: professionalId === "all" ? null : professionalId,
+          starts_at,
+          ends_at,
+          reason: reason.trim() || undefined,
+        }),
+      });
+      if (!r?.ok) throw new Error(r?.error || "Erro ao bloquear horário");
+      toast.success("Horário bloqueado");
+      onSaved();
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao bloquear horário");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Bloquear horário</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <p className="text-xs text-neutral-400">
+            Para o dia {day.toLocaleDateString("pt-BR", { day: "2-digit", month: "long" })}. Use para almoço, folga,
+            feriado ou qualquer indisponibilidade — o período fica sem poder receber novos agendamentos.
+          </p>
+          {professionals.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>Quem fica indisponível</Label>
+              <Select value={professionalId} onValueChange={setProfessionalId}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toda a loja</SelectItem>
+                  {professionals.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Das</Label>
+              <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Até</Label>
+              <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Motivo (opcional)</Label>
+            <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Ex: Almoço, Folga, Feriado" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={saving || startTime >= endTime}>
+            {saving ? "Bloqueando..." : "Bloquear"}
           </Button>
         </DialogFooter>
       </DialogContent>
