@@ -53,6 +53,16 @@ type TimeBlock = { id: string; professional_id: string | null; starts_at: string
 
 const SLOT_HEIGHT_PX = 56;
 
+/** O título deixou de ser um campo do formulário: ele é derivado do serviço
+ * escolhido (ou do cliente), porque o gestor já informa essas duas coisas. */
+function buildTitle(services: Service[], serviceId: string, customers: CustomerOption[], customerId: string) {
+  const svc = services.find((s) => s.id === serviceId);
+  if (svc) return svc.name;
+  const cus = customers.find((c) => c.id === customerId);
+  if (cus) return cus.name;
+  return "Agendamento";
+}
+
 function ymd(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
@@ -684,6 +694,7 @@ function SlotActionDialog({
   prefill,
   customers,
   professionals,
+  services,
   timeBlocks,
   api,
   onAppointmentSaved,
@@ -696,6 +707,7 @@ function SlotActionDialog({
   prefill: { time: string; professionalId: string | null } | null;
   customers: CustomerOption[];
   professionals: Professional[];
+  services: Service[];
   timeBlocks: TimeBlock[];
   api: Api;
   onAppointmentSaved: (data: {
@@ -746,8 +758,10 @@ function SlotActionDialog({
           <TabsContent value="agendar">
             <SlotAppointmentForm
               prefill={prefill}
+              day={day}
               customers={customers}
               professionals={professionals}
+              services={services}
               api={api}
               onSave={onAppointmentSaved}
             />
@@ -791,14 +805,18 @@ function SlotActionDialog({
 
 function SlotAppointmentForm({
   prefill,
+  day,
   customers,
   professionals,
+  services,
   api,
   onSave,
 }: {
   prefill: { time: string; professionalId: string | null } | null;
+  day: Date;
   customers: CustomerOption[];
   professionals: Professional[];
+  services: Service[];
   api: Api;
   onSave: (data: {
     title: string;
@@ -812,35 +830,33 @@ function SlotAppointmentForm({
     notes: string;
   }) => void;
 }) {
-  const [title, setTitle] = useState("");
   const [customerId, setCustomerId] = useState("none");
   const [professionalId, setProfessionalId] = useState(prefill?.professionalId ?? "none");
   const [serviceId, setServiceId] = useState("none");
+  const [date, setDate] = useState(() => ymd(day));
   const [time, setTime] = useState(prefill?.time ?? "09:00");
   const [duration, setDuration] = useState(30);
+  const [price, setPrice] = useState("");
   const [notes, setNotes] = useState("");
-  const [services, setServices] = useState<Service[]>([]);
 
   useEffect(() => {
-    api("/api/public/extension/services").then((r) => {
-      if (r?.ok) setServices(r.services);
-    });
-    setTitle("");
     setCustomerId("none");
     setProfessionalId(prefill?.professionalId ?? "none");
     setServiceId("none");
+    setDate(ymd(day));
     setTime(prefill?.time ?? "09:00");
     setDuration(30);
+    setPrice("");
     setNotes("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prefill]);
+  }, [prefill, day]);
 
   function handleServiceChange(id: string) {
     setServiceId(id);
     const svc = services.find((s) => s.id === id);
     if (svc) {
       setDuration(svc.duration_minutes);
-      if (!title.trim()) setTitle(svc.name);
+      if (svc.price != null) setPrice(String(svc.price));
     }
   }
 
@@ -851,27 +867,10 @@ function SlotAppointmentForm({
   return (
     <div className="space-y-3 py-2">
       <div className="space-y-1.5">
-        <Label>Título</Label>
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Corte + barba" />
+        <Label>Cliente</Label>
+        <CustomerPicker customers={customers} value={customerId} onChange={setCustomerId} api={api} />
       </div>
-      {professionals.length > 0 && (
-        <div className="space-y-1.5">
-          <Label>Profissional</Label>
-          <Select value={professionalId} onValueChange={setProfessionalId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Sem profissional vinculado" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Sem profissional vinculado</SelectItem>
-              {professionals.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+
       {services.length > 0 && (
         <div className="space-y-1.5">
           <Label>Serviço</Label>
@@ -890,20 +889,48 @@ function SlotAppointmentForm({
           </Select>
         </div>
       )}
-      <div className="space-y-1.5">
-        <Label>Cliente (opcional)</Label>
-        <CustomerPicker customers={customers} value={customerId} onChange={setCustomerId} api={api} />
-      </div>
+
+      {professionals.length > 0 && (
+        <div className="space-y-1.5">
+          <Label>Profissional</Label>
+          <Select value={professionalId} onValueChange={setProfessionalId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Sem profissional vinculado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sem profissional vinculado</SelectItem>
+              {professionals.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label>Horário</Label>
+          <Label>Data</Label>
+          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Hora</Label>
           <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label>Duração (min)</Label>
           <Input type="number" min={5} step={5} value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
         </div>
+        <div className="space-y-1.5">
+          <Label>Valor (R$)</Label>
+          <Input type="number" min={0} step={0.01} placeholder="0,00" value={price} onChange={(e) => setPrice(e.target.value)} />
+        </div>
       </div>
+
       <div className="space-y-1.5">
         <Label>Notas (opcional)</Label>
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
@@ -912,16 +939,17 @@ function SlotAppointmentForm({
         <Button
           onClick={() =>
             onSave({
-              title: title.trim(),
+              title: buildTitle(services, serviceId, customers, customerId),
               customer_id: customerId === "none" ? null : customerId,
               professional_id: professionalId === "none" ? null : professionalId,
               service_id: serviceId === "none" ? null : serviceId,
+              date,
               time,
               duration_minutes: duration,
+              price: price.trim() === "" ? null : Number(price),
               notes,
             })
           }
-          disabled={!title.trim()}
         >
           Criar agendamento
         </Button>
