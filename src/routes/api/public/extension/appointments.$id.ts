@@ -14,7 +14,7 @@ const patchSchema = z.object({
   service_id: z.string().uuid().optional().nullable(),
   scheduled_at: z.string().min(4).max(40).optional(),
   duration_minutes: z.number().int().min(5).max(480).optional(),
-  status: z.enum(["scheduled", "done", "canceled"]).optional(),
+  status: z.enum(["scheduled", "confirmed", "done", "canceled"]).optional(),
 });
 
 export const Route = createFileRoute("/api/public/extension/appointments/$id")({

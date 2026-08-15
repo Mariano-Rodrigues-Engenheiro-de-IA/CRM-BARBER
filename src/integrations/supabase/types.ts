@@ -18,18 +18,24 @@ export type Database = {
         Row: {
           barbershop_id: string
           business_hours: Json
+          online_booking_enabled: boolean
+          public_slug: string | null
           slot_duration_minutes: number
           updated_at: string
         }
         Insert: {
           barbershop_id: string
           business_hours?: Json
+          online_booking_enabled?: boolean
+          public_slug?: string | null
           slot_duration_minutes?: number
           updated_at?: string
         }
         Update: {
           barbershop_id?: string
           business_hours?: Json
+          online_booking_enabled?: boolean
+          public_slug?: string | null
           slot_duration_minutes?: number
           updated_at?: string
         }

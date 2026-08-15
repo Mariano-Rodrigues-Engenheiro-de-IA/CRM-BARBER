@@ -12,6 +12,27 @@ import { type Professional, type Service, ProfessionalAvatar } from "@/component
 
 type Api = (path: string, opts?: RequestInit) => Promise<any>;
 
+export type AppointmentStatus = "scheduled" | "confirmed" | "done" | "canceled";
+
+/** Rótulos em português usados no seletor de status e no resumo. */
+const STATUS_OPTIONS: { value: AppointmentStatus; label: string }[] = [
+  { value: "scheduled", label: "Aguardando confirmação" },
+  { value: "confirmed", label: "Confirmado" },
+  { value: "done", label: "Finalizado" },
+  { value: "canceled", label: "Cancelado" },
+];
+const statusLabelOf = (s: string) => STATUS_OPTIONS.find((o) => o.value === s)?.label ?? "Agendado";
+const statusClassOf = (s: string) =>
+  s === "done"
+    ? "border-emerald-300 bg-emerald-50"
+    : s === "confirmed"
+      ? "border-sky-300 bg-sky-50"
+      : s === "canceled"
+        ? "border-neutral-300 bg-neutral-100 line-through opacity-70"
+        : "border-brand/40 bg-brand/10";
+
+
+
 type Appointment = {
   id: string;
   title: string;
@@ -21,7 +42,7 @@ type Appointment = {
   service_id: string | null;
   scheduled_at: string;
   duration_minutes: number;
-  status: "scheduled" | "done" | "canceled";
+  status: AppointmentStatus;
   customers?: { name: string; phone: string } | null;
 };
 
@@ -145,6 +166,7 @@ export function AgendaView({ api }: { api: Api }) {
     time: string;
     duration_minutes: number;
     notes: string;
+    status?: AppointmentStatus;
   }) {
     const scheduled_at = new Date(`${ymd(day)}T${data.time}:00`).toISOString();
     try {
@@ -159,10 +181,12 @@ export function AgendaView({ api }: { api: Api }) {
             scheduled_at,
             duration_minutes: data.duration_minutes,
             notes: data.notes || null,
+            ...(data.status ? { status: data.status } : {}),
           }),
         });
         if (!r?.ok) throw new Error(r?.error || "Erro ao salvar");
         toast.success("Agendamento atualizado");
+
       } else {
         const r = await api("/api/public/extension/appointments", {
           method: "POST",
@@ -198,18 +222,22 @@ export function AgendaView({ api }: { api: Api }) {
     }
   }
 
-  async function handleMarkDone(a: Appointment) {
+  /** Altera o status direto no card aberto (confirmado, finalizado, etc). */
+  async function handleStatusChange(a: Appointment, status: AppointmentStatus) {
     const r = await api(`/api/public/extension/appointments/${a.id}`, {
       method: "PATCH",
-      body: JSON.stringify({ status: "done" }),
+      body: JSON.stringify({ status }),
     });
     if (r?.ok) {
-      toast.success("Marcado como concluído");
-      void loadAppointments();
+      setEditing((prev) => (prev && prev.id === a.id ? { ...prev, status } : prev));
+      setAppointments((prev) => prev.map((x) => (x.id === a.id ? { ...x, status } : x)));
+      toast.success(`Status: ${statusLabelOf(status)}`);
     } else {
-      toast.error(r?.error || "Erro ao atualizar");
+      toast.error(r?.error || "Erro ao atualizar status");
     }
   }
+
+
 
   async function handleDeleteBlock(b: TimeBlock) {
     if (!confirm("Remover esse bloqueio de horário?")) return;
@@ -271,7 +299,7 @@ export function AgendaView({ api }: { api: Api }) {
         <div className="overflow-x-auto rounded-xl border border-neutral-300 bg-white">
           <div className="flex" style={{ minWidth: 80 + columns.length * 220 }}>
             <div className="w-20 shrink-0 border-r border-neutral-200">
-              <div className="h-12 border-b border-neutral-200" />
+              <div className="h-14 border-b border-neutral-200" />
               {slots.map((t) => (
                 <div key={t} className="flex items-start justify-end border-b border-neutral-100 pr-2 pt-1 text-[11px] text-neutral-400" style={{ height: SLOT_HEIGHT_PX }}>
                   {t}
@@ -281,10 +309,11 @@ export function AgendaView({ api }: { api: Api }) {
 
             {columns.map((prof) => (
               <div key={prof.id} className="relative flex-1 border-r border-neutral-100 last:border-r-0" style={{ minWidth: 220 }}>
-                <div className="flex h-12 items-center gap-1.5 border-b border-neutral-200 px-2">
-                  <ProfessionalAvatar professional={prof} size={26} />
+                <div className="flex h-14 items-center gap-2 border-b border-neutral-200 px-2">
+                  <ProfessionalAvatar professional={prof} size={40} />
                   <span className="truncate text-xs font-semibold text-neutral-700">{prof.name}</span>
                 </div>
+
 
                 <div className="relative">
                   {slots.map((t) => (
@@ -328,7 +357,6 @@ export function AgendaView({ api }: { api: Api }) {
                     const startMin = start.getHours() * 60 + start.getMinutes();
                     const top = ((startMin - gridStartMin) / slotDuration) * SLOT_HEIGHT_PX;
                     const height = Math.max((a.duration_minutes / slotDuration) * SLOT_HEIGHT_PX - 2, 20);
-                    const isDone = a.status === "done";
                     return (
                       <div
                         key={a.id}
@@ -344,8 +372,9 @@ export function AgendaView({ api }: { api: Api }) {
                         onMouseLeave={() => setHovered(null)}
                         className={
                           "absolute left-1 right-1 z-20 cursor-pointer rounded-md border px-2 py-1 text-[11px] shadow-sm " +
-                          (isDone ? "border-emerald-300 bg-emerald-50" : "border-brand/40 bg-brand/10")
+                          statusClassOf(a.status)
                         }
+
                         style={{ top, height }}
                       >
                         <div className="h-full overflow-hidden">
@@ -380,8 +409,10 @@ export function AgendaView({ api }: { api: Api }) {
         api={api}
         onSave={handleSave}
         onCancelAppointment={editing ? () => handleCancel(editing) : undefined}
-        onMarkDone={editing && editing.status === "scheduled" ? () => handleMarkDone(editing) : undefined}
+        onStatusChange={editing ? (s) => handleStatusChange(editing, s) : undefined}
       />
+
+
 
       {hovered && (
         <AppointmentTooltip
@@ -431,7 +462,7 @@ function AppointmentFormDialog({
   api,
   onSave,
   onCancelAppointment,
-  onMarkDone,
+  onStatusChange,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -450,8 +481,9 @@ function AppointmentFormDialog({
     notes: string;
   }) => void;
   onCancelAppointment?: () => void;
-  onMarkDone?: () => void;
+  onStatusChange?: (status: AppointmentStatus) => void;
 }) {
+
   const [title, setTitle] = useState("");
   const [customerId, setCustomerId] = useState<string>("none");
   const [professionalId, setProfessionalId] = useState<string>("none");
@@ -568,6 +600,25 @@ function AppointmentFormDialog({
             <Label>Notas (opcional)</Label>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
           </div>
+
+          {editing && onStatusChange && (
+            <div className="space-y-1.5">
+              <Label>Status do agendamento</Label>
+              <Select value={editing.status} onValueChange={(v) => onStatusChange(v as AppointmentStatus)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-neutral-400">A alteração de status é salva na hora.</p>
+            </div>
+          )}
         </div>
         <DialogFooter className="flex-wrap gap-2">
           {onCancelAppointment && (
@@ -575,11 +626,7 @@ function AppointmentFormDialog({
               Cancelar agendamento
             </Button>
           )}
-          {onMarkDone && (
-            <Button variant="outline" onClick={onMarkDone}>
-              Concluir
-            </Button>
-          )}
+
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Fechar
           </Button>
@@ -1002,8 +1049,8 @@ function AppointmentTooltip({
   y: number;
 }) {
   const endMin = startMin + appointment.duration_minutes;
-  const statusLabel =
-    appointment.status === "done" ? "Concluído" : appointment.status === "canceled" ? "Cancelado" : "Agendado";
+  const statusLabel = statusLabelOf(appointment.status);
+
   return (
     <div
       className="pointer-events-none fixed z-50 w-64 -translate-x-1/2 translate-y-2 rounded-lg border border-neutral-200 bg-white p-3 text-left shadow-xl"
