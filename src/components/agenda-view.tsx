@@ -271,7 +271,7 @@ export function AgendaView({ api }: { api: Api }) {
         <div className="overflow-x-auto rounded-xl border border-neutral-300 bg-white">
           <div className="flex" style={{ minWidth: 80 + columns.length * 220 }}>
             <div className="w-20 shrink-0 border-r border-neutral-200">
-              <div className="h-12 border-b border-neutral-200" />
+              <div className="h-14 border-b border-neutral-200" />
               {slots.map((t) => (
                 <div key={t} className="flex items-start justify-end border-b border-neutral-100 pr-2 pt-1 text-[11px] text-neutral-400" style={{ height: SLOT_HEIGHT_PX }}>
                   {t}
