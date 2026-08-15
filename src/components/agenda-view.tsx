@@ -405,8 +405,8 @@ export function AgendaView({ api }: { api: Api }) {
         api={api}
         onSave={handleSave}
         onCancelAppointment={editing ? () => handleCancel(editing) : undefined}
-        onMarkDone={editing && editing.status === "scheduled" ? () => handleMarkDone(editing) : undefined}
       />
+
 
       {hovered && (
         <AppointmentTooltip
