@@ -132,6 +132,7 @@ export function ProfessionalsTab({ api, onChanged }: { api: Api; onChanged?: () 
                   {[p.phone, p.email].filter(Boolean).join(" · ") || "Sem contato cadastrado"}
                   {p.commission_percent != null ? ` · Comissão ${p.commission_percent}%` : ""}
                 </p>
+                {p.bio && <p className="truncate text-[11px] text-brand">{p.bio}</p>}
               </div>
               <Button
                 variant="ghost"
