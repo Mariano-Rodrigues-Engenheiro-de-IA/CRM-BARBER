@@ -122,12 +122,67 @@ export function GeneralSettingsTab({ api, onSaved }: { api: Api; onSaved?: (s: A
         })}
       </div>
 
+      <OnlineBookingSection settings={settings} setSettings={setSettings} />
+
       <Button onClick={handleSave} disabled={saving}>
         {saving ? "Salvando..." : "Salvar configurações"}
       </Button>
     </div>
   );
 }
+
+/** Agendamento online: liga/desliga e mostra o link público que o cliente
+ * abre no celular ou no computador para marcar horário sozinho. */
+function OnlineBookingSection({
+  settings,
+  setSettings,
+}: {
+  settings: AgendaSettings;
+  setSettings: React.Dispatch<React.SetStateAction<AgendaSettings | null>>;
+}) {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const slug = settings.public_slug || "";
+  const link = slug ? `${origin}/agendar/${slug}` : "";
+
+  return (
+    <div className="space-y-2 rounded-lg border border-neutral-200 p-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <Label>Agendamento online</Label>
+          <p className="text-xs text-neutral-400">Seus clientes marcam horário sozinhos pelo link, no celular ou no computador.</p>
+        </div>
+        <Switch
+          checked={!!settings.online_booking_enabled}
+          onCheckedChange={(checked) => setSettings((prev) => (prev ? { ...prev, online_booking_enabled: checked } : prev))}
+        />
+      </div>
+
+      {settings.online_booking_enabled &&
+        (link ? (
+          <div className="flex items-center gap-2">
+            <Input value={link} readOnly className="h-8 text-xs" />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                void navigator.clipboard.writeText(link);
+                toast.success("Link copiado");
+              }}
+            >
+              Copiar
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => window.open(link, "_blank")}>
+              Abrir
+            </Button>
+          </div>
+        ) : (
+          <p className="text-xs text-neutral-400">Salve as configurações para gerar o link público.</p>
+        ))}
+    </div>
+  );
+}
+
 
 /** Dialog com as configurações — usado como atalho rápido dentro da
  * própria tela da Agenda (a gestão completa vive em Configurações). */
