@@ -928,7 +928,14 @@ function SlotBlockForm({
         <div className="grid grid-cols-2 gap-3 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
           <div className="space-y-1.5">
             <Label className="text-xs">Repetir por quantos dias</Label>
-            <Input type="number" min={1} max={180} value={countDays} onChange={(e) => setCountDays(Number(e.target.value))} />
+            <Input
+              type="number"
+              min={1}
+              max={180}
+              value={countDays}
+              onChange={(e) => setCountDays(Math.min(180, Math.max(1, Number(e.target.value) || 1)))}
+            />
+            <p className="text-[10px] text-neutral-400">Máximo de 180 dias.</p>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">A cada quantos dias</Label>

@@ -12,7 +12,7 @@ const dayHours = z.object({
   close: z.string().optional(),
 });
 const patchSchema = z.object({
-  slot_duration_minutes: z.number().int().min(5).max(120).optional(),
+  slot_duration_minutes: z.number().int().min(10).max(120).optional(),
   business_hours: z.record(z.string(), dayHours).optional(),
 });
 
