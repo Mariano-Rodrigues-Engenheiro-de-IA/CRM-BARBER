@@ -166,6 +166,7 @@ export function AgendaView({ api }: { api: Api }) {
     time: string;
     duration_minutes: number;
     notes: string;
+    status?: AppointmentStatus;
   }) {
     const scheduled_at = new Date(`${ymd(day)}T${data.time}:00`).toISOString();
     try {
@@ -180,10 +181,12 @@ export function AgendaView({ api }: { api: Api }) {
             scheduled_at,
             duration_minutes: data.duration_minutes,
             notes: data.notes || null,
+            ...(data.status ? { status: data.status } : {}),
           }),
         });
         if (!r?.ok) throw new Error(r?.error || "Erro ao salvar");
         toast.success("Agendamento atualizado");
+
       } else {
         const r = await api("/api/public/extension/appointments", {
           method: "POST",
