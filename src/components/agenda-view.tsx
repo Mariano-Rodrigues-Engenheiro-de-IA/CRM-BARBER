@@ -21,7 +21,7 @@ type Appointment = {
   service_id: string | null;
   scheduled_at: string;
   duration_minutes: number;
-  status: "scheduled" | "done" | "canceled";
+  status: AppointmentStatus;
   customers?: { name: string; phone: string } | null;
 };
 
