@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { User, Phone, Scissors, Clock, CircleCheck, StickyNote, DollarSign } from "lucide-react";
+import { User, Phone, Scissors, Clock, CircleCheck, StickyNote, DollarSign, UserRound } from "lucide-react";
 import { type AgendaSettings } from "@/components/agenda-settings-dialog";
 import { type Professional, type Service, ProfessionalAvatar } from "@/components/professionals-services-dialog";
 
@@ -1110,38 +1110,54 @@ function AppointmentTooltip({
       className="pointer-events-none fixed z-50 w-64 -translate-x-1/2 translate-y-2 rounded-lg border border-neutral-200 bg-white p-3 text-left shadow-xl"
       style={{ left: x, top: y }}
     >
-      <p className="text-sm font-semibold text-neutral-900">{appointment.title}</p>
-      <p className="mt-0.5 text-xs text-neutral-500">
-        {minutesToTime(startMin)} – {minutesToTime(endMin)} · {appointment.duration_minutes} min
+      <p className="flex items-center gap-1.5 text-sm font-semibold text-neutral-900">
+        <Clock className="h-3.5 w-3.5 shrink-0 text-brand" />
+        {minutesToTime(startMin)} – {minutesToTime(endMin)}
+        <span className="font-normal text-neutral-400">· {appointment.duration_minutes} min</span>
       </p>
-      <dl className="mt-2 space-y-1 text-xs">
-        <div className="flex gap-1.5">
-          <dt className="text-neutral-400">Cliente:</dt>
+      <dl className="mt-2 space-y-1.5 text-xs">
+        <div className="flex items-center gap-1.5">
+          <User className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
           <dd className="flex-1 truncate text-neutral-700">{appointment.customers?.name || "Sem cliente"}</dd>
         </div>
         {appointment.customers?.phone && (
-          <div className="flex gap-1.5">
-            <dt className="text-neutral-400">Telefone:</dt>
+          <div className="flex items-center gap-1.5">
+            <Phone className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
             <dd className="flex-1 truncate text-neutral-700">{appointment.customers.phone}</dd>
           </div>
         )}
-        <div className="flex gap-1.5">
-          <dt className="text-neutral-400">Profissional:</dt>
+        <div className="flex items-center gap-1.5">
+          <Scissors className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
+          <dd className="flex-1 truncate text-neutral-700">{appointment.title}</dd>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <ProfessionalAvatarFallback />
           <dd className="flex-1 truncate text-neutral-700">{professional.id === "__none__" ? "Sem profissional" : professional.name}</dd>
         </div>
-        <div className="flex gap-1.5">
-          <dt className="text-neutral-400">Status:</dt>
+        {appointment.price != null && (
+          <div className="flex items-center gap-1.5">
+            <DollarSign className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
+            <dd className="flex-1 truncate text-neutral-700">R$ {Number(appointment.price).toFixed(2)}</dd>
+          </div>
+        )}
+        <div className="flex items-center gap-1.5">
+          <CircleCheck className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
           <dd className="flex-1 text-neutral-700">{statusLabel}</dd>
         </div>
         {appointment.notes && (
-          <div className="pt-1 text-neutral-500">
-            <span className="text-neutral-400">Notas: </span>
-            {appointment.notes}
+          <div className="flex items-start gap-1.5">
+            <StickyNote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-400" />
+            <dd className="flex-1 text-neutral-500">{appointment.notes}</dd>
           </div>
         )}
       </dl>
     </div>
   );
+}
+
+/** Ícone de profissional usado no resumo (mesma métrica dos demais ícones). */
+function ProfessionalAvatarFallback() {
+  return <UserRound className="h-3.5 w-3.5 shrink-0 text-neutral-400" />;
 }
 
 /** Seletor de cliente: só uma barra de busca (nome, telefone ou e-mail) e um
