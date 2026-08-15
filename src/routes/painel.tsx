@@ -566,7 +566,7 @@ function Painel() {
         <nav className={"flex-1 space-y-1 " + (sidebarCollapsed ? "px-2" : "px-3")}>
           {NAV_TOP.map((n) => {
             const active = section === n.key;
-            const open = Boolean(n.children) && assinOpen && !sidebarCollapsed;
+            const open = Boolean(n.children) && openMenu === n.key && !sidebarCollapsed;
             return (
               <div key={n.key} className="group relative">
                 <button
