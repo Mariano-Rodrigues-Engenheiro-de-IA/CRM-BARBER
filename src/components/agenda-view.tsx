@@ -227,22 +227,29 @@ export function AgendaView({ api }: { api: Api }) {
           <Button variant="outline" size="sm" onClick={() => setDay(new Date(day.getTime() - 86400000))}>
             ←
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setDay(new Date())}>
-            Hoje
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setDay(new Date(day.getTime() + 86400000))}>
-            →
-          </Button>
           <Input
             type="date"
             value={ymd(day)}
             onChange={(e) => setDay(new Date(`${e.target.value}T00:00:00`))}
             className="w-40"
           />
-          <span className="ml-2 text-sm font-medium text-neutral-700">
-            {day.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
-            {isToday && <span className="ml-1 text-brand">(hoje)</span>}
-          </span>
+          <Button variant="outline" size="sm" onClick={() => setDay(new Date(day.getTime() + 86400000))}>
+            →
+          </Button>
+          {isToday ? (
+            <span className="ml-2 text-sm font-medium text-neutral-700">
+              {day.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
+              <span className="ml-1 text-brand">(hoje)</span>
+            </span>
+          ) : (
+            <button
+              onClick={() => setDay(new Date())}
+              className="ml-2 text-sm font-medium text-neutral-700 underline decoration-dotted hover:text-brand"
+              title="Voltar para hoje"
+            >
+              {day.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
+            </button>
+          )}
         </div>
         <Button variant="outline" size="sm" onClick={() => setBlockFormOpen(true)}>
           🚫 Bloquear horário
