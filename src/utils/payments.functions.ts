@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { type StripeEnv, createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
 import { hashToken } from "@/lib/extension-auth";
-import { priceIdForPlan, type PlanId } from "@/lib/billing";
+import { priceIdForPlan, type PlanId, priceIdForAiAddonPlan, type AiAddonPlanId } from "@/lib/billing";
 
 type CheckoutResult = { clientSecret: string } | { error: string };
 
@@ -162,6 +162,69 @@ export const createPremiumCheckout = createServerFn({ method: "POST" })
         customer: customerId,
         metadata: { barbershop_id: barbershopId, plan: data.plan ?? "premium" },
         subscription_data: { metadata: { barbershop_id: barbershopId } },
+      });
+
+      return { clientSecret: session.client_secret ?? "" };
+    } catch (error) {
+      return { error: getStripeErrorMessage(error) };
+    }
+  });
+
+/** Checkout do add-on do Agente de IA — independente do plano do CRM
+ * (Grátis ou Premium podem comprar), mesma lógica de resolução de
+ * barbearia/cliente do checkout premium. */
+export const createAiAddonCheckout = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      token?: string;
+      barbershopId?: string;
+      phone?: string;
+      email?: string;
+      name?: string;
+      plan: AiAddonPlanId;
+      returnUrl: string;
+      environment: StripeEnv;
+    }) => {
+      if (data.barbershopId && !/^[0-9a-fA-F-]{36}$/.test(data.barbershopId)) {
+        throw new Error("Invalid barbershopId");
+      }
+      if (data.plan !== "ai_monthly" && data.plan !== "ai_semestral") {
+        throw new Error("Invalid plan");
+      }
+      return data;
+    },
+  )
+  .handler(async ({ data }): Promise<CheckoutResult> => {
+    const barbershopId = await resolveBarbershop(data);
+    if (!barbershopId) {
+      return { error: "Informe o WhatsApp da barbearia para identificarmos sua conta." };
+    }
+
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: shop } = await supabaseAdmin
+        .from("barbershops")
+        .select("owner_email")
+        .eq("id", barbershopId)
+        .maybeSingle();
+
+      const stripe = createStripeClient(data.environment);
+      const lookupKey = priceIdForAiAddonPlan(data.plan);
+      const prices = await stripe.prices.list({ lookup_keys: [lookupKey] });
+      if (!prices.data.length) return { error: `Preço não encontrado (${lookupKey})` };
+      const price = prices.data[0];
+
+      const email = shop?.owner_email ?? data.email?.trim().toLowerCase() ?? undefined;
+      const customerId = await resolveCustomer(stripe, barbershopId, email);
+
+      const session = await stripe.checkout.sessions.create({
+        line_items: [{ price: price.id, quantity: 1 }],
+        mode: "subscription",
+        ui_mode: "embedded_page",
+        return_url: data.returnUrl,
+        customer: customerId,
+        metadata: { barbershop_id: barbershopId, plan: data.plan, product: "ai_addon" },
+        subscription_data: { metadata: { barbershop_id: barbershopId, product: "ai_addon" } },
       });
 
       return { clientSecret: session.client_secret ?? "" };
