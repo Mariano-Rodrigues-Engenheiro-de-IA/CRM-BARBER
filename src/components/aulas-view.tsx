@@ -13,15 +13,14 @@ type Lesson = {
   sort_order: number;
 };
 
-// Imagem de banner customizada (fundo do card de destaque) — troca esse
-// caminho quando a arte definitiva for adicionada em /public/academy/.
-// Até lá, usa o gradiente escuro como fundo (fallback abaixo).
-const BANNER_IMAGE_URL: string | null = null;
-
-/** Área de Treinamento — estilo "academy"/área de membros escura: aula em
- * destaque como banner grande no topo (com overlay pra contraste do
- * texto, nunca a thumbnail do vídeo esticada como fundo), demais aulas
- * enfileiradas abaixo. */
+/** Área de Treinamento — estilo "academy"/área de membros:
+ * 1) Banner grande no topo — SÓ decorativo (não é clicável, não abre
+ *    nenhum vídeo), com a arte enviada pelo Mariano (robô de IA +
+ *    celular com WhatsApp) e o texto de boas-vindas por cima.
+ * 2) Logo abaixo, a lista de aulas de verdade — é ali que a pessoa
+ *    clica pra assistir. A primeira aula ganha um destaque visual
+ *    sutil (selo "Comece aqui"), mas faz parte da mesma grade, sem
+ *    virar um bloco gigante separado. */
 export function AulasView({ api }: { api: Api }) {
   const [lessons, setLessons] = useState<Lesson[] | null>(null);
   const [playing, setPlaying] = useState<Lesson | null>(null);
@@ -33,81 +32,77 @@ export function AulasView({ api }: { api: Api }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!lessons) {
-    return <p className="text-sm text-neutral-400">Carregando...</p>;
-  }
-
-  if (lessons.length === 0) {
-    return (
-      <div className="rounded-2xl border border-dashed border-neutral-700 bg-neutral-900 p-10 text-center">
-        <p className="text-sm text-neutral-500">Nenhuma aula disponível ainda.</p>
-      </div>
-    );
-  }
-
-  const featured = lessons.find((l) => l.featured) ?? lessons[0];
-  const rest = lessons.filter((l) => l.id !== featured.id);
+  const sorted = (lessons ?? []).slice().sort((a, b) => {
+    if (a.featured !== b.featured) return a.featured ? -1 : 1;
+    return a.sort_order - b.sort_order;
+  });
 
   return (
-    <div className="mx-auto max-w-6xl space-y-10">
-      {/* Banner grande — aula em destaque. Fundo é uma arte dedicada (ou
-          gradiente escuro de fallback), NUNCA a thumbnail do vídeo — evita
-          o efeito "travado"/poluído de esticar um print de tela. */}
+    <div className="mx-auto max-w-6xl space-y-8">
+      {/* Banner decorativo — não clicável */}
       <div
         className="relative overflow-hidden rounded-2xl"
         style={{
-          backgroundImage: BANNER_IMAGE_URL
-            ? `linear-gradient(90deg, rgba(5,8,20,0.92) 0%, rgba(5,8,20,0.55) 55%, rgba(5,8,20,0.25) 100%), url(${BANNER_IMAGE_URL})`
-            : "radial-gradient(circle at 15% 30%, #1c2440 0%, #0a0e1e 55%, #05070f 100%)",
+          backgroundImage: "url(/academy/banner.jpg)",
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
       >
-        <div className="flex min-h-[260px] flex-col justify-center px-6 py-10 md:min-h-[340px] md:px-12">
+        <div className="flex min-h-[220px] flex-col justify-center px-6 py-10 md:min-h-[280px] md:px-12">
           <span className="mb-3 inline-block w-fit rounded-full bg-brand px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white">
             Bem-vindo(a)
           </span>
-          <h1 className="max-w-lg text-2xl font-bold text-white md:text-4xl">Zaylo Treinamentos</h1>
-          <p className="mt-2 max-w-md text-sm text-neutral-300 md:text-base">
+          <h1 className="max-w-md text-2xl font-bold text-white md:text-4xl">Zaylo Academy</h1>
+          <p className="mt-2 max-w-sm text-sm text-neutral-200 md:text-base">
             Aulas práticas pra você tirar o máximo proveito do sistema. Comece pela primeira e siga no seu ritmo.
           </p>
-          <button
-            onClick={() => setPlaying(featured)}
-            className="mt-6 flex w-fit items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-neutral-900 shadow-lg transition hover:scale-[1.02]"
-          >
-            <PlayIcon /> Assistir "{featured.title}"
-          </button>
         </div>
       </div>
 
-      {/* Demais aulas, enfileiradas — sem repetir a que já está em destaque acima */}
-      {rest.length > 0 && (
-        <div>
-          <h3 className="mb-4 text-lg font-bold text-neutral-100">Mais aulas</h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {rest.map((l) => (
-              <button
-                key={l.id}
-                onClick={() => setPlaying(l)}
-                className="group overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900 text-left shadow-sm transition hover:border-neutral-700 hover:shadow-lg"
-              >
-                <div className="relative">
-                  <img src={youtubeThumbnail(l.youtube_url) ?? undefined} alt="" className="h-40 w-full object-cover" />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition group-hover:bg-black/30">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/90 opacity-0 shadow transition group-hover:opacity-100">
-                      <PlayIcon />
-                    </div>
-                  </div>
-                </div>
-                <div className="p-3">
-                  <p className="line-clamp-2 text-sm font-semibold text-neutral-100">{l.title}</p>
-                  {l.description && <p className="mt-1 line-clamp-2 text-xs text-neutral-400">{l.description}</p>}
-                </div>
-              </button>
-            ))}
+      {/* Lista de aulas — aqui sim é clicável */}
+      <div>
+        {!lessons ? (
+          <p className="text-sm text-neutral-500">Carregando...</p>
+        ) : sorted.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-10 text-center">
+            <p className="text-sm text-neutral-400">Nenhuma aula disponível ainda.</p>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {sorted.map((l, idx) => {
+              const isFirst = idx === 0;
+              return (
+                <button
+                  key={l.id}
+                  onClick={() => setPlaying(l)}
+                  className={
+                    "group overflow-hidden rounded-xl border bg-white text-left shadow-sm transition hover:shadow-md " +
+                    (isFirst ? "border-brand ring-1 ring-brand/30" : "border-neutral-200")
+                  }
+                >
+                  <div className="relative">
+                    <img src={youtubeThumbnail(l.youtube_url) ?? undefined} alt="" className="h-40 w-full object-cover" />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition group-hover:bg-black/20">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/90 opacity-0 shadow transition group-hover:opacity-100">
+                        <PlayIcon />
+                      </div>
+                    </div>
+                    {isFirst && (
+                      <span className="absolute left-2 top-2 rounded-full bg-brand px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                        Comece aqui
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <p className="line-clamp-2 text-sm font-semibold text-neutral-900">{l.title}</p>
+                    {l.description && <p className="mt-1 line-clamp-2 text-xs text-neutral-500">{l.description}</p>}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       <Dialog open={!!playing} onOpenChange={(v) => !v && setPlaying(null)}>
         <DialogContent className="max-w-3xl overflow-hidden p-0">

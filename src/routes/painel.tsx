@@ -715,14 +715,14 @@ function Painel() {
 
         {section === "treinamento" && token && (
           <>
-            <header className="sticky top-0 z-10 border-b border-neutral-800 bg-neutral-950/95 backdrop-blur mt-14 md:mt-0">
+            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
               <div className="flex items-center gap-3 px-5 py-2">
-                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-100">
+                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
                   Treinamento
                 </h1>
               </div>
             </header>
-            <main className="min-h-[calc(100vh-56px)] bg-neutral-950 px-4 py-6">
+            <main className="px-4 py-6">
               <AulasView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
             </main>
           </>
