@@ -736,7 +736,7 @@ function Painel() {
               </div>
             </header>
             <main className="px-4 py-6">
-              <AgenteIaView api={(path: string, opts?: RequestInit) => api(token, path, opts)} token={token} />
+              <AgenteIaView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
             </main>
           </>
         )}
