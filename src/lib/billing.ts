@@ -40,6 +40,11 @@ export type BillingStatus = {
   current_period_end: string | null;
   usage: { customers: number; messages: number };
   limits: { customers: number; dispatchBatch: number };
+  ai_addon: {
+    active: boolean;
+    status: string | null;
+    current_period_end: string | null;
+  };
 };
 
 export function remaining(status: BillingStatus, kind: "customers"): number {
