@@ -49,6 +49,68 @@ export type Database = {
           },
         ]
       }
+      agente_ia_settings: {
+        Row: {
+          id: boolean
+          sales_video_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: boolean
+          sales_video_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: boolean
+          sales_video_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_demo_leads: {
+        Row: {
+          barbershop_id: string | null
+          created_at: string
+          goal: string | null
+          id: string
+          name: string
+          phone: string
+          revenue_range: string | null
+          segment: string | null
+          status: string
+        }
+        Insert: {
+          barbershop_id?: string | null
+          created_at?: string
+          goal?: string | null
+          id?: string
+          name: string
+          phone: string
+          revenue_range?: string | null
+          segment?: string | null
+          status?: string
+        }
+        Update: {
+          barbershop_id?: string | null
+          created_at?: string
+          goal?: string | null
+          id?: string
+          name?: string
+          phone?: string
+          revenue_range?: string | null
+          segment?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_demo_leads_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           barbershop_id: string
@@ -153,6 +215,7 @@ export type Database = {
       }
       barbershops: {
         Row: {
+          ai_access_enabled: boolean
           created_at: string
           created_by: string | null
           id: string
@@ -164,6 +227,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_access_enabled?: boolean
           created_at?: string
           created_by?: string | null
           id?: string
@@ -175,6 +239,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_access_enabled?: boolean
           created_at?: string
           created_by?: string | null
           id?: string
@@ -630,6 +695,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lessons: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          featured: boolean
+          id: string
+          sort_order: number
+          title: string
+          updated_at: string
+          youtube_url: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          featured?: boolean
+          id?: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+          youtube_url: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          featured?: boolean
+          id?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          youtube_url?: string
+        }
+        Relationships: []
       }
       message_jobs: {
         Row: {

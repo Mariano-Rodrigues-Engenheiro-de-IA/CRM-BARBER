@@ -16,10 +16,13 @@ import { Route as InstalarRouteImport } from './routes/instalar'
 import { Route as BaixarRouteImport } from './routes/baixar'
 import { Route as AssinarRouteImport } from './routes/assinar'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AssinarRetornoRouteImport } from './routes/assinar.retorno'
+import { Route as AgenteIaRetornoRouteImport } from './routes/agente-ia.retorno'
 import { Route as AgendarSlugRouteImport } from './routes/agendar.$slug'
 import { Route as AdminWhatsappRouteImport } from './routes/admin.whatsapp'
 import { Route as AdminTokensRouteImport } from './routes/admin.tokens'
+import { Route as AdminLessonsRouteImport } from './routes/admin.lessons'
 import { Route as AdminClientsRouteImport } from './routes/admin.clients'
 import { Route as ApiPublicSignupRouteImport } from './routes/api/public/signup'
 import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp.webhook'
@@ -33,15 +36,20 @@ import { Route as ApiPublicExtensionQuickRepliesRouteImport } from './routes/api
 import { Route as ApiPublicExtensionProfessionalsRouteImport } from './routes/api/public/extension/professionals'
 import { Route as ApiPublicExtensionPairRouteImport } from './routes/api/public/extension/pair'
 import { Route as ApiPublicExtensionMetaRouteImport } from './routes/api/public/extension/meta'
+import { Route as ApiPublicExtensionLessonsRouteImport } from './routes/api/public/extension/lessons'
 import { Route as ApiPublicExtensionFunnelsRouteImport } from './routes/api/public/extension/funnels'
 import { Route as ApiPublicExtensionFunnelCardsRouteImport } from './routes/api/public/extension/funnel-cards'
 import { Route as ApiPublicExtensionCustomersRouteImport } from './routes/api/public/extension/customers'
 import { Route as ApiPublicExtensionCampaignsRouteImport } from './routes/api/public/extension/campaigns'
 import { Route as ApiPublicExtensionBillingRouteImport } from './routes/api/public/extension/billing'
 import { Route as ApiPublicExtensionAppointmentsRouteImport } from './routes/api/public/extension/appointments'
+import { Route as ApiPublicExtensionAiDemoLeadsRouteImport } from './routes/api/public/extension/ai-demo-leads'
+import { Route as ApiPublicExtensionAgenteIaSettingsRouteImport } from './routes/api/public/extension/agente-ia-settings'
+import { Route as ApiPublicExtensionAgenteIaAccessLinkRouteImport } from './routes/api/public/extension/agente-ia-access-link'
 import { Route as ApiPublicExtensionAgendaSettingsRouteImport } from './routes/api/public/extension/agenda-settings'
 import { Route as ApiPublicBookingSlugRouteImport } from './routes/api/public/booking.$slug'
 import { Route as ApiPublicAiUpdateSummaryRouteImport } from './routes/api/public/ai/update-summary'
+import { Route as ApiPublicAiSetAccessRouteImport } from './routes/api/public/ai/set-access'
 import { Route as ApiPublicAiMoveLeadRouteImport } from './routes/api/public/ai/move-lead'
 import { Route as ApiPublicAiFunnelsRouteImport } from './routes/api/public/ai/funnels'
 import { Route as ApiPublicAdminIssueTokenRouteImport } from './routes/api/public/admin/issue-token'
@@ -102,10 +110,20 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AssinarRetornoRoute = AssinarRetornoRouteImport.update({
   id: '/retorno',
   path: '/retorno',
   getParentRoute: () => AssinarRoute,
+} as any)
+const AgenteIaRetornoRoute = AgenteIaRetornoRouteImport.update({
+  id: '/agente-ia/retorno',
+  path: '/agente-ia/retorno',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AgendarSlugRoute = AgendarSlugRouteImport.update({
   id: '/agendar/$slug',
@@ -120,6 +138,11 @@ const AdminWhatsappRoute = AdminWhatsappRouteImport.update({
 const AdminTokensRoute = AdminTokensRouteImport.update({
   id: '/admin/tokens',
   path: '/admin/tokens',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminLessonsRoute = AdminLessonsRouteImport.update({
+  id: '/admin/lessons',
+  path: '/admin/lessons',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminClientsRoute = AdminClientsRouteImport.update({
@@ -195,6 +218,12 @@ const ApiPublicExtensionMetaRoute = ApiPublicExtensionMetaRouteImport.update({
   path: '/api/public/extension/meta',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicExtensionLessonsRoute =
+  ApiPublicExtensionLessonsRouteImport.update({
+    id: '/api/public/extension/lessons',
+    path: '/api/public/extension/lessons',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicExtensionFunnelsRoute =
   ApiPublicExtensionFunnelsRouteImport.update({
     id: '/api/public/extension/funnels',
@@ -231,6 +260,24 @@ const ApiPublicExtensionAppointmentsRoute =
     path: '/api/public/extension/appointments',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicExtensionAiDemoLeadsRoute =
+  ApiPublicExtensionAiDemoLeadsRouteImport.update({
+    id: '/api/public/extension/ai-demo-leads',
+    path: '/api/public/extension/ai-demo-leads',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionAgenteIaSettingsRoute =
+  ApiPublicExtensionAgenteIaSettingsRouteImport.update({
+    id: '/api/public/extension/agente-ia-settings',
+    path: '/api/public/extension/agente-ia-settings',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionAgenteIaAccessLinkRoute =
+  ApiPublicExtensionAgenteIaAccessLinkRouteImport.update({
+    id: '/api/public/extension/agente-ia-access-link',
+    path: '/api/public/extension/agente-ia-access-link',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicExtensionAgendaSettingsRoute =
   ApiPublicExtensionAgendaSettingsRouteImport.update({
     id: '/api/public/extension/agenda-settings',
@@ -248,6 +295,11 @@ const ApiPublicAiUpdateSummaryRoute =
     path: '/api/public/ai/update-summary',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicAiSetAccessRoute = ApiPublicAiSetAccessRouteImport.update({
+  id: '/api/public/ai/set-access',
+  path: '/api/public/ai/set-access',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicAiMoveLeadRoute = ApiPublicAiMoveLeadRouteImport.update({
   id: '/api/public/ai/move-lead',
   path: '/api/public/ai/move-lead',
@@ -400,23 +452,31 @@ export interface FileRoutesByFullPath {
   '/painel': typeof PainelRoute
   '/politicas': typeof PoliticasRoute
   '/admin/clients': typeof AdminClientsRoute
+  '/admin/lessons': typeof AdminLessonsRoute
   '/admin/tokens': typeof AdminTokensRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/agendar/$slug': typeof AgendarSlugRoute
+  '/agente-ia/retorno': typeof AgenteIaRetornoRoute
   '/assinar/retorno': typeof AssinarRetornoRoute
+  '/admin/': typeof AdminIndexRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/api/public/admin/issue-token': typeof ApiPublicAdminIssueTokenRoute
   '/api/public/ai/funnels': typeof ApiPublicAiFunnelsRoute
   '/api/public/ai/move-lead': typeof ApiPublicAiMoveLeadRoute
+  '/api/public/ai/set-access': typeof ApiPublicAiSetAccessRoute
   '/api/public/ai/update-summary': typeof ApiPublicAiUpdateSummaryRoute
   '/api/public/booking/$slug': typeof ApiPublicBookingSlugRoute
   '/api/public/extension/agenda-settings': typeof ApiPublicExtensionAgendaSettingsRoute
+  '/api/public/extension/agente-ia-access-link': typeof ApiPublicExtensionAgenteIaAccessLinkRoute
+  '/api/public/extension/agente-ia-settings': typeof ApiPublicExtensionAgenteIaSettingsRoute
+  '/api/public/extension/ai-demo-leads': typeof ApiPublicExtensionAiDemoLeadsRoute
   '/api/public/extension/appointments': typeof ApiPublicExtensionAppointmentsRouteWithChildren
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRouteWithChildren
+  '/api/public/extension/lessons': typeof ApiPublicExtensionLessonsRoute
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
   '/api/public/extension/professionals': typeof ApiPublicExtensionProfessionalsRouteWithChildren
@@ -459,23 +519,31 @@ export interface FileRoutesByTo {
   '/painel': typeof PainelRoute
   '/politicas': typeof PoliticasRoute
   '/admin/clients': typeof AdminClientsRoute
+  '/admin/lessons': typeof AdminLessonsRoute
   '/admin/tokens': typeof AdminTokensRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/agendar/$slug': typeof AgendarSlugRoute
+  '/agente-ia/retorno': typeof AgenteIaRetornoRoute
   '/assinar/retorno': typeof AssinarRetornoRoute
+  '/admin': typeof AdminIndexRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/api/public/admin/issue-token': typeof ApiPublicAdminIssueTokenRoute
   '/api/public/ai/funnels': typeof ApiPublicAiFunnelsRoute
   '/api/public/ai/move-lead': typeof ApiPublicAiMoveLeadRoute
+  '/api/public/ai/set-access': typeof ApiPublicAiSetAccessRoute
   '/api/public/ai/update-summary': typeof ApiPublicAiUpdateSummaryRoute
   '/api/public/booking/$slug': typeof ApiPublicBookingSlugRoute
   '/api/public/extension/agenda-settings': typeof ApiPublicExtensionAgendaSettingsRoute
+  '/api/public/extension/agente-ia-access-link': typeof ApiPublicExtensionAgenteIaAccessLinkRoute
+  '/api/public/extension/agente-ia-settings': typeof ApiPublicExtensionAgenteIaSettingsRoute
+  '/api/public/extension/ai-demo-leads': typeof ApiPublicExtensionAiDemoLeadsRoute
   '/api/public/extension/appointments': typeof ApiPublicExtensionAppointmentsRouteWithChildren
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRouteWithChildren
+  '/api/public/extension/lessons': typeof ApiPublicExtensionLessonsRoute
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
   '/api/public/extension/professionals': typeof ApiPublicExtensionProfessionalsRouteWithChildren
@@ -519,23 +587,31 @@ export interface FileRoutesById {
   '/painel': typeof PainelRoute
   '/politicas': typeof PoliticasRoute
   '/admin/clients': typeof AdminClientsRoute
+  '/admin/lessons': typeof AdminLessonsRoute
   '/admin/tokens': typeof AdminTokensRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/agendar/$slug': typeof AgendarSlugRoute
+  '/agente-ia/retorno': typeof AgenteIaRetornoRoute
   '/assinar/retorno': typeof AssinarRetornoRoute
+  '/admin/': typeof AdminIndexRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/api/public/admin/issue-token': typeof ApiPublicAdminIssueTokenRoute
   '/api/public/ai/funnels': typeof ApiPublicAiFunnelsRoute
   '/api/public/ai/move-lead': typeof ApiPublicAiMoveLeadRoute
+  '/api/public/ai/set-access': typeof ApiPublicAiSetAccessRoute
   '/api/public/ai/update-summary': typeof ApiPublicAiUpdateSummaryRoute
   '/api/public/booking/$slug': typeof ApiPublicBookingSlugRoute
   '/api/public/extension/agenda-settings': typeof ApiPublicExtensionAgendaSettingsRoute
+  '/api/public/extension/agente-ia-access-link': typeof ApiPublicExtensionAgenteIaAccessLinkRoute
+  '/api/public/extension/agente-ia-settings': typeof ApiPublicExtensionAgenteIaSettingsRoute
+  '/api/public/extension/ai-demo-leads': typeof ApiPublicExtensionAiDemoLeadsRoute
   '/api/public/extension/appointments': typeof ApiPublicExtensionAppointmentsRouteWithChildren
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRouteWithChildren
+  '/api/public/extension/lessons': typeof ApiPublicExtensionLessonsRoute
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
   '/api/public/extension/professionals': typeof ApiPublicExtensionProfessionalsRouteWithChildren
@@ -580,23 +656,31 @@ export interface FileRouteTypes {
     | '/painel'
     | '/politicas'
     | '/admin/clients'
+    | '/admin/lessons'
     | '/admin/tokens'
     | '/admin/whatsapp'
     | '/agendar/$slug'
+    | '/agente-ia/retorno'
     | '/assinar/retorno'
+    | '/admin/'
     | '/api/public/signup'
     | '/api/public/admin/issue-token'
     | '/api/public/ai/funnels'
     | '/api/public/ai/move-lead'
+    | '/api/public/ai/set-access'
     | '/api/public/ai/update-summary'
     | '/api/public/booking/$slug'
     | '/api/public/extension/agenda-settings'
+    | '/api/public/extension/agente-ia-access-link'
+    | '/api/public/extension/agente-ia-settings'
+    | '/api/public/extension/ai-demo-leads'
     | '/api/public/extension/appointments'
     | '/api/public/extension/billing'
     | '/api/public/extension/campaigns'
     | '/api/public/extension/customers'
     | '/api/public/extension/funnel-cards'
     | '/api/public/extension/funnels'
+    | '/api/public/extension/lessons'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
     | '/api/public/extension/professionals'
@@ -639,23 +723,31 @@ export interface FileRouteTypes {
     | '/painel'
     | '/politicas'
     | '/admin/clients'
+    | '/admin/lessons'
     | '/admin/tokens'
     | '/admin/whatsapp'
     | '/agendar/$slug'
+    | '/agente-ia/retorno'
     | '/assinar/retorno'
+    | '/admin'
     | '/api/public/signup'
     | '/api/public/admin/issue-token'
     | '/api/public/ai/funnels'
     | '/api/public/ai/move-lead'
+    | '/api/public/ai/set-access'
     | '/api/public/ai/update-summary'
     | '/api/public/booking/$slug'
     | '/api/public/extension/agenda-settings'
+    | '/api/public/extension/agente-ia-access-link'
+    | '/api/public/extension/agente-ia-settings'
+    | '/api/public/extension/ai-demo-leads'
     | '/api/public/extension/appointments'
     | '/api/public/extension/billing'
     | '/api/public/extension/campaigns'
     | '/api/public/extension/customers'
     | '/api/public/extension/funnel-cards'
     | '/api/public/extension/funnels'
+    | '/api/public/extension/lessons'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
     | '/api/public/extension/professionals'
@@ -698,23 +790,31 @@ export interface FileRouteTypes {
     | '/painel'
     | '/politicas'
     | '/admin/clients'
+    | '/admin/lessons'
     | '/admin/tokens'
     | '/admin/whatsapp'
     | '/agendar/$slug'
+    | '/agente-ia/retorno'
     | '/assinar/retorno'
+    | '/admin/'
     | '/api/public/signup'
     | '/api/public/admin/issue-token'
     | '/api/public/ai/funnels'
     | '/api/public/ai/move-lead'
+    | '/api/public/ai/set-access'
     | '/api/public/ai/update-summary'
     | '/api/public/booking/$slug'
     | '/api/public/extension/agenda-settings'
+    | '/api/public/extension/agente-ia-access-link'
+    | '/api/public/extension/agente-ia-settings'
+    | '/api/public/extension/ai-demo-leads'
     | '/api/public/extension/appointments'
     | '/api/public/extension/billing'
     | '/api/public/extension/campaigns'
     | '/api/public/extension/customers'
     | '/api/public/extension/funnel-cards'
     | '/api/public/extension/funnels'
+    | '/api/public/extension/lessons'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
     | '/api/public/extension/professionals'
@@ -758,22 +858,30 @@ export interface RootRouteChildren {
   PainelRoute: typeof PainelRoute
   PoliticasRoute: typeof PoliticasRoute
   AdminClientsRoute: typeof AdminClientsRoute
+  AdminLessonsRoute: typeof AdminLessonsRoute
   AdminTokensRoute: typeof AdminTokensRoute
   AdminWhatsappRoute: typeof AdminWhatsappRoute
   AgendarSlugRoute: typeof AgendarSlugRoute
+  AgenteIaRetornoRoute: typeof AgenteIaRetornoRoute
+  AdminIndexRoute: typeof AdminIndexRoute
   ApiPublicSignupRoute: typeof ApiPublicSignupRoute
   ApiPublicAdminIssueTokenRoute: typeof ApiPublicAdminIssueTokenRoute
   ApiPublicAiFunnelsRoute: typeof ApiPublicAiFunnelsRoute
   ApiPublicAiMoveLeadRoute: typeof ApiPublicAiMoveLeadRoute
+  ApiPublicAiSetAccessRoute: typeof ApiPublicAiSetAccessRoute
   ApiPublicAiUpdateSummaryRoute: typeof ApiPublicAiUpdateSummaryRoute
   ApiPublicBookingSlugRoute: typeof ApiPublicBookingSlugRoute
   ApiPublicExtensionAgendaSettingsRoute: typeof ApiPublicExtensionAgendaSettingsRoute
+  ApiPublicExtensionAgenteIaAccessLinkRoute: typeof ApiPublicExtensionAgenteIaAccessLinkRoute
+  ApiPublicExtensionAgenteIaSettingsRoute: typeof ApiPublicExtensionAgenteIaSettingsRoute
+  ApiPublicExtensionAiDemoLeadsRoute: typeof ApiPublicExtensionAiDemoLeadsRoute
   ApiPublicExtensionAppointmentsRoute: typeof ApiPublicExtensionAppointmentsRouteWithChildren
   ApiPublicExtensionBillingRoute: typeof ApiPublicExtensionBillingRoute
   ApiPublicExtensionCampaignsRoute: typeof ApiPublicExtensionCampaignsRouteWithChildren
   ApiPublicExtensionCustomersRoute: typeof ApiPublicExtensionCustomersRouteWithChildren
   ApiPublicExtensionFunnelCardsRoute: typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   ApiPublicExtensionFunnelsRoute: typeof ApiPublicExtensionFunnelsRouteWithChildren
+  ApiPublicExtensionLessonsRoute: typeof ApiPublicExtensionLessonsRoute
   ApiPublicExtensionMetaRoute: typeof ApiPublicExtensionMetaRoute
   ApiPublicExtensionPairRoute: typeof ApiPublicExtensionPairRoute
   ApiPublicExtensionProfessionalsRoute: typeof ApiPublicExtensionProfessionalsRouteWithChildren
@@ -848,12 +956,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/assinar/retorno': {
       id: '/assinar/retorno'
       path: '/retorno'
       fullPath: '/assinar/retorno'
       preLoaderRoute: typeof AssinarRetornoRouteImport
       parentRoute: typeof AssinarRoute
+    }
+    '/agente-ia/retorno': {
+      id: '/agente-ia/retorno'
+      path: '/agente-ia/retorno'
+      fullPath: '/agente-ia/retorno'
+      preLoaderRoute: typeof AgenteIaRetornoRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/agendar/$slug': {
       id: '/agendar/$slug'
@@ -874,6 +996,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/tokens'
       fullPath: '/admin/tokens'
       preLoaderRoute: typeof AdminTokensRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/lessons': {
+      id: '/admin/lessons'
+      path: '/admin/lessons'
+      fullPath: '/admin/lessons'
+      preLoaderRoute: typeof AdminLessonsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/clients': {
@@ -967,6 +1096,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensionMetaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/extension/lessons': {
+      id: '/api/public/extension/lessons'
+      path: '/api/public/extension/lessons'
+      fullPath: '/api/public/extension/lessons'
+      preLoaderRoute: typeof ApiPublicExtensionLessonsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/extension/funnels': {
       id: '/api/public/extension/funnels'
       path: '/api/public/extension/funnels'
@@ -1009,6 +1145,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensionAppointmentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/extension/ai-demo-leads': {
+      id: '/api/public/extension/ai-demo-leads'
+      path: '/api/public/extension/ai-demo-leads'
+      fullPath: '/api/public/extension/ai-demo-leads'
+      preLoaderRoute: typeof ApiPublicExtensionAiDemoLeadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/agente-ia-settings': {
+      id: '/api/public/extension/agente-ia-settings'
+      path: '/api/public/extension/agente-ia-settings'
+      fullPath: '/api/public/extension/agente-ia-settings'
+      preLoaderRoute: typeof ApiPublicExtensionAgenteIaSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/agente-ia-access-link': {
+      id: '/api/public/extension/agente-ia-access-link'
+      path: '/api/public/extension/agente-ia-access-link'
+      fullPath: '/api/public/extension/agente-ia-access-link'
+      preLoaderRoute: typeof ApiPublicExtensionAgenteIaAccessLinkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/extension/agenda-settings': {
       id: '/api/public/extension/agenda-settings'
       path: '/api/public/extension/agenda-settings'
@@ -1028,6 +1185,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/ai/update-summary'
       fullPath: '/api/public/ai/update-summary'
       preLoaderRoute: typeof ApiPublicAiUpdateSummaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/ai/set-access': {
+      id: '/api/public/ai/set-access'
+      path: '/api/public/ai/set-access'
+      fullPath: '/api/public/ai/set-access'
+      preLoaderRoute: typeof ApiPublicAiSetAccessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/ai/move-lead': {
@@ -1357,16 +1521,25 @@ const rootRouteChildren: RootRouteChildren = {
   PainelRoute: PainelRoute,
   PoliticasRoute: PoliticasRoute,
   AdminClientsRoute: AdminClientsRoute,
+  AdminLessonsRoute: AdminLessonsRoute,
   AdminTokensRoute: AdminTokensRoute,
   AdminWhatsappRoute: AdminWhatsappRoute,
   AgendarSlugRoute: AgendarSlugRoute,
+  AgenteIaRetornoRoute: AgenteIaRetornoRoute,
+  AdminIndexRoute: AdminIndexRoute,
   ApiPublicSignupRoute: ApiPublicSignupRoute,
   ApiPublicAdminIssueTokenRoute: ApiPublicAdminIssueTokenRoute,
   ApiPublicAiFunnelsRoute: ApiPublicAiFunnelsRoute,
   ApiPublicAiMoveLeadRoute: ApiPublicAiMoveLeadRoute,
+  ApiPublicAiSetAccessRoute: ApiPublicAiSetAccessRoute,
   ApiPublicAiUpdateSummaryRoute: ApiPublicAiUpdateSummaryRoute,
   ApiPublicBookingSlugRoute: ApiPublicBookingSlugRoute,
   ApiPublicExtensionAgendaSettingsRoute: ApiPublicExtensionAgendaSettingsRoute,
+  ApiPublicExtensionAgenteIaAccessLinkRoute:
+    ApiPublicExtensionAgenteIaAccessLinkRoute,
+  ApiPublicExtensionAgenteIaSettingsRoute:
+    ApiPublicExtensionAgenteIaSettingsRoute,
+  ApiPublicExtensionAiDemoLeadsRoute: ApiPublicExtensionAiDemoLeadsRoute,
   ApiPublicExtensionAppointmentsRoute:
     ApiPublicExtensionAppointmentsRouteWithChildren,
   ApiPublicExtensionBillingRoute: ApiPublicExtensionBillingRoute,
@@ -1377,6 +1550,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicExtensionFunnelCardsRoute:
     ApiPublicExtensionFunnelCardsRouteWithChildren,
   ApiPublicExtensionFunnelsRoute: ApiPublicExtensionFunnelsRouteWithChildren,
+  ApiPublicExtensionLessonsRoute: ApiPublicExtensionLessonsRoute,
   ApiPublicExtensionMetaRoute: ApiPublicExtensionMetaRoute,
   ApiPublicExtensionPairRoute: ApiPublicExtensionPairRoute,
   ApiPublicExtensionProfessionalsRoute:
