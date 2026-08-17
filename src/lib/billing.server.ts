@@ -19,7 +19,7 @@ export async function getBillingStatus(
   supabaseAdmin: SupabaseClient<Database>,
   barbershopId: string,
 ): Promise<BillingStatus> {
-  const [subRes, customersRes, messagesRes] = await Promise.all([
+  const [subRes, customersRes, messagesRes, shopRes] = await Promise.all([
     supabaseAdmin
       .from("shop_subscriptions")
       .select("status, current_period_end, price_id")
@@ -35,6 +35,7 @@ export async function getBillingStatus(
       .from("message_jobs")
       .select("id", { count: "exact", head: true })
       .eq("barbershop_id", barbershopId),
+    supabaseAdmin.from("barbershops").select("ai_access_enabled").eq("id", barbershopId).maybeSingle(),
   ]);
 
   const now = Date.now();
@@ -62,6 +63,7 @@ export async function getBillingStatus(
       status: activeAi?.status ?? null,
       current_period_end: activeAi?.current_period_end ?? null,
     },
+    ai_access_enabled: Boolean(shopRes.data?.ai_access_enabled),
   };
 }
 

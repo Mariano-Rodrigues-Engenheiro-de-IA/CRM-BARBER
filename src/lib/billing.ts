@@ -45,6 +45,7 @@ export type BillingStatus = {
     status: string | null;
     current_period_end: string | null;
   };
+  ai_access_enabled: boolean;
 };
 
 export function remaining(status: BillingStatus, kind: "customers"): number {
