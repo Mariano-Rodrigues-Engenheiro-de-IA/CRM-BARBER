@@ -20,6 +20,7 @@ import { FREE_LIMITS, PROMO_PRICE_LABEL, type BillingStatus } from "@/lib/billin
 
 import { useConfirm } from "@/components/confirm-dialog";
 import { AgendaView } from "@/components/agenda-view";
+import { AulasView } from "@/components/aulas-view";
 import { ServicesTab, ProfessionalsTab } from "@/components/professionals-services-dialog";
 import { GeneralSettingsTab } from "@/components/agenda-settings-dialog";
 import { AccountTab } from "@/components/account-tab";
@@ -239,7 +240,7 @@ function nudgeExtensionPoll() {
   window.postMessage({ __crm: "poll_now_v180" }, window.location.origin);
 }
 
-type Section = "agenda" | "configuracoes" | "assinantes" | "funis" | "disparo" | "respostas" | "equipe" | "conexao" | "templates";
+type Section = "agenda" | "aulas" | "configuracoes" | "assinantes" | "funis" | "disparo" | "respostas" | "equipe" | "conexao" | "templates";
 /** Sub-abas da sanfona de Assinaturas. */
 type AssinTab = "visao" | "assinantes";
 /** Sub-abas da sanfona de Configurações. */
@@ -321,6 +322,16 @@ function IconPlug() {
   );
 }
 
+function IconGraduationCap() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 10 12 5 2 10l10 5 10-5Z" />
+      <path d="M6 12v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5" />
+      <path d="M22 10v6" />
+    </svg>
+  );
+}
+
 
 
 type Brand = { name?: string; logo?: string };
@@ -358,7 +369,7 @@ function Painel() {
   const initialSection: Section = (() => {
     if (typeof window === "undefined") return "assinantes";
     const s = new URLSearchParams(window.location.search).get("section");
-    if (s === "agenda" || s === "configuracoes" || s === "equipe" || s === "conexao" || s === "respostas" || s === "funis" || s === "disparo" || s === "templates") return s;
+    if (s === "agenda" || s === "aulas" || s === "configuracoes" || s === "equipe" || s === "conexao" || s === "respostas" || s === "funis" || s === "disparo" || s === "templates") return s;
     return "assinantes";
   })();
   const [section, setSection] = useState<Section>(initialSection);
@@ -490,6 +501,7 @@ function Painel() {
     children?: Array<{ key: AssinTab | ConfigTab; label: string }>;
   }> = [
     { key: "agenda", label: "Agenda", icon: <IconCalendar /> },
+    { key: "aulas", label: "Aulas", icon: <IconGraduationCap /> },
     {
       key: "assinantes",
       label: "Assinaturas",
@@ -697,6 +709,21 @@ function Painel() {
             </header>
             <main className="px-4 py-4">
               <AgendaView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+            </main>
+          </>
+        )}
+
+        {section === "aulas" && token && (
+          <>
+            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
+              <div className="flex items-center gap-3 px-5 py-2">
+                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
+                  Aulas
+                </h1>
+              </div>
+            </header>
+            <main className="px-4 py-6">
+              <AulasView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
             </main>
           </>
         )}
