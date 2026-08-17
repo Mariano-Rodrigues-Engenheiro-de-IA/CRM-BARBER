@@ -21,6 +21,7 @@ import { FREE_LIMITS, PROMO_PRICE_LABEL, type BillingStatus } from "@/lib/billin
 import { useConfirm } from "@/components/confirm-dialog";
 import { AgendaView } from "@/components/agenda-view";
 import { AulasView } from "@/components/aulas-view";
+import { AgenteIaView } from "@/components/agente-ia-view";
 import { ServicesTab, ProfessionalsTab } from "@/components/professionals-services-dialog";
 import { GeneralSettingsTab } from "@/components/agenda-settings-dialog";
 import { AccountTab } from "@/components/account-tab";
@@ -240,7 +241,7 @@ function nudgeExtensionPoll() {
   window.postMessage({ __crm: "poll_now_v180" }, window.location.origin);
 }
 
-type Section = "agenda" | "treinamento" | "configuracoes" | "assinantes" | "funis" | "disparo" | "respostas" | "equipe" | "conexao" | "templates";
+type Section = "agenda" | "agente-ia" | "treinamento" | "configuracoes" | "assinantes" | "funis" | "disparo" | "respostas" | "equipe" | "conexao" | "templates";
 /** Sub-abas da sanfona de Assinaturas. */
 type AssinTab = "visao" | "assinantes";
 /** Sub-abas da sanfona de Configurações. */
@@ -332,6 +333,17 @@ function IconGraduationCap() {
   );
 }
 
+function IconRobot() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="9" width="16" height="11" rx="2" />
+      <path d="M12 9V5" /><circle cx="12" cy="3.5" r="1.5" />
+      <circle cx="9" cy="14" r="1" /><circle cx="15" cy="14" r="1" />
+      <path d="M2 13v3M22 13v3" />
+    </svg>
+  );
+}
+
 
 
 type Brand = { name?: string; logo?: string };
@@ -369,7 +381,7 @@ function Painel() {
   const initialSection: Section = (() => {
     if (typeof window === "undefined") return "assinantes";
     const s = new URLSearchParams(window.location.search).get("section");
-    if (s === "agenda" || s === "treinamento" || s === "configuracoes" || s === "equipe" || s === "conexao" || s === "respostas" || s === "funis" || s === "disparo" || s === "templates") return s;
+    if (s === "agenda" || s === "agente-ia" || s === "treinamento" || s === "configuracoes" || s === "equipe" || s === "conexao" || s === "respostas" || s === "funis" || s === "disparo" || s === "templates") return s;
     return "assinantes";
   })();
   const [section, setSection] = useState<Section>(initialSection);
@@ -501,6 +513,7 @@ function Painel() {
     children?: Array<{ key: AssinTab | ConfigTab; label: string }>;
   }> = [
     { key: "agenda", label: "Agenda", icon: <IconCalendar /> },
+    { key: "agente-ia", label: "Agente de IA", icon: <IconRobot /> },
     {
       key: "assinantes",
       label: "Assinaturas",
@@ -709,6 +722,21 @@ function Painel() {
             </header>
             <main className="px-4 py-4">
               <AgendaView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+            </main>
+          </>
+        )}
+
+        {section === "agente-ia" && token && (
+          <>
+            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
+              <div className="flex items-center gap-3 px-5 py-2">
+                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
+                  Agente de IA
+                </h1>
+              </div>
+            </header>
+            <main className="px-4 py-6">
+              <AgenteIaView api={(path: string, opts?: RequestInit) => api(token, path, opts)} token={token} />
             </main>
           </>
         )}
