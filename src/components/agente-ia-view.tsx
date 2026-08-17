@@ -6,10 +6,6 @@ import { youtubeEmbedUrl } from "@/lib/youtube";
 
 type Api = (path: string, opts?: RequestInit) => Promise<any>;
 
-// Vídeo de vendas explicando o Agente de IA — troca esse link quando o
-// Mariano gravar o vídeo definitivo (mesmo padrão simples do banner).
-const SALES_VIDEO_URL: string | null = null;
-
 const REVENUE_RANGES = [
   "Até R$ 5.000/mês",
   "R$ 5.001 a R$ 15.000/mês",
@@ -24,7 +20,16 @@ const REVENUE_RANGES = [
 export function AgenteIaView({ api }: { api: Api }) {
   const [formOpen, setFormOpen] = useState(false);
   const [sent, setSent] = useState(false);
-  const embedUrl = SALES_VIDEO_URL ? youtubeEmbedUrl(SALES_VIDEO_URL) : null;
+  const [salesVideoUrl, setSalesVideoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    api("/api/public/extension/agente-ia-settings").then((r) => {
+      if (r?.ok) setSalesVideoUrl(r.sales_video_url);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const embedUrl = salesVideoUrl ? youtubeEmbedUrl(salesVideoUrl) : null;
 
   if (sent) {
     return (
