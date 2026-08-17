@@ -240,7 +240,7 @@ function nudgeExtensionPoll() {
   window.postMessage({ __crm: "poll_now_v180" }, window.location.origin);
 }
 
-type Section = "agenda" | "aulas" | "configuracoes" | "assinantes" | "funis" | "disparo" | "respostas" | "equipe" | "conexao" | "templates";
+type Section = "agenda" | "treinamento" | "configuracoes" | "assinantes" | "funis" | "disparo" | "respostas" | "equipe" | "conexao" | "templates";
 /** Sub-abas da sanfona de Assinaturas. */
 type AssinTab = "visao" | "assinantes";
 /** Sub-abas da sanfona de Configurações. */
@@ -369,7 +369,7 @@ function Painel() {
   const initialSection: Section = (() => {
     if (typeof window === "undefined") return "assinantes";
     const s = new URLSearchParams(window.location.search).get("section");
-    if (s === "agenda" || s === "aulas" || s === "configuracoes" || s === "equipe" || s === "conexao" || s === "respostas" || s === "funis" || s === "disparo" || s === "templates") return s;
+    if (s === "agenda" || s === "treinamento" || s === "configuracoes" || s === "equipe" || s === "conexao" || s === "respostas" || s === "funis" || s === "disparo" || s === "templates") return s;
     return "assinantes";
   })();
   const [section, setSection] = useState<Section>(initialSection);
@@ -501,7 +501,6 @@ function Painel() {
     children?: Array<{ key: AssinTab | ConfigTab; label: string }>;
   }> = [
     { key: "agenda", label: "Agenda", icon: <IconCalendar /> },
-    { key: "aulas", label: "Aulas", icon: <IconGraduationCap /> },
     {
       key: "assinantes",
       label: "Assinaturas",
@@ -530,6 +529,7 @@ function Painel() {
         { key: "conta", label: "Minha conta" },
       ],
     },
+    { key: "treinamento", label: "Treinamento", icon: <IconGraduationCap /> },
   ];
 
   const navRowCls = (active: boolean) =>
@@ -713,16 +713,16 @@ function Painel() {
           </>
         )}
 
-        {section === "aulas" && token && (
+        {section === "treinamento" && token && (
           <>
-            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
+            <header className="sticky top-0 z-10 border-b border-neutral-800 bg-neutral-950/95 backdrop-blur mt-14 md:mt-0">
               <div className="flex items-center gap-3 px-5 py-2">
-                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
-                  Aulas
+                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-100">
+                  Treinamento
                 </h1>
               </div>
             </header>
-            <main className="px-4 py-6">
+            <main className="min-h-[calc(100vh-56px)] bg-neutral-950 px-4 py-6">
               <AulasView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
             </main>
           </>
