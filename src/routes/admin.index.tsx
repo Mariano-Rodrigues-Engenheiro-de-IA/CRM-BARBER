@@ -67,7 +67,9 @@ function AdminHome() {
           {tab === "interessados" && (
             <AdminLeadsPanel
               listLeads={() => listLeads()}
-              updateLeadStatus={(id, status) => updateLeadStatus({ data: { id, status: status as any } })}
+              updateLeadStatus={async (id, status) => {
+                await updateLeadStatus({ data: { id, status: status as any } });
+              }}
             />
           )}
           {tab === "aulas" && <AdminLessonsPanel />}
