@@ -16,18 +16,27 @@ const REVENUE_RANGES = [
 
 /** Página do Agente de IA — vitrine + agendar demonstração (não é mais
  * checkout direto: a venda acontece por contato humano, depois de
- * preencher esse formulário). */
+ * preencher esse formulário). Se o admin já vinculou a conta (depois da
+ * compra), mostra direto o botão de acesso, sem passar pela vitrine. */
 export function AgenteIaView({ api }: { api: Api }) {
   const [formOpen, setFormOpen] = useState(false);
   const [sent, setSent] = useState(false);
   const [salesVideoUrl, setSalesVideoUrl] = useState<string | null>(null);
+  const [accessEnabled, setAccessEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
     api("/api/public/extension/agente-ia-settings").then((r) => {
       if (r?.ok) setSalesVideoUrl(r.sales_video_url);
     });
+    api("/api/public/extension/billing").then((r) => {
+      if (r?.ok) setAccessEnabled(Boolean(r.billing?.ai_access_enabled));
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  if (accessEnabled) {
+    return <AiAccessGranted api={api} />;
+  }
 
   const embedUrl = salesVideoUrl ? youtubeEmbedUrl(salesVideoUrl) : null;
 
@@ -183,6 +192,50 @@ function DemoForm({ api, onSent }: { api: Api; onSent: () => void }) {
         className="w-full rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
       >
         {saving ? "Enviando..." : "Enviar"}
+      </button>
+    </div>
+  );
+}
+
+/** Cliente já tem acesso liberado (admin vinculou depois da compra) —
+ * botão único que gera um link mágico e abre o painel da IA já logado,
+ * sem precisar digitar senha de novo. */
+function AiAccessGranted({ api }: { api: Api }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleAccess() {
+    setLoading(true);
+    setError(null);
+    try {
+      const r = await api("/api/public/extension/agente-ia-access-link");
+      if (!r?.ok || !r.action_link) throw new Error(r?.error || "Não foi possível abrir o acesso agora.");
+      window.open(r.action_link, "_blank");
+    } catch (e: any) {
+      setError(e?.message || "Erro ao gerar acesso");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-lg space-y-4 rounded-2xl border border-neutral-200 bg-white p-8 text-center">
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand/10">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-brand">
+          <rect x="4" y="9" width="16" height="11" rx="2" />
+          <path d="M12 9V5" /><circle cx="12" cy="3.5" r="1.5" />
+          <circle cx="9" cy="14" r="1" /><circle cx="15" cy="14" r="1" />
+        </svg>
+      </div>
+      <h1 className="text-xl font-bold text-neutral-900">Seu Agente de IA está pronto</h1>
+      <p className="text-sm text-neutral-500">Clique abaixo para acessar o painel da sua IA, sem precisar fazer login de novo.</p>
+      {error && <p className="rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-700">{error}</p>}
+      <button
+        onClick={handleAccess}
+        disabled={loading}
+        className="w-full rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
+      >
+        {loading ? "Abrindo..." : "Acessar minha IA"}
       </button>
     </div>
   );
