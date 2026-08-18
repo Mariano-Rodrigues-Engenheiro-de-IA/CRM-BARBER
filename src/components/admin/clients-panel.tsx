@@ -3,9 +3,10 @@
 // admin.clients.tsx para ser reaproveitado dentro do painel admin
 // unificado (com abas).
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { adminListClientsOverview } from "@/lib/admin-whatsapp.functions";
+import { useCachedFetch } from "@/lib/api-cache";
 
 type Row = Awaited<ReturnType<typeof adminListClientsOverview>>[number];
 
@@ -24,23 +25,16 @@ function statusLabel(status: string | null) {
 
 export function AdminClientsPanel() {
   const listClients = useServerFn(adminListClientsOverview);
-  const [rows, setRows] = useState<Row[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-
-  async function reload() {
+  const [error, setError] = useState<string | null>(null);
+  const { data: rows } = useCachedFetch<Row[]>("admin-clients", async () => {
     try {
-      const data = await listClients();
-      setRows(data);
+      return await listClients();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      return [];
     }
-  }
-
-  useEffect(() => {
-    void reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  });
 
   const filtered = (rows ?? []).filter((r) => {
     const q = search.trim().toLowerCase();
