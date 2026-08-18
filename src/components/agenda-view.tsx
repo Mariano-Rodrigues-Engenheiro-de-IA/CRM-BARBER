@@ -13,6 +13,14 @@ import { type Professional, type Service, ProfessionalAvatar } from "@/component
 
 type Api = (path: string, opts?: RequestInit) => Promise<any>;
 
+/** Cache entre navegações — trocar de aba e voltar, ou trocar de dia e
+ * voltar, não deve piscar "Carregando..." de novo. Configurações,
+ * profissionais, clientes e serviços mudam pouco (cache único); os
+ * agendamentos/bloqueios do dia são indexados por data (cada dia guarda
+ * sua própria entrada, nunca mistura dados de dias diferentes). */
+let staticCache: { settings: AgendaSettings; professionals: Professional[]; customers: CustomerOption[]; services: Service[] } | null = null;
+const dayCache = new Map<string, { appointments: Appointment[]; timeBlocks: TimeBlock[] }>();
+
 export type AppointmentStatus = "scheduled" | "confirmed" | "done" | "canceled";
 
 /** Rótulos em português usados no seletor de status e no resumo. */
@@ -78,12 +86,12 @@ function minutesToTime(mins: number) {
 
 export function AgendaView({ api }: { api: Api }) {
   const [day, setDay] = useState(() => new Date());
-  const [settings, setSettings] = useState<AgendaSettings | null>(null);
-  const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [settings, setSettings] = useState<AgendaSettings | null>(staticCache?.settings ?? null);
+  const [professionals, setProfessionals] = useState<Professional[]>(staticCache?.professionals ?? []);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
-  const [customers, setCustomers] = useState<CustomerOption[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
+  const [customers, setCustomers] = useState<CustomerOption[]>(staticCache?.customers ?? []);
+  const [services, setServices] = useState<Service[]>(staticCache?.services ?? []);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Appointment | null>(null);
@@ -97,15 +105,28 @@ export function AgendaView({ api }: { api: Api }) {
   async function loadSettings() {
     const r = await api("/api/public/extension/agenda-settings");
     if (r?.ok) setSettings(r.settings);
+    return r?.ok ? r.settings : null;
   }
   async function loadProfessionals() {
     const r = await api("/api/public/extension/professionals");
     if (r?.ok) setProfessionals(r.professionals);
+    return r?.ok ? r.professionals : [];
   }
   /** Carrega agendamentos e bloqueios do dia JUNTOS, para a agenda trocar
-   * de dia de uma vez só (sem informação aparecendo em partes). */
+   * de dia de uma vez só (sem informação aparecendo em partes). Se o dia
+   * já tem dado em cache, mostra na hora (sem "Carregando...") e atualiza
+   * em segundo plano — só usa o loader de tela cheia em dias nunca
+   * visitados nesta sessão. */
   async function loadDay(showLoader = true) {
-    if (showLoader) setLoading(true);
+    const key = ymd(day);
+    const cached = dayCache.get(key);
+    if (cached) {
+      setAppointments(cached.appointments);
+      setTimeBlocks(cached.timeBlocks);
+      setLoading(false);
+    } else if (showLoader) {
+      setLoading(true);
+    }
     try {
       const from = new Date(day);
       from.setHours(0, 0, 0, 0);
@@ -115,8 +136,11 @@ export function AgendaView({ api }: { api: Api }) {
         api(`/api/public/extension/appointments?from=${from.toISOString()}&to=${to.toISOString()}`),
         api(`/api/public/extension/time-blocks?from=${from.toISOString()}&to=${to.toISOString()}`),
       ]);
-      if (ap?.ok) setAppointments(ap.appointments || []);
-      if (tb?.ok) setTimeBlocks(tb.time_blocks || []);
+      const nextAppointments = ap?.ok ? ap.appointments || [] : appointments;
+      const nextTimeBlocks = tb?.ok ? tb.time_blocks || [] : timeBlocks;
+      if (ap?.ok) setAppointments(nextAppointments);
+      if (tb?.ok) setTimeBlocks(nextTimeBlocks);
+      if (ap?.ok && tb?.ok) dayCache.set(key, { appointments: nextAppointments, timeBlocks: nextTimeBlocks });
     } finally {
       setLoading(false);
     }
@@ -125,16 +149,30 @@ export function AgendaView({ api }: { api: Api }) {
   const loadTimeBlocks = () => loadDay(false);
 
   useEffect(() => {
-    void loadSettings();
-    void loadProfessionals();
-    api("/api/public/extension/customers").then((r) => {
-      if (r?.ok) setCustomers((r.customers || []).map((c: any) => ({ id: c.id, name: c.name, phone: c.phone })));
-    });
-    // Serviços carregados junto com a agenda para o formulário de novo
-    // agendamento já abrir completo (sem o campo Serviço chegando depois).
-    api("/api/public/extension/services").then((r) => {
-      if (r?.ok) setServices(r.services || []);
-    });
+    if (staticCache) {
+      // Já em cache de uma visita anterior nesta sessão — nada pra buscar.
+      return;
+    }
+    (async () => {
+      const [settingsRes, professionalsRes, customersRes, servicesRes] = await Promise.all([
+        loadSettings(),
+        loadProfessionals(),
+        api("/api/public/extension/customers"),
+        api("/api/public/extension/services"),
+      ]);
+      const customersList = customersRes?.ok
+        ? (customersRes.customers || []).map((c: any) => ({ id: c.id, name: c.name, phone: c.phone }))
+        : [];
+      const servicesList = servicesRes?.ok ? servicesRes.services || [] : [];
+      setCustomers(customersList);
+      setServices(servicesList);
+      staticCache = {
+        settings: settingsRes,
+        professionals: professionalsRes,
+        customers: customersList,
+        services: servicesList,
+      };
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
