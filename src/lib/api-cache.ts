@@ -19,6 +19,19 @@ export function useCachedFetch<T>(key: string, fetcher: () => Promise<T>) {
   const fetcherRef = useRef(fetcher);
   fetcherRef.current = fetcher;
 
+  async function run() {
+    try {
+      const result = await fetcherRef.current();
+      memoryCache.set(key, result);
+      setData(result);
+      setLoading(false);
+      return result;
+    } catch {
+      setLoading(false);
+      return null;
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
     fetcherRef
@@ -38,5 +51,11 @@ export function useCachedFetch<T>(key: string, fetcher: () => Promise<T>) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
-  return { data, loading, setData };
+  /** Força buscar de novo, ignorando o cache — usar depois de uma ação que
+   * muda os dados no servidor (criar, editar, remover). */
+  async function refetch() {
+    return run();
+  }
+
+  return { data, loading, setData, refetch };
 }
