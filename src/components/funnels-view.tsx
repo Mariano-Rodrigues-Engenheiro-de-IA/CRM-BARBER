@@ -339,6 +339,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       label_ids?: string[];
       unread_count?: number;
     },
+    targetIndex?: number,
   ) {
     if (!active || !stageId) return;
     // Guard: um mesmo contato só pode entrar uma vez no funil (constraint
@@ -396,6 +397,13 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
             : { ...f, cards: f.cards.map((c) => (c.id === tempId ? created : c)) },
         ),
       );
+      // Se veio de um drop numa posição específica (não o final da lista),
+      // reaproveita a mesma lógica de reposicionamento já usada para mover
+      // cards entre etapas — dá o mesmo comportamento de "abrir espaço"
+      // também para leads chegando do Inbox, não só entre etapas do funil.
+      if (targetIndex !== undefined) {
+        await moveCardToPosition(created, stageId, targetIndex);
+      }
       return created;
     }
     setErr((r?.error as string) || "Erro ao criar card");
@@ -553,7 +561,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
           {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-[calc(100vh-108px)] w-72 shrink-0 animate-pulse rounded-xl border border-neutral-300 bg-neutral-200"
+              className="h-[calc(100vh-108px)] w-72 shrink-0 animate-pulse rounded-xl border border-neutral-300 bg-[#eef0f1]"
             />
           ))}
         </div>
@@ -567,7 +575,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
         <>
           <div className="thin-scrollbar flex min-h-[calc(100vh-108px)] items-start gap-2.5 overflow-x-auto pb-4">
             <div
-              className="flex max-h-[calc(100vh-108px)] w-72 shrink-0 flex-col rounded-xl border border-neutral-300 bg-neutral-200 py-2 pl-2 pr-1"
+              className="flex max-h-[calc(100vh-108px)] w-72 shrink-0 flex-col rounded-xl border border-neutral-300 bg-[#eef0f1] py-2 pl-2 pr-1"
               style={{ borderTop: "4px solid #3d5fa8", borderBottom: "4px solid #3d5fa8" }}
             >
               <div className="flex items-center justify-between gap-2">
@@ -604,6 +612,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                       onDragStart={(e) => {
                         draggedContact.current = c;
                         dragged.current = null;
+                        draggedCardHeight.current = e.currentTarget.getBoundingClientRect().height;
                         // Sem payload no dataTransfer o Chrome cancela o drag
                         // iniciado dentro de containers com scroll/botões.
                         e.dataTransfer.effectAllowed = "move";
@@ -615,6 +624,8 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                       }}
                       onDragEnd={() => {
                         draggedContact.current = null;
+                        setDropIndicator(null);
+                        columnSnapshot.current = null;
                       }}
 
                       className="select-none cursor-grab outline-none rounded-xl border border-neutral-300 bg-white p-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-neutral-400 hover:shadow-md active:cursor-grabbing"
@@ -708,8 +719,8 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                       setStageDropIndicator(isLeftHalf ? stageIndex : stageIndex + 1);
                       return;
                     }
-                    if (dragged.current) {
-                      const draggedId = dragged.current.id;
+                    if (dragged.current || draggedContact.current) {
+                      const draggedId = dragged.current?.id;
                       // Captura a "foto" das posições dos cards só UMA VEZ ao
                       // entrar nessa coluna — os cálculos seguintes usam essa
                       // referência fixa, nunca o DOM ao vivo (que a inserção
@@ -755,26 +766,32 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                     const card = dragged.current;
                     draggedContact.current = null;
                     dragged.current = null;
+                    const idx = dropIndicator?.stageId === stage.id ? dropIndicator.index : cards.length;
                     if (contact) {
                       // Se o contato já virou card neste funil, o drop move o
                       // card existente em vez de ser ignorado em silêncio.
                       const existing = active.cards.find((c) => c.wa_contact_id === contact.id);
                       if (existing) {
-                        if (existing.stage_id !== stage.id) void moveCard(existing, stage.id);
+                        if (existing.stage_id !== stage.id) void moveCardToPosition(existing, stage.id, idx);
+                        setDropIndicator(null);
                         return;
                       }
-                      void addCard(stage.id, {
-                        title: contact.name || contact.phone || contact.wa_id,
-                        phone: contact.phone ?? undefined,
-                        wa_contact_id: contact.id,
-                        wa_id: contact.wa_id,
-                        label_ids: contact.label_ids,
-                        unread_count: contact.unread_count,
-                      });
+                      void addCard(
+                        stage.id,
+                        {
+                          title: contact.name || contact.phone || contact.wa_id,
+                          phone: contact.phone ?? undefined,
+                          wa_contact_id: contact.id,
+                          wa_id: contact.wa_id,
+                          label_ids: contact.label_ids,
+                          unread_count: contact.unread_count,
+                        },
+                        idx,
+                      );
+                      setDropIndicator(null);
                       return;
                     }
                     if (card) {
-                      const idx = dropIndicator?.stageId === stage.id ? dropIndicator.index : cards.length;
                       void moveCardToPosition(card, stage.id, idx);
                     }
                     setDropIndicator(null);
@@ -794,7 +811,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                     }
                   }}
 
-                  className="flex max-h-[calc(100vh-108px)] w-72 shrink-0 flex-col rounded-xl border border-neutral-300 bg-neutral-200 py-2 pl-2 pr-1"
+                  className="flex max-h-[calc(100vh-108px)] w-72 shrink-0 flex-col rounded-xl border border-neutral-300 bg-[#eef0f1] py-2 pl-2 pr-1"
                   style={{
                     borderTop: `4px solid ${active.mode === "label" ? stage.color || "#3d5fa8" : "#3d5fa8"}`,
                     borderBottom: `4px solid ${active.mode === "label" ? stage.color || "#3d5fa8" : "#3d5fa8"}`,
@@ -1634,7 +1651,7 @@ function AddStageColumn({ onAdd }: { onAdd: (name: string) => void }) {
   }
 
   return (
-    <div className="flex h-fit w-56 shrink-0 flex-col gap-2 rounded-xl border border-neutral-300 bg-neutral-200 p-2">
+    <div className="flex h-fit w-56 shrink-0 flex-col gap-2 rounded-xl border border-neutral-300 bg-[#eef0f1] p-2">
       <input
         autoFocus
         value={name}
