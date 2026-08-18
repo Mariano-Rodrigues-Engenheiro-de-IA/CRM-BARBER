@@ -1456,8 +1456,7 @@ function KanbanView({
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="truncate font-semibold text-neutral-900">{c.name}</div>
-                        <div className="text-[11px] text-neutral-500">{phoneLabel(c.phone)}</div>
+                        <div className="truncate font-semibold text-neutral-900">{c.name || phoneLabel(c.phone)}</div>
                         <div className="mt-1 flex flex-wrap items-center gap-1">
                           {plan && (
                             <span className="rounded bg-yellow-100 px-1.5 py-0.5 text-[10px] font-medium text-yellow-800">
@@ -1497,10 +1496,15 @@ function KanbanView({
                       </div>
                       <button
                         onClick={(e) => { e.stopPropagation(); remove(c.id); }}
-                        className="rounded p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600"
+                        className="rounded-md p-1 text-neutral-400 transition hover:bg-red-50 hover:text-red-600"
                         title="Remover"
                       >
-                        🗑
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M4 7h16" />
+                          <path d="M9 7V4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7" />
+                          <path d="M6 7l1 12.5a1.5 1.5 0 0 0 1.5 1.5h7a1.5 1.5 0 0 0 1.5-1.5L18 7" />
+                          <path d="M10 11v6M14 11v6" />
+                        </svg>
                       </button>
                     </div>
                   </div>

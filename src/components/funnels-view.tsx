@@ -553,7 +553,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
           {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-[calc(100vh-108px)] w-72 shrink-0 animate-pulse rounded-xl border border-neutral-200 bg-neutral-100"
+              className="h-[calc(100vh-108px)] w-72 shrink-0 animate-pulse rounded-xl border border-neutral-300 bg-neutral-200"
             />
           ))}
         </div>
@@ -567,7 +567,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
         <>
           <div className="thin-scrollbar flex min-h-[calc(100vh-108px)] items-start gap-3 overflow-x-auto pb-4">
             <div
-              className="flex max-h-[calc(100vh-108px)] w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-100 p-2"
+              className="flex max-h-[calc(100vh-108px)] w-72 shrink-0 flex-col rounded-xl border border-neutral-300 bg-neutral-200 p-2"
               style={{ borderTop: "4px solid #3d5fa8", borderBottom: "4px solid #3d5fa8" }}
             >
               <div className="flex items-center justify-between gap-2">
@@ -636,9 +636,6 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                           {c.name || c.phone || c.wa_id}
                         </p>
                       </div>
-                      {isRealPhone(c.phone) && (
-                        <p className="mt-0.5 truncate text-[11px] text-neutral-500">{c.phone}</p>
-                      )}
                       <div className="mt-2 flex items-center gap-1">
                         <div className="relative inline-block">
                           <CardAction
@@ -730,13 +727,17 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                         columnSnapshot.current = { stageId: stage.id, cards: snapshot };
                       }
                       const snap = columnSnapshot.current.cards;
-                      let index = snap.length;
-                      for (let i = 0; i < snap.length; i++) {
-                        if (e.clientY < snap[i].mid) {
-                          index = i;
-                          break;
-                        }
-                      }
+                      // Histerese: parte do índice JÁ conhecido e só troca se
+                      // o mouse cruzar claramente além de uma margem de
+                      // segurança (12px) da fronteira — sem isso, pequenas
+                      // variações de sub-pixel bem em cima do ponto médio de
+                      // dois cards vizinhos faziam o índice "piscar" entre
+                      // os dois repetidamente, dando a sensação de disputa.
+                      const margin = 12;
+                      const knownIndex = dropIndicator?.stageId === stage.id ? dropIndicator.index : snap.length;
+                      let index = Math.min(knownIndex, snap.length);
+                      while (index < snap.length && e.clientY > snap[index].mid + margin) index++;
+                      while (index > 0 && e.clientY < snap[index - 1].mid - margin) index--;
                       setDropIndicatorStable({ stageId: stage.id, index });
                     }
                   }}
@@ -787,7 +788,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                     }
                   }}
 
-                  className="flex max-h-[calc(100vh-108px)] w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-100 p-2"
+                  className="flex max-h-[calc(100vh-108px)] w-72 shrink-0 flex-col rounded-xl border border-neutral-300 bg-neutral-200 p-2"
                   style={{
                     borderTop: `4px solid ${active.mode === "label" ? stage.color || "#3d5fa8" : "#3d5fa8"}`,
                     borderBottom: `4px solid ${active.mode === "label" ? stage.color || "#3d5fa8" : "#3d5fa8"}`,
@@ -890,7 +891,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
 
                           className={
                             "select-none cursor-grab rounded-xl border border-neutral-300 bg-white p-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-neutral-400 hover:shadow-md active:cursor-grabbing " +
-                            (draggingCardId === card.id ? "opacity-40" : "")
+                            (draggingCardId === card.id ? "opacity-80 ring-2 ring-brand" : "")
                           }
                         >
                         <div className="flex items-start justify-between gap-2">
@@ -914,15 +915,18 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                           {active.mode !== "label" && (
                             <button
                               onClick={() => removeCard(card)}
-                              className="shrink-0 text-[11px] text-neutral-400 hover:text-red-600"
+                              title="Remover lead"
+                              className="shrink-0 rounded-md p-1 text-neutral-400 transition hover:bg-red-50 hover:text-red-600"
                             >
-                              ✕
+                              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M4 7h16" />
+                                <path d="M9 7V4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7" />
+                                <path d="M6 7l1 12.5a1.5 1.5 0 0 0 1.5 1.5h7a1.5 1.5 0 0 0 1.5-1.5L18 7" />
+                                <path d="M10 11v6M14 11v6" />
+                              </svg>
                             </button>
                           )}
                         </div>
-                        {isRealPhone(card.phone) && (
-                          <p className="mt-0.5 text-[11px] text-neutral-500">{card.phone}</p>
-                        )}
                         {card.notes && (
                           <span className="mt-1 inline-block rounded bg-neutral-200 px-1.5 py-0.5 text-[10px] text-neutral-700">
                             anotação
@@ -1624,7 +1628,7 @@ function AddStageColumn({ onAdd }: { onAdd: (name: string) => void }) {
   }
 
   return (
-    <div className="flex h-fit w-56 shrink-0 flex-col gap-2 rounded-xl border border-neutral-200 bg-neutral-100 p-2">
+    <div className="flex h-fit w-56 shrink-0 flex-col gap-2 rounded-xl border border-neutral-300 bg-neutral-200 p-2">
       <input
         autoFocus
         value={name}
