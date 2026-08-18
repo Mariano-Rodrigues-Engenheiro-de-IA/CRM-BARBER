@@ -559,8 +559,11 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       {active && (
         <>
           <div className="thin-scrollbar flex min-h-[calc(100vh-108px)] items-start gap-3 overflow-x-auto pb-4">
-            <div className="flex max-h-[calc(100vh-108px)] min-h-[120px] w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-100 p-2">
-              <div className="flex items-baseline justify-between gap-2">
+            <div
+              className="flex max-h-[calc(100vh-108px)] w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-100 p-2"
+              style={{ borderTop: "4px solid #3d5fa8", borderBottom: "4px solid #3d5fa8" }}
+            >
+              <div className="flex items-center justify-between gap-2">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-900">
                   Inbox
                 </h3>
@@ -568,12 +571,18 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                   {inboxContacts.length}
                 </span>
               </div>
-              <input
-                value={inboxQuery}
-                onChange={(e) => setInboxQuery(e.target.value)}
-                placeholder="Buscar"
-                className="mt-1.5 w-full rounded-lg border border-neutral-200 px-2.5 py-1 text-xs outline-none focus:border-brand"
-              />
+              <div className="relative mt-1.5">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-neutral-400">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m20 20-3.5-3.5" />
+                </svg>
+                <input
+                  value={inboxQuery}
+                  onChange={(e) => setInboxQuery(e.target.value)}
+                  placeholder="Buscar nesta aba..."
+                  className="w-full rounded-lg border border-neutral-300 bg-white py-1.5 pl-7 pr-2 text-xs outline-none focus:border-brand"
+                />
+              </div>
               <div className="thin-scrollbar mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                 {inboxContacts
                   .filter((c) => {
@@ -601,7 +610,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                         draggedContact.current = null;
                       }}
 
-                      className="select-none cursor-grab rounded-xl border border-neutral-300 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-neutral-400 hover:shadow-md active:cursor-grabbing"
+                      className="select-none cursor-grab rounded-xl border border-neutral-300 bg-white p-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-neutral-400 hover:shadow-md active:cursor-grabbing"
                     >
                       <div className="flex items-center gap-2 min-w-0 mb-1">
                         {c.profile_picture_url ? (
