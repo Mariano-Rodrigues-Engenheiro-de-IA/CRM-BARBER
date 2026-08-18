@@ -663,20 +663,17 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                   className="flex h-full w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-2"
                   style={stage.color ? { borderTop: `4px solid ${stage.color}` } : {}}
                 >
-                  <div className="flex items-center justify-between gap-2">
+                  <div
+                    draggable
+                    onDragStart={(e) => {
+                      draggedStageId.current = stage.id;
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
+                    onDragEnd={() => { draggedStageId.current = null; }}
+                    title="Arrastar para reordenar"
+                    className="flex cursor-grab items-center justify-between gap-2 active:cursor-grabbing"
+                  >
                     <div className="flex min-w-0 items-center gap-1">
-                      <span
-                        draggable
-                        onDragStart={(e) => {
-                          draggedStageId.current = stage.id;
-                          e.dataTransfer.effectAllowed = "move";
-                        }}
-                        onDragEnd={() => { draggedStageId.current = null; }}
-                        title="Arrastar para reordenar"
-                        className="cursor-grab select-none px-0.5 text-neutral-400 hover:text-neutral-600 active:cursor-grabbing"
-                      >
-                        ⠿
-                      </span>
                       <StageTitle
                         name={stage.name}
                         editing={renamingStage === stage.id}
@@ -687,8 +684,13 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                       onCancel={() => setRenamingStage(null)}
                     />
                     </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      <span className="text-[11px] text-neutral-500">{cards.length}</span>
+                    <div
+                      className="flex shrink-0 items-center gap-1"
+                      onMouseDown={(e) => e.stopPropagation()}
+                    >
+                      <span className="shrink-0 rounded-full bg-neutral-200 px-2 py-0.5 text-[11px] font-semibold text-neutral-700">
+                        {cards.length}
+                      </span>
                       {active.mode !== "label" && (
                         <DotsMenu
                           items={[
