@@ -2,7 +2,7 @@
 // ativar/desativar. Cada aula agora pertence obrigatoriamente a um
 // módulo (Tráfego Pago, Vendas, Agente de IA, etc).
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   adminListLessons,
@@ -13,6 +13,7 @@ import {
 } from "@/lib/admin-lessons.functions";
 import { adminListModules, type ModuleRow } from "@/lib/admin-modules.functions";
 import { youtubeThumbnail } from "@/lib/youtube";
+import { useCachedFetch } from "@/lib/api-cache";
 
 export function AdminLessonsPanel() {
   const listLessons = useServerFn(adminListLessons);
@@ -21,25 +22,23 @@ export function AdminLessonsPanel() {
   const updateLesson = useServerFn(adminUpdateLesson);
   const deleteLesson = useServerFn(adminDeleteLesson);
 
-  const [lessons, setLessons] = useState<LessonRow[] | null>(null);
-  const [modules, setModules] = useState<ModuleRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
-
-  async function reload() {
-    try {
-      const [lessonsData, modulesData] = await Promise.all([listLessons(), listModules()]);
-      setLessons(lessonsData);
-      setModules(modulesData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }
-
-  useEffect(() => {
-    void reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const { data, refetch } = useCachedFetch<{ lessons: LessonRow[]; modules: ModuleRow[] }>(
+    "admin-lessons",
+    async () => {
+      try {
+        const [lessonsData, modulesData] = await Promise.all([listLessons(), listModules()]);
+        return { lessons: lessonsData, modules: modulesData };
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+        return { lessons: [], modules: [] };
+      }
+    },
+  );
+  const lessons = data?.lessons ?? null;
+  const modules = data?.modules ?? [];
+  const reload = refetch;
 
   async function handleToggleActive(l: LessonRow) {
     await updateLesson({ data: { id: l.id, active: !l.active } });
