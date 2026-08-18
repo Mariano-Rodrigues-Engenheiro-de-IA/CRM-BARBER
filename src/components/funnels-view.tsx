@@ -507,7 +507,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                         draggedContact.current = null;
                       }}
 
-                      className="cursor-grab rounded-xl border border-neutral-300 bg-white p-3 shadow-sm active:cursor-grabbing"
+                      className="cursor-grab rounded-xl border border-sky-200 bg-white p-3 shadow-sm active:cursor-grabbing"
                     >
                       <div className="flex items-center gap-2 min-w-0 mb-1">
                         {c.profile_picture_url ? (
@@ -534,6 +534,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                           <CardAction
                             title="Abrir conversa no WhatsApp"
                             disabled={!canOpenWhatsapp(c.phone, c.wa_id)}
+                            colorClass="border-emerald-200 text-emerald-600 hover:border-emerald-400 hover:text-emerald-700"
                             onClick={() =>
                               void openWhatsappChat(c.phone || "", c.name || undefined, c.wa_id)
                             }
@@ -544,12 +545,14 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                         </div>
                         <CardAction
                           title="Anotações"
+                          colorClass="border-sky-200 text-sky-600 hover:border-sky-400 hover:text-sky-700"
                           onClick={() => void promoteContact(c, "notes")}
                         >
                           <IconNote />
                         </CardAction>
                         <CardAction
                           title="Mensagem agendada / disparo"
+                          colorClass="border-orange-200 text-orange-600 hover:border-orange-400 hover:text-orange-700"
                           onClick={() => void promoteContact(c, "schedule")}
                         >
                           <IconClock />
@@ -654,7 +657,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                           dragged.current = null;
                         }}
 
-                        className="cursor-grab rounded-xl border border-neutral-300 bg-white p-3 shadow-sm active:cursor-grabbing"
+                        className="cursor-grab rounded-xl border border-sky-200 bg-white p-3 shadow-sm active:cursor-grabbing"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
@@ -697,6 +700,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                             <CardAction
                               title="Abrir conversa no WhatsApp"
                               disabled={!canOpenWhatsapp(card.phone, card.wa_id)}
+                              colorClass="border-emerald-200 text-emerald-600 hover:border-emerald-400 hover:text-emerald-700"
                               onClick={() =>
                                 void openWhatsappChat(card.phone || "", card.title, card.wa_id)
                               }
@@ -707,6 +711,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                           </div>
                           <CardAction
                             title="Anotações"
+                            colorClass="border-sky-200 text-sky-600 hover:border-sky-400 hover:text-sky-700"
                             onClick={() => {
                               setDetailTab("notes");
                               setDetail(card);
@@ -716,6 +721,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                           </CardAction>
                           <CardAction
                             title="Mensagem agendada / disparo"
+                            colorClass="border-orange-200 text-orange-600 hover:border-orange-400 hover:text-orange-700"
                             onClick={() => {
                               setDetailTab("schedule");
                               setDetail(card);
@@ -961,11 +967,13 @@ function CardAction({
   onClick,
   disabled,
   children,
+  colorClass,
 }: {
   title: string;
   onClick: () => void;
   disabled?: boolean;
   children: React.ReactNode;
+  colorClass?: string;
 }) {
   return (
     <button
@@ -975,7 +983,10 @@ function CardAction({
         e.stopPropagation();
         onClick();
       }}
-      className="rounded-xl border border-neutral-300 bg-white p-1.5 text-neutral-600 hover:border-brand hover:text-brand disabled:opacity-40"
+      className={
+        "rounded-xl border bg-white p-1.5 disabled:opacity-40 " +
+        (colorClass ?? "border-neutral-300 text-neutral-600 hover:border-brand hover:text-brand")
+      }
     >
       {children}
     </button>
