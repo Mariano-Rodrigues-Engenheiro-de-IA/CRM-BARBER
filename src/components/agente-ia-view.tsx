@@ -23,16 +23,30 @@ export function AgenteIaView({ api }: { api: Api }) {
   const [sent, setSent] = useState(false);
   const [salesVideoUrl, setSalesVideoUrl] = useState<string | null>(null);
   const [accessEnabled, setAccessEnabled] = useState<boolean | null>(null);
+  const [loadingAccess, setLoadingAccess] = useState(true);
 
   useEffect(() => {
     api("/api/public/extension/agente-ia-settings").then((r) => {
       if (r?.ok) setSalesVideoUrl(r.sales_video_url);
     });
-    api("/api/public/extension/billing").then((r) => {
-      if (r?.ok) setAccessEnabled(Boolean(r.billing?.ai_access_enabled));
-    });
+    api("/api/public/extension/billing")
+      .then((r) => {
+        if (r?.ok) setAccessEnabled(Boolean(r.billing?.ai_access_enabled));
+      })
+      .finally(() => setLoadingAccess(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Espera saber de verdade se o acesso já foi liberado antes de decidir
+  // qual tela mostrar — sem isso, a vitrine (com banner) aparecia por um
+  // instante mesmo pra quem já tem acesso, e depois trocava de tela.
+  if (loadingAccess) {
+    return (
+      <div className="flex min-h-[300px] items-center justify-center">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-brand" />
+      </div>
+    );
+  }
 
   if (accessEnabled) {
     return <AiAccessGranted api={api} />;

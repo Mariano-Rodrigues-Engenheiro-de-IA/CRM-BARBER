@@ -513,7 +513,6 @@ function Painel() {
     children?: Array<{ key: AssinTab | ConfigTab; label: string }>;
   }> = [
     { key: "agenda", label: "Agenda", icon: <IconCalendar /> },
-    { key: "agente-ia", label: "Agente de IA", icon: <IconRobot /> },
     {
       key: "assinantes",
       label: "Assinaturas",
@@ -530,6 +529,7 @@ function Painel() {
     ...(isAdmin ? [{ key: "templates" as Section, label: "Modelos", icon: <IconNote /> }] : []),
 
     { key: "conexao", label: "Conexão", icon: <IconPlug /> },
+    { key: "agente-ia", label: "Agente de IA", icon: <IconRobot /> },
     {
       key: "configuracoes",
       label: "Configurações",
