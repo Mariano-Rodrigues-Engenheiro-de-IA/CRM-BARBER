@@ -2,7 +2,7 @@
 // ativar/desativar, com upload real de capa (formato retrato 500x750,
 // estilo capa de curso).
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   adminListModules,
@@ -17,24 +17,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { useCachedFetch } from "@/lib/api-cache";
 
 export function AdminModulesPanel() {
   const listModules = useServerFn(adminListModules);
   const deleteModule = useServerFn(adminDeleteModule);
   const updateModule = useServerFn(adminUpdateModule);
 
-  const [modules, setModules] = useState<ModuleRow[] | null>(null);
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
-
-  async function reload() {
-    const data = await listModules();
-    setModules(data);
-  }
-
-  useEffect(() => {
-    void reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const { data: modules, refetch: reload } = useCachedFetch<ModuleRow[]>("admin-modules", () => listModules());
 
   async function handleToggleActive(m: ModuleRow) {
     await updateModule({ data: { id: m.id, active: !m.active } });
