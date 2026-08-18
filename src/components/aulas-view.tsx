@@ -24,11 +24,19 @@ type Lesson = {
 export function AulasView({ api }: { api: Api }) {
   const [lessons, setLessons] = useState<Lesson[] | null>(null);
   const [playing, setPlaying] = useState<Lesson | null>(null);
+  const [bannerLoaded, setBannerLoaded] = useState(false);
 
   useEffect(() => {
     api("/api/public/extension/lessons").then((r) => {
       if (r?.ok) setLessons(r.lessons);
     });
+    // Pré-carrega a imagem do banner ANTES de mostrar o texto por cima —
+    // sem isso, o nome/frase apareciam de imediato enquanto a imagem
+    // ainda estava baixando, dando impressão de bug.
+    const img = new Image();
+    img.src = "/academy/banner.jpg";
+    img.onload = () => setBannerLoaded(true);
+    img.onerror = () => setBannerLoaded(true); // não trava a tela pra sempre se a imagem falhar
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -39,20 +47,19 @@ export function AulasView({ api }: { api: Api }) {
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
-      {/* Banner decorativo — não clicável */}
+      {/* Banner decorativo — não clicável. Imagem e texto aparecem juntos,
+          só depois que a imagem termina de carregar (evita o "pisca"). */}
       <div
-        className="relative overflow-hidden rounded-2xl"
+        className="relative min-h-[220px] overflow-hidden rounded-2xl bg-neutral-900 transition-opacity duration-300 md:min-h-[280px]"
         style={{
-          backgroundImage: "url(/academy/banner.jpg)",
+          opacity: bannerLoaded ? 1 : 0,
+          backgroundImage: bannerLoaded ? "url(/academy/banner.jpg)" : undefined,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
       >
         <div className="flex min-h-[220px] flex-col justify-center px-6 py-10 md:min-h-[280px] md:px-12">
-          <span className="mb-3 inline-block w-fit rounded-full bg-brand px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white">
-            Bem-vindo(a)
-          </span>
-          <h1 className="max-w-md text-2xl font-bold text-white md:text-4xl">Zaylo Academy</h1>
+          <h1 className="max-w-md text-3xl font-bold text-white md:text-5xl">Bem-vindo(a)!</h1>
           <p className="mt-2 max-w-sm text-sm text-neutral-200 md:text-base">
             Aulas práticas pra você tirar o máximo proveito do sistema. Comece pela primeira e siga no seu ritmo.
           </p>

@@ -24,6 +24,7 @@ export function AgenteIaView({ api }: { api: Api }) {
   const [salesVideoUrl, setSalesVideoUrl] = useState<string | null>(null);
   const [accessEnabled, setAccessEnabled] = useState<boolean | null>(null);
   const [loadingAccess, setLoadingAccess] = useState(true);
+  const [bannerLoaded, setBannerLoaded] = useState(false);
 
   useEffect(() => {
     api("/api/public/extension/agente-ia-settings").then((r) => {
@@ -34,6 +35,12 @@ export function AgenteIaView({ api }: { api: Api }) {
         if (r?.ok) setAccessEnabled(Boolean(r.billing?.ai_access_enabled));
       })
       .finally(() => setLoadingAccess(false));
+    // Pré-carrega a imagem do banner antes de mostrar o texto por cima —
+    // evita o nome/frase aparecendo antes da imagem (impressão de bug).
+    const img = new Image();
+    img.src = "/academy/banner.jpg";
+    img.onload = () => setBannerLoaded(true);
+    img.onerror = () => setBannerLoaded(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -73,9 +80,10 @@ export function AgenteIaView({ api }: { api: Api }) {
   return (
     <div className="mx-auto max-w-4xl space-y-8">
       <div
-        className="relative overflow-hidden rounded-2xl"
+        className="relative min-h-[200px] overflow-hidden rounded-2xl bg-neutral-900 transition-opacity duration-300"
         style={{
-          backgroundImage: "url(/academy/banner.jpg)",
+          opacity: bannerLoaded ? 1 : 0,
+          backgroundImage: bannerLoaded ? "url(/academy/banner.jpg)" : undefined,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
