@@ -617,7 +617,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                         draggedContact.current = null;
                       }}
 
-                      className="select-none cursor-grab rounded-xl border border-neutral-300 bg-white p-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-neutral-400 hover:shadow-md active:cursor-grabbing"
+                      className="select-none cursor-grab outline-none rounded-xl border border-neutral-300 bg-white p-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-neutral-400 hover:shadow-md active:cursor-grabbing"
                     >
                       <div className="flex items-center gap-2 min-w-0 mb-1">
                         {c.profile_picture_url ? (
@@ -778,6 +778,12 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                       void moveCardToPosition(card, stage.id, idx);
                     }
                     setDropIndicator(null);
+                    // Limpeza defensiva: o moveCardToPosition reordena o
+                    // estado de forma otimista IMEDIATAMENTE, o que pode
+                    // desmontar/remontar o elemento original antes do evento
+                    // nativo dragend conseguir disparar nele — sem isso, o
+                    // destaque de "sendo arrastado" as vezes ficava preso.
+                    setDraggingCardId(null);
                   }}
                   onDragLeave={(e) => {
                     // Só limpa se realmente saiu da coluna (não ao passar
@@ -890,7 +896,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                           }}
 
                           className={
-                            "select-none cursor-grab rounded-xl border border-neutral-300 bg-white p-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-neutral-400 hover:shadow-md active:cursor-grabbing " +
+                            "select-none cursor-grab outline-none rounded-xl border border-neutral-300 bg-white p-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-neutral-400 hover:shadow-md active:cursor-grabbing " +
                             (draggingCardId === card.id ? "opacity-80 ring-2 ring-brand" : "")
                           }
                         >
