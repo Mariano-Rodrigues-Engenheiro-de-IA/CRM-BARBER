@@ -983,14 +983,14 @@ type DrawerTab = "notes" | "schedule";
 
 function IconWhatsapp() {
   return (
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
       <path d="M12 2C6.5 2 2 6.4 2 11.8c0 1.9.5 3.7 1.5 5.3L2 22l5.1-1.4c1.5.8 3.2 1.3 4.9 1.3 5.5 0 10-4.4 10-9.9C22 6.4 17.5 2 12 2Zm5.6 14c-.2.7-1.4 1.3-2 1.4-.5.1-1.2.1-1.9-.1-.4-.1-1-.3-1.7-.6-3-1.3-4.9-4.3-5.1-4.5-.1-.2-1.2-1.6-1.2-3.1s.8-2.2 1.1-2.5c.3-.3.6-.4.8-.4h.6c.2 0 .5 0 .7.6l1 2.3c.1.2.1.4 0 .6l-.5.6-.4.5c-.1.2-.3.4-.1.7.2.3.9 1.4 1.9 2.3 1.3 1.2 2.4 1.5 2.7 1.7.3.2.5.1.7-.1l.9-1c.2-.3.4-.2.7-.1l2.1 1c.3.1.6.2.6.4.1.2.1.9-.1 1.6Z" />
     </svg>
   );
 }
 function IconNote() {
   return (
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M6 3.5h9.5L19 7v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1Z" />
       <path d="M15.2 3.5V7h3.6" />
       <path d="M8.3 12h7M8.3 15.3h7M8.3 18.5h4.3" />
@@ -999,7 +999,7 @@ function IconNote() {
 }
 function IconClock() {
   return (
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="11" cy="13" r="8" />
       <path d="M11 9.2V13l2.6 1.6" />
       <path d="M8.2 2.6h5.6M18.5 5l1.6-1.6" />
@@ -1032,8 +1032,8 @@ function CardAction({
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       className={
-        "grid h-7 w-7 place-items-center rounded-xl border bg-white transition disabled:opacity-40 " +
-        (colorClass ?? "border-neutral-300 text-neutral-600 hover:border-brand hover:text-brand")
+        "grid h-7 w-7 place-items-center rounded-md transition disabled:opacity-40 " +
+        (colorClass ?? "text-neutral-500 hover:text-brand")
       }
     >
       {children}
@@ -1474,21 +1474,21 @@ function KanbanView({
                           <CardAction
                             title="Abrir WhatsApp / enviar resposta rápida"
                             onClick={() => setWaTarget(c)}
-                            colorClass="border-emerald-200 text-emerald-600 hover:border-emerald-400 hover:text-emerald-700"
+                            colorClass="text-emerald-600 hover:bg-emerald-50"
                           >
                             <IconWhatsapp />
                           </CardAction>
                           <CardAction
                             title="Anotações"
                             onClick={() => { setDetailTab("notes"); setDetail(c); }}
-                            colorClass="border-sky-200 text-sky-600 hover:border-sky-400 hover:text-sky-700"
+                            colorClass="text-sky-600 hover:bg-sky-50"
                           >
                             <IconNote />
                           </CardAction>
                           <CardAction
                             title="Mensagem agendada"
                             onClick={() => { setDetailTab("schedule"); setDetail(c); }}
-                            colorClass="border-orange-200 text-orange-600 hover:border-orange-400 hover:text-orange-700"
+                            colorClass="text-orange-600 hover:bg-orange-50"
                           >
                             <IconClock />
                           </CardAction>

@@ -641,7 +641,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                           <CardAction
                             title="Abrir conversa no WhatsApp"
                             disabled={!canOpenWhatsapp(c.phone, c.wa_id)}
-                            colorClass="border-emerald-200 text-emerald-600 hover:border-emerald-400 hover:text-emerald-700"
+                            colorClass="text-emerald-600 hover:bg-emerald-50"
                             onClick={() =>
                               void openWhatsappChat(c.phone || "", c.name || undefined, c.wa_id)
                             }
@@ -652,14 +652,14 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                         </div>
                         <CardAction
                           title="Anotações"
-                          colorClass="border-sky-200 text-sky-600 hover:border-sky-400 hover:text-sky-700"
+                          colorClass="text-sky-600 hover:bg-sky-50"
                           onClick={() => void promoteContact(c, "notes")}
                         >
                           <IconNote />
                         </CardAction>
                         <CardAction
                           title="Mensagem agendada / disparo"
-                          colorClass="border-orange-200 text-orange-600 hover:border-orange-400 hover:text-orange-700"
+                          colorClass="text-orange-600 hover:bg-orange-50"
                           onClick={() => void promoteContact(c, "schedule")}
                         >
                           <IconClock />
@@ -944,7 +944,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                             <CardAction
                               title="Abrir conversa no WhatsApp"
                               disabled={!canOpenWhatsapp(card.phone, card.wa_id)}
-                              colorClass="border-emerald-200 text-emerald-600 hover:border-emerald-400 hover:text-emerald-700"
+                              colorClass="text-emerald-600 hover:bg-emerald-50"
                               onClick={() =>
                                 void openWhatsappChat(card.phone || "", card.title, card.wa_id)
                               }
@@ -955,7 +955,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                           </div>
                           <CardAction
                             title="Anotações"
-                            colorClass="border-sky-200 text-sky-600 hover:border-sky-400 hover:text-sky-700"
+                            colorClass="text-sky-600 hover:bg-sky-50"
                             onClick={() => {
                               setDetailTab("notes");
                               setDetail(card);
@@ -965,7 +965,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                           </CardAction>
                           <CardAction
                             title="Mensagem agendada / disparo"
-                            colorClass="border-orange-200 text-orange-600 hover:border-orange-400 hover:text-orange-700"
+                            colorClass="text-orange-600 hover:bg-orange-50"
                             onClick={() => {
                               setDetailTab("schedule");
                               setDetail(card);
@@ -1239,8 +1239,8 @@ function CardAction({
         onClick();
       }}
       className={
-        "rounded-xl border bg-white p-1.5 disabled:opacity-40 " +
-        (colorClass ?? "border-neutral-300 text-neutral-600 hover:border-brand hover:text-brand")
+        "rounded-md p-1 transition disabled:opacity-40 " +
+        (colorClass ?? "text-neutral-500 hover:text-brand")
       }
     >
       {children}
@@ -1249,19 +1249,19 @@ function CardAction({
 }
 
 const IconWhatsapp = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
     <path d="M12 2C6.5 2 2 6.4 2 11.8c0 1.9.5 3.7 1.5 5.3L2 22l5.1-1.4c1.5.8 3.2 1.3 4.9 1.3 5.5 0 10-4.4 10-9.9C22 6.4 17.5 2 12 2Zm5.6 14c-.2.7-1.4 1.3-2 1.4-.5.1-1.2.1-1.9-.1-.4-.1-1-.3-1.7-.6-3-1.3-4.9-4.3-5.1-4.5-.1-.2-1.2-1.6-1.2-3.1s.8-2.2 1.1-2.5c.3-.3.6-.4.8-.4h.6c.2 0 .5 0 .7.6l1 2.3c.1.2.1.4 0 .6l-.5.6-.4.5c-.1.2-.3.4-.1.7.2.3.9 1.4 1.9 2.3 1.3 1.2 2.4 1.5 2.7 1.7.3.2.5.1.7-.1l.9-1c.2-.3.4-.2.7-.1l2.1 1c.3.1.6.2.6.4.1.2.1.9-.1 1.6Z" />
   </svg>
 );
 const IconNote = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
     <path d="M6 3.5h9.5L19 7v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1Z" />
     <path d="M15.2 3.5V7h3.6" />
     <path d="M8.3 12h7M8.3 15.3h7M8.3 18.5h4.3" />
   </svg>
 );
 const IconClock = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
     <circle cx="11" cy="13" r="8" />
     <path d="M11 9.2V13l2.6 1.6" />
     <path d="M8.2 2.6h5.6M18.5 5l1.6-1.6" />
