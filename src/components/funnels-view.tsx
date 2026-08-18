@@ -510,8 +510,8 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
 
       {active && (
         <>
-          <div className="flex h-[calc(100vh-108px)] gap-3 overflow-x-auto pb-1">
-            <div className="flex h-full w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-2">
+          <div className="flex min-h-[calc(100vh-108px)] items-start gap-3 overflow-x-auto pb-1">
+            <div className="flex h-fit min-h-[120px] w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-2">
               <div className="flex items-baseline justify-between gap-2">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-900">
                   Inbox
@@ -526,7 +526,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                 placeholder="Buscar"
                 className="mt-1.5 w-full rounded-lg border border-neutral-200 px-2.5 py-1 text-xs outline-none focus:border-brand"
               />
-              <div className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+              <div className="mt-2 space-y-2 pr-1">
                 {inboxContacts
                   .filter((c) => {
                     const t = inboxQuery.trim().toLowerCase();
@@ -660,8 +660,11 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                     if (card) void moveCard(card, stage.id);
                   }}
 
-                  className="flex h-full w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-2"
-                  style={stage.color ? { borderTop: `4px solid ${stage.color}` } : {}}
+                  className="flex h-fit w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-2"
+                  style={{
+                    borderTop: `4px solid ${active.mode === "label" ? stage.color || "#3d5fa8" : "#3d5fa8"}`,
+                    borderBottom: `4px solid ${active.mode === "label" ? stage.color || "#3d5fa8" : "#3d5fa8"}`,
+                  }}
                 >
                   <div
                     draggable
@@ -706,7 +709,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                     </div>
                   </div>
 
-                  <div className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+                  <div className="mt-2 space-y-2 pr-1">
                     {cards.map((card) => (
                       <div
                         key={card.id}
