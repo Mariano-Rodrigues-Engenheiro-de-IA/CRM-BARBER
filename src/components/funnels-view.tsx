@@ -208,8 +208,14 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
   const active = funnels.find((f) => f.id === activeId) || null;
 
   const inboxContacts = useMemo(() => {
-    return contacts.filter((c) => !c.is_group);
-  }, [contacts]);
+    // Um contato que já virou lead em QUALQUER funil não deve mais
+    // aparecer no Inbox — antes só filtrava grupos, deixando o contato
+    // "duplicado" (visível no Inbox e já dentro de uma etapa do funil).
+    const contactIdsInFunnels = new Set(
+      funnels.flatMap((f) => f.cards.map((c) => c.wa_contact_id).filter(Boolean)),
+    );
+    return contacts.filter((c) => !c.is_group && !contactIdsInFunnels.has(c.id));
+  }, [contacts, funnels]);
 
   function stageCards(stageId: string): FunnelCard[] {
     if (!active || active.mode !== "label")
