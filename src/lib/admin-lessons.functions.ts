@@ -13,13 +13,14 @@ export type LessonRow = {
   featured: boolean;
   sort_order: number;
   active: boolean;
+  module_id: string | null;
 };
 
 export const adminListLessons = createServerFn({ method: "GET" }).handler(async (): Promise<LessonRow[]> => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data, error } = await supabaseAdmin
     .from("lessons")
-    .select("id, title, youtube_url, description, featured, sort_order, active")
+    .select("id, title, youtube_url, description, featured, sort_order, active, module_id")
     .order("sort_order", { ascending: true });
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -31,6 +32,7 @@ const lessonInputSchema = z.object({
   description: z.string().trim().max(1000).optional(),
   featured: z.boolean().optional(),
   sort_order: z.number().int().optional(),
+  module_id: z.string().uuid(),
 });
 
 export const adminCreateLesson = createServerFn({ method: "POST" })
@@ -44,7 +46,7 @@ export const adminCreateLesson = createServerFn({ method: "POST" })
     const { data: created, error } = await supabaseAdmin
       .from("lessons")
       .insert(data)
-      .select("id, title, youtube_url, description, featured, sort_order, active")
+      .select("id, title, youtube_url, description, featured, sort_order, active, module_id")
       .single();
     if (error) throw new Error(error.message);
     return created;
@@ -58,6 +60,7 @@ const lessonUpdateSchema = z.object({
   featured: z.boolean().optional(),
   sort_order: z.number().int().optional(),
   active: z.boolean().optional(),
+  module_id: z.string().uuid().optional(),
 });
 
 export const adminUpdateLesson = createServerFn({ method: "POST" })
@@ -72,7 +75,7 @@ export const adminUpdateLesson = createServerFn({ method: "POST" })
       .from("lessons")
       .update(patch)
       .eq("id", id)
-      .select("id, title, youtube_url, description, featured, sort_order, active")
+      .select("id, title, youtube_url, description, featured, sort_order, active, module_id")
       .single();
     if (error) throw new Error(error.message);
     return updated;
