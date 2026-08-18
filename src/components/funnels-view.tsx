@@ -48,6 +48,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
   const [detailTab, setDetailTab] = useState<"notes" | "schedule">("notes");
   const [inboxQuery, setInboxQuery] = useState("");
   const [renamingStage, setRenamingStage] = useState<string | null>(null);
+  const [stageSearch, setStageSearch] = useState<Record<string, string>>({});
   const dragged = useRef<FunnelCard | null>(null);
   const draggedContact = useRef<WaContact | null>(null);
   const draggedStageId = useRef<string | null>(null);
@@ -619,7 +620,13 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
             </div>
 
             {active.stages.map((stage) => {
-              const cards = stageCards(stage.id);
+              const allCards = stageCards(stage.id);
+              const search = (stageSearch[stage.id] ?? "").trim().toLowerCase();
+              const cards = search
+                ? allCards.filter(
+                    (c) => (c.title ?? "").toLowerCase().includes(search) || (c.phone ?? "").includes(search),
+                  )
+                : allCards;
               return (
                 <div
                   key={stage.id}
@@ -692,7 +699,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                       onMouseDown={(e) => e.stopPropagation()}
                     >
                       <span className="shrink-0 rounded-full bg-neutral-200 px-2 py-0.5 text-[11px] font-semibold text-neutral-700">
-                        {cards.length}
+                        {allCards.length}
                       </span>
                       {active.mode !== "label" && (
                         <DotsMenu
@@ -707,6 +714,19 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                         />
                       )}
                     </div>
+                  </div>
+
+                  <div className="relative mt-2" onMouseDown={(e) => e.stopPropagation()}>
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-neutral-400">
+                      <circle cx="11" cy="11" r="7" />
+                      <path d="m20 20-3.5-3.5" />
+                    </svg>
+                    <input
+                      value={stageSearch[stage.id] ?? ""}
+                      onChange={(e) => setStageSearch((prev) => ({ ...prev, [stage.id]: e.target.value }))}
+                      placeholder="Buscar nesta aba..."
+                      className="w-full rounded-lg border border-neutral-300 bg-white py-1.5 pl-7 pr-2 text-xs outline-none focus:border-brand"
+                    />
                   </div>
 
                   <div className="mt-2 space-y-2 pr-1">
