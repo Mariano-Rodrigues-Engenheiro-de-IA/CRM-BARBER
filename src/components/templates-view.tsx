@@ -2,7 +2,8 @@
 // enquanto. Cria e lista templates direto pela API da Meta, sem precisar
 // entrar no Gerenciador do WhatsApp.
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useCachedFetch } from "@/lib/api-cache";
 
 type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
 
@@ -35,8 +36,11 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export function TemplatesView({ api }: { api: ApiFn }) {
-  const [templates, setTemplates] = useState<Template[] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: templates, loading, refetch } = useCachedFetch<Template[]>("templates", async () => {
+    const res = await api("/api/public/extension/whatsapp/templates");
+    if (!res.ok) throw new Error((res.error as string) || "Falha ao carregar modelos.");
+    return (res.templates as Template[]) ?? [];
+  });
   const [err, setErr] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -45,23 +49,6 @@ export function TemplatesView({ api }: { api: ApiFn }) {
   const [category, setCategory] = useState<"MARKETING" | "UTILITY" | "AUTHENTICATION">("UTILITY");
   const [languageCode, setLanguageCode] = useState("pt_BR");
   const [bodyText, setBodyText] = useState("");
-
-  async function refresh() {
-    setLoading(true);
-    setErr(null);
-    const res = await api("/api/public/extension/whatsapp/templates");
-    if (res.ok) {
-      setTemplates((res.templates as Template[]) ?? []);
-    } else {
-      setErr((res.error as string) || "Falha ao carregar modelos.");
-    }
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    void refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   async function createTemplate() {
     if (!name.trim() || !bodyText.trim()) return;
@@ -79,7 +66,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
     setName("");
     setBodyText("");
     setShowNew(false);
-    void refresh();
+    void refetch();
   }
 
   return (
