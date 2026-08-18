@@ -14,6 +14,7 @@ import {
 } from "@/lib/admin-whatsapp.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useCachedFetch } from "@/lib/api-cache";
 
 type Row = Awaited<ReturnType<typeof adminListShops>>[number];
 
@@ -24,7 +25,6 @@ export function AdminWhatsAppPanel() {
   const registerNum = useServerFn(adminRegisterMetaNumber);
   const setProvider = useServerFn(adminSetWhatsAppProvider);
 
-  const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string>("");
   const [phoneNumberId, setPhoneNumberId] = useState("");
@@ -35,20 +35,20 @@ export function AdminWhatsAppPanel() {
   const [busy, setBusy] = useState<"save" | "test" | "register" | "provider" | null>(null);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
 
-  async function reload() {
+  const { data: rows, refetch: reload } = useCachedFetch<Row[]>("admin-whatsapp-shops", async () => {
     try {
-      const data = await listShops();
-      setRows(data);
-      setSelected((prev) => prev || data[0]?.barbershop_id || "");
+      return await listShops();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      return [];
     }
-  }
+  });
 
+  // Seleciona a primeira loja automaticamente assim que a lista chega —
+  // só na ausência de seleção, pra não sobrescrever escolha do usuário.
   useEffect(() => {
-    void reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (rows && rows.length > 0) setSelected((prev) => prev || rows[0].barbershop_id);
+  }, [rows]);
 
   const current = rows?.find((r) => r.barbershop_id === selected) ?? null;
 
