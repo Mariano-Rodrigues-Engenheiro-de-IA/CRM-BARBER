@@ -2,7 +2,8 @@
 // demonstração" da página Agente de IA. Novo, criado direto pro painel
 // admin unificado (não tinha rota antiga).
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useCachedFetch } from "@/lib/api-cache";
 
 type Lead = {
   id: string;
@@ -42,22 +43,15 @@ export function AdminLeadsPanel({
   listLeads: () => Promise<Lead[]>;
   updateLeadStatus: (id: string, status: string) => Promise<void>;
 }) {
-  const [leads, setLeads] = useState<Lead[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  async function reload() {
+  const { data: leads, setData: setLeads } = useCachedFetch<Lead[]>("admin-leads", async () => {
     try {
-      const data = await listLeads();
-      setLeads(data);
+      return await listLeads();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      return [];
     }
-  }
-
-  useEffect(() => {
-    void reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  });
+  const [error, setError] = useState<string | null>(null);
 
   async function handleStatusChange(id: string, status: string) {
     setLeads((prev) => prev?.map((l) => (l.id === id ? { ...l, status } : l)) ?? null);
