@@ -20,6 +20,7 @@ type Module = {
   description: string | null;
   cover_image_url: string | null;
   sort_order: number;
+  locked: boolean;
 };
 
 /** Área de Treinamento — estilo "academy"/área de membros, organizada por
@@ -127,22 +128,42 @@ function ModulesGrid({ modules, onOpen }: { modules: Module[] | null; onOpen: (i
         {modules.map((m) => (
           <button
             key={m.id}
-            onClick={() => onOpen(m.id)}
-            className="group overflow-hidden rounded-xl border border-neutral-200 bg-white text-left shadow-sm transition hover:shadow-lg"
+            onClick={() => !m.locked && onOpen(m.id)}
+            disabled={m.locked}
+            className={
+              "group overflow-hidden rounded-xl border border-neutral-200 bg-white text-left shadow-sm transition " +
+              (m.locked ? "cursor-not-allowed" : "hover:shadow-lg")
+            }
           >
-            <div className="aspect-[2/3] w-full overflow-hidden bg-neutral-100">
+            <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-100">
               {m.cover_image_url ? (
                 <img
                   src={m.cover_image_url}
                   alt={m.title}
-                  className="h-full w-full object-cover transition group-hover:scale-105"
+                  className={
+                    "h-full w-full object-cover transition " +
+                    (m.locked ? "opacity-40 grayscale" : "group-hover:scale-105")
+                  }
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-xs text-neutral-400">{m.title}</div>
               )}
+              {m.locked && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="4" y="11" width="16" height="10" rx="2" />
+                      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                    </svg>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="p-2.5">
-              <p className="line-clamp-2 text-sm font-semibold text-neutral-900">{m.title}</p>
+              <p className={"line-clamp-2 text-sm font-semibold " + (m.locked ? "text-neutral-400" : "text-neutral-900")}>
+                {m.title}
+              </p>
+              {m.locked && <p className="text-[11px] text-neutral-400">Em breve</p>}
             </div>
           </button>
         ))}

@@ -41,6 +41,11 @@ export function AdminModulesPanel() {
     await reload();
   }
 
+  async function handleToggleLocked(m: ModuleRow) {
+    await updateModule({ data: { id: m.id, locked: !m.locked } });
+    await reload();
+  }
+
   async function handleDelete(m: ModuleRow) {
     if (!confirm(`Remover o módulo "${m.title}"? As aulas dele ficam sem módulo.`)) return;
     await deleteModule({ data: { id: m.id } });
@@ -69,11 +74,20 @@ export function AdminModulesPanel() {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
           {modules.map((m) => (
             <div key={m.id} className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
-              <div className="aspect-[2/3] w-full bg-neutral-100">
+              <div className="relative aspect-[2/3] w-full bg-neutral-100">
                 {m.cover_image_url ? (
-                  <img src={m.cover_image_url} alt={m.title} className="h-full w-full object-cover" />
+                  <img
+                    src={m.cover_image_url}
+                    alt={m.title}
+                    className={"h-full w-full object-cover " + (m.locked ? "opacity-40 grayscale" : "")}
+                  />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-xs text-neutral-400">Sem capa</div>
+                )}
+                {m.locked && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <LockIcon />
+                  </div>
                 )}
               </div>
               <div className="p-2.5">
@@ -88,6 +102,14 @@ export function AdminModulesPanel() {
                     {m.active ? "Ocultar" : "Ativar"}
                   </Button>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={"h-7 w-full px-2 text-xs " + (m.locked ? "text-amber-600" : "text-neutral-500")}
+                  onClick={() => handleToggleLocked(m)}
+                >
+                  {m.locked ? "🔒 Trancado — liberar" : "🔓 Liberado — trancar"}
+                </Button>
                 <Button variant="ghost" size="sm" className="h-7 w-full px-2 text-xs text-red-600" onClick={() => handleDelete(m)}>
                   Remover
                 </Button>
@@ -224,5 +246,16 @@ function ModuleFormModal({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function LockIcon() {
+  return (
+    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="4" y="11" width="16" height="10" rx="2" />
+        <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+      </svg>
+    </div>
   );
 }
