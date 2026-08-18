@@ -50,6 +50,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
   const [renamingStage, setRenamingStage] = useState<string | null>(null);
   const dragged = useRef<FunnelCard | null>(null);
   const draggedContact = useRef<WaContact | null>(null);
+  const draggedStageId = useRef<string | null>(null);
   const pendingContacts = useRef<Set<string>>(new Set());
 
   async function reload() {
@@ -410,6 +411,45 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
     });
   }
 
+  /** Move uma coluna (estágio) pra posição de outra — recalcula o
+   * sort_order de todas as colunas do funil ativo e manda pro backend
+   * de uma vez (endpoint já suporta isso, sem precisar de nada novo). */
+  async function reorderStages(fromStageId: string, toStageId: string) {
+    if (!active || fromStageId === toStageId) return;
+    const funnelId = active.id;
+    const ordered = [...active.stages].sort((a, b) => a.sort_order - b.sort_order);
+    const fromIdx = ordered.findIndex((s) => s.id === fromStageId);
+    const toIdx = ordered.findIndex((s) => s.id === toStageId);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const [moved] = ordered.splice(fromIdx, 1);
+    ordered.splice(toIdx, 0, moved);
+    const withNewOrder = ordered.map((s, i) => ({ ...s, sort_order: i }));
+
+    setFunnels((list) =>
+      list.map((f) => (f.id !== funnelId ? f : { ...f, stages: withNewOrder })),
+    );
+    await api(`/api/public/extension/funnels/${funnelId}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        stages: withNewOrder.map((s) => ({ id: s.id, name: s.name, sort_order: s.sort_order })),
+      }),
+    });
+  }
+
+  /** Adiciona uma nova coluna (estágio) no final do funil ativo. */
+  async function addStage(name: string) {
+    if (!active || !name.trim()) return;
+    const funnelId = active.id;
+    const nextOrder = active.stages.length
+      ? Math.max(...active.stages.map((s) => s.sort_order)) + 1
+      : 0;
+    await api(`/api/public/extension/funnels/${funnelId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ stages: [{ name: name.trim(), sort_order: nextOrder }] }),
+    });
+    await reload();
+  }
+
   async function renameFunnel(id: string, name: string) {
     if (!name.trim()) return;
     setFunnels((list) => list.map((f) => (f.id === id ? { ...f, name: name.trim() } : f)));
@@ -583,6 +623,12 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                   }}
                   onDrop={(e) => {
                     e.preventDefault();
+                    const draggedStage = draggedStageId.current;
+                    draggedStageId.current = null;
+                    if (draggedStage) {
+                      void reorderStages(draggedStage, stage.id);
+                      return;
+                    }
                     const contact = draggedContact.current;
                     const card = dragged.current;
                     draggedContact.current = null;
@@ -612,15 +658,29 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                   style={stage.color ? { borderTop: `4px solid ${stage.color}` } : {}}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <StageTitle
-                      name={stage.name}
-                      editing={renamingStage === stage.id}
-                      onRename={(n: string) => {
-                        setRenamingStage(null);
-                        void renameStage(stage, n);
+                    <div className="flex min-w-0 items-center gap-1">
+                      <span
+                        draggable
+                        onDragStart={(e) => {
+                          draggedStageId.current = stage.id;
+                          e.dataTransfer.effectAllowed = "move";
+                        }}
+                        onDragEnd={() => { draggedStageId.current = null; }}
+                        title="Arrastar para reordenar"
+                        className="cursor-grab select-none px-0.5 text-neutral-400 hover:text-neutral-600 active:cursor-grabbing"
+                      >
+                        ⠿
+                      </span>
+                      <StageTitle
+                        name={stage.name}
+                        editing={renamingStage === stage.id}
+                        onRename={(n: string) => {
+                          setRenamingStage(null);
+                          void renameStage(stage, n);
                       }}
                       onCancel={() => setRenamingStage(null)}
                     />
+                    </div>
                     <div className="flex shrink-0 items-center gap-1">
                       <span className="text-[11px] text-neutral-500">{cards.length}</span>
                       {active.mode !== "label" && (
@@ -745,6 +805,8 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                 </div>
               );
             })}
+
+            {active.mode !== "label" && <AddStageColumn onAdd={(name) => void addStage(name)} />}
           </div>
         </>
       )}
@@ -1366,5 +1428,60 @@ function NewFunnelModal({
         </div>
       </div>
     </Overlay>
+  );
+}
+
+/** Coluna especial no final da fileira — clicar abre um campo simples
+ * pra digitar o nome da nova aba/estágio do funil. */
+function AddStageColumn({ onAdd }: { onAdd: (name: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+
+  function confirm() {
+    if (name.trim()) onAdd(name.trim());
+    setName("");
+    setOpen(false);
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="flex h-full w-56 shrink-0 items-center justify-center rounded-xl border-2 border-dashed border-neutral-300 text-sm font-medium text-neutral-400 transition hover:border-brand hover:text-brand"
+      >
+        + Nova aba
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex h-fit w-56 shrink-0 flex-col gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-2">
+      <input
+        autoFocus
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") confirm();
+          if (e.key === "Escape") { setOpen(false); setName(""); }
+        }}
+        placeholder="Nome da aba"
+        className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm outline-none focus:border-brand"
+      />
+      <div className="flex gap-1">
+        <button
+          onClick={confirm}
+          disabled={!name.trim()}
+          className="flex-1 rounded-lg bg-brand px-2 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+        >
+          Adicionar
+        </button>
+        <button
+          onClick={() => { setOpen(false); setName(""); }}
+          className="rounded-lg border border-neutral-300 px-2 py-1.5 text-xs text-neutral-600"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
   );
 }
