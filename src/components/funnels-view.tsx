@@ -668,6 +668,11 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                   onDragOver={(e) => {
                     e.preventDefault();
                     e.dataTransfer.dropEffect = "move";
+                    // Só atualiza pro final se não veio de um card (que já
+                    // define a posição certa via stopPropagation próprio).
+                    if (dragged.current && !draggedStageId.current) {
+                      setDropIndicator({ stageId: stage.id, index: cards.length });
+                    }
                   }}
                   onDrop={(e) => {
                     e.preventDefault();
@@ -699,7 +704,18 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                       });
                       return;
                     }
-                    if (card) void moveCard(card, stage.id);
+                    if (card) {
+                      const idx = dropIndicator?.stageId === stage.id ? dropIndicator.index : cards.length;
+                      void moveCardToPosition(card, stage.id, idx);
+                    }
+                    setDropIndicator(null);
+                  }}
+                  onDragLeave={(e) => {
+                    // Só limpa se realmente saiu da coluna (não ao passar
+                    // de um card filho pra outro dentro dela).
+                    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                      setDropIndicator((prev) => (prev?.stageId === stage.id ? null : prev));
+                    }
                   }}
 
                   className="flex h-fit w-72 shrink-0 flex-col rounded-xl border border-neutral-200 bg-neutral-50 p-2"
@@ -765,26 +781,41 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                   </div>
 
                   <div className="mt-2 space-y-2 pr-1">
-                    {cards.map((card) => (
-                      <div
-                        key={card.id}
-                        draggable
-                        onDragStart={(e) => {
-                          dragged.current = card;
-                          draggedContact.current = null;
-                          e.dataTransfer.effectAllowed = "move";
-                          try {
-                            e.dataTransfer.setData("text/plain", card.id);
-                          } catch {
-                            /* noop */
-                          }
-                        }}
-                        onDragEnd={() => {
-                          dragged.current = null;
-                        }}
+                    {cards.flatMap((card, cardIndex) => {
+                      const showIndicatorBefore =
+                        dropIndicator?.stageId === stage.id && dropIndicator.index === cardIndex;
+                      const placeholder = showIndicatorBefore ? (
+                        <div key={`indicator-${card.id}`} className="h-14 rounded-xl border-2 border-dashed border-brand bg-brand/5" />
+                      ) : null;
 
-                        className="cursor-grab rounded-xl border border-neutral-300 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-neutral-400 hover:shadow-md active:cursor-grabbing"
-                      >
+                      const cardEl = (
+                        <div
+                          key={card.id}
+                          draggable
+                          onDragStart={(e) => {
+                            dragged.current = card;
+                            draggedContact.current = null;
+                            e.dataTransfer.effectAllowed = "move";
+                            try {
+                              e.dataTransfer.setData("text/plain", card.id);
+                            } catch {
+                              /* noop */
+                            }
+                          }}
+                          onDragEnd={() => {
+                            dragged.current = null;
+                            setDropIndicator(null);
+                          }}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const isTopHalf = e.clientY - rect.top < rect.height / 2;
+                            setDropIndicator({ stageId: stage.id, index: isTopHalf ? cardIndex : cardIndex + 1 });
+                          }}
+
+                          className="cursor-grab rounded-xl border border-neutral-300 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-neutral-400 hover:shadow-md active:cursor-grabbing"
+                        >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
                             {card?.profile_picture_url ? (
@@ -866,7 +897,12 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                           )}
                         </div>
                       </div>
-                    ))}
+                      );
+                      return [placeholder, cardEl].filter(Boolean);
+                    })}
+                    {dropIndicator?.stageId === stage.id && dropIndicator.index === cards.length && (
+                      <div className="h-14 rounded-xl border-2 border-dashed border-brand bg-brand/5" />
+                    )}
                   </div>
                 </div>
               );
