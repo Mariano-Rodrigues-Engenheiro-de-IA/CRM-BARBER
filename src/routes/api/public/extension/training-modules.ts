@@ -18,7 +18,7 @@ export const Route = createFileRoute("/api/public/extension/training-modules")({
         }
         const { data, error } = await supabaseAdmin
           .from("training_modules")
-          .select("id, title, description, cover_image_url, sort_order")
+          .select("id, title, description, cover_image_url, sort_order, locked")
           .eq("active", true)
           .order("sort_order", { ascending: true });
         if (error) {

@@ -11,13 +11,14 @@ export type ModuleRow = {
   cover_image_url: string | null;
   sort_order: number;
   active: boolean;
+  locked: boolean;
 };
 
 export const adminListModules = createServerFn({ method: "GET" }).handler(async (): Promise<ModuleRow[]> => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data, error } = await supabaseAdmin
     .from("training_modules")
-    .select("id, title, description, cover_image_url, sort_order, active")
+    .select("id, title, description, cover_image_url, sort_order, active, locked")
     .order("sort_order", { ascending: true });
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -28,6 +29,7 @@ const moduleInputSchema = z.object({
   description: z.string().trim().max(500).optional(),
   cover_image_url: z.string().trim().url().max(500).optional(),
   sort_order: z.number().int().optional(),
+  locked: z.boolean().optional(),
 });
 
 export const adminCreateModule = createServerFn({ method: "POST" })
@@ -37,7 +39,7 @@ export const adminCreateModule = createServerFn({ method: "POST" })
     const { data: created, error } = await supabaseAdmin
       .from("training_modules")
       .insert(data)
-      .select("id, title, description, cover_image_url, sort_order, active")
+      .select("id, title, description, cover_image_url, sort_order, active, locked")
       .single();
     if (error) throw new Error(error.message);
     return created;
@@ -50,6 +52,7 @@ const moduleUpdateSchema = z.object({
   cover_image_url: z.string().trim().url().max(500).optional().nullable(),
   sort_order: z.number().int().optional(),
   active: z.boolean().optional(),
+  locked: z.boolean().optional(),
 });
 
 export const adminUpdateModule = createServerFn({ method: "POST" })
@@ -61,7 +64,7 @@ export const adminUpdateModule = createServerFn({ method: "POST" })
       .from("training_modules")
       .update(patch)
       .eq("id", id)
-      .select("id, title, description, cover_image_url, sort_order, active")
+      .select("id, title, description, cover_image_url, sort_order, active, locked")
       .single();
     if (error) throw new Error(error.message);
     return updated;
