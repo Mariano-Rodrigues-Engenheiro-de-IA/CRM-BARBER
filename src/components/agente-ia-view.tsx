@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { youtubeEmbedUrl } from "@/lib/youtube";
+import { useCachedFetch } from "@/lib/api-cache";
 
 type Api = (path: string, opts?: RequestInit) => Promise<any>;
 
@@ -26,21 +27,14 @@ const REVENUE_RANGES = [
 export function AgenteIaView({ api }: { api: Api }) {
   const [formOpen, setFormOpen] = useState(false);
   const [sent, setSent] = useState(false);
-  const [salesVideoUrl, setSalesVideoUrl] = useState<string | null>(null);
-  const [accessEnabled, setAccessEnabled] = useState<boolean | null>(null);
-  const [loadingAccess, setLoadingAccess] = useState(true);
-
-  useEffect(() => {
-    api("/api/public/extension/agente-ia-settings").then((r) => {
-      if (r?.ok) setSalesVideoUrl(r.sales_video_url);
-    });
-    api("/api/public/extension/billing")
-      .then((r) => {
-        if (r?.ok) setAccessEnabled(Boolean(r.billing?.ai_access_enabled));
-      })
-      .finally(() => setLoadingAccess(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const { data: salesVideoUrl } = useCachedFetch<string | null>("agente-ia-video", async () => {
+    const r = await api("/api/public/extension/agente-ia-settings");
+    return r?.ok ? r.sales_video_url : null;
+  });
+  const { data: accessEnabled, loading: loadingAccess } = useCachedFetch<boolean>("agente-ia-access", async () => {
+    const r = await api("/api/public/extension/billing");
+    return r?.ok ? Boolean(r.billing?.ai_access_enabled) : false;
+  });
 
   // Espera saber de verdade se o acesso já foi liberado antes de decidir
   // qual tela mostrar — sem isso, a vitrine aparecia por um instante
