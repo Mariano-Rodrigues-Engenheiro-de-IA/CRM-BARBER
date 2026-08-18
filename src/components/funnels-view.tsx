@@ -553,7 +553,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                         draggedContact.current = null;
                       }}
 
-                      className="cursor-grab rounded-xl border border-sky-200 bg-white p-3 shadow-sm active:cursor-grabbing"
+                      className="cursor-grab rounded-xl border border-neutral-300 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-neutral-400 hover:shadow-md active:cursor-grabbing"
                     >
                       <div className="flex items-center gap-2 min-w-0 mb-1">
                         {c.profile_picture_url ? (
@@ -723,7 +723,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                           dragged.current = null;
                         }}
 
-                        className="cursor-grab rounded-xl border border-sky-200 bg-white p-3 shadow-sm active:cursor-grabbing"
+                        className="cursor-grab rounded-xl border border-neutral-300 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-neutral-400 hover:shadow-md active:cursor-grabbing"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">

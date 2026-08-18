@@ -1448,7 +1448,7 @@ function KanbanView({
                     onDragEnd={() => { setDragId(null); setOverCol(null); }}
                     onClick={() => setDetail(c)}
                     className={
-                      "cursor-grab rounded-lg border border-sky-200 bg-neutral-50 p-2.5 text-[13px] transition hover:border-brand hover:shadow-sm active:cursor-grabbing " +
+                      "cursor-grab rounded-lg border border-neutral-300 bg-neutral-50 p-2.5 text-[13px] transition hover:-translate-y-0.5 hover:border-neutral-400 hover:shadow-md active:cursor-grabbing " +
                       (dragId === c.id ? "opacity-50" : "")
                     }
                   >
