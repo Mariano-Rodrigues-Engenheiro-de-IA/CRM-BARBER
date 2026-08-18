@@ -49,6 +49,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
   const [inboxQuery, setInboxQuery] = useState("");
   const [renamingStage, setRenamingStage] = useState<string | null>(null);
   const [stageSearch, setStageSearch] = useState<Record<string, string>>({});
+  const [dropIndicator, setDropIndicator] = useState<{ stageId: string; index: number } | null>(null);
   const dragged = useRef<FunnelCard | null>(null);
   const draggedContact = useRef<WaContact | null>(null);
   const draggedStageId = useRef<string | null>(null);
@@ -220,7 +221,9 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
 
   function stageCards(stageId: string): FunnelCard[] {
     if (!active || active.mode !== "label")
-      return active?.cards.filter((c) => c.stage_id === stageId) ?? [];
+      return (active?.cards.filter((c) => c.stage_id === stageId) ?? []).sort(
+        (a, b) => a.sort_order - b.sort_order,
+      );
     const stage = active.stages.find((item) => item.id === stageId);
     const label = labels.find((item) => item.name === stage?.name);
     if (!label) return [];
@@ -261,6 +264,38 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       body: JSON.stringify({ id: card.id, stage_id: stageId }),
     });
     if (!r?.ok) void reload();
+  }
+
+  /** Move o card pra uma posição EXATA dentro da coluna de destino (usado
+   * pelo indicador visual de posição durante o arraste) — recalcula o
+   * sort_order de todos os cards afetados na coluna de destino. */
+  async function moveCardToPosition(card: FunnelCard, stageId: string, targetIndex: number) {
+    if (!active) return;
+    const funnelId = card.funnel_id;
+    const destCardsBefore = active.cards
+      .filter((c) => c.stage_id === stageId && c.id !== card.id)
+      .sort((a, b) => a.sort_order - b.sort_order);
+    const newDestOrder = [...destCardsBefore];
+    const clampedIndex = Math.max(0, Math.min(targetIndex, newDestOrder.length));
+    newDestOrder.splice(clampedIndex, 0, card);
+    const withNewOrder = newDestOrder.map((c, i) => ({ ...c, stage_id: stageId, sort_order: i }));
+
+    setFunnels((list) =>
+      list.map((f) => {
+        if (f.id !== funnelId) return f;
+        const byId = new Map(withNewOrder.map((c) => [c.id, c]));
+        return { ...f, cards: f.cards.map((c) => byId.get(c.id) ?? c) };
+      }),
+    );
+
+    await Promise.all(
+      withNewOrder.map((c) =>
+        api("/api/public/extension/funnel-cards", {
+          method: "PATCH",
+          body: JSON.stringify({ id: c.id, stage_id: c.stage_id, sort_order: c.sort_order }),
+        }),
+      ),
+    );
   }
 
   async function removeCard(card: FunnelCard) {
