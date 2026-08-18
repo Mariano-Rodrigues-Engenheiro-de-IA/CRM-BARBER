@@ -53,6 +53,13 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
   const draggedCardHeight = useRef<number>(72);
   const [stageDropIndicator, setStageDropIndicator] = useState<number | null>(null);
   const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
+  // Snapshot ESTÁTICO das posições dos cards de uma coluna, capturado uma
+  // única vez ao entrar nela durante o arraste — evita o loop de
+  // realimentação onde re-medir o DOM a cada movimento (que a própria
+  // inserção do placeholder já alterou) causava o card "trocar de alvo"
+  // continuamente e tremer.
+  const columnSnapshot = useRef<{ stageId: string; cards: { id: string; mid: number }[] } | null>(null);
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   /** Só atualiza o indicador se a posição realmente mudou — evita
    * re-renders/flicker a cada pixel de movimento do mouse. */
@@ -704,10 +711,33 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                       setStageDropIndicator(isLeftHalf ? stageIndex : stageIndex + 1);
                       return;
                     }
-                    // Só atualiza pro final se não veio de um card (que já
-                    // define a posição certa via stopPropagation próprio).
                     if (dragged.current) {
-                      setDropIndicatorStable({ stageId: stage.id, index: cards.length });
+                      const draggedId = dragged.current.id;
+                      // Captura a "foto" das posições dos cards só UMA VEZ ao
+                      // entrar nessa coluna — os cálculos seguintes usam essa
+                      // referência fixa, nunca o DOM ao vivo (que a inserção
+                      // do próprio placeholder já alterou), eliminando o loop
+                      // onde o alvo trocava a cada frame e tudo tremia.
+                      if (columnSnapshot.current?.stageId !== stage.id) {
+                        const snapshot: { id: string; mid: number }[] = [];
+                        for (const c of cards) {
+                          if (c.id === draggedId) continue;
+                          const el = cardRefs.current.get(c.id);
+                          if (!el) continue;
+                          const rect = el.getBoundingClientRect();
+                          snapshot.push({ id: c.id, mid: rect.top + rect.height / 2 });
+                        }
+                        columnSnapshot.current = { stageId: stage.id, cards: snapshot };
+                      }
+                      const snap = columnSnapshot.current.cards;
+                      let index = snap.length;
+                      for (let i = 0; i < snap.length; i++) {
+                        if (e.clientY < snap[i].mid) {
+                          index = i;
+                          break;
+                        }
+                      }
+                      setDropIndicatorStable({ stageId: stage.id, index });
                     }
                   }}
                   onDrop={(e) => {
@@ -753,6 +783,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                     // de um card filho pra outro dentro dela).
                     if (!e.currentTarget.contains(e.relatedTarget as Node)) {
                       setDropIndicator((prev) => (prev?.stageId === stage.id ? null : prev));
+                      if (columnSnapshot.current?.stageId === stage.id) columnSnapshot.current = null;
                     }
                   }}
 
@@ -833,6 +864,10 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                       const cardEl = (
                         <div
                           key={card.id}
+                          ref={(el) => {
+                            if (el) cardRefs.current.set(card.id, el);
+                            else cardRefs.current.delete(card.id);
+                          }}
                           draggable
                           onDragStart={(e) => {
                             dragged.current = card;
@@ -850,13 +885,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                             dragged.current = null;
                             setDropIndicator(null);
                             setDraggingCardId(null);
-                          }}
-                          onDragOver={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            const isTopHalf = e.clientY - rect.top < rect.height / 2;
-                            setDropIndicatorStable({ stageId: stage.id, index: isTopHalf ? cardIndex : cardIndex + 1 });
+                            columnSnapshot.current = null;
                           }}
 
                           className={
