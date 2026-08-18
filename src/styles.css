@@ -166,3 +166,26 @@
 .animate-ai-ticker {
   animation: ai-ticker 88s linear infinite;
 }
+
+/* Scrollbars finas e discretas para o Kanban (leads e funis) — trilho
+   quase invisível, indicador fino que só fica mais visível no hover,
+   sem competir visualmente com os cards. Cobre Chrome/Safari/Edge
+   (::-webkit-scrollbar) e Firefox (scrollbar-width/scrollbar-color). */
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+.thin-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.15);
+  border-radius: 9999px;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.3);
+}
