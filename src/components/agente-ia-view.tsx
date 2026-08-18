@@ -78,68 +78,52 @@ export function AgenteIaView({ api }: { api: Api }) {
   }
 
   return (
-    <div className="-mx-4 -my-6 min-h-[calc(100vh-56px)] bg-neutral-950 px-4 py-8 sm:-mx-6" style={{ backgroundImage: "radial-gradient(rgba(90,140,255,0.14) 1px, transparent 1px)", backgroundSize: "26px 26px" }}>
-      <div className="mx-auto max-w-3xl space-y-6">
-        <div
-          className="h-[3px] w-full rounded-full"
-          style={{
-            background: "linear-gradient(90deg, #3b82f6, #22d3ee, #3b82f6)",
-            backgroundSize: "200% 100%",
-            animation: "ai-glow-move 6s linear infinite",
-          }}
-        />
-        <style>{`@keyframes ai-glow-move { 0% { background-position: 0% 0%; } 100% { background-position: 200% 0%; } }`}</style>
-
-        {/* Botão em destaque logo no topo — economiza espaço, sempre visível */}
-        <div className="text-center">
+    <div className="mx-auto max-w-3xl space-y-6">
+      <div
+        className="relative min-h-[220px] overflow-hidden rounded-2xl transition-opacity duration-300"
+        style={{
+          opacity: bannerLoaded ? 1 : 0,
+          backgroundImage: bannerLoaded
+            ? "url(/academy/agente-ia-banner.jpg), radial-gradient(circle at 20% 30%, #1c2440 0%, #0a0e1e 55%, #05070f 100%)"
+            : undefined,
+          backgroundSize: "cover, cover",
+          backgroundPosition: "center, center",
+        }}
+      >
+        <div className="flex min-h-[220px] flex-col justify-center px-6 py-6 md:px-10">
+          <span className="mb-2 inline-block w-fit rounded-full bg-brand px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white">
+            Novidade
+          </span>
+          <h1 className="max-w-md text-xl font-bold text-white md:text-2xl">Agente de IA para o seu WhatsApp</h1>
+          <p className="mt-1 max-w-sm text-xs text-neutral-200 md:text-sm">
+            Atendimento e agendamento automático, 24h por dia, direto no WhatsApp do seu negócio.
+          </p>
           <button
             onClick={() => setFormOpen((v) => !v)}
-            className="rounded-xl bg-brand px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-brand/20 hover:bg-brand-strong"
+            className="mt-4 w-fit rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-brand-strong"
           >
             {formOpen ? "Fechar formulário" : "Agendar demonstração"}
           </button>
         </div>
-
-        {formOpen && <DemoForm api={api} onSent={() => setSent(true)} />}
-
-        <div
-          className="relative min-h-[130px] overflow-hidden rounded-2xl transition-opacity duration-300"
-          style={{
-            opacity: bannerLoaded ? 1 : 0,
-            backgroundImage: bannerLoaded
-              ? "url(/academy/agente-ia-banner.jpg), radial-gradient(circle at 20% 30%, #1c2440 0%, #0a0e1e 55%, #05070f 100%)"
-              : undefined,
-            backgroundSize: "cover, cover",
-            backgroundPosition: "center, center",
-          }}
-        >
-          <div className="flex min-h-[130px] flex-col justify-center px-6 py-5 md:px-10">
-            <span className="mb-2 inline-block w-fit rounded-full bg-brand px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white">
-              Novidade
-            </span>
-            <h1 className="max-w-md text-xl font-bold text-white md:text-2xl">Agente de IA para o seu WhatsApp</h1>
-            <p className="mt-1 max-w-sm text-xs text-neutral-200 md:text-sm">
-              Atendimento e agendamento automático, 24h por dia, direto no WhatsApp do seu negócio.
-            </p>
-          </div>
-        </div>
-
-        {embedUrl ? (
-          <div className="mx-auto aspect-video w-full max-w-md overflow-hidden rounded-2xl">
-            <iframe
-              src={embedUrl}
-              title="Conheça o Agente de IA"
-              className="h-full w-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
-        ) : (
-          <div className="mx-auto max-w-md rounded-2xl border border-dashed border-neutral-700 bg-neutral-900 p-6 text-center">
-            <p className="text-sm text-neutral-500">Vídeo de apresentação em breve.</p>
-          </div>
-        )}
       </div>
+
+      {formOpen && <DemoForm api={api} onSent={() => setSent(true)} />}
+
+      {embedUrl ? (
+        <div className="mx-auto aspect-video w-full max-w-2xl overflow-hidden rounded-2xl border-2 border-brand shadow-lg">
+          <iframe
+            src={embedUrl}
+            title="Conheça o Agente de IA"
+            className="h-full w-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      ) : (
+        <div className="mx-auto max-w-2xl rounded-2xl border-2 border-dashed border-neutral-300 bg-neutral-50 p-10 text-center">
+          <p className="text-sm text-neutral-400">Vídeo de apresentação em breve.</p>
+        </div>
+      )}
     </div>
   );
 }
