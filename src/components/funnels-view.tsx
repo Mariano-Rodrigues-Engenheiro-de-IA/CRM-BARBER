@@ -50,6 +50,18 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
   const [renamingStage, setRenamingStage] = useState<string | null>(null);
   const [stageSearch, setStageSearch] = useState<Record<string, string>>({});
   const [dropIndicator, setDropIndicator] = useState<{ stageId: string; index: number } | null>(null);
+  const draggedCardHeight = useRef<number>(72);
+  const [stageDropIndicator, setStageDropIndicator] = useState<number | null>(null);
+  const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
+
+  /** Só atualiza o indicador se a posição realmente mudou — evita
+   * re-renders/flicker a cada pixel de movimento do mouse. */
+  function setDropIndicatorStable(next: { stageId: string; index: number } | null) {
+    setDropIndicator((prev) => {
+      if (prev?.stageId === next?.stageId && prev?.index === next?.index) return prev;
+      return next;
+    });
+  }
   const dragged = useRef<FunnelCard | null>(null);
   const draggedContact = useRef<WaContact | null>(null);
   const draggedStageId = useRef<string | null>(null);
@@ -671,7 +683,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                     // Só atualiza pro final se não veio de um card (que já
                     // define a posição certa via stopPropagation próprio).
                     if (dragged.current && !draggedStageId.current) {
-                      setDropIndicator({ stageId: stage.id, index: cards.length });
+                      setDropIndicatorStable({ stageId: stage.id, index: cards.length });
                     }
                   }}
                   onDrop={(e) => {
@@ -785,7 +797,11 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                       const showIndicatorBefore =
                         dropIndicator?.stageId === stage.id && dropIndicator.index === cardIndex;
                       const placeholder = showIndicatorBefore ? (
-                        <div key={`indicator-${card.id}`} className="h-14 rounded-xl border-2 border-dashed border-brand bg-brand/5" />
+                        <div
+                          key={`indicator-${card.id}`}
+                          className="rounded-xl border-2 border-brand/50 bg-brand/5 transition-all duration-150"
+                          style={{ height: draggedCardHeight.current }}
+                        />
                       ) : null;
 
                       const cardEl = (
@@ -795,6 +811,8 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                           onDragStart={(e) => {
                             dragged.current = card;
                             draggedContact.current = null;
+                            draggedCardHeight.current = e.currentTarget.getBoundingClientRect().height;
+                            setDraggingCardId(card.id);
                             e.dataTransfer.effectAllowed = "move";
                             try {
                               e.dataTransfer.setData("text/plain", card.id);
@@ -805,16 +823,20 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                           onDragEnd={() => {
                             dragged.current = null;
                             setDropIndicator(null);
+                            setDraggingCardId(null);
                           }}
                           onDragOver={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
                             const rect = e.currentTarget.getBoundingClientRect();
                             const isTopHalf = e.clientY - rect.top < rect.height / 2;
-                            setDropIndicator({ stageId: stage.id, index: isTopHalf ? cardIndex : cardIndex + 1 });
+                            setDropIndicatorStable({ stageId: stage.id, index: isTopHalf ? cardIndex : cardIndex + 1 });
                           }}
 
-                          className="cursor-grab rounded-xl border border-neutral-300 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-neutral-400 hover:shadow-md active:cursor-grabbing"
+                          className={
+                            "cursor-grab rounded-xl border border-neutral-300 bg-white p-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-neutral-400 hover:shadow-md active:cursor-grabbing " +
+                            (draggingCardId === card.id ? "opacity-40" : "")
+                          }
                         >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
@@ -901,7 +923,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                       return [placeholder, cardEl].filter(Boolean);
                     })}
                     {dropIndicator?.stageId === stage.id && dropIndicator.index === cards.length && (
-                      <div className="h-14 rounded-xl border-2 border-dashed border-brand bg-brand/5" />
+                      <div className="rounded-xl border-2 border-brand/50 bg-brand/5 transition-all duration-150" style={{ height: draggedCardHeight.current }} />
                     )}
                   </div>
                 </div>
