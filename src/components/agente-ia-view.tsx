@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { youtubeEmbedUrl } from "@/lib/youtube";
 
 type Api = (path: string, opts?: RequestInit) => Promise<any>;
@@ -17,14 +19,16 @@ const REVENUE_RANGES = [
 /** Página do Agente de IA — vitrine + agendar demonstração (não é mais
  * checkout direto: a venda acontece por contato humano, depois de
  * preencher esse formulário). Se o admin já vinculou a conta (depois da
- * compra), mostra direto o botão de acesso, sem passar pela vitrine. */
+ * compra), mostra direto o botão de acesso, sem passar pela vitrine.
+ *
+ * Layout: só vídeo + botão (sem banner) — o botão abre o formulário
+ * num popup centralizado, sem empurrar o resto da página. */
 export function AgenteIaView({ api }: { api: Api }) {
   const [formOpen, setFormOpen] = useState(false);
   const [sent, setSent] = useState(false);
   const [salesVideoUrl, setSalesVideoUrl] = useState<string | null>(null);
   const [accessEnabled, setAccessEnabled] = useState<boolean | null>(null);
   const [loadingAccess, setLoadingAccess] = useState(true);
-  const [bannerLoaded, setBannerLoaded] = useState(false);
 
   useEffect(() => {
     api("/api/public/extension/agente-ia-settings").then((r) => {
@@ -35,18 +39,12 @@ export function AgenteIaView({ api }: { api: Api }) {
         if (r?.ok) setAccessEnabled(Boolean(r.billing?.ai_access_enabled));
       })
       .finally(() => setLoadingAccess(false));
-    // Pré-carrega a imagem do banner antes de mostrar o texto por cima —
-    // evita o nome/frase aparecendo antes da imagem (impressão de bug).
-    const img = new Image();
-    img.src = "/academy/agente-ia-banner.jpg";
-    img.onload = () => setBannerLoaded(true);
-    img.onerror = () => setBannerLoaded(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Espera saber de verdade se o acesso já foi liberado antes de decidir
-  // qual tela mostrar — sem isso, a vitrine (com banner) aparecia por um
-  // instante mesmo pra quem já tem acesso, e depois trocava de tela.
+  // qual tela mostrar — sem isso, a vitrine aparecia por um instante
+  // mesmo pra quem já tem acesso, e depois trocava de tela.
   if (loadingAccess) {
     return (
       <div className="flex min-h-[300px] items-center justify-center">
@@ -63,14 +61,14 @@ export function AgenteIaView({ api }: { api: Api }) {
 
   if (sent) {
     return (
-      <div className="mx-auto max-w-lg rounded-2xl border border-neutral-800 bg-neutral-900 p-8 text-center">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15">
-          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <div className="mx-auto max-w-lg rounded-2xl border border-neutral-200 bg-white p-8 text-center">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 6 9 17l-5-5" />
           </svg>
         </div>
-        <h1 className="text-xl font-bold text-white">Ótimo!</h1>
-        <p className="mt-2 text-sm text-neutral-400">
+        <h1 className="text-xl font-bold text-neutral-900">Ótimo!</h1>
+        <p className="mt-2 text-sm text-neutral-500">
           Um de nossos especialistas vai entrar em contato com você pra agendar uma demonstração.
         </p>
       </div>
@@ -78,39 +76,9 @@ export function AgenteIaView({ api }: { api: Api }) {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div
-        className="relative min-h-[220px] overflow-hidden rounded-2xl transition-opacity duration-300"
-        style={{
-          opacity: bannerLoaded ? 1 : 0,
-          backgroundImage: bannerLoaded
-            ? "url(/academy/agente-ia-banner.jpg), radial-gradient(circle at 20% 30%, #1c2440 0%, #0a0e1e 55%, #05070f 100%)"
-            : undefined,
-          backgroundSize: "cover, cover",
-          backgroundPosition: "center, center",
-        }}
-      >
-        <div className="flex min-h-[220px] flex-col justify-center px-6 py-6 md:px-10">
-          <span className="mb-2 inline-block w-fit rounded-full bg-brand px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white">
-            Novidade
-          </span>
-          <h1 className="max-w-md text-xl font-bold text-white md:text-2xl">Agente de IA para o seu WhatsApp</h1>
-          <p className="mt-1 max-w-sm text-xs text-neutral-200 md:text-sm">
-            Atendimento e agendamento automático, 24h por dia, direto no WhatsApp do seu negócio.
-          </p>
-          <button
-            onClick={() => setFormOpen((v) => !v)}
-            className="mt-4 w-fit rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-brand-strong"
-          >
-            {formOpen ? "Fechar formulário" : "Agendar demonstração"}
-          </button>
-        </div>
-      </div>
-
-      {formOpen && <DemoForm api={api} onSent={() => setSent(true)} />}
-
+    <div className="mx-auto max-w-2xl space-y-6">
       {embedUrl ? (
-        <div className="mx-auto aspect-video w-full max-w-2xl overflow-hidden rounded-2xl border-2 border-brand shadow-lg">
+        <div className="mx-auto aspect-video w-full overflow-hidden rounded-2xl border-2 border-brand shadow-lg">
           <iframe
             src={embedUrl}
             title="Conheça o Agente de IA"
@@ -120,10 +88,28 @@ export function AgenteIaView({ api }: { api: Api }) {
           />
         </div>
       ) : (
-        <div className="mx-auto max-w-2xl rounded-2xl border-2 border-dashed border-neutral-300 bg-neutral-50 p-10 text-center">
+        <div className="mx-auto rounded-2xl border-2 border-dashed border-neutral-300 bg-neutral-50 p-10 text-center">
           <p className="text-sm text-neutral-400">Vídeo de apresentação em breve.</p>
         </div>
       )}
+
+      <div className="text-center">
+        <button
+          onClick={() => setFormOpen(true)}
+          className="rounded-xl bg-brand px-8 py-3 text-sm font-semibold text-white shadow-lg hover:bg-brand-strong"
+        >
+          Agendar demonstração
+        </button>
+      </div>
+
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Agendar demonstração</DialogTitle>
+          </DialogHeader>
+          <DemoForm api={api} onSent={() => { setFormOpen(false); setSent(true); }} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -133,7 +119,7 @@ function DemoForm({ api, onSent }: { api: Api; onSent: () => void }) {
   const [phone, setPhone] = useState("");
   const [segment, setSegment] = useState("");
   const [revenueRange, setRevenueRange] = useState("");
-  const [goal, setGoal] = useState<"vendas" | "agendamento" | "ambos" | "">("");
+  const [usage, setUsage] = useState("");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -149,7 +135,7 @@ function DemoForm({ api, onSent }: { api: Api; onSent: () => void }) {
           phone: phone.trim(),
           segment: segment.trim() || undefined,
           revenue_range: revenueRange || undefined,
-          goal: goal || undefined,
+          goal: usage.trim() || undefined,
         }),
       });
       if (!r?.ok) throw new Error(r?.error || "Erro ao enviar");
@@ -162,20 +148,19 @@ function DemoForm({ api, onSent }: { api: Api; onSent: () => void }) {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 rounded-2xl border border-neutral-200 bg-white p-6">
-      <h2 className="text-lg font-bold text-neutral-900">Agendar demonstração</h2>
+    <div className="space-y-4">
       {err && <p className="rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-700">{err}</p>}
       <div className="space-y-1.5">
         <Label>Nome</Label>
-        <Input value={name} onChange={(e) => setName(e.target.value)} />
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="" />
       </div>
       <div className="space-y-1.5">
         <Label>Telefone (com DDD)</Label>
-        <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Ex: 44991234567" />
+        <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="" />
       </div>
       <div className="space-y-1.5">
         <Label>Segmento do seu negócio</Label>
-        <Input value={segment} onChange={(e) => setSegment(e.target.value)} placeholder="Ex: Barbearia, Salão, Clínica de estética..." />
+        <Input value={segment} onChange={(e) => setSegment(e.target.value)} placeholder="" />
       </div>
       <div className="space-y-1.5">
         <Label>Faixa de faturamento mensal</Label>
@@ -193,17 +178,8 @@ function DemoForm({ api, onSent }: { api: Api; onSent: () => void }) {
         </Select>
       </div>
       <div className="space-y-1.5">
-        <Label>O que você mais precisa da IA?</Label>
-        <Select value={goal} onValueChange={(v) => setGoal(v as any)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="vendas">Mais vendas</SelectItem>
-            <SelectItem value="agendamento">Agendamento automático</SelectItem>
-            <SelectItem value="ambos">Os dois</SelectItem>
-          </SelectContent>
-        </Select>
+        <Label>Descreva como você quer usar a IA/agente</Label>
+        <Textarea value={usage} onChange={(e) => setUsage(e.target.value)} rows={4} placeholder="" />
       </div>
       <button
         onClick={handleSubmit}
