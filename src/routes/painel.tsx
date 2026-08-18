@@ -713,9 +713,10 @@ function Painel() {
       <div className="flex-1 min-w-0">
         {section === "agenda" && token && (
           <>
-            <header className="sticky top-0 z-10 bg-sidebar mt-14 md:mt-0">
-              <div className="flex items-center gap-3 px-5 py-2">
-                <h1 className="truncate text-[13px] font-bold uppercase tracking-[0.2em] text-brand">
+            <header className="sticky top-0 z-10 bg-brand mt-14 md:mt-0">
+              <div className="flex items-center gap-2 px-5 py-2">
+                <span className="text-white"><IconCalendar /></span>
+                <h1 className="truncate text-[13px] font-bold uppercase tracking-[0.2em] text-white">
                   Agenda
                 </h1>
               </div>
@@ -762,10 +763,10 @@ function Painel() {
 
         {section === "treinamento" && token && (
           <>
-            <header className="sticky top-0 z-10 bg-sidebar mt-14 md:mt-0">
+            <header className="sticky top-0 z-10 bg-brand mt-14 md:mt-0">
               <div className="flex items-center gap-2 px-5 py-2">
-                <span className="text-brand"><IconGraduationCap /></span>
-                <h1 className="truncate text-[13px] font-bold uppercase tracking-[0.2em] text-brand">
+                <span className="text-white"><IconGraduationCap /></span>
+                <h1 className="truncate text-[13px] font-bold uppercase tracking-[0.2em] text-white">
                   Treinamentos
                 </h1>
               </div>
@@ -778,9 +779,10 @@ function Painel() {
 
         {section === "configuracoes" && token && (
           <>
-            <header className="sticky top-0 z-10 bg-sidebar mt-14 md:mt-0">
-              <div className="flex items-center gap-3 px-5 py-2">
-                <h1 className="truncate text-[13px] font-bold uppercase tracking-[0.2em] text-brand">
+            <header className="sticky top-0 z-10 bg-brand mt-14 md:mt-0">
+              <div className="flex items-center gap-2 px-5 py-2">
+                <span className="text-white"><IconGear /></span>
+                <h1 className="truncate text-[13px] font-bold uppercase tracking-[0.2em] text-white">
                   {configTab === "servicos" && "Configurações · Serviços"}
                   {configTab === "profissionais" && "Configurações · Profissionais"}
                   {configTab === "clientes" && "Configurações · Clientes"}
@@ -885,9 +887,10 @@ function Painel() {
 
         {section === "respostas" && token && (
           <>
-            <header className="sticky top-0 z-10 bg-sidebar mt-14 md:mt-0">
-              <div className="flex items-center gap-3 px-5 py-2">
-                <h1 className="truncate text-[13px] font-bold uppercase tracking-[0.2em] text-brand">
+            <header className="sticky top-0 z-10 bg-brand mt-14 md:mt-0">
+              <div className="flex items-center gap-2 px-5 py-2">
+                <span className="text-white"><IconChat /></span>
+                <h1 className="truncate text-[13px] font-bold uppercase tracking-[0.2em] text-white">
                   Respostas rápidas
                 </h1>
               </div>
@@ -940,9 +943,10 @@ function Painel() {
 
         {section === "conexao" && token && (
           <>
-            <header className="sticky top-0 z-10 bg-sidebar mt-14 md:mt-0">
-              <div className="flex items-center gap-3 px-5 py-2">
-                <h1 className="truncate text-[13px] font-bold uppercase tracking-[0.2em] text-brand">
+            <header className="sticky top-0 z-10 bg-brand mt-14 md:mt-0">
+              <div className="flex items-center gap-2 px-5 py-2">
+                <span className="text-white"><IconPlug /></span>
+                <h1 className="truncate text-[13px] font-bold uppercase tracking-[0.2em] text-white">
                   Conexão
                 </h1>
               </div>
@@ -955,9 +959,10 @@ function Painel() {
 
         {section === "templates" && token && isAdmin && (
           <>
-            <header className="sticky top-0 z-10 bg-sidebar mt-14 md:mt-0">
-              <div className="flex items-center gap-3 px-5 py-2">
-                <h1 className="truncate text-[13px] font-bold uppercase tracking-[0.2em] text-brand">
+            <header className="sticky top-0 z-10 bg-brand mt-14 md:mt-0">
+              <div className="flex items-center gap-2 px-5 py-2">
+                <span className="text-white"><IconNote /></span>
+                <h1 className="truncate text-[13px] font-bold uppercase tracking-[0.2em] text-white">
                   Modelos de mensagem
                 </h1>
               </div>
