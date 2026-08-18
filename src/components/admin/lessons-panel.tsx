@@ -1,6 +1,6 @@
 // Painel de Aulas (academy) — criar, editar, reordenar, marcar destaque,
-// ativar/desativar. Extraído de admin.lessons.tsx para ser reaproveitado
-// dentro do painel admin unificado (com abas).
+// ativar/desativar. Cada aula agora pertence obrigatoriamente a um
+// módulo (Tráfego Pago, Vendas, Agente de IA, etc).
 
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -11,22 +11,26 @@ import {
   adminDeleteLesson,
   type LessonRow,
 } from "@/lib/admin-lessons.functions";
+import { adminListModules, type ModuleRow } from "@/lib/admin-modules.functions";
 import { youtubeThumbnail } from "@/lib/youtube";
 
 export function AdminLessonsPanel() {
   const listLessons = useServerFn(adminListLessons);
+  const listModules = useServerFn(adminListModules);
   const createLesson = useServerFn(adminCreateLesson);
   const updateLesson = useServerFn(adminUpdateLesson);
   const deleteLesson = useServerFn(adminDeleteLesson);
 
   const [lessons, setLessons] = useState<LessonRow[] | null>(null);
+  const [modules, setModules] = useState<ModuleRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
 
   async function reload() {
     try {
-      const data = await listLessons();
-      setLessons(data);
+      const [lessonsData, modulesData] = await Promise.all([listLessons(), listModules()]);
+      setLessons(lessonsData);
+      setModules(modulesData);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
@@ -50,6 +54,10 @@ export function AdminLessonsPanel() {
 
   const editing = editingId && editingId !== "new" ? lessons?.find((l) => l.id === editingId) ?? null : null;
 
+  function moduleName(moduleId: string | null) {
+    return modules.find((m) => m.id === moduleId)?.title ?? "Sem módulo";
+  }
+
   return (
     <>
       <div className="space-y-4">
@@ -58,12 +66,16 @@ export function AdminLessonsPanel() {
             <h1 className="text-xl font-bold text-neutral-900">Aulas</h1>
             <p className="text-sm text-neutral-500">Conteúdo da área de treinamento — visível pra todos os clientes.</p>
           </div>
-          <button
-            onClick={() => setEditingId("new")}
-            className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong"
-          >
-            + Nova aula
-          </button>
+          {modules.length === 0 ? (
+            <p className="text-xs text-amber-600">Cria um módulo primeiro, na aba "Módulos".</p>
+          ) : (
+            <button
+              onClick={() => setEditingId("new")}
+              className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong"
+            >
+              + Nova aula
+            </button>
+          )}
         </div>
 
         {error && <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
@@ -94,7 +106,9 @@ export function AdminLessonsPanel() {
                         </span>
                       )}
                     </p>
-                    <p className="truncate text-xs text-neutral-400">{l.youtube_url}</p>
+                    <p className="truncate text-xs text-neutral-400">
+                      {moduleName(l.module_id)} · {l.youtube_url}
+                    </p>
                   </div>
                   <button onClick={() => setEditingId(l.id)} className="rounded-lg px-3 py-1.5 text-xs font-medium text-neutral-600 hover:bg-neutral-100">
                     Editar
@@ -115,6 +129,7 @@ export function AdminLessonsPanel() {
       {editingId && (
         <LessonFormModal
           editing={editing}
+          modules={modules}
           onClose={() => setEditingId(null)}
           onSaved={async () => {
             setEditingId(null);
@@ -130,12 +145,14 @@ export function AdminLessonsPanel() {
 
 function LessonFormModal({
   editing,
+  modules,
   onClose,
   onSaved,
   createLesson,
   updateLesson,
 }: {
   editing: LessonRow | null;
+  modules: ModuleRow[];
   onClose: () => void;
   onSaved: () => void;
   createLesson: ReturnType<typeof useServerFn<typeof adminCreateLesson>>;
@@ -146,21 +163,37 @@ function LessonFormModal({
   const [description, setDescription] = useState(editing?.description ?? "");
   const [featured, setFeatured] = useState(editing?.featured ?? false);
   const [sortOrder, setSortOrder] = useState(editing?.sort_order ?? 0);
+  const [moduleId, setModuleId] = useState(editing?.module_id ?? modules[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   async function handleSave() {
-    if (!title.trim() || !youtubeUrl.trim()) return;
+    if (!title.trim() || !youtubeUrl.trim() || !moduleId) return;
     setSaving(true);
     setErr(null);
     try {
       if (editing) {
         await updateLesson({
-          data: { id: editing.id, title: title.trim(), youtube_url: youtubeUrl.trim(), description: description.trim() || null, featured, sort_order: sortOrder },
+          data: {
+            id: editing.id,
+            title: title.trim(),
+            youtube_url: youtubeUrl.trim(),
+            description: description.trim() || null,
+            featured,
+            sort_order: sortOrder,
+            module_id: moduleId,
+          },
         });
       } else {
         await createLesson({
-          data: { title: title.trim(), youtube_url: youtubeUrl.trim(), description: description.trim() || undefined, featured, sort_order: sortOrder },
+          data: {
+            title: title.trim(),
+            youtube_url: youtubeUrl.trim(),
+            description: description.trim() || undefined,
+            featured,
+            sort_order: sortOrder,
+            module_id: moduleId,
+          },
         });
       }
       onSaved();
@@ -177,6 +210,20 @@ function LessonFormModal({
         <h2 className="text-lg font-bold text-neutral-900">{editing ? "Editar aula" : "Nova aula"}</h2>
         {err && <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-700">{err}</div>}
         <div className="space-y-3">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-neutral-600">Módulo</label>
+            <select
+              value={moduleId}
+              onChange={(e) => setModuleId(e.target.value)}
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-brand"
+            >
+              {modules.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.title}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-neutral-600">Título</label>
             <input
@@ -226,7 +273,7 @@ function LessonFormModal({
           </button>
           <button
             onClick={handleSave}
-            disabled={!title.trim() || !youtubeUrl.trim() || saving}
+            disabled={!title.trim() || !youtubeUrl.trim() || !moduleId || saving}
             className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
             {saving ? "Salvando..." : "Salvar"}

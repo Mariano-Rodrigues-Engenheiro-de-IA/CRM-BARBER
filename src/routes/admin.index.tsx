@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { AdminClientsPanel } from "@/components/admin/clients-panel";
 import { AdminLessonsPanel } from "@/components/admin/lessons-panel";
+import { AdminModulesPanel } from "@/components/admin/modules-panel";
 import { AdminAgenteIaPanel } from "@/components/admin/agente-ia-panel";
 import { AdminLeadsPanel } from "@/components/admin/leads-panel";
 import { AdminTokensPanel } from "@/components/admin/tokens-panel";
@@ -25,11 +26,12 @@ export const Route = createFileRoute("/admin/")({
   component: AdminHome,
 });
 
-type Tab = "clientes" | "aulas" | "agente-ia" | "interessados" | "tokens" | "whatsapp";
+type Tab = "clientes" | "modulos" | "aulas" | "agente-ia" | "interessados" | "tokens" | "whatsapp";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "clientes", label: "Clientes" },
   { key: "interessados", label: "Clientes interessados" },
+  { key: "modulos", label: "Módulos" },
   { key: "aulas", label: "Aulas" },
   { key: "agente-ia", label: "Vídeo Agente de IA" },
   { key: "tokens", label: "Tokens de integração" },
@@ -72,6 +74,7 @@ function AdminHome() {
               }}
             />
           )}
+          {tab === "modulos" && <AdminModulesPanel />}
           {tab === "aulas" && <AdminLessonsPanel />}
           {tab === "agente-ia" && <AdminAgenteIaPanel />}
           {tab === "tokens" && <AdminTokensPanel />}
