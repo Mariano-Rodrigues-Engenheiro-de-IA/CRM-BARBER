@@ -154,3 +154,15 @@
     color: var(--color-foreground);
   }
 }
+
+/* Letreiro contínuo da barra superior do Agente de IA — desliza um
+   conjunto duplicado de palavras (0% a -50%) para criar um loop
+   infinito sem "pulo" visível no fim do ciclo. */
+@keyframes ai-ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-ai-ticker {
+  animation: ai-ticker 22s linear infinite;
+}

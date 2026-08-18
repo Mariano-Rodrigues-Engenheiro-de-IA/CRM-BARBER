@@ -728,15 +728,34 @@ function Painel() {
 
         {section === "agente-ia" && token && (
           <>
-            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
-              <div className="flex items-center gap-3 px-5 py-2">
-                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
-                  Agente de IA
-                </h1>
+            <header className="sticky top-0 z-10 overflow-hidden bg-brand mt-14 md:mt-0">
+              <div className="flex items-center py-2.5">
+                <div className="flex w-max shrink-0 animate-ai-ticker items-center whitespace-nowrap">
+                  {Array.from({ length: 2 }).map((_, i) => (
+                    <div key={i} className="flex shrink-0 items-center">
+                      {["Vendas", "Agendamentos", "Atendimento 24 horas", "Humanização", "Fidelização"].map((word) => (
+                        <span key={word} className="flex items-center text-[13px] font-semibold uppercase tracking-widest text-white">
+                          {word}
+                          <span className="mx-4 h-1 w-1 rounded-full bg-white/50" />
+                        </span>
+                      ))}
+                    </div>
+                  ))}
+                </div>
               </div>
             </header>
-            <main className="px-4 py-6">
-              <AgenteIaView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+            <main className="relative px-4 py-6">
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  backgroundImage:
+                    "radial-gradient(rgba(59,130,246,0.16) 1px, transparent 1px), linear-gradient(rgba(59,130,246,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,0.06) 1px, transparent 1px)",
+                  backgroundSize: "24px 24px, 48px 48px, 48px 48px",
+                }}
+              />
+              <div className="relative">
+                <AgenteIaView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+              </div>
             </main>
           </>
         )}
