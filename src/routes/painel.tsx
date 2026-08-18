@@ -1011,11 +1011,13 @@ function CardAction({
   onClick,
   disabled,
   children,
+  colorClass,
 }: {
   title: string;
   onClick: () => void;
   disabled?: boolean;
   children: React.ReactNode;
+  colorClass?: string;
 }) {
   return (
     <button
@@ -1027,7 +1029,10 @@ function CardAction({
       onPointerDown={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
-      className="grid h-7 w-7 place-items-center rounded-xl border border-neutral-300 bg-white text-neutral-600 transition hover:border-brand hover:text-brand disabled:opacity-40"
+      className={
+        "grid h-7 w-7 place-items-center rounded-xl border bg-white transition disabled:opacity-40 " +
+        (colorClass ?? "border-neutral-300 text-neutral-600 hover:border-brand hover:text-brand")
+      }
     >
       {children}
     </button>
@@ -1443,7 +1448,7 @@ function KanbanView({
                     onDragEnd={() => { setDragId(null); setOverCol(null); }}
                     onClick={() => setDetail(c)}
                     className={
-                      "cursor-grab rounded-lg border border-neutral-200 bg-neutral-50 p-2.5 text-[13px] transition hover:border-brand hover:shadow-sm active:cursor-grabbing " +
+                      "cursor-grab rounded-lg border border-sky-200 bg-neutral-50 p-2.5 text-[13px] transition hover:border-brand hover:shadow-sm active:cursor-grabbing " +
                       (dragId === c.id ? "opacity-50" : "")
                     }
                   >
@@ -1468,19 +1473,21 @@ function KanbanView({
                           <CardAction
                             title="Abrir WhatsApp / enviar resposta rápida"
                             onClick={() => setWaTarget(c)}
-                            
+                            colorClass="border-emerald-200 text-emerald-600 hover:border-emerald-400 hover:text-emerald-700"
                           >
                             <IconWhatsapp />
                           </CardAction>
                           <CardAction
                             title="Anotações"
                             onClick={() => { setDetailTab("notes"); setDetail(c); }}
+                            colorClass="border-sky-200 text-sky-600 hover:border-sky-400 hover:text-sky-700"
                           >
                             <IconNote />
                           </CardAction>
                           <CardAction
                             title="Mensagem agendada"
                             onClick={() => { setDetailTab("schedule"); setDetail(c); }}
+                            colorClass="border-orange-200 text-orange-600 hover:border-orange-400 hover:text-orange-700"
                           >
                             <IconClock />
                           </CardAction>
