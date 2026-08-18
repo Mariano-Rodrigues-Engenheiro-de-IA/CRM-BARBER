@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { youtubeThumbnail, youtubeEmbedUrl } from "@/lib/youtube";
+import { useCachedFetch } from "@/lib/api-cache";
 
 type Api = (path: string, opts?: RequestInit) => Promise<any>;
 
@@ -30,19 +31,19 @@ type Module = {
  * 3) Dentro de um módulo: lista das aulas daquele módulo só, com a
  *    primeira em destaque, e um jeito de voltar pra grade de módulos. */
 export function AulasView({ api }: { api: Api }) {
-  const [lessons, setLessons] = useState<Lesson[] | null>(null);
-  const [modules, setModules] = useState<Module[] | null>(null);
+  const { data: lessons } = useCachedFetch<Lesson[]>("training-lessons", async () => {
+    const r = await api("/api/public/extension/lessons");
+    return r?.ok ? r.lessons : [];
+  });
+  const { data: modules } = useCachedFetch<Module[]>("training-modules", async () => {
+    const r = await api("/api/public/extension/training-modules");
+    return r?.ok ? r.modules : [];
+  });
   const [playing, setPlaying] = useState<Lesson | null>(null);
   const [bannerLoaded, setBannerLoaded] = useState(false);
   const [openModuleId, setOpenModuleId] = useState<string | null>(null);
 
   useEffect(() => {
-    api("/api/public/extension/lessons").then((r) => {
-      if (r?.ok) setLessons(r.lessons);
-    });
-    api("/api/public/extension/training-modules").then((r) => {
-      if (r?.ok) setModules(r.modules);
-    });
     const img = new Image();
     img.src = "/academy/banner.jpg";
     img.onload = () => setBannerLoaded(true);
