@@ -1,10 +1,11 @@
 // Painel de Tokens de integração — extraído de admin.tokens.tsx para ser
 // reaproveitado dentro do painel admin unificado (com abas).
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { adminListShopsForTokens, adminIssueToken } from "@/lib/admin-tokens.functions";
 import { Button } from "@/components/ui/button";
+import { useCachedFetch } from "@/lib/api-cache";
 
 type Row = Awaited<ReturnType<typeof adminListShopsForTokens>>[number];
 
@@ -12,25 +13,18 @@ export function AdminTokensPanel() {
   const listShops = useServerFn(adminListShopsForTokens);
   const issueToken = useServerFn(adminIssueToken);
 
-  const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [issued, setIssued] = useState<{ barbershopId: string; barbershopName: string; token: string } | null>(null);
   const [copied, setCopied] = useState(false);
-
-  async function reload() {
+  const { data: rows, refetch } = useCachedFetch<Row[]>("admin-tokens", async () => {
     try {
-      const data = await listShops();
-      setRows(data);
+      return await listShops();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      return [];
     }
-  }
-
-  useEffect(() => {
-    void reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  });
 
   async function onIssue(barbershopId: string, barbershopName: string) {
     setBusyId(barbershopId);
@@ -39,7 +33,7 @@ export function AdminTokensPanel() {
     try {
       const res = await issueToken({ data: { barbershop_id: barbershopId } });
       setIssued({ barbershopId, barbershopName, token: res.token });
-      await reload();
+      await refetch();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
