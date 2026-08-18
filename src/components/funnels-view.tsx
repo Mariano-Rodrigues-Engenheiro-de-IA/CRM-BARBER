@@ -468,15 +468,15 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
   /** Move uma coluna (estágio) pra posição de outra — recalcula o
    * sort_order de todas as colunas do funil ativo e manda pro backend
    * de uma vez (endpoint já suporta isso, sem precisar de nada novo). */
-  async function reorderStages(fromStageId: string, toStageId: string) {
-    if (!active || fromStageId === toStageId) return;
+  async function reorderStagesToIndex(fromStageId: string, targetIndex: number) {
+    if (!active) return;
     const funnelId = active.id;
     const ordered = [...active.stages].sort((a, b) => a.sort_order - b.sort_order);
     const fromIdx = ordered.findIndex((s) => s.id === fromStageId);
-    const toIdx = ordered.findIndex((s) => s.id === toStageId);
-    if (fromIdx === -1 || toIdx === -1) return;
+    if (fromIdx === -1) return;
     const [moved] = ordered.splice(fromIdx, 1);
-    ordered.splice(toIdx, 0, moved);
+    const clampedIndex = Math.max(0, Math.min(targetIndex, ordered.length));
+    ordered.splice(clampedIndex, 0, moved);
     const withNewOrder = ordered.map((s, i) => ({ ...s, sort_order: i }));
 
     setFunnels((list) =>
@@ -666,7 +666,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
               </div>
             </div>
 
-            {active.stages.map((stage) => {
+            {active.stages.flatMap((stage, stageIndex) => {
               const allCards = stageCards(stage.id);
               const search = (stageSearch[stage.id] ?? "").trim().toLowerCase();
               const cards = search
@@ -674,15 +674,30 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                     (c) => (c.title ?? "").toLowerCase().includes(search) || (c.phone ?? "").includes(search),
                   )
                 : allCards;
-              return (
+
+              const stagePlaceholder =
+                stageDropIndicator === stageIndex ? (
+                  <div
+                    key={`stage-indicator-${stage.id}`}
+                    className="h-fit w-1 shrink-0 self-stretch rounded-full bg-brand/60 transition-all duration-150"
+                  />
+                ) : null;
+
+              const columnEl = (
                 <div
                   key={stage.id}
                   onDragOver={(e) => {
                     e.preventDefault();
                     e.dataTransfer.dropEffect = "move";
+                    if (draggedStageId.current) {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const isLeftHalf = e.clientX - rect.left < rect.width / 2;
+                      setStageDropIndicator(isLeftHalf ? stageIndex : stageIndex + 1);
+                      return;
+                    }
                     // Só atualiza pro final se não veio de um card (que já
                     // define a posição certa via stopPropagation próprio).
-                    if (dragged.current && !draggedStageId.current) {
+                    if (dragged.current) {
                       setDropIndicatorStable({ stageId: stage.id, index: cards.length });
                     }
                   }}
@@ -691,7 +706,9 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                     const draggedStage = draggedStageId.current;
                     draggedStageId.current = null;
                     if (draggedStage) {
-                      void reorderStages(draggedStage, stage.id);
+                      const targetIndex = stageDropIndicator ?? stageIndex;
+                      setStageDropIndicator(null);
+                      void reorderStagesToIndex(draggedStage, targetIndex);
                       return;
                     }
                     const contact = draggedContact.current;
@@ -742,7 +759,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                       draggedStageId.current = stage.id;
                       e.dataTransfer.effectAllowed = "move";
                     }}
-                    onDragEnd={() => { draggedStageId.current = null; }}
+                    onDragEnd={() => { draggedStageId.current = null; setStageDropIndicator(null); }}
                     title="Arrastar para reordenar"
                     className="flex cursor-grab items-center justify-between gap-2 active:cursor-grabbing"
                   >
@@ -928,7 +945,11 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                   </div>
                 </div>
               );
+              return [stagePlaceholder, columnEl].filter(Boolean);
             })}
+            {stageDropIndicator === active.stages.length && (
+              <div className="h-fit w-1 shrink-0 self-stretch rounded-full bg-brand/60 transition-all duration-150" />
+            )}
 
             {active.mode !== "label" && <AddStageColumn onAdd={(name) => void addStage(name)} />}
           </div>
