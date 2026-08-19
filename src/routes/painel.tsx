@@ -241,9 +241,10 @@ function nudgeExtensionPoll() {
   window.postMessage({ __crm: "poll_now_v180" }, window.location.origin);
 }
 
-type Section = "agenda" | "agente-ia" | "treinamento" | "configuracoes" | "assinantes" | "funis" | "disparo" | "respostas" | "equipe" | "conexao" | "templates";
-/** Sub-abas da sanfona de Assinaturas. */
-type AssinTab = "visao" | "assinantes";
+type Section = "agenda" | "agente-ia" | "treinamento" | "configuracoes" | "area-barber" | "funis" | "disparo" | "respostas" | "conexao" | "templates";
+/** Sub-abas internas da "Área Barber" — navegadas por pílulas DENTRO da
+ * tela (mesmo padrão do Disparo), não por sanfona no menu lateral. */
+type BarberTab = "visao" | "assinantes" | "equipe";
 /** Sub-abas da sanfona de Configurações. */
 type ConfigTab = "servicos" | "profissionais" | "clientes" | "gerais" | "conta";
 
@@ -254,6 +255,17 @@ function IconUsers() {
       <circle cx="9" cy="7" r="4" />
       <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+/** Tesoura — item unificado "Área Barber" (Visão geral, Assinantes e Equipe). */
+function IconScissors() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="6" cy="7" r="3" />
+      <circle cx="6" cy="17" r="3" />
+      <path d="M8.6 8.6 20 20" />
+      <path d="M8.6 15.4 20 4" />
     </svg>
   );
 }
@@ -379,13 +391,21 @@ function Painel() {
   const [loading, setLoading] = useState(false);
 
   const initialSection: Section = (() => {
-    if (typeof window === "undefined") return "assinantes";
+    if (typeof window === "undefined") return "area-barber";
     const s = new URLSearchParams(window.location.search).get("section");
-    if (s === "agenda" || s === "agente-ia" || s === "treinamento" || s === "configuracoes" || s === "equipe" || s === "conexao" || s === "respostas" || s === "funis" || s === "disparo" || s === "templates") return s;
-    return "assinantes";
+    if (s === "agenda" || s === "agente-ia" || s === "treinamento" || s === "configuracoes" || s === "area-barber" || s === "conexao" || s === "respostas" || s === "funis" || s === "disparo" || s === "templates") return s;
+    // Compatibilidade com links/favoritos antigos que apontavam direto pras
+    // seções "Assinaturas" ou "Equipe" — agora unificadas em "Área Barber".
+    return "area-barber";
   })();
   const [section, setSection] = useState<Section>(initialSection);
-  const [assinTab, setAssinTab] = useState<AssinTab>("assinantes");
+  const [barberTab, setBarberTab] = useState<BarberTab>(() => {
+    if (typeof window === "undefined") return "visao";
+    const s = new URLSearchParams(window.location.search).get("section");
+    if (s === "equipe") return "equipe";
+    if (s === "assinantes") return "assinantes";
+    return "visao";
+  });
   const [configTab, setConfigTab] = useState<ConfigTab>("servicos");
   // Sanfona do menu: guarda QUAL seção está aberta — antes era um booleano
   // único, o que abria as sub-abas de Assinaturas e Configurações juntas.
@@ -468,7 +488,7 @@ function Painel() {
 
   // Refresh silencioso ao voltar pra seção assinantes — sem "Carregando..." piscando entre abas.
   useEffect(() => {
-    if (token && section === "assinantes") reload(true);
+    if (token && section === "area-barber") reload(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [section]);
 
@@ -510,22 +530,15 @@ function Painel() {
     key: Section;
     label: string;
     icon: React.ReactNode;
-    children?: Array<{ key: AssinTab | ConfigTab; label: string }>;
+    children?: Array<{ key: ConfigTab; label: string }>;
   }> = [
     { key: "agenda", label: "Agenda", icon: <IconCalendar /> },
-    {
-      key: "assinantes",
-      label: "Assinaturas",
-      icon: <IconUsers />,
-      children: [
-        { key: "visao", label: "Visão geral" },
-        { key: "assinantes", label: "Assinantes" },
-      ],
-    },
+    // Reúne Visão geral, Assinantes e Equipe num só item — a navegação entre
+    // elas acontece por pílulas dentro da própria tela, sem sanfona no menu.
+    { key: "area-barber", label: "Área Barber", icon: <IconScissors /> },
     { key: "funis", label: "Funis de Vendas", icon: <IconChart /> },
     { key: "disparo", label: "Disparo", icon: <IconSend /> },
     { key: "respostas", label: "Respostas rápidas", icon: <IconChat /> },
-    { key: "equipe", label: "Equipe", icon: <IconTrophy /> },
     ...(isAdmin ? [{ key: "templates" as Section, label: "Modelos", icon: <IconNote /> }] : []),
 
     { key: "conexao", label: "Conexão", icon: <IconPlug /> },
@@ -644,14 +657,13 @@ function Painel() {
                 {open && n.children && (
                   <div className="mt-1 space-y-0.5 border-l border-sidebar-border pl-3 ml-4">
                     {n.children.map((sub) => {
-                      const isSubActive = n.key === "assinantes" ? assinTab === sub.key : n.key === "configuracoes" ? configTab === sub.key : false;
+                      const isSubActive = n.key === "configuracoes" ? configTab === sub.key : false;
                       return (
                         <button
                           key={sub.key}
                           onClick={() => {
                             setSection(n.key);
-                            if (n.key === "assinantes") setAssinTab(sub.key as AssinTab);
-                            else if (n.key === "configuracoes") setConfigTab(sub.key as ConfigTab);
+                            if (n.key === "configuracoes") setConfigTab(sub.key as ConfigTab);
                           }}
                           className={
                             "block w-full rounded-lg px-3 py-1.5 text-left text-[13px] transition " +
@@ -809,22 +821,52 @@ function Painel() {
           </>
         )}
 
-        {section === "assinantes" && (
+        {section === "area-barber" && (
           <>
             <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
               <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-2">
                 <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
-                  {assinTab === "visao" ? "Visão geral" : "Assinantes"}
+                  {barberTab === "visao" ? "Visão geral" : barberTab === "assinantes" ? "Assinantes" : "Equipe"}
                 </h1>
-                <div ref={setAssinHeaderEl} className="flex shrink-0 items-center gap-2" />
+                <div className="flex shrink-0 items-center gap-3">
+                  {barberTab === "assinantes" && (
+                    <div ref={setAssinHeaderEl} className="flex shrink-0 items-center gap-2" />
+                  )}
+                  {barberTab === "equipe" && billing?.premium !== false && (
+                    <div ref={setEquipeHeaderEl} className="flex shrink-0 items-center gap-2" />
+                  )}
+                  {/* Pílulas de navegação interna — mesmo padrão já usado em
+                      Disparo (Novo disparo/Campanhas): troca o conteúdo sem
+                      empilhar menus ou sair da tela. */}
+                  <nav className="flex shrink-0 gap-1 rounded-lg bg-neutral-100 p-1">
+                    {(
+                      [
+                        { key: "visao", label: "Visão geral" },
+                        { key: "assinantes", label: "Assinantes" },
+                        { key: "equipe", label: "Equipe" },
+                      ] as const
+                    ).map((t) => (
+                      <button
+                        key={t.key}
+                        onClick={() => setBarberTab(t.key)}
+                        className={
+                          "rounded-md px-3 py-1.5 text-xs font-medium transition " +
+                          (barberTab === t.key ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
+                        }
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </nav>
+                </div>
               </div>
             </header>
 
             <main className="px-4 py-3">
-              {assinTab === "visao" && (
+              {barberTab === "visao" && (
                 <OverviewView customers={subscribers} shopId={shop?.id ?? "default"} />
               )}
-              {assinTab === "assinantes" && (
+              {barberTab === "assinantes" && (
                 <KanbanView
                   customers={subscribers}
                   loading={loading}
@@ -832,8 +874,32 @@ function Painel() {
                   reload={reload}
                   shopId={shop?.id ?? "default"}
                   headerHost={assinHeaderEl}
-                  onGoSettings={() => setAssinTab("visao")}
+                  onGoSettings={() => setBarberTab("visao")}
                 />
+              )}
+              {barberTab === "equipe" && (
+                billing && !billing.premium ? (
+                  <div className="mx-auto max-w-lg rounded-xl border border-neutral-300 bg-white p-8 text-center">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-yellow-600">
+                      Recurso Premium
+                    </p>
+                    <h2 className="mt-2 text-xl font-bold text-neutral-900">
+                      Gestão de equipe e vendas
+                    </h2>
+                    <p className="mt-2 text-sm text-neutral-600">
+                      Lançamento de vendas por barbeiro, ranking gamificado, ranking de clientes e
+                      histórico de consumo fazem parte do plano pago.
+                    </p>
+                    <button
+                      onClick={openCheckout}
+                      className="mt-6 w-full rounded-xl bg-yellow-400 px-4 py-3 text-sm font-bold text-neutral-950 transition hover:bg-yellow-300"
+                    >
+                      Assinar Premium por {PROMO_PRICE_LABEL}
+                    </button>
+                  </div>
+                ) : (
+                  <TeamView shopId={shop?.id ?? "default"} headerHost={equipeHeaderEl} />
+                )
               )}
             </main>
           </>
@@ -908,46 +974,6 @@ function Painel() {
             </main>
           </>
         )}
-
-        {section === "equipe" && (
-          <>
-            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-2">
-                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
-                  Equipe
-                </h1>
-                {billing?.premium !== false && (
-                  <div ref={setEquipeHeaderEl} className="flex shrink-0 items-center gap-2" />
-                )}
-              </div>
-            </header>
-            <main className="px-4 py-4">
-              {billing && !billing.premium ? (
-                <div className="mx-auto max-w-lg rounded-xl border border-neutral-300 bg-white p-8 text-center">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-yellow-600">
-                    Recurso Premium
-                  </p>
-                  <h2 className="mt-2 text-xl font-bold text-neutral-900">
-                    Gestão de equipe e vendas
-                  </h2>
-                  <p className="mt-2 text-sm text-neutral-600">
-                    Lançamento de vendas por barbeiro, ranking gamificado, ranking de clientes e
-                    histórico de consumo fazem parte do plano pago.
-                  </p>
-                  <button
-                    onClick={openCheckout}
-                    className="mt-6 w-full rounded-xl bg-yellow-400 px-4 py-3 text-sm font-bold text-neutral-950 transition hover:bg-yellow-300"
-                  >
-                    Assinar Premium por {PROMO_PRICE_LABEL}
-                  </button>
-                </div>
-              ) : (
-                <TeamView shopId={shop?.id ?? "default"} headerHost={equipeHeaderEl} />
-              )}
-            </main>
-          </>
-        )}
-
 
         {section === "conexao" && token && (
           <>
