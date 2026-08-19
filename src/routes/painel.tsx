@@ -247,6 +247,25 @@ type AssinTab = "visao" | "assinantes";
 /** Sub-abas da sanfona de Configurações. */
 type ConfigTab = "servicos" | "profissionais" | "clientes" | "gerais" | "conta";
 
+/** Selo de assinante ativo — assinatura/fidelidade, sem usar ícone de pessoas. */
+function IconBadgeCheck() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8.5 12.3 11 14.8l4.5-5" />
+    </svg>
+  );
+}
+/** Barras ascendentes — ranking de vendas (não amarrado a "barbeiro"/troféu). */
+function IconRankingBars() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3.5" y="13" width="4.5" height="7" rx="1" />
+      <rect x="9.75" y="9" width="4.5" height="11" rx="1" />
+      <rect x="16" y="4.5" width="4.5" height="15.5" rx="1" />
+    </svg>
+  );
+}
 function IconUsers() {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -276,10 +295,12 @@ function IconGear({ size = 18 }: { size?: number }) {
     </svg>
   );
 }
+/** Balão de conversa com indicador de "resposta pronta" (pontinhos). */
 function IconChat() {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-4.9A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z" />
+      <path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01" strokeWidth="2.6" />
     </svg>
   );
 }
@@ -299,10 +320,14 @@ function IconChevron({ className = "" }: { className?: string }) {
   );
 }
 /** Aviãozinho — seção de Disparo. */
+/** Sinal de transmissão — mensagem indo pra uma base grande de contatos (disparo em massa). */
 function IconSend() {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4Z" />
+      <path d="M12 19.5h.01" />
+      <path d="M9.2 16.8a4 4 0 0 1 5.6 0" />
+      <path d="M6.5 14a7.8 7.8 0 0 1 11 0" />
+      <path d="M3.8 11.2a11.6 11.6 0 0 1 16.4 0" />
     </svg>
   );
 }
@@ -314,11 +339,13 @@ function IconCalendar() {
   );
 }
 /** Plug — seção de Conexão (não repetir o ícone de Assinaturas). */
+/** Link/corrente — plugue trocado por um símbolo mais "conexão/integração". */
 function IconPlug() {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 2v6" /><path d="M15 2v6" />
-      <path d="M6 8h12v3a6 6 0 0 1-6 6 6 6 0 0 1-6-6Z" /><path d="M12 17v5" />
+      <path d="M9.5 14.5 14.5 9.5" />
+      <path d="M11 5.2 12 4.2a3.6 3.6 0 1 1 5.1 5.1l-1 1" />
+      <path d="M13 18.8 12 19.8a3.6 3.6 0 1 1-5.1-5.1l1-1" />
     </svg>
   );
 }
@@ -513,19 +540,19 @@ function Painel() {
     children?: Array<{ key: AssinTab | ConfigTab; label: string }>;
   }> = [
     { key: "agenda", label: "Agenda", icon: <IconCalendar /> },
+    { key: "funis", label: "Funis de Vendas", icon: <IconChart /> },
+    { key: "disparo", label: "Disparo", icon: <IconSend /> },
+    { key: "respostas", label: "Respostas rápidas", icon: <IconChat /> },
     {
       key: "assinantes",
       label: "Assinaturas",
-      icon: <IconUsers />,
+      icon: <IconBadgeCheck />,
       children: [
         { key: "visao", label: "Visão geral" },
         { key: "assinantes", label: "Assinantes" },
       ],
     },
-    { key: "funis", label: "Funis de Vendas", icon: <IconChart /> },
-    { key: "disparo", label: "Disparo", icon: <IconSend /> },
-    { key: "respostas", label: "Respostas rápidas", icon: <IconChat /> },
-    { key: "equipe", label: "Equipe", icon: <IconTrophy /> },
+    { key: "equipe", label: "Ranking de vendas", icon: <IconRankingBars /> },
     ...(isAdmin ? [{ key: "templates" as Section, label: "Modelos", icon: <IconNote /> }] : []),
 
     { key: "conexao", label: "Conexão", icon: <IconPlug /> },
@@ -914,7 +941,7 @@ function Painel() {
             <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
               <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-2">
                 <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
-                  Equipe
+                  Ranking de vendas
                 </h1>
                 {billing?.premium !== false && (
                   <div ref={setEquipeHeaderEl} className="flex shrink-0 items-center gap-2" />
@@ -928,10 +955,10 @@ function Painel() {
                     Recurso Premium
                   </p>
                   <h2 className="mt-2 text-xl font-bold text-neutral-900">
-                    Gestão de equipe e vendas
+                    Ranking de vendas
                   </h2>
                   <p className="mt-2 text-sm text-neutral-600">
-                    Lançamento de vendas por barbeiro, ranking gamificado, ranking de clientes e
+                    Lançamento de vendas por profissional, ranking da equipe, ranking de clientes e
                     histórico de consumo fazem parte do plano pago.
                   </p>
                   <button
@@ -996,12 +1023,13 @@ function IconWhatsapp() {
     </svg>
   );
 }
+/** Layout de template — retângulo com cabeçalho + linhas de conteúdo. */
 function IconNote() {
   return (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 3.5h9.5L19 7v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1Z" />
-      <path d="M15.2 3.5V7h3.6" />
-      <path d="M8.3 12h7M8.3 15.3h7M8.3 18.5h4.3" />
+      <rect x="4.5" y="3.5" width="15" height="17" rx="1.6" />
+      <path d="M4.5 8.5h15" />
+      <path d="M8 12.3h8M8 15.5h5.5" />
     </svg>
   );
 }
