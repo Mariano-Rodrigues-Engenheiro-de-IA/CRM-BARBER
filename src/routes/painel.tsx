@@ -7,7 +7,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { TeamView, loadState as loadTeamState, type Entry as TeamEntry } from "@/components/team-view";
+import { TeamView } from "@/components/team-view";
 import { ConnectionView } from "@/components/connection-view";
 import { QuickRepliesView } from "@/components/quick-replies-view";
 import { TemplatesView } from "@/components/templates-view";
@@ -17,20 +17,6 @@ import { sendWaAction, isRealPhone, openWhatsappChat, applyFunnelActions } from 
 
 import { sendableActions, type QuickReply } from "@/lib/quick-replies";
 import { FREE_LIMITS, PROMO_PRICE_LABEL, type BillingStatus } from "@/lib/billing";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-} from "recharts";
 
 import { useConfirm } from "@/components/confirm-dialog";
 import { AgendaView } from "@/components/agenda-view";
@@ -2284,15 +2270,6 @@ function Modal({
  * Visão geral das assinaturas: gamificação da meta + configurações
  * (sistema, planos e meta). Antes era um modal; virou sub-aba.
  */
-/** Paleta fixa pros gráficos (recharts não lê classes Tailwind, precisa de
- * cor literal). Segue a marca (#3d5fa8) + amarelo já usado na meta. */
-const CHART_COLORS = {
-  assinaturas: "#3d5fa8",
-  servicos: "#facc15",
-  produtos: "#34d399",
-  extras: "#a3a3a3",
-};
-
 function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: string }) {
   const [system, setSystem] = useState<SubscriptionSystemId | "">(() => readSystem(shopId) ?? "");
   const [plans, setPlans] = useState<Plan[]>(() => readPlans(shopId));
@@ -2304,69 +2281,6 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
   const missing = Math.max(0, goal - totalSubs);
   const pct = goal > 0 ? Math.min(100, Math.round((totalSubs / goal) * 100)) : 0;
   const mrr = actives.reduce((sum, c) => sum + priceOf(plans, planFromTags(c.tags)), 0);
-
-  // Dados de Equipe (vendas de serviços/produtos) — mesmo storage local usado
-  // pela aba Equipe, lido aqui só pra compor o dashboard da Visão geral.
-  const [team, setTeam] = useState(() => loadTeamState(shopId));
-  useEffect(() => {
-    setTeam(loadTeamState(shopId));
-  }, [shopId]);
-
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const entriesThisMonth = team.entries.filter((e) => new Date(e.createdAt) >= monthStart);
-
-  const revenueByKind = { service: 0, product: 0, extra: 0 };
-  for (const e of entriesThisMonth) revenueByKind[e.kind] += e.amountCents;
-  const teamRevenue = revenueByKind.service + revenueByKind.product + revenueByKind.extra;
-
-  const revenueComposition = [
-    { name: "Assinaturas", value: mrr, color: CHART_COLORS.assinaturas },
-    { name: "Serviços", value: revenueByKind.service, color: CHART_COLORS.servicos },
-    { name: "Produtos", value: revenueByKind.product, color: CHART_COLORS.produtos },
-    { name: "Extras", value: revenueByKind.extra, color: CHART_COLORS.extras },
-  ].filter((d) => d.value > 0);
-
-  // Faturamento por dia — últimos 14 dias (serviços + produtos + extras).
-  const dailyTrend = Array.from({ length: 14 }, (_, i) => {
-    const day = new Date(now);
-    day.setDate(day.getDate() - (13 - i));
-    day.setHours(0, 0, 0, 0);
-    const next = new Date(day);
-    next.setDate(next.getDate() + 1);
-    const total = team.entries
-      .filter((e) => {
-        const t = new Date(e.createdAt);
-        return t >= day && t < next;
-      })
-      .reduce((sum, e) => sum + e.amountCents, 0);
-    return { label: day.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), total: total / 100 };
-  });
-
-  // Ranking da equipe — top 5 por faturamento do mês.
-  const revenueByMember = new Map<string, number>();
-  for (const e of entriesThisMonth) revenueByMember.set(e.memberId, (revenueByMember.get(e.memberId) ?? 0) + e.amountCents);
-  const teamRanking = [...revenueByMember.entries()]
-    .map(([memberId, cents]) => ({
-      name: team.members.find((m) => m.id === memberId)?.name ?? "—",
-      total: cents / 100,
-    }))
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 5);
-
-  // Top produtos vendidos no mês — agrupado por nome (label salvo na venda).
-  const revenueByProduct = new Map<string, { qty: number; cents: number }>();
-  for (const e of entriesThisMonth) {
-    if (e.kind !== "product") continue;
-    const cur = revenueByProduct.get(e.label) ?? { qty: 0, cents: 0 };
-    cur.qty += 1;
-    cur.cents += e.amountCents;
-    revenueByProduct.set(e.label, cur);
-  }
-  const topProducts = [...revenueByProduct.entries()]
-    .map(([name, v]) => ({ name, qty: v.qty, total: v.cents / 100 }))
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 5);
 
   function saveSystem(id: SubscriptionSystemId) {
     setSystem(id);
@@ -2391,26 +2305,6 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-5">
-      {/* KPIs gerais — assinaturas, equipe e produtos numa única leitura */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-xl border border-neutral-300 bg-white p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500">Assinantes ativos</p>
-          <p className="mt-1 text-2xl font-semibold text-neutral-950">{totalSubs}</p>
-        </div>
-        <div className="rounded-xl border border-neutral-300 bg-white p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500">Receita recorrente</p>
-          <p className="mt-1 text-2xl font-semibold text-neutral-950">{formatBRL(mrr)}</p>
-        </div>
-        <div className="rounded-xl border border-neutral-300 bg-white p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500">Faturamento equipe (mês)</p>
-          <p className="mt-1 text-2xl font-semibold text-neutral-950">{formatBRL(teamRevenue)}</p>
-        </div>
-        <div className="rounded-xl border border-neutral-300 bg-white p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500">Vendas de produto (mês)</p>
-          <p className="mt-1 text-2xl font-semibold text-neutral-950">{formatBRL(revenueByKind.product)}</p>
-        </div>
-      </div>
-
       {/* Meta do mês — o número de assinantes é o herói do card */}
       <div className="rounded-xl border border-neutral-300 bg-white p-6 shadow-sm">
         <div className="flex items-start justify-between gap-6">
@@ -2446,106 +2340,6 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
         </div>
       </div>
 
-      {/* Faturamento por dia — serviços + produtos + extras, últimos 14 dias */}
-      <div className="rounded-xl border border-neutral-300 bg-white p-5 shadow-sm">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-          Faturamento da equipe · últimos 14 dias
-        </h3>
-        <div className="mt-3 h-56 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={dailyTrend} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-              <CartesianGrid vertical={false} stroke="#f0f0f0" />
-              <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#a3a3a3" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "#a3a3a3" }} axisLine={false} tickLine={false} width={48} />
-              <Tooltip
-                formatter={(v: number) => formatBRL(Math.round(v * 100))}
-                contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #e5e5e5" }}
-              />
-              <Bar dataKey="total" name="Faturamento" fill={CHART_COLORS.assinaturas} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      <div className="grid gap-5 sm:grid-cols-2">
-        {/* Composição da receita do mês */}
-        <div className="rounded-xl border border-neutral-300 bg-white p-5 shadow-sm">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-            Composição da receita do mês
-          </h3>
-          {revenueComposition.length === 0 ? (
-            <p className="mt-6 text-center text-xs text-neutral-400">Sem dados ainda este mês.</p>
-          ) : (
-            <>
-              <div className="mt-2 h-48 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={revenueComposition} dataKey="value" nameKey="name" innerRadius={45} outerRadius={70} paddingAngle={2}>
-                      {revenueComposition.map((d) => (
-                        <Cell key={d.name} fill={d.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(v: number) => formatBRL(v)} contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #e5e5e5" }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-                {revenueComposition.map((d) => (
-                  <div key={d.name} className="flex items-center gap-1.5 text-xs text-neutral-600">
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: d.color }} />
-                    {d.name}
-                  </div>
-                ))}
-              </div>
-              <p className="mt-2 text-[11px] text-neutral-400">
-                Assinaturas considera a receita recorrente atual (MRR); os demais valores são o realizado no mês.
-              </p>
-            </>
-          )}
-        </div>
-
-        {/* Ranking da equipe */}
-        <div className="rounded-xl border border-neutral-300 bg-white p-5 shadow-sm">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-            Ranking da equipe · mês
-          </h3>
-          {teamRanking.length === 0 ? (
-            <p className="mt-6 text-center text-xs text-neutral-400">Nenhuma venda lançada este mês.</p>
-          ) : (
-            <div className="mt-3 h-48 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={teamRanking} layout="vertical" margin={{ top: 0, right: 12, left: 0, bottom: 0 }}>
-                  <XAxis type="number" hide />
-                  <YAxis type="category" dataKey="name" width={90} tick={{ fontSize: 11, fill: "#525252" }} axisLine={false} tickLine={false} />
-                  <Tooltip formatter={(v: number) => formatBRL(Math.round(v * 100))} contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #e5e5e5" }} />
-                  <Bar dataKey="total" name="Faturamento" fill={CHART_COLORS.assinaturas} radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Top produtos vendidos no mês */}
-      <div className="rounded-xl border border-neutral-300 bg-white p-5 shadow-sm">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-          Produtos mais vendidos · mês
-        </h3>
-        {topProducts.length === 0 ? (
-          <p className="mt-3 text-xs text-neutral-400">Nenhuma venda de produto lançada este mês.</p>
-        ) : (
-          <div className="mt-3 space-y-2">
-            {topProducts.map((p, i) => (
-              <div key={p.name} className="flex items-center gap-3">
-                <span className="w-4 shrink-0 text-xs font-semibold text-neutral-400">{i + 1}º</span>
-                <span className="min-w-0 flex-1 truncate text-sm text-neutral-800">{p.name}</span>
-                <span className="shrink-0 text-xs text-neutral-500">{p.qty}x</span>
-                <span className="w-20 shrink-0 text-right text-sm font-semibold text-neutral-900">{formatBRL(Math.round(p.total * 100))}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
 
       <div className="space-y-5 rounded-xl border border-neutral-300 bg-white p-5 shadow-sm">
 
