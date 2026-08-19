@@ -378,9 +378,9 @@ function IconPlug() {
 function IconGraduationCap() {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 10 12 5 2 10l10 5 10-5Z" />
-      <path d="M6 12v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5" />
-      <path d="M22 10v6" />
+      <path d="M23 9 12 3 1 9l11 6 11-6Z" />
+      <path d="M5 11.5v5c0 1.8 3.1 3.5 7 3.5s7-1.7 7-3.5v-5" />
+      <path d="M23 9v7" />
     </svg>
   );
 }
@@ -388,10 +388,10 @@ function IconGraduationCap() {
 function IconRobot() {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="4" y="9" width="16" height="11" rx="2" />
-      <path d="M12 9V5" /><circle cx="12" cy="3.5" r="1.5" />
-      <circle cx="9" cy="14" r="1" /><circle cx="15" cy="14" r="1" />
-      <path d="M2 13v3M22 13v3" />
+      <rect x="3" y="8.5" width="18" height="12.5" rx="2.5" />
+      <path d="M12 8.5V4" /><circle cx="12" cy="2.5" r="1.6" />
+      <circle cx="8.5" cy="14.5" r="1.2" /><circle cx="15.5" cy="14.5" r="1.2" />
+      <path d="M1 12.5v4M23 12.5v4" />
     </svg>
   );
 }
@@ -625,7 +625,7 @@ function Painel() {
               src="/brand/zaylo-icon.png"
               alt="CRM Zaylo"
               className={
-                "absolute h-7 w-auto object-contain transition-opacity duration-200 " +
+                "absolute h-8 w-auto object-contain transition-opacity duration-200 " +
                 (sidebarCollapsed ? "opacity-100" : "opacity-0")
               }
             />
@@ -1026,7 +1026,7 @@ function IconWhatsapp() {
 /** Layout de template — retângulo com cabeçalho + linhas de conteúdo. */
 function IconNote() {
   return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <rect x="4.5" y="3.5" width="15" height="17" rx="1.6" />
       <path d="M4.5 8.5h15" />
       <path d="M8 12.3h8M8 15.5h5.5" />
