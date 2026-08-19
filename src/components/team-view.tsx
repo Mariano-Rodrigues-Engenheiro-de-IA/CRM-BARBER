@@ -172,6 +172,7 @@ export function TeamView({
   headerHost,
   api,
   onGoToSettings,
+  customers,
 }: {
   shopId: string;
   headerHost?: HTMLDivElement | null;
@@ -179,6 +180,10 @@ export function TeamView({
    * produtos. Cadastro deles é feito em Configurações, não aqui. */
   api: (path: string, opts?: RequestInit) => Promise<any>;
   onGoToSettings?: (tab: "profissionais" | "servicos" | "produtos") => void;
+  /** Contatos reais do CRM (mesma base usada em Agenda/Assinaturas) — usado
+   * pra popular o seletor de cliente ao lançar uma venda, em vez de manter
+   * um cadastro de clientes separado só pra essa tela. */
+  customers?: Array<{ id: string; name: string; phone: string }>;
 }) {
   const { confirm, dialog } = useConfirm();
   const [state, setState] = useState<TeamState>(DEFAULT_STATE);
@@ -231,6 +236,25 @@ export function TeamView({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopId]);
+
+  // Clientes reais do CRM (mesma base do resto do sistema) — mesclados com
+  // qualquer cliente avulso já cadastrado só aqui (dedupe por id). Efeito
+  // separado do catálogo pra não refazer as chamadas de API toda vez que a
+  // lista de contatos mudar.
+  useEffect(() => {
+    const apiClients: Client[] = (customers ?? []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      phone: c.phone || undefined,
+      createdAt: "",
+    }));
+    if (apiClients.length === 0) return;
+    setState((prev) => ({
+      ...prev,
+      clients: [...apiClients, ...prev.clients.filter((c) => !apiClients.some((ac) => ac.id === c.id))],
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customers]);
 
   useEffect(() => {
     if (ready) saveState(shopId, state);
@@ -637,6 +661,32 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub?: string
 
 // --- Modals ---
 
+/** Ícones neutros pro tipo de venda — sem remeter a nenhum nicho específico. */
+function IconClipboardCheck() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="5.5" y="4" width="13" height="16" rx="2" />
+      <path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" />
+      <path d="M9 12.3l2 2 4-4.3" />
+    </svg>
+  );
+}
+function IconShoppingBag() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 8h12l-1 12.5a1 1 0 0 1-1 .9H8a1 1 0 0 1-1-.9L6 8Z" />
+      <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+    </svg>
+  );
+}
+function IconStarOutline() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3.5l2.6 5.4 5.9.6-4.4 4 1.2 5.9L12 16.5l-5.3 2.9 1.2-5.9-4.4-4 5.9-.6L12 3.5Z" />
+    </svg>
+  );
+}
+
 function AddEntryModal({
   member,
   config,
@@ -706,22 +756,23 @@ function AddEntryModal({
           <div className="grid grid-cols-3 gap-2">
             {(
               [
-                { k: "service", label: "✂️ Serviço" },
-                { k: "product", label: "🛒 Produto" },
-                { k: "extra", label: "🎯 Extra" },
-              ] as const
+                { k: "service" as const, label: "Serviço", icon: <IconClipboardCheck /> },
+                { k: "product" as const, label: "Produto", icon: <IconShoppingBag /> },
+                { k: "extra" as const, label: "Extra", icon: <IconStarOutline /> },
+              ]
             ).map((o) => (
               <button
                 key={o.k}
                 type="button"
                 onClick={() => { setKind(o.k); setLabel(""); setAmount(""); }}
                 className={
-                  "rounded-lg border px-3 py-2 text-sm font-medium " +
+                  "flex flex-col items-center gap-1 rounded-lg border px-3 py-2.5 text-sm font-medium " +
                   (kind === o.k
                     ? "border-brand bg-brand text-white"
                     : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400")
                 }
               >
+                {o.icon}
                 {o.label}
               </button>
             ))}

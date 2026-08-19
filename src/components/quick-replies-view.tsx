@@ -85,8 +85,7 @@ export function QuickRepliesView({ token, api }: { token: string; api: ApiFn }) 
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-neutral-900">Respostas rápidas</h2>
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <button
           onClick={() => setEditing("new")}
           className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong"

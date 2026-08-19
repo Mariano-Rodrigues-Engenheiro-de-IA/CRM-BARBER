@@ -348,14 +348,11 @@ function SectionHeader({
     </header>
   );
 }
-/** Sinal de transmissão — mensagem indo pra uma base grande de contatos (disparo em massa). */
+/** Aviãozinho de disparo — o clássico ícone de "enviar em massa". */
 function IconSend() {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 19.5h.01" />
-      <path d="M9.2 16.8a4 4 0 0 1 5.6 0" />
-      <path d="M6.5 14a7.8 7.8 0 0 1 11 0" />
-      <path d="M3.8 11.2a11.6 11.6 0 0 1 16.4 0" />
+      <path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4Z" />
     </svg>
   );
 }
@@ -777,7 +774,7 @@ function Painel() {
       <div className="flex-1 min-w-0">
         {section === "agenda" && token && (
           <>
-            <SectionHeader icon={<IconCalendar />} title="Agenda" subtitle="Seus horários e agendamentos do dia" />
+            <SectionHeader icon={<IconCalendar />} title="Agenda" />
             <main className="px-4 py-4">
               <AgendaView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
             </main>
@@ -821,9 +818,9 @@ function Painel() {
         {section === "treinamento" && token && (
           <>
             <header className="sticky top-0 z-10 bg-brand mt-14 md:mt-0">
-              <div className="flex items-center gap-2 px-5 py-2">
+              <div className="flex items-center gap-2.5 px-5 py-3">
                 <span className="text-white"><IconGraduationCap /></span>
-                <h1 className="truncate text-[13px] font-bold uppercase tracking-[0.2em] text-white">
+                <h1 className="truncate text-[15px] font-medium leading-tight text-white">
                   Treinamentos
                 </h1>
               </div>
@@ -836,18 +833,19 @@ function Painel() {
 
         {section === "configuracoes" && token && (
           <>
-            <header className="sticky top-0 z-10 bg-brand mt-14 md:mt-0">
-              <div className="flex items-center gap-2 px-5 py-2">
-                <span className="text-white"><IconGear /></span>
-                <h1 className="truncate text-[13px] font-bold uppercase tracking-[0.2em] text-white">
-                  {configTab === "servicos" && "Configurações · Serviços"}
-                  {configTab === "profissionais" && "Configurações · Profissionais"}
-                  {configTab === "clientes" && "Configurações · Clientes"}
-                  {configTab === "gerais" && "Configurações · Gerais"}
-                  {configTab === "conta" && "Configurações · Minha conta"}
-                </h1>
-              </div>
-            </header>
+            <SectionHeader
+              icon={<IconGear />}
+              title="Configurações"
+              subtitle={
+                (configTab === "servicos" && "Serviços") ||
+                (configTab === "produtos" && "Produtos") ||
+                (configTab === "profissionais" && "Profissionais") ||
+                (configTab === "clientes" && "Clientes") ||
+                (configTab === "gerais" && "Gerais") ||
+                (configTab === "conta" && "Minha conta") ||
+                undefined
+              }
+            />
             <main className="px-4 py-4">
               {configTab === "servicos" && <ServicesTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
               {configTab === "produtos" && <ProductsTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
@@ -864,7 +862,7 @@ function Painel() {
             <SectionHeader
               icon={<IconBadgeCheck />}
               title={assinTab === "visao" ? "Visão geral" : "Assinantes"}
-              subtitle={assinTab === "visao" ? "Meta do mês e receita recorrente" : "Gerencie os clientes com assinatura ativa"}
+              subtitle={assinTab === "visao" ? "Meta do mês e receita recorrente" : undefined}
               right={<div ref={setAssinHeaderEl} className="flex shrink-0 items-center gap-2" />}
             />
 
@@ -889,11 +887,10 @@ function Painel() {
 
         {section === "disparo" && token && (
           <>
-            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-2.5">
-                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
-                  Disparo
-                </h1>
+            <SectionHeader
+              icon={<IconSend />}
+              title="Disparo"
+              right={
                 <nav className="flex shrink-0 gap-1 rounded-lg bg-neutral-100 p-1">
                   {(["novo", "campanhas"] as const).map((t) => (
                     <button
@@ -908,8 +905,8 @@ function Painel() {
                     </button>
                   ))}
                 </nav>
-              </div>
-            </header>
+              }
+            />
             <main className="px-4 py-4">
               {disparoTab === "novo" && (
                 <DispatchCenter
@@ -943,14 +940,7 @@ function Painel() {
 
         {section === "respostas" && token && (
           <>
-            <header className="sticky top-0 z-10 bg-brand mt-14 md:mt-0">
-              <div className="flex items-center gap-2 px-5 py-2">
-                <span className="text-white"><IconChat /></span>
-                <h1 className="truncate text-[13px] font-bold uppercase tracking-[0.2em] text-white">
-                  Respostas rápidas
-                </h1>
-              </div>
-            </header>
+            <SectionHeader icon={<IconChat />} title="Respostas rápidas" />
             <main className="px-4 py-4">
               <QuickRepliesView token={token} api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
             </main>
@@ -990,6 +980,7 @@ function Painel() {
                   shopId={shop?.id ?? "default"}
                   headerHost={equipeHeaderEl}
                   api={(path: string, opts?: RequestInit) => api(token, path, opts)}
+                  customers={customers}
                   onGoToSettings={(tab) => {
                     setSection("configuracoes");
                     setConfigTab(tab);
@@ -1003,14 +994,7 @@ function Painel() {
 
         {section === "conexao" && token && (
           <>
-            <header className="sticky top-0 z-10 bg-brand mt-14 md:mt-0">
-              <div className="flex items-center gap-2 px-5 py-2">
-                <span className="text-white"><IconPlug /></span>
-                <h1 className="truncate text-[13px] font-bold uppercase tracking-[0.2em] text-white">
-                  Conexão
-                </h1>
-              </div>
-            </header>
+            <SectionHeader icon={<IconPlug />} title="Conexão" />
             <main className="max-w-3xl px-4 py-4">
               <ConnectionView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
             </main>
@@ -1019,14 +1003,7 @@ function Painel() {
 
         {section === "templates" && token && isAdmin && (
           <>
-            <header className="sticky top-0 z-10 bg-brand mt-14 md:mt-0">
-              <div className="flex items-center gap-2 px-5 py-2">
-                <span className="text-white"><IconNote /></span>
-                <h1 className="truncate text-[13px] font-bold uppercase tracking-[0.2em] text-white">
-                  Modelos de mensagem
-                </h1>
-              </div>
-            </header>
+            <SectionHeader icon={<IconNote />} title="Modelos de mensagem" />
             <main className="max-w-3xl px-4 py-4">
               <TemplatesView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
             </main>
