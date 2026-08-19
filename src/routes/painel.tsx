@@ -319,7 +319,35 @@ function IconChevron({ className = "" }: { className?: string }) {
     </svg>
   );
 }
-/** Aviãozinho — seção de Disparo. */
+/** Cabeçalho padrão das telas — ícone num quadrado colorido + título com peso
+ * de verdade (não mais caps-lock) + linha de apoio opcional. Piloto em
+ * Agenda / Assinaturas / Ranking de vendas antes de estender pro resto. */
+function SectionHeader({
+  icon,
+  title,
+  subtitle,
+  right,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  subtitle?: string;
+  right?: React.ReactNode;
+}) {
+  return (
+    <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
+      <div className="flex items-center gap-3 px-5 py-3">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
+          {icon}
+        </div>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-[15px] font-medium leading-tight text-neutral-900">{title}</h1>
+          {subtitle && <p className="truncate text-xs text-neutral-500">{subtitle}</p>}
+        </div>
+        {right && <div className="flex shrink-0 items-center gap-2">{right}</div>}
+      </div>
+    </header>
+  );
+}
 /** Sinal de transmissão — mensagem indo pra uma base grande de contatos (disparo em massa). */
 function IconSend() {
   return (
@@ -749,14 +777,7 @@ function Painel() {
       <div className="flex-1 min-w-0">
         {section === "agenda" && token && (
           <>
-            <header className="sticky top-0 z-10 bg-brand mt-14 md:mt-0">
-              <div className="flex items-center gap-2 px-5 py-2">
-                <span className="text-white"><IconCalendar /></span>
-                <h1 className="truncate text-[13px] font-bold uppercase tracking-[0.2em] text-white">
-                  Agenda
-                </h1>
-              </div>
-            </header>
+            <SectionHeader icon={<IconCalendar />} title="Agenda" subtitle="Seus horários e agendamentos do dia" />
             <main className="px-4 py-4">
               <AgendaView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
             </main>
@@ -840,14 +861,12 @@ function Painel() {
 
         {section === "assinantes" && (
           <>
-            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-2">
-                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
-                  {assinTab === "visao" ? "Visão geral" : "Assinantes"}
-                </h1>
-                <div ref={setAssinHeaderEl} className="flex shrink-0 items-center gap-2" />
-              </div>
-            </header>
+            <SectionHeader
+              icon={<IconBadgeCheck />}
+              title={assinTab === "visao" ? "Visão geral" : "Assinantes"}
+              subtitle={assinTab === "visao" ? "Meta do mês e receita recorrente" : "Gerencie os clientes com assinatura ativa"}
+              right={<div ref={setAssinHeaderEl} className="flex shrink-0 items-center gap-2" />}
+            />
 
             <main className="px-4 py-3">
               {assinTab === "visao" && (
@@ -940,16 +959,12 @@ function Painel() {
 
         {section === "equipe" && token && (
           <>
-            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-2">
-                <h1 className="truncate text-[13px] font-semibold uppercase tracking-widest text-neutral-900">
-                  Ranking de vendas
-                </h1>
-                {billing?.premium !== false && (
-                  <div ref={setEquipeHeaderEl} className="flex shrink-0 items-center gap-2" />
-                )}
-              </div>
-            </header>
+            <SectionHeader
+              icon={<IconRankingBars />}
+              title="Ranking de vendas"
+              subtitle="Desempenho da equipe por faturamento e pontos no período"
+              right={billing?.premium !== false ? <div ref={setEquipeHeaderEl} className="flex shrink-0 items-center gap-2" /> : undefined}
+            />
             <main className="px-4 py-4">
               {billing && !billing.premium ? (
                 <div className="mx-auto max-w-lg rounded-xl border border-neutral-300 bg-white p-8 text-center">
