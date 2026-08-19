@@ -556,19 +556,27 @@ function Painel() {
       {/* Sidebar fixa */}
       <aside className={"hidden md:flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-200 " + (sidebarCollapsed ? "w-[68px]" : "w-64")}>
         <div className={"flex pt-5 pb-4 " + (sidebarCollapsed ? "flex-col items-center gap-2 px-2" : "items-center justify-between pl-6 pr-3")}>
-          {sidebarCollapsed ? (
-            <img
-              src="/brand/zaylo-icon.png"
-              alt="CRM Zaylo"
-              className="h-4 w-auto object-contain"
-            />
-          ) : (
+          <div className={"relative flex h-9 shrink-0 items-center transition-[width] duration-200 " + (sidebarCollapsed ? "w-9 justify-center" : "w-36 justify-start")}>
+            {/* Ambas as imagens ficam sempre montadas (já pré-carregadas) e alternam
+                via opacidade, em sincronia com a transição de largura da sidebar,
+                evitando o "salto" que acontecia ao trocar de <img> condicionalmente. */}
             <img
               src="/brand/zaylo-logo.png"
               alt="CRM Zaylo"
-              className="h-5 w-auto object-contain"
+              className={
+                "absolute left-0 h-8 w-auto object-contain object-left transition-opacity duration-200 " +
+                (sidebarCollapsed ? "opacity-0" : "opacity-100")
+              }
             />
-          )}
+            <img
+              src="/brand/zaylo-icon.png"
+              alt="CRM Zaylo"
+              className={
+                "absolute h-7 w-auto object-contain transition-opacity duration-200 " +
+                (sidebarCollapsed ? "opacity-100" : "opacity-0")
+              }
+            />
+          </div>
           <button
             onClick={() => setSidebarCollapsed((v) => !v)}
             title={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
