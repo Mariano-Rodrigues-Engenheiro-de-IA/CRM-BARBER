@@ -57,13 +57,14 @@ html body.crm-shell #app {
   box-sizing: border-box !important;
 }
 
-/* Trilho lateral — só ícones */
+/* Trilho lateral — só ícones. Largura alinhada com a barra nativa do
+   próprio WhatsApp (a nossa estava fina demais perto dela). */
 #crm-rail {
   position: fixed;
   top: 0;
   left: 0;
   bottom: 0;
-  width: 46px;
+  width: 60px;
   background: linear-gradient(180deg, var(--z-ink) 0%, #edf0f4 100%);
   border-right: 1px solid var(--z-line-soft);
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.06);
@@ -71,8 +72,8 @@ html body.crm-shell #app {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 8px 0;
+  gap: 6px;
+  padding: 10px 0;
   font-family: var(--z-font);
   overflow-y: auto;
   overflow-x: hidden;
@@ -80,8 +81,8 @@ html body.crm-shell #app {
 }
 #crm-rail::-webkit-scrollbar { display: none; }
 .crm-rail-mark {
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -94,10 +95,10 @@ html body.crm-shell #app {
   display: block;
 }
 .crm-rail-btn {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border: 0;
-  border-radius: 9px;
+  border-radius: 10px;
   background: transparent;
   color: var(--z-accent);
   display: flex;
@@ -106,36 +107,40 @@ html body.crm-shell #app {
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
-.crm-rail-btn:hover { background: var(--z-accent-soft); color: var(--z-accent); }
+.crm-rail-btn svg { width: 19px; height: 19px; }
+.crm-rail-btn:hover { background: var(--z-accent); color: var(--z-on-accent); }
 .crm-rail-spacer { flex: 1; }
 .crm-rail-divider {
-  width: 24px;
+  width: 28px;
   height: 1px;
   background: var(--z-line-soft);
   margin: 4px 0;
   flex: 0 0 auto;
 }
 
-/* Tooltip do trilho (nome da aba ao passar o mouse) */
+/* Tooltip do trilho (nome da aba ao passar o mouse) — fundo azul sólido
+   (mesma cor dos botões do sistema), texto branco, bem visível por cima
+   do WhatsApp. */
 .crm-rail-btn { position: relative; }
 .crm-rail-btn::after {
   content: attr(data-label);
   position: absolute;
-  left: 40px;
+  left: 48px;
   top: 50%;
   transform: translateY(-50%);
-  background: var(--z-surface);
-  color: var(--z-text);
-  border: 1px solid var(--z-line);
+  background: var(--z-accent);
+  color: var(--z-on-accent);
+  border: 0;
   border-radius: 8px;
-  padding: 5px 9px;
-  font-size: 11px;
+  padding: 6px 11px;
+  font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.12s ease;
   z-index: 1000001;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 .crm-rail-btn:hover::after { opacity: 1; }
 

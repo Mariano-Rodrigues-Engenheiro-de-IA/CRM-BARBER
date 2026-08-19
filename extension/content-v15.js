@@ -236,7 +236,6 @@
       <button class="crm-rail-btn" data-go="treinamento" data-label="Treinamentos">${ICONS.cap}</button>
       <button class="crm-rail-btn" data-go="conexao" data-label="Conexão">${ICONS.link}</button>
       <div class="crm-rail-divider"></div>
-      <button class="crm-rail-btn" data-act="sync" data-label="Sincronizar listas e conversas">${ICONS.sync}</button>
       <div class="crm-rail-spacer"></div>
       <button class="crm-rail-btn" data-go="configuracoes" data-label="Configurações">${ICONS.gear}</button>
       <button class="crm-rail-btn" data-act="unpair" data-label="Desvincular">${ICONS.exit}</button>

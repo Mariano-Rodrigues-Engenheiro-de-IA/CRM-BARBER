@@ -602,7 +602,7 @@ function Painel() {
     "group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition " +
     (active
       ? "bg-brand text-white"
-      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground");
+      : "text-sidebar-foreground/70 hover:bg-brand/25 hover:text-white");
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -690,7 +690,7 @@ function Painel() {
                   )}
                 </button>
                 {sidebarCollapsed && (
-                  <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-75 group-hover:opacity-100">
+                  <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-brand px-2.5 py-1.5 text-xs font-semibold text-white opacity-0 shadow-lg transition-opacity duration-75 group-hover:opacity-100">
                     {n.label}
                   </span>
                 )}
