@@ -44,12 +44,32 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+// A extensão do WhatsApp abre /painel?embed=1 dentro de um <iframe> por cima
+// do WhatsApp Web (sobreposição de Agenda/Respostas rápidas). Por padrão,
+// nada no app define X-Frame-Options/CSP — mas plataformas de hospedagem
+// às vezes injetam proteção anticlickjacking por padrão, o que faria o
+// Chrome recusar a conexão dentro do iframe ("refused to connect"). Esse
+// passo garante explicitamente que só essa rota, só nesse modo, libera ser
+// embutida — e apenas pelo domínio do WhatsApp Web.
+function allowWhatsappEmbed(request: Request, response: Response): Response {
+  const url = new URL(request.url);
+  if (url.pathname !== "/painel" || url.searchParams.get("embed") !== "1") return response;
+  const headers = new Headers(response.headers);
+  headers.delete("x-frame-options");
+  headers.set("content-security-policy", "frame-ancestors https://web.whatsapp.com;");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      return allowWhatsappEmbed(request, await normalizeCatastrophicSsrResponse(response));
     } catch (error) {
       console.error(error);
       return new Response(renderErrorPage(), {
