@@ -197,6 +197,47 @@
     window.open(painelUrl(section, extra), "_blank", "noopener");
   }
 
+  // Piloto: abas que abrem como sobreposição dentro do próprio WhatsApp
+  // (iframe do painel em modo compacto), em vez de nova aba. Só as que
+  // fazem sentido como ação rápida — Funis fica de fora por ser complexo
+  // demais pra caber numa caixa menor.
+  const SHEET_SECTIONS = new Set(["agenda", "respostas"]);
+
+  function closeSheet() {
+    const overlay = document.getElementById("crm-sheet-overlay");
+    if (!overlay) return;
+    overlay.remove();
+    document.removeEventListener("keydown", onSheetKeydown);
+  }
+
+  function onSheetKeydown(e) {
+    if (e.key === "Escape") closeSheet();
+  }
+
+  function openSheet(section, label) {
+    closeSheet();
+    const overlay = document.createElement("div");
+    overlay.id = "crm-sheet-overlay";
+    overlay.className = "crm-sheet-overlay";
+    overlay.innerHTML = `
+      <div class="crm-sheet" role="dialog" aria-modal="true" aria-label="${escapeHtml(label)}">
+        <div class="crm-sheet-head">
+          <span class="crm-sheet-title">${escapeHtml(label)}</span>
+          <button class="crm-sheet-close" aria-label="Fechar" title="Fechar">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <iframe class="crm-sheet-frame" src="${painelUrl(section, "&embed=1")}" title="${escapeHtml(label)}"></iframe>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) closeSheet();
+    });
+    overlay.querySelector(".crm-sheet-close").addEventListener("click", closeSheet);
+    document.addEventListener("keydown", onSheetKeydown);
+  }
+
   const ICONS = {
     funnel: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 8v7l-4 2v-9L3 4z"/></svg>`,
     sync: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>`,
@@ -255,7 +296,13 @@
       const btn = e.target.closest(".crm-rail-btn");
       if (!btn) return;
       const go = btn.getAttribute("data-go");
-      if (go) return openPainel(go);
+      if (go) {
+        // Piloto: Agenda e Respostas rápidas abrem numa sobreposição, sem
+        // sair do WhatsApp. As demais abas continuam abrindo o CRM numa
+        // aba nova, como sempre fizeram.
+        if (SHEET_SECTIONS.has(go)) return openSheet(go, btn.getAttribute("data-label") || "");
+        return openPainel(go);
+      }
       const act = btn.getAttribute("data-act");
       if (act === "sync") {
         syncing = false;

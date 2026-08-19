@@ -360,6 +360,68 @@ html body.crm-shell #app {
 }
 .crm-modal-input:focus { border-color: var(--z-accent); }
 
+/* Sobreposição "sheet" — Agenda e Respostas rápidas abertas por cima do
+   WhatsApp, sem sair da conversa. Caixa grande (o máximo de espaço que
+   couber), com um iframe do painel em modo compacto (?embed=1) dentro. */
+.crm-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  background: rgba(4, 12, 9, 0.62);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--z-font);
+  padding: 24px;
+}
+.crm-sheet, .crm-sheet * { box-sizing: border-box; }
+.crm-sheet {
+  width: min(1180px, 96vw);
+  height: min(880px, 92vh);
+  background: var(--z-bar);
+  border: 1px solid var(--z-line);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+.crm-sheet-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--z-line-soft);
+  background: var(--z-surface);
+}
+.crm-sheet-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--z-text);
+}
+.crm-sheet-close {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--z-text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.crm-sheet-close:hover { background: var(--z-surface-2); color: var(--z-text); }
+.crm-sheet-frame {
+  flex: 1 1 auto;
+  width: 100%;
+  border: 0;
+  background: #fff;
+}
+
 /* Aviso de plano: vive no topo do WhatsApp, não dentro do painel. */
 .crm-pill-premium {
   margin-left: auto;
