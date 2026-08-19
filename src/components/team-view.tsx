@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import confetti from "canvas-confetti";
 import { useConfirm } from "@/components/confirm-dialog";
 
-type Member = { id: string; name: string; photo?: string; emoji?: string };
+export type Member = { id: string; name: string; photo?: string; emoji?: string };
 
 function Avatar({ member, size = 40 }: { member: Member; size?: number }) {
   const initial = (member.name || "?").trim().charAt(0).toUpperCase();
@@ -43,12 +43,12 @@ async function fileToDataUrl(file: File, max = 320): Promise<string> {
   });
 }
 
-type CatalogItem = { id: string; name: string; priceCents: number };
+export type CatalogItem = { id: string; name: string; priceCents: number };
 
 /** Cliente da barbearia — usado para jornada de compra e ranking de clientes. */
-type Client = { id: string; name: string; phone?: string; createdAt: string };
+export type Client = { id: string; name: string; phone?: string; createdAt: string };
 
-type Entry = {
+export type Entry = {
   id: string;
   memberId: string;
   kind: "service" | "product" | "extra";
@@ -60,14 +60,14 @@ type Entry = {
   clientName?: string;
 };
 
-type TeamConfig = {
+export type TeamConfig = {
   monthGoalCents: number;
   perMemberGoalCents: number;
   pointsPerReal: number;
   bonusExtra: number;
 };
 
-type TeamState = {
+export type TeamState = {
   members: Member[];
   entries: Entry[];
   config: TeamConfig;
@@ -94,7 +94,7 @@ const DEFAULT_STATE: TeamState = {
 
 function storageKey(shopId: string) { return `crm_team_v1_${shopId}`; }
 
-function loadState(shopId: string): TeamState {
+export function loadState(shopId: string): TeamState {
   if (typeof window === "undefined") return DEFAULT_STATE;
   try {
     const raw = localStorage.getItem(storageKey(shopId));
