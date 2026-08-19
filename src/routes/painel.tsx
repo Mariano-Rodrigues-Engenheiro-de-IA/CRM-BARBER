@@ -430,12 +430,6 @@ function Painel() {
   const [customers, setCustomers] = useState<Customer[]>(() => customersCache ?? []);
   const [loading, setLoading] = useState(false);
 
-  // Modo embutido: carregado dentro de um iframe/sobreposição no WhatsApp
-  // Web (piloto em Agenda e Respostas rápidas). Esconde o chrome do CRM
-  // (sidebar, barra mobile) e mostra só o conteúdo da seção, ocupando o
-  // espaço todo disponível dentro da caixa da extensão.
-  const isEmbedded = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("embed") === "1";
-
   const initialSection: Section = (() => {
     if (typeof window === "undefined") return "assinantes";
     const s = new URLSearchParams(window.location.search).get("section");
@@ -612,8 +606,7 @@ function Painel() {
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-      {/* Sidebar fixa — escondida no modo embutido (sobreposição no WhatsApp) */}
-      {!isEmbedded && (
+      {/* Sidebar fixa */}
       <aside className={"hidden md:flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-200 " + (sidebarCollapsed ? "w-[68px]" : "w-64")}>
         <div className={"flex pt-5 pb-4 " + (sidebarCollapsed ? "flex-col items-center gap-2 px-2" : "items-center justify-between pl-6 pr-3")}>
           <div className={"relative flex h-9 shrink-0 items-center transition-[width] duration-200 " + (sidebarCollapsed ? "w-9 justify-center" : "w-36 justify-start")}>
@@ -754,10 +747,8 @@ function Painel() {
 
 
       </aside>
-      )}
 
-      {/* Mobile top bar — também escondida no modo embutido */}
-      {!isEmbedded && (
+      {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-sidebar-border bg-sidebar text-sidebar-foreground px-4 py-3">
         <img src="/brand/zaylo-logo.png" alt="CRM Zaylo" className="h-7 w-auto object-contain" />
         <div className="flex gap-1 rounded-lg bg-sidebar-accent/40 p-1">
@@ -775,7 +766,6 @@ function Painel() {
           ))}
         </div>
       </div>
-      )}
 
 
 
