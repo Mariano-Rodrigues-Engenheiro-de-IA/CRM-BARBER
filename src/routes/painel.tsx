@@ -862,7 +862,6 @@ function Painel() {
             <SectionHeader
               icon={<IconBadgeCheck />}
               title={assinTab === "visao" ? "Visão geral" : "Assinantes"}
-              subtitle={assinTab === "visao" ? "Meta do mês e receita recorrente" : undefined}
               right={<div ref={setAssinHeaderEl} className="flex shrink-0 items-center gap-2" />}
             />
 
@@ -952,7 +951,6 @@ function Painel() {
             <SectionHeader
               icon={<IconRankingBars />}
               title="Ranking de vendas"
-              subtitle="Desempenho da equipe por faturamento e pontos no período"
               right={billing?.premium !== false ? <div ref={setEquipeHeaderEl} className="flex shrink-0 items-center gap-2" /> : undefined}
             />
             <main className="px-4 py-4">

@@ -1,7 +1,7 @@
 // Aba "Minha conta" (Configurações): dados da barbearia que aparecem no
 // sistema e na página pública de agendamento.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,9 +18,28 @@ type Shop = {
   owner_phone: string | null;
 };
 
+/** Redimensiona a imagem escolhida (mantendo a proporção original, sem
+ * cortar) e devolve um data URL leve — evita depender de um serviço externo
+ * de upload de arquivos só pra guardar a logo. */
+async function fileToLogoDataUrl(file: File, maxSize = 320): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
+  const w = Math.max(1, Math.round(bitmap.width * scale));
+  const h = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Não consegui processar a imagem");
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  return canvas.toDataURL("image/png");
+}
+
 export function AccountTab({ api }: { api: Api }) {
   const [shop, setShop] = useState<Shop | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     api("/api/public/extension/shop").then((r) => {
@@ -31,6 +50,24 @@ export function AccountTab({ api }: { api: Api }) {
 
   function set<K extends keyof Shop>(key: K, value: Shop[K]) {
     setShop((prev) => (prev ? { ...prev, [key]: value } : prev));
+  }
+
+  async function handleLogoFile(file: File | null) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Escolha um arquivo de imagem");
+      return;
+    }
+    setUploading(true);
+    try {
+      const dataUrl = await fileToLogoDataUrl(file);
+      set("logo_url", dataUrl);
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao processar a imagem");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   }
 
   async function handleSave() {
@@ -67,19 +104,31 @@ export function AccountTab({ api }: { api: Api }) {
     <div className="max-w-xl space-y-5">
       <div className="flex items-center gap-4">
         {shop.logo_url ? (
-          <img src={shop.logo_url} alt={`Logo de ${shop.name}`} className="h-16 w-16 rounded-xl border border-neutral-200 object-cover" />
+          <img src={shop.logo_url} alt={`Logo de ${shop.name}`} className="h-16 w-16 rounded-xl border border-neutral-200 object-contain bg-white" />
         ) : (
           <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-brand text-xl font-semibold text-white">
             {shop.name.trim().charAt(0).toUpperCase() || "?"}
           </div>
         )}
         <div className="flex-1 space-y-1.5">
-          <Label>Logo da empresa (link da imagem)</Label>
-          <Input
-            value={shop.logo_url ?? ""}
-            onChange={(e) => set("logo_url", e.target.value)}
-            placeholder="https://..."
+          <Label>Logo da empresa</Label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => handleLogoFile(e.target.files?.[0] ?? null)}
           />
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="outline" size="sm" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
+              {uploading ? "Processando..." : shop.logo_url ? "Trocar arquivo" : "Escolher arquivo"}
+            </Button>
+            {shop.logo_url && (
+              <Button type="button" variant="ghost" size="sm" onClick={() => set("logo_url", null)}>
+                Remover
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 

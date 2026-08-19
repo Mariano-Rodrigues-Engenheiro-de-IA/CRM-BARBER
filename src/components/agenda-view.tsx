@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { User, Phone, Scissors, Clock, CircleCheck, StickyNote, DollarSign, UserRound } from "lucide-react";
 import { type AgendaSettings } from "@/components/agenda-settings-dialog";
 import { type Professional, type Service, ProfessionalAvatar } from "@/components/professionals-services-dialog";
+import { useConfirm } from "@/components/confirm-dialog";
 
 type Api = (path: string, opts?: RequestInit) => Promise<any>;
 
@@ -85,6 +86,7 @@ function minutesToTime(mins: number) {
 }
 
 export function AgendaView({ api }: { api: Api }) {
+  const { confirm, dialog } = useConfirm();
   const [day, setDay] = useState(() => new Date());
   const [settings, setSettings] = useState<AgendaSettings | null>(staticCache?.settings ?? null);
   const [professionals, setProfessionals] = useState<Professional[]>(staticCache?.professionals ?? []);
@@ -271,7 +273,14 @@ export function AgendaView({ api }: { api: Api }) {
   }
 
   async function handleCancel(a: Appointment) {
-    if (!confirm(`Cancelar o agendamento "${a.title}"?`)) return;
+    const ok = await confirm({
+      title: "Cancelar agendamento?",
+      description: `"${a.title}" será removido da agenda.`,
+      confirmLabel: "Cancelar agendamento",
+      cancelLabel: "Voltar",
+      destructive: true,
+    });
+    if (!ok) return;
     const r = await api(`/api/public/extension/appointments/${a.id}`, { method: "DELETE" });
     if (r?.ok) {
       toast.success("Agendamento cancelado");
@@ -299,7 +308,14 @@ export function AgendaView({ api }: { api: Api }) {
 
 
   async function handleDeleteBlock(b: TimeBlock) {
-    if (!confirm("Remover esse bloqueio de horário?")) return;
+    const ok = await confirm({
+      title: "Remover bloqueio de horário?",
+      description: "O horário volta a ficar disponível pra agendamento.",
+      confirmLabel: "Remover",
+      cancelLabel: "Voltar",
+      destructive: true,
+    });
+    if (!ok) return;
     const r = await api(`/api/public/extension/time-blocks/${b.id}`, { method: "DELETE" });
     if (r?.ok) {
       toast.success("Bloqueio removido");
@@ -511,6 +527,7 @@ export function AgendaView({ api }: { api: Api }) {
         deleteBlock={handleDeleteBlock}
       />
 
+      {dialog}
     </div>
   );
 }

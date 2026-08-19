@@ -10,7 +10,9 @@ const SELECT = "id, name, logo_url, owner_name, owner_email, owner_phone";
 
 const patchSchema = z.object({
   name: z.string().trim().min(2).max(120).optional(),
-  logo_url: z.string().trim().max(600).nullable().optional(),
+  // Aceita tanto uma URL comum quanto um data URL (imagem anexada e
+  // convertida no navegador) — por isso o limite bem mais alto.
+  logo_url: z.string().trim().max(500000).nullable().optional(),
   owner_name: z.string().trim().max(120).nullable().optional(),
   owner_email: z.string().trim().max(160).nullable().optional(),
   owner_phone: z.string().trim().max(30).nullable().optional(),
