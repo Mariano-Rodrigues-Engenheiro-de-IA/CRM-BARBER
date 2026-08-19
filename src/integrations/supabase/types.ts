@@ -985,6 +985,50 @@ export type Database = {
           },
         ]
       }
+      products: {
+        Row: {
+          active: boolean
+          barbershop_id: string
+          category: string | null
+          created_at: string
+          id: string
+          name: string
+          price: number | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          barbershop_id: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          price?: number | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          barbershop_id?: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          price?: number | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           active: boolean

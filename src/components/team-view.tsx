@@ -1,5 +1,6 @@
-// Gamificação da equipe — 100% client-side (localStorage por barbearia).
-// Cadastro de barbeiros, serviços, produtos e metas mora dentro de Configurações.
+// Gamificação da equipe — genérico pra qualquer negócio (não só barbearia).
+// Cadastro de profissionais, serviços e produtos mora em Configurações;
+// aqui só o ranking, os lançamentos de venda e as metas do mês.
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -166,7 +167,19 @@ function fireConfetti() {
   })();
 }
 
-export function TeamView({ shopId, headerHost }: { shopId: string; headerHost?: HTMLDivElement | null }) {
+export function TeamView({
+  shopId,
+  headerHost,
+  api,
+  onGoToSettings,
+}: {
+  shopId: string;
+  headerHost?: HTMLDivElement | null;
+  /** Chamadas à API pública — usadas só pra LER profissionais/serviços/
+   * produtos. Cadastro deles é feito em Configurações, não aqui. */
+  api: (path: string, opts?: RequestInit) => Promise<any>;
+  onGoToSettings?: (tab: "profissionais" | "servicos" | "produtos") => void;
+}) {
   const { confirm, dialog } = useConfirm();
   const [state, setState] = useState<TeamState>(DEFAULT_STATE);
   const [ready, setReady] = useState(false);
@@ -183,6 +196,40 @@ export function TeamView({ shopId, headerHost }: { shopId: string; headerHost?: 
   useEffect(() => {
     setState(loadState(shopId));
     setReady(true);
+  }, [shopId]);
+
+  // Profissionais, serviços e produtos são cadastrados em Configurações
+  // (dados reais, no banco) — aqui só lemos pra montar o ranking e o
+  // catálogo disponível na hora de lançar uma venda.
+  useEffect(() => {
+    let cancelled = false;
+    async function loadCatalog() {
+      const [pr, sr, prodr] = await Promise.all([
+        api("/api/public/extension/professionals"),
+        api("/api/public/extension/services"),
+        api("/api/public/extension/products"),
+      ]);
+      if (cancelled) return;
+      const members: Member[] = (pr?.ok ? pr.professionals : [])
+        .filter((p: any) => p.active !== false)
+        .map((p: any) => ({ id: p.id, name: p.name, photo: p.avatar_url ?? undefined }));
+      const services: CatalogItem[] = (sr?.ok ? sr.services : []).map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        priceCents: s.price != null ? Math.round(s.price * 100) : 0,
+      }));
+      const products: CatalogItem[] = (prodr?.ok ? prodr.products : []).map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        priceCents: p.price != null ? Math.round(p.price * 100) : 0,
+      }));
+      setState((prev) => ({ ...prev, members, services, products }));
+    }
+    void loadCatalog();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopId]);
 
   useEffect(() => {
@@ -301,7 +348,7 @@ export function TeamView({ shopId, headerHost }: { shopId: string; headerHost?: 
             onClick={() => setShowConfig(true)}
             className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong"
           >
-            Acessar
+            Metas & pontos
           </button>
         </div>
 
@@ -345,13 +392,13 @@ export function TeamView({ shopId, headerHost }: { shopId: string; headerHost?: 
         <div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-10 text-center">
           <h3 className="text-base font-semibold text-neutral-900">Cadastre sua equipe</h3>
           <p className="mt-1 text-sm text-neutral-500">
-            Abra Acessar para cadastrar barbeiros, serviços, produtos e definir as metas do mês.
+            Cadastre profissionais, serviços e produtos em Configurações pra começar a lançar vendas aqui.
           </p>
           <button
-            onClick={() => setShowConfig(true)}
+            onClick={() => onGoToSettings?.("profissionais")}
             className="mt-4 rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white hover:bg-brand-strong"
           >
-            Acessar
+            Ir para Configurações
           </button>
         </div>
       )}
@@ -504,6 +551,7 @@ export function TeamView({ shopId, headerHost }: { shopId: string; headerHost?: 
             setState((s) => ({ ...s, entries: s.entries.filter((e) => !inRange(e.createdAt, r.from, r.to)) }));
             celebratedRef.current.clear();
           }}
+          onGoToSettings={onGoToSettings}
         />
       )}
     </div>
@@ -917,262 +965,35 @@ function ClientsPanel({
 
 // --- Config modal com abas ---
 
-type ConfigTab = "barbeiros" | "servicos" | "produtos" | "metas";
-
 function ConfigModal({
   state,
   onClose,
   onChange,
   onResetMonth,
+  onGoToSettings,
 }: {
   state: TeamState;
   onClose: () => void;
   onChange: (s: TeamState) => void;
   onResetMonth: () => void;
+  onGoToSettings?: (tab: "profissionais" | "servicos" | "produtos") => void;
 }) {
-  const [tab, setTab] = useState<ConfigTab>("barbeiros");
-
-  const tabs: Array<{ k: ConfigTab; label: string }> = [
-    { k: "barbeiros", label: "Barbeiros" },
-    { k: "servicos", label: "Serviços" },
-    { k: "produtos", label: "Produtos" },
-    { k: "metas", label: "Metas & Pontos" },
-  ];
-
   return (
-    <ModalShell title="Configurações da equipe" onClose={onClose} wide>
-      <div className="mb-4 flex flex-wrap gap-1 rounded-lg bg-neutral-100 p-1">
-        {tabs.map((t) => (
-          <button
-            key={t.k}
-            onClick={() => setTab(t.k)}
-            className={
-              "flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition " +
-              (tab === t.k ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
-            }
-          >
-            {t.label}
+    <ModalShell title="Metas & pontos" onClose={onClose} wide>
+      <p className="mb-4 text-xs text-neutral-500">
+        Profissionais, serviços e produtos agora são cadastrados em Configurações.{" "}
+        {onGoToSettings && (
+          <button onClick={() => onGoToSettings("profissionais")} className="font-semibold text-brand hover:underline">
+            Ir para lá
           </button>
-        ))}
-      </div>
-
-      {tab === "barbeiros" && (
-        <MembersTab
-          members={state.members}
-          onAdd={(m) => onChange({ ...state, members: [...state.members, m] })}
-          onRemove={(id) => onChange({ ...state, members: state.members.filter((m) => m.id !== id) })}
-        />
-      )}
-
-      {tab === "servicos" && (
-        <CatalogTab
-          kind="service"
-          items={state.services}
-          onChange={(items) => onChange({ ...state, services: items })}
-        />
-      )}
-
-      {tab === "produtos" && (
-        <CatalogTab
-          kind="product"
-          items={state.products}
-          onChange={(items) => onChange({ ...state, products: items })}
-        />
-      )}
-
-      {tab === "metas" && (
-        <MetasTab
-          config={state.config}
-          onSave={(cfg) => onChange({ ...state, config: cfg })}
-          onResetMonth={onResetMonth}
-        />
-      )}
+        )}
+      </p>
+      <MetasTab
+        config={state.config}
+        onSave={(cfg) => onChange({ ...state, config: cfg })}
+        onResetMonth={onResetMonth}
+      />
     </ModalShell>
-  );
-}
-
-function MembersTab({
-  members,
-  onAdd,
-  onRemove,
-}: {
-  members: Member[];
-  onAdd: (m: Member) => void;
-  onRemove: (id: string) => void;
-}) {
-  const { confirm, dialog } = useConfirm();
-  const [name, setName] = useState("");
-  const [photo, setPhoto] = useState<string | undefined>(undefined);
-  const fileRef = useRef<HTMLInputElement | null>(null);
-
-  async function onPickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    setPhoto(await fileToDataUrl(f));
-    e.target.value = "";
-  }
-
-  return (
-    <div className="space-y-5">
-      {dialog}
-      <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Adicionar barbeiro</p>
-        <div className="flex items-center gap-3">
-          <Avatar member={{ id: "", name: name || "?", photo }} size={56} />
-          <div className="flex flex-col gap-2">
-            <input ref={fileRef} type="file" accept="image/*" onChange={onPickPhoto} className="hidden" />
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              className="rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:border-neutral-400"
-            >
-              {photo ? "Trocar foto" : "Escolher foto"}
-            </button>
-            {photo && (
-              <button
-                type="button"
-                onClick={() => setPhoto(undefined)}
-                className="text-[11px] text-neutral-500 hover:text-red-600"
-              >
-                remover foto
-              </button>
-            )}
-          </div>
-        </div>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Nome (ex: Bruno)"
-          className={inputCls}
-        />
-        <button
-          disabled={!name.trim()}
-          onClick={() => {
-            onAdd({ id: crypto.randomUUID(), name: name.trim(), photo });
-            setName("");
-            setPhoto(undefined);
-          }}
-          className="w-full rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-40"
-        >
-          Adicionar à equipe
-        </button>
-      </div>
-
-      <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-          Equipe atual ({members.length})
-        </p>
-        {members.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 text-center text-sm text-neutral-500">
-            Nenhum barbeiro cadastrado ainda.
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {members.map((m) => (
-              <li key={m.id} className="flex items-center gap-3 rounded-xl border border-neutral-300 bg-white p-3">
-                <Avatar member={m} size={36} />
-                <span className="flex-1 truncate text-sm font-medium text-neutral-900">{m.name}</span>
-                <button
-                  onClick={async () => {
-                    const ok = await confirm({
-                      title: `Remover ${m.name}?`,
-                      description: "Os lançamentos ficam no histórico.",
-                      confirmLabel: "Remover",
-                      destructive: true,
-                    });
-                    if (!ok) return;
-                    onRemove(m.id);
-                  }}
-                  className="rounded-md border border-neutral-200 px-2.5 py-1 text-xs text-neutral-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
-                >
-                  remover
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function CatalogTab({
-  kind,
-  items,
-  onChange,
-}: {
-  kind: "service" | "product";
-  items: CatalogItem[];
-  onChange: (items: CatalogItem[]) => void;
-}) {
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const label = kind === "service" ? "serviço" : "produto";
-
-  function add() {
-    if (!name.trim()) return;
-    const cents = Math.round(Number(price.replace(",", ".")) * 100) || 0;
-    onChange([...items, { id: crypto.randomUUID(), name: name.trim(), priceCents: cents }]);
-    setName("");
-    setPrice("");
-  }
-
-  return (
-    <div className="space-y-5">
-      <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-          Adicionar {label}
-        </p>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={kind === "service" ? "ex: Corte + Barba" : "ex: Pomada Modeladora"}
-          className={inputCls}
-        />
-        <input
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          placeholder="Preço (R$) — opcional"
-          inputMode="decimal"
-          className={inputCls}
-        />
-        <button
-          disabled={!name.trim()}
-          onClick={add}
-          className="w-full rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-40"
-        >
-          Adicionar {label}
-        </button>
-      </div>
-
-      <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-          Catálogo ({items.length})
-        </p>
-        {items.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-neutral-300 bg-white p-6 text-center text-sm text-neutral-500">
-            Nenhum {label} cadastrado. Use o formulário acima.
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {items.map((it) => (
-              <li key={it.id} className="flex items-center gap-3 rounded-xl border border-neutral-300 bg-white p-3">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-neutral-900">{it.name}</p>
-                  <p className="text-xs text-neutral-500">{fmtBRL(it.priceCents)}</p>
-                </div>
-                <button
-                  onClick={() => onChange(items.filter((x) => x.id !== it.id))}
-                  className="rounded-md border border-neutral-200 px-2.5 py-1 text-xs text-neutral-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
-                >
-                  remover
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
   );
 }
 
@@ -1197,7 +1018,7 @@ function MetasTab({
         <input value={monthGoal} onChange={(e) => setMonthGoal(e.target.value)} className={inputCls} inputMode="decimal" />
       </label>
       <label className="block">
-        <span className="mb-1 block text-sm font-medium text-neutral-700">Meta individual por barbeiro (R$)</span>
+        <span className="mb-1 block text-sm font-medium text-neutral-700">Meta individual por profissional (R$)</span>
         <input value={perMemberGoal} onChange={(e) => setPerMemberGoal(e.target.value)} className={inputCls} inputMode="decimal" />
       </label>
       <div className="grid grid-cols-2 gap-3">

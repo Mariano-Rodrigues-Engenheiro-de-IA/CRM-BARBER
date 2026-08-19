@@ -22,7 +22,7 @@ import { useConfirm } from "@/components/confirm-dialog";
 import { AgendaView } from "@/components/agenda-view";
 import { AulasView } from "@/components/aulas-view";
 import { AgenteIaView } from "@/components/agente-ia-view";
-import { ServicesTab, ProfessionalsTab } from "@/components/professionals-services-dialog";
+import { ServicesTab, ProfessionalsTab, ProductsTab } from "@/components/professionals-services-dialog";
 import { GeneralSettingsTab } from "@/components/agenda-settings-dialog";
 import { AccountTab } from "@/components/account-tab";
 import { CustomersTab } from "@/components/customers-tab";
@@ -245,7 +245,7 @@ type Section = "agenda" | "agente-ia" | "treinamento" | "configuracoes" | "assin
 /** Sub-abas da sanfona de Assinaturas. */
 type AssinTab = "visao" | "assinantes";
 /** Sub-abas da sanfona de Configurações. */
-type ConfigTab = "servicos" | "profissionais" | "clientes" | "gerais" | "conta";
+type ConfigTab = "servicos" | "produtos" | "profissionais" | "clientes" | "gerais" | "conta";
 
 /** Selo de assinante ativo — assinatura/fidelidade, sem usar ícone de pessoas. */
 function IconBadgeCheck() {
@@ -563,6 +563,7 @@ function Painel() {
       icon: <IconGear />,
       children: [
         { key: "servicos", label: "Serviços" },
+        { key: "produtos", label: "Produtos" },
         { key: "profissionais", label: "Profissionais" },
         { key: "clientes", label: "Clientes" },
         { key: "gerais", label: "Gerais" },
@@ -828,6 +829,7 @@ function Painel() {
             </header>
             <main className="px-4 py-4">
               {configTab === "servicos" && <ServicesTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
+              {configTab === "produtos" && <ProductsTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
               {configTab === "profissionais" && <ProfessionalsTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
               {configTab === "clientes" && <CustomersTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
               {configTab === "gerais" && <GeneralSettingsTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
@@ -936,7 +938,7 @@ function Painel() {
           </>
         )}
 
-        {section === "equipe" && (
+        {section === "equipe" && token && (
           <>
             <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
               <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-2">
@@ -969,7 +971,15 @@ function Painel() {
                   </button>
                 </div>
               ) : (
-                <TeamView shopId={shop?.id ?? "default"} headerHost={equipeHeaderEl} />
+                <TeamView
+                  shopId={shop?.id ?? "default"}
+                  headerHost={equipeHeaderEl}
+                  api={(path: string, opts?: RequestInit) => api(token, path, opts)}
+                  onGoToSettings={(tab) => {
+                    setSection("configuracoes");
+                    setConfigTab(tab);
+                  }}
+                />
               )}
             </main>
           </>

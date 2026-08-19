@@ -30,6 +30,13 @@ export type Service = {
   active: boolean;
   professional_ids?: string[];
 };
+export type Product = {
+  id: string;
+  name: string;
+  category: string | null;
+  price: number | null;
+  active: boolean;
+};
 
 /** Redimensiona a imagem escolhida pra um quadrado pequeno e devolve um
  * data URL leve — evita subir arquivo e mantém a foto junto do cadastro. */
@@ -542,6 +549,179 @@ function ServiceFormDialog({
               </div>
             </div>
           )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={!name.trim() || saving}>
+            {saving ? "Salvando..." : editing ? "Salvar" : "Adicionar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Cadastro de produtos — mesmo padrão de Serviços, sem duração/agenda. */
+export function ProductsTab({ api, onChanged }: { api: Api; onChanged?: () => void }) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+
+  async function load() {
+    const r = await api("/api/public/extension/products?include_inactive=1");
+    if (r?.ok) setProducts(r.products);
+  }
+
+  useEffect(() => {
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function toggleActive(p: Product) {
+    const r = await api(`/api/public/extension/products/${p.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ active: !p.active }),
+    });
+    if (r?.ok) {
+      await load();
+      onChanged?.();
+    }
+  }
+
+  const editing = products.find((p) => p.id === editingId) ?? null;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-neutral-700">Produtos cadastrados</h3>
+        <Button
+          size="sm"
+          onClick={() => {
+            setEditingId(null);
+            setFormOpen(true);
+          }}
+        >
+          + Novo produto
+        </Button>
+      </div>
+
+      {products.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-neutral-300 p-6 text-center text-sm text-neutral-400">
+          Nenhum produto cadastrado ainda.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {products.map((p) => (
+            <div key={p.id} className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3">
+              <div className="min-w-0 flex-1">
+                <p className={"truncate text-sm font-medium " + (p.active ? "text-neutral-900" : "text-neutral-400 line-through")}>
+                  {p.name}
+                  {p.category && <span className="ml-2 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-500">{p.category}</span>}
+                </p>
+                {p.price != null && <p className="truncate text-xs text-neutral-400">R$ {p.price.toFixed(2)}</p>}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setEditingId(p.id);
+                  setFormOpen(true);
+                }}
+              >
+                Editar
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => toggleActive(p)}>
+                {p.active ? "Desativar" : "Reativar"}
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <ProductFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        editing={editing}
+        api={api}
+        onSaved={async () => {
+          await load();
+          onChanged?.();
+        }}
+      />
+    </div>
+  );
+}
+
+function ProductFormDialog({
+  open,
+  onOpenChange,
+  editing,
+  api,
+  onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  editing: Product | null;
+  api: Api;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("");
+  const [price, setPrice] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setName(editing?.name ?? "");
+      setCategory(editing?.category ?? "");
+      setPrice(editing?.price != null ? String(editing.price) : "");
+    }
+  }, [open, editing]);
+
+  async function handleSave() {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      const payload = {
+        name: name.trim(),
+        category: category.trim() || undefined,
+        price: price ? Number(price) : undefined,
+      };
+      const r = editing
+        ? await api(`/api/public/extension/products/${editing.id}`, { method: "PATCH", body: JSON.stringify(payload) })
+        : await api("/api/public/extension/products", { method: "POST", body: JSON.stringify(payload) });
+      if (!r?.ok) throw new Error(r?.error || "Erro ao salvar");
+      toast.success(editing ? "Produto atualizado" : "Produto adicionado");
+      onOpenChange(false);
+      onSaved();
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao salvar");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{editing ? "Editar produto" : "Novo produto"}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Nome do produto</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Pomada modeladora" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Categoria (opcional)</Label>
+            <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Ex: Cuidados, Cosméticos" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Preço (opcional)</Label>
+            <Input type="number" min={0} step={0.01} placeholder="R$" value={price} onChange={(e) => setPrice(e.target.value)} />
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
