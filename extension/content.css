@@ -417,6 +417,78 @@ html body.crm-shell #app {
 }
 .crm-chat-btn:hover::after { opacity: 1; }
 
+/* Bolinha no ícone do funil — sinaliza de cara que o lead já está no
+ * Funil principal, sem precisar abrir nada. Usa ::before pq o ::after já
+ * é o tooltip. */
+.crm-chat-btn-active { color: var(--z-accent); }
+.crm-chat-btn-active::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--z-accent);
+  border: 2px solid #fff;
+  z-index: 1;
+}
+
+/* Popover leve do funil — ancorado no ícone, sem escurecer nem desfocar o
+ * fundo (não é modal de tela cheia). Uma bolinha por etapa: vazia = clica
+ * pra adicionar, cheia = clica pra remover. */
+.crm-fn-pop {
+  position: fixed;
+  width: 240px;
+  background: var(--z-surface);
+  border: 1px solid var(--z-line);
+  border-radius: 12px;
+  padding: 10px;
+  z-index: 2147483646;
+  font-family: var(--z-font);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.18);
+}
+.crm-fn-pop-title {
+  margin: 0 4px 6px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--z-text-dim);
+}
+.crm-fn-pop-empty { margin: 4px; font-size: 12px; color: var(--z-text-dim); }
+.crm-fn-pop-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--z-text);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.crm-fn-pop-row:hover { background: var(--z-surface-2); }
+.crm-fn-pop-row:disabled { opacity: 0.5; cursor: default; }
+.crm-fn-pop-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid var(--z-line);
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.crm-fn-pop-dot.is-on {
+  background: var(--z-accent);
+  border-color: var(--z-accent);
+}
+.crm-fn-pop-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* Aviso rápido das ações feitas dentro da conversa. */
 .crm-toast {
   position: fixed;
@@ -487,24 +559,6 @@ html body.crm-shell #app {
 .crm-qr-send:active { transform: scale(0.97); }
 .crm-qr-send:disabled { opacity: 0.6; cursor: default; }
 .crm-chat-btn-icon { margin-left: 2px; }
-
-/* Badge de "já está aqui" ao lado do nome do funil/etapa — pill sólido,
-   igual ao padrão de contagem usado em referências de produtos maduros. */
-.crm-fn-tag {
-  display: inline-flex; align-items: center; margin-left: 6px; padding: 2px 9px; border-radius: 999px;
-  background: var(--z-accent); color: var(--z-on-accent); font-size: 10px; font-weight: 700;
-  vertical-align: middle; white-space: nowrap;
-}
-/* Botão de remover — mesmo tamanho/posição do botão "Adicionar", só que
-   com contorno vermelho, pra ficar claro que é uma ação diferente. */
-.crm-fn-remove-inline {
-  flex-shrink: 0; padding: 8px 16px; border-radius: 10px;
-  background: transparent; border: 1px solid var(--z-danger); color: var(--z-danger);
-  font-size: 12.5px; font-weight: 700; cursor: pointer;
-  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.crm-fn-remove-inline:hover { background: var(--z-danger); color: #fff; }
-.crm-fn-remove-inline:disabled { opacity: 0.6; cursor: default; }
 
 /* ------------------------------------------------------------------ */
 /* Popover de contatos — abre abaixo da aba clicada, centralizado */

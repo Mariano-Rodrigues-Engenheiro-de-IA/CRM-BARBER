@@ -177,6 +177,7 @@
       funnels = r.funnels || [];
       renderTopbar();
       renderDrawer();
+      updateFunnelBadge();
     }
   }
 
@@ -1284,7 +1285,10 @@
     if (!header) return;
     const hasCrm = document.getElementById(CHAT_BTN_ID);
     const hasQr = document.getElementById(QR_BTN_ID);
-    if (hasCrm && hasQr && header.contains(hasCrm) && header.contains(hasQr)) return;
+    if (hasCrm && hasQr && header.contains(hasCrm) && header.contains(hasQr)) {
+      updateFunnelBadge();
+      return;
+    }
     hasCrm?.remove();
     hasQr?.remove();
 
@@ -1298,7 +1302,7 @@
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      openFunnelModal();
+      openFunnelModal(btn);
     });
 
     const qr = document.createElement("button");
@@ -1323,6 +1327,7 @@
       slot.insertAdjacentElement("beforebegin", btn);
       btn.insertAdjacentElement("afterend", qr);
     }
+    updateFunnelBadge();
   }
 
 
@@ -1350,102 +1355,114 @@
     return out;
   }
 
-  function openFunnelModal() {
-    document.querySelector(".crm-fn-overlay")?.remove();
-    const overlay = document.createElement("div");
-    overlay.className = "crm-modal-overlay crm-qr-overlay crm-fn-overlay";
-    overlay.innerHTML = `
-      <div class="crm-qr" role="dialog" aria-modal="true">
-        <div class="crm-qr-head">
-          <div class="crm-qr-mark">${ICONS.funnel}</div>
-          <p class="crm-qr-title">Funil principal</p>
-          <button class="crm-qr-close" title="Fechar">&times;</button>
-        </div>
-        <div class="crm-qr-list"></div>
-      </div>
-    `;
-    const close = () => overlay.remove();
-    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
-    overlay.querySelector(".crm-qr-close").addEventListener("click", close);
-    document.body.appendChild(overlay);
+  /** true se a conversa aberta agora tem card no Funil principal. */
+  function activeChatInMainFunnel() {
+    const waId = activeChatIdFromDom();
+    if (!waId) return false;
+    const funnel = tabFunnel();
+    if (!funnel) return false;
+    return (funnel.cards || []).some((c) => c.wa_id === waId);
+  }
 
-    const list = overlay.querySelector(".crm-qr-list");
-    let chat = null;
+  /** Bolinha no ícone do funil — indica de cara que o lead já está no
+   * Funil principal, sem precisar abrir nada. */
+  function updateFunnelBadge() {
+    const btn = document.getElementById(CHAT_BTN_ID);
+    if (!btn) return;
+    btn.classList.toggle("crm-chat-btn-active", activeChatInMainFunnel());
+  }
 
-    // Só existe UM funil aqui na conversa: o Funil principal. Pra colocar
-    // um lead em outro funil (dos personalizados), é preciso ir no CRM —
-    // aqui é só pra ação rápida do dia a dia.
-    const renderStageList = () => {
-      const funnel = tabFunnel();
+  // ---------------------------------------------------------------------
+  // Popover leve do funil — ancorado no ícone, sem escurecer/desfocar o
+  // fundo (não é mais um modal de tela cheia). Lista as etapas do Funil
+  // principal; clicar na bolinha adiciona (se vazia) ou remove (se cheia).
+  // ---------------------------------------------------------------------
+  function openFunnelModal(anchor) {
+    document.querySelector(".crm-fn-pop")?.remove();
+    const funnel = tabFunnel();
+    const pop = document.createElement("div");
+    pop.className = "crm-fn-pop";
+    const rect = anchor.getBoundingClientRect();
+    pop.style.top = `${rect.bottom + 8}px`;
+    pop.style.left = `${Math.min(Math.max(8, rect.left), window.innerWidth - 268)}px`;
+
+    const renderRows = (chat) => {
       if (!funnel) {
-        list.innerHTML = `<p class="crm-qr-empty">Funil principal ainda não foi criado.</p>`;
+        pop.innerHTML = `<p class="crm-fn-pop-title">Funil principal</p><p class="crm-fn-pop-empty">Funil principal ainda não foi criado.</p>`;
         return;
       }
       const stages = funnel.stages || [];
       if (!stages.length) {
-        list.innerHTML = `<p class="crm-qr-empty">O funil principal ainda não tem etapas.</p>`;
+        pop.innerHTML = `<p class="crm-fn-pop-title">Funil principal</p><p class="crm-fn-pop-empty">Ainda não tem etapas.</p>`;
         return;
       }
       const memberships = chat ? membershipsFor(chat) : [];
-      const inThisFunnel = memberships.find((m) => m.funnel.id === funnel.id);
-      list.innerHTML = stages
-        .map((st) => {
-          const isCurrent = inThisFunnel?.stage?.id === st.id;
-          if (isCurrent) {
-            return `<div class="crm-qr-item">
-              <p class="crm-qr-name">${escapeHtml(st.name)} <span class="crm-fn-tag">lead aqui</span></p>
-              <button class="crm-fn-remove-inline" data-remove-card="${escapeHtml(inThisFunnel.card.id)}">Remover do funil</button>
-            </div>`;
-          }
-          const label = inThisFunnel ? "Mover para cá" : "Adicionar";
-          return `<div class="crm-qr-item">
-            <p class="crm-qr-name">${escapeHtml(st.name)}</p>
-            <button class="crm-qr-send" data-stage="${escapeHtml(st.id)}">${label}</button>
-          </div>`;
-        })
-        .join("");
+      const inFunnel = memberships.find((m) => m.funnel.id === funnel.id);
+      pop.innerHTML = `
+        <p class="crm-fn-pop-title">Funil principal</p>
+        ${stages
+          .map((st) => {
+            const isOn = inFunnel?.stage?.id === st.id;
+            return `<button class="crm-fn-pop-row" data-stage="${escapeHtml(st.id)}">
+              <span class="crm-fn-pop-dot${isOn ? " is-on" : ""}"></span>
+              <span class="crm-fn-pop-name">${escapeHtml(st.name)}</span>
+            </button>`;
+          })
+          .join("")}
+      `;
     };
 
-    // Abre na hora com o cache e recarrega em segundo plano.
-    renderStageList();
-    activeChat().then((c) => { chat = c; renderStageList(); });
-    void loadFunnels().then(() => renderStageList());
+    document.body.appendChild(pop);
+    let chat = null;
+    renderRows(null);
+    activeChat().then((c) => { chat = c; renderRows(chat); });
+    void loadFunnels().then(() => renderRows(chat));
 
-    list.addEventListener("click", async (e) => {
-      // Já está aqui → remove direto, sem precisar escolher etapa de novo
-      // (a gente já sabe exatamente qual card remover).
-      const removeBtn = e.target.closest("[data-remove-card]");
-      if (removeBtn) {
-        removeBtn.disabled = true;
-        removeBtn.textContent = "Removendo...";
-        const cardId = removeBtn.getAttribute("data-remove-card");
+    const close = () => {
+      pop.remove();
+      document.removeEventListener("mousedown", onDoc, true);
+    };
+    function onDoc(ev) {
+      if (!pop.contains(ev.target) && ev.target !== anchor) close();
+    }
+    setTimeout(() => document.addEventListener("mousedown", onDoc, true), 0);
+
+    pop.addEventListener("click", async (e) => {
+      const row = e.target.closest("[data-stage]");
+      if (!row || row.disabled) return;
+      const dot = row.querySelector(".crm-fn-pop-dot");
+      const wasOn = dot.classList.contains("is-on");
+      const stageId = row.getAttribute("data-stage");
+      const stage = funnel && (funnel.stages || []).find((s) => s.id === stageId);
+      if (!funnel || !stage) return;
+      row.disabled = true;
+      if (!chat) chat = await activeChat();
+      if (!chat) {
+        crmToast("Não consegui ler a conversa aberta.", "err");
+        row.disabled = false;
+        return;
+      }
+      if (wasOn) {
+        // Já estava aqui → remove.
+        const memberships = membershipsFor(chat);
+        const card = memberships.find((m) => m.funnel.id === funnel.id)?.card;
+        if (!card) { row.disabled = false; return; }
         const r = await chrome.runtime
-          .sendMessage({ type: "api", path: "/api/public/extension/funnel-cards", opts: { method: "DELETE", body: JSON.stringify({ id: cardId }) } })
+          .sendMessage({ type: "api", path: "/api/public/extension/funnel-cards", opts: { method: "DELETE", body: JSON.stringify({ id: card.id }) } })
           .catch(() => null);
         if (r?.ok) {
           crmToast("Removido do funil");
           await loadFunnels();
-          renderStageList();
+          updateFunnelBadge();
+          renderRows(chat);
         } else {
           crmToast(r?.error || "Não consegui remover.", "err");
-          removeBtn.disabled = false;
-          removeBtn.textContent = "Remover do funil";
+          row.disabled = false;
         }
         return;
       }
-
-      const pickStage = e.target.closest("[data-stage]");
-      if (!pickStage) return;
-      const funnel = tabFunnel();
-      const stage = funnel && (funnel.stages || []).find((s) => s.id === pickStage.getAttribute("data-stage"));
-      if (!funnel || !stage) return;
-      pickStage.disabled = true;
-      pickStage.textContent = "Movendo...";
-      if (!chat) chat = await activeChat();
-      if (!chat) {
-        crmToast("Não consegui ler a conversa aberta.", "err");
-        return;
-      }
+      // Não estava aqui → adiciona/move (o servidor já remove de qualquer
+      // outra etapa/funil automaticamente).
       const r = await chrome.runtime
         .sendMessage({
           type: "api",
@@ -1457,11 +1474,6 @@
               stage_id: stage.id,
               title: chat.name || chat.phone || "Contato",
               phone: chat.phone || null,
-              // id interno (uuid) do contato — NUNCA o wa_id (formato
-              // "5511...@c.us"), que não é um uuid válido e derrubava a
-              // validação com "Dados inválidos". Quando o contato ainda
-              // não foi sincronizado, manda null (a sincronização
-              // automática cobre isso nos minutos seguintes).
               wa_contact_id: chat.contact_db_id || null,
             }),
           },
@@ -1470,11 +1482,11 @@
       if (r?.ok) {
         crmToast(`Adicionado em ${stage.name}`);
         await loadFunnels();
-        renderStageList();
+        updateFunnelBadge();
+        renderRows(chat);
       } else {
         crmToast(r?.error || "Não consegui adicionar ao funil.", "err");
-        pickStage.disabled = false;
-        pickStage.textContent = "Adicionar";
+        row.disabled = false;
       }
     });
   }

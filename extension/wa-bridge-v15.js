@@ -460,7 +460,16 @@
       palette = await window.WPP?.labels?.getLabelColorPalette?.();
       console.info("[CRM][diagnostico-cor] paleta:", JSON.stringify(palette));
     } catch (e) {
-      console.warn("[CRM] paleta de cores de etiqueta indisponível:", e?.message || e);
+      const msg = e?.message || String(e);
+      // "Etiquetas" é um recurso exclusivo do WhatsApp Business — em conta
+      // pessoal, o WhatsApp recusa até a primeira chamada. Não adianta
+      // tentar as outras fontes abaixo (também vão falhar/vir vazias); sai
+      // cedo com lista vazia em vez de gerar mais ruído no console.
+      if (/not a business version/i.test(msg)) {
+        console.info("[CRM] Conta pessoal (não Business) — sem etiquetas do WhatsApp disponíveis.");
+        return [];
+      }
+      console.warn("[CRM] paleta de cores de etiqueta indisponível:", msg);
     }
     function colorFromIndex(idx) {
       if (palette == null || idx == null) return null;
