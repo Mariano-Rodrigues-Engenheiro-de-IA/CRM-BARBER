@@ -50,6 +50,23 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
           return jsonResponse(request, { ok: false, error: "Coluna não encontrada" }, { status: 404 });
         }
 
+        // Um lead pertence a UM funil por vez — é uma jornada, não várias em
+        // paralelo. Antes de colocar (ou mover) o contato no funil de
+        // destino, tira ele de qualquer OUTRO funil em que já estivesse.
+        // Cobre tanto o popup de funis do WhatsApp quanto o próprio
+        // kanban do CRM, que passam pelo mesmo endpoint.
+        if (parsed.data.wa_contact_id || parsed.data.customer_id) {
+          let otherFunnelsQuery = supabaseAdmin
+            .from("funnel_cards")
+            .delete()
+            .eq("barbershop_id", shop)
+            .neq("funnel_id", parsed.data.funnel_id);
+          otherFunnelsQuery = parsed.data.wa_contact_id
+            ? otherFunnelsQuery.eq("wa_contact_id", parsed.data.wa_contact_id)
+            : otherFunnelsQuery.eq("customer_id", parsed.data.customer_id as string);
+          await otherFunnelsQuery;
+        }
+
         // Idempotência: o mesmo contato só pode ter um card por funil
         // (constraint funnel_cards_unique_contact). Se já existir, apenas
         // movemos para a coluna alvo em vez de tentar inserir de novo.

@@ -438,7 +438,7 @@ html body.crm-shell #app {
 }
 .crm-toast-err { border-left-color: var(--z-danger); }
 
-/* ---- Pop-up de Respostas Rápidas ---- */
+/* ---- Pop-up de Respostas Rápidas / Funis (compartilham a mesma base) ---- */
 .crm-qr {
   width: 460px;
   max-width: 92vw;
@@ -452,52 +452,53 @@ html body.crm-shell #app {
   padding: 16px 16px 12px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
 }
-.crm-qr-head { display: flex; align-items: center; justify-content: space-between; }
-.crm-qr-title { margin: 0; font-size: 15px; font-weight: 700; }
+.crm-qr-head { display: flex; align-items: center; gap: 8px; }
+.crm-qr-title { margin: 0; flex: 1; font-size: 15px; font-weight: 700; }
+.crm-qr-back {
+  flex-shrink: 0; background: transparent; border: none; color: var(--z-accent);
+  cursor: pointer; font-size: 12px; font-weight: 700; padding: 4px 2px 4px 0;
+}
+.crm-qr-back:hover { text-decoration: underline; }
 .crm-qr-close {
-  background: transparent; border: none; color: var(--z-text-dim); cursor: pointer; font-size: 14px;
+  flex-shrink: 0; background: transparent; border: none; color: var(--z-text-dim); cursor: pointer; font-size: 16px; line-height: 1;
 }
 .crm-qr-close:hover { color: var(--z-accent); }
-.crm-qr-list { margin-top: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.crm-qr-list { margin-top: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
 .crm-qr-empty { margin: 12px 0; font-size: 13px; color: var(--z-text-dim); }
 .crm-qr-item {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 10px 12px; border: 1px solid var(--z-line-soft); border-radius: 10px; background: var(--z-ink);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; border: 1px solid var(--z-line-soft); border-radius: 12px; background: var(--z-ink);
+  transition: border-color 0.12s ease;
 }
+.crm-qr-item:hover { border-color: var(--z-line); }
 .crm-qr-name {
-  margin: 0; font-size: 13px; font-weight: 600; min-width: 0;
+  margin: 0; font-size: 13.5px; font-weight: 600; min-width: 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .crm-qr-send {
-  flex-shrink: 0; padding: 6px 12px; border-radius: 8px;
+  flex-shrink: 0; padding: 7px 13px; border-radius: 8px;
   background: var(--z-accent); border: 1px solid var(--z-accent); color: var(--z-on-accent);
-  font-size: 12px; font-weight: 700; cursor: pointer;
+  font-size: 12px; font-weight: 700; cursor: pointer; transition: background 0.12s ease;
 }
 .crm-qr-send:hover { background: var(--z-accent-strong); }
+.crm-qr-send:disabled { opacity: 0.6; cursor: default; }
 .crm-chat-btn-icon { margin-left: 2px; }
 
-/* Status atual do lead nos funis — mostra de cara onde ele já está,
-   com botão pra remover, antes da lista de "adicionar a". */
-.crm-fn-current:empty { display: none; }
-.crm-fn-current { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
-.crm-fn-badge {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 8px 12px; border-radius: 10px;
-  background: var(--z-accent-soft); border: 1px solid var(--z-accent);
-  font-size: 12px; color: var(--z-text);
-}
-.crm-fn-remove {
-  flex-shrink: 0; padding: 5px 10px; border-radius: 8px;
-  background: transparent; border: 1px solid var(--z-danger); color: var(--z-danger);
-  font-size: 11px; font-weight: 700; cursor: pointer;
-}
-.crm-fn-remove:hover { background: var(--z-danger); color: #fff; }
-.crm-fn-remove:disabled { opacity: 0.5; cursor: default; }
+/* Badge de "já está aqui" ao lado do nome do funil/etapa. */
 .crm-fn-tag {
-  display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px;
+  display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px;
   background: var(--z-accent-soft); color: var(--z-accent); font-size: 10px; font-weight: 700;
-  vertical-align: middle;
+  vertical-align: middle; white-space: nowrap;
 }
+/* Botão de remover — mesmo tamanho/posição do botão "Adicionar", só que
+   com contorno vermelho, pra ficar claro que é uma ação diferente. */
+.crm-fn-remove-inline {
+  flex-shrink: 0; padding: 7px 13px; border-radius: 8px;
+  background: transparent; border: 1px solid var(--z-danger); color: var(--z-danger);
+  font-size: 12px; font-weight: 700; cursor: pointer; transition: background 0.12s ease, color 0.12s ease;
+}
+.crm-fn-remove-inline:hover { background: var(--z-danger); color: #fff; }
+.crm-fn-remove-inline:disabled { opacity: 0.6; cursor: default; }
 
 /* ------------------------------------------------------------------ */
 /* Popover de contatos — abre abaixo da aba clicada, centralizado */
