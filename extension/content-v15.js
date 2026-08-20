@@ -363,6 +363,7 @@
   // tenta aplicar o filtro nativo da lista de conversas.
   // ---------------------------------------------------------------------
   let activeFilter = null; // { key, kind, id, funnelId, name }
+  let filterLoadingKey = null; // chave da pílula esperando o WhatsApp confirmar o filtro
   let nativeTabWatcherReady = false;
 
   /** IDs completos (@lid/@c.us/@g.us) que o motor interno do WhatsApp usa.
@@ -472,6 +473,7 @@
 
   function clearChatFilter() {
     activeFilter = null;
+    filterLoadingKey = null;
     closeDrawer();
     void applyNativeChatList("all");
     renderTopbar();
@@ -516,12 +518,13 @@
     // provisório — evita que um segundo clique concorrente (usuário troca
     // de etapa rápido) aplique o filtro errado depois do await.
     activeFilter = { key, kind: "stage", id: stageId, funnelId, name: "Etapa", funnelName: "" };
+    filterLoadingKey = key;
     renderTopbar();
     closeDrawer();
     await ensureFilterData("stage");
     if (activeFilter?.key !== key) return; // usuário trocou de filtro no meio
     const funnel = funnels.find((f) => f.id === funnelId);
-    if (!funnel) return;
+    if (!funnel) { filterLoadingKey = null; renderTopbar(); return; }
     const stage = (funnel.stages || []).find((s) => s.id === stageId);
     activeFilter = {
       key,
@@ -535,8 +538,12 @@
     const waIds = (funnel.cards || [])
       .filter((c) => c.stage_id === stageId && c.wa_id)
       .map((c) => c.wa_id);
-    void applyNativeChatList("custom", waIds);
-
+    // O motor do WhatsApp pode demorar (ou ainda estar de aquecendo logo
+    // após abrir a página) — a pílula fica "carregando" até confirmar,
+    // pra não parecer que o clique não registrou.
+    await applyNativeChatList("custom", waIds);
+    if (filterLoadingKey === key) filterLoadingKey = null;
+    renderTopbar();
   }
 
   // ---------------------------------------------------------------------
@@ -932,10 +939,15 @@
     const pills = ((f?.stages) || [])
       .map((s) => {
         const cards = (f.cards || []).filter((c) => c.stage_id === s.id);
-        const on = activeFilter?.key === `stage:${s.id}`;
+        const key = `stage:${s.id}`;
+        const on = activeFilter?.key === key;
+        const loading = filterLoadingKey === key;
+        const countHtml = loading
+          ? `<span class="crm-pill-count crm-pill-spin"></span>`
+          : `<span class="crm-pill-count">${cards.length}</span>`;
         return `<span class="crm-pill${on ? " crm-pill-on" : ""}" data-funnel="${escapeHtml(f.id)}" data-stage="${escapeHtml(s.id)}">
             ${escapeHtml(s.name)}
-            <span class="crm-pill-count">${cards.length}</span>
+            ${countHtml}
             <button class="crm-pill-gear" data-funnel="${escapeHtml(f.id)}" data-stage="${escapeHtml(s.id)}" title="Opções">${GEAR_SVG}</button>
           </span>`;
       })

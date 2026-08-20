@@ -256,6 +256,23 @@ html body.crm-shell #app {
   font-size: 11.5px;
 }
 .crm-pill-on .crm-pill-count { background: rgba(255, 255, 255, 0.22); }
+/* Enquanto o WhatsApp confirma o filtro (pode demorar um instante, ou
+   estar "esquentando" o motor logo após abrir a página), a bolinha de
+   contagem vira um spinner — deixa claro que o clique registrou. */
+.crm-pill-spin {
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  background: transparent !important;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-top-color: #fff;
+  animation: crm-spin 0.7s linear infinite;
+}
+.crm-pill:not(.crm-pill-on) .crm-pill-spin {
+  border-color: var(--z-line);
+  border-top-color: var(--z-accent);
+}
+@keyframes crm-spin { to { transform: rotate(360deg); } }
 .crm-pill-dot {
   width: 7px;
   height: 7px;
