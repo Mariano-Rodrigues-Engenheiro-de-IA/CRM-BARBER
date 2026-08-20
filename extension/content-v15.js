@@ -1506,6 +1506,7 @@
     const panel = document.createElement("div");
     panel.className = "crm-qrp";
     document.body.appendChild(panel);
+    document.body.classList.add("crm-qr-open");
     animatePopIn(panel);
 
     let mode = "list";
@@ -1623,7 +1624,7 @@
     function renderForm(reply) {
       mode = "form";
       editingId = reply?.id || null;
-      steps = reply ? JSON.parse(JSON.stringify(reply.actions || [])) : [{ type: "text", text: "" }];
+      steps = reply ? JSON.parse(JSON.stringify(reply.actions || [])) : [{ type: "text", text: "", delay_seconds: 5 }];
       paintForm(reply?.title || "");
     }
 
@@ -1653,7 +1654,10 @@
       if (mode === "list") renderList();
     });
 
-    const close = () => panel.remove();
+    const close = () => {
+      panel.remove();
+      document.body.classList.remove("crm-qr-open");
+    };
 
     panel.addEventListener("click", async (e) => {
       if (e.target.closest("[data-close]")) return close();
@@ -1714,7 +1718,7 @@
 
       const addStep = e.target.closest("[data-add-step]");
       if (addStep) {
-        steps.push({ type: "text", text: "" });
+        steps.push({ type: "text", text: "", delay_seconds: 5 });
         paintForm(currentTitle());
         return;
       }
@@ -1722,7 +1726,7 @@
       const delStep = e.target.closest("[data-del-step]");
       if (delStep) {
         steps.splice(Number(delStep.getAttribute("data-del-step")), 1);
-        if (!steps.length) steps.push({ type: "text", text: "" });
+        if (!steps.length) steps.push({ type: "text", text: "", delay_seconds: 5 });
         paintForm(currentTitle());
         return;
       }
@@ -1775,7 +1779,9 @@
       const typeSel = e.target.closest("[data-step-type]");
       if (typeSel) {
         const i = Number(typeSel.getAttribute("data-step-type"));
-        steps[i] = { type: typeSel.value };
+        // Passo novo já nasce com 5s de espera (padrão pedido); mídia
+        // e texto usam, funil ignora (não mostra esse campo).
+        steps[i] = { type: typeSel.value, delay_seconds: 5 };
         paintForm(currentTitle());
         return;
       }
@@ -2024,6 +2030,10 @@
             // Mídia já baixada pelo service worker (a página do WhatsApp
             // bloqueia fetch externo por CSP).
             data_base64: a.data_base64 || null,
+            // Tempo de espera configurado nesse passo — estava se perdendo
+            // aqui (o objeto era remontado campo a campo e esse não tinha
+            // sido copiado), por isso o temporizador não fazia efeito.
+            delay_seconds: typeof a.delay_seconds === "number" ? a.delay_seconds : null,
           });
         }
       } else if (action.text) {

@@ -55,6 +55,12 @@ html body.crm-shell #app {
   margin: 0 !important;
   padding: 0 !important;
   box-sizing: border-box !important;
+  transition: right 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* Painel de Respostas rápidas aberto — reserva o espaço dele de verdade
+   (como uma aba lateral), em vez de sobrepor por cima da conversa. */
+html body.crm-shell.crm-qr-open #app {
+  right: 396px !important;
 }
 
 /* Trilho lateral — só ícones. Largura alinhada com a barra nativa do

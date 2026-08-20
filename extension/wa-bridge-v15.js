@@ -251,7 +251,7 @@
       }
       // Cada passo pode ter seu próprio tempo de espera configurado
       // (editor de respostas rápidas); sem isso, usa o padrão de sempre.
-      const waitMs = typeof action.delay_seconds === "number" ? action.delay_seconds * 1000 : 700;
+      const waitMs = typeof action.delay_seconds === "number" ? action.delay_seconds * 1000 : 5000;
       await sleep(waitMs);
     }
   }

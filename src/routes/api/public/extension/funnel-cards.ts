@@ -57,19 +57,11 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
           return jsonResponse(request, { ok: false, error: "Coluna não encontrada" }, { status: 404 });
         }
 
-        // Um lead pertence a UM funil por vez — é uma jornada, não várias em
-        // paralelo. Antes de colocar (ou mover) o contato no funil de
-        // destino, tira ele de qualquer OUTRO funil em que já estivesse.
-        // Cobre tanto o popup de funis do WhatsApp quanto o próprio
-        // kanban do CRM, que passam pelo mesmo endpoint.
-        if (matchCol) {
-          await supabaseAdmin
-            .from("funnel_cards")
-            .delete()
-            .eq("barbershop_id", shop)
-            .neq("funnel_id", parsed.data.funnel_id)
-            .eq(matchCol, matchVal as string);
-        }
+        // NOTA: um lead PODE estar em vários funis ao mesmo tempo — a
+        // remoção automática de outros funis foi removida por pedido.
+        // Só sai de um funil se: (a) for uma etapa dentro do MESMO funil
+        // (linha abaixo, via idempotência), ou (b) uma ação explícita de
+        // "remover do funil" (funnel_remove) for programada.
 
         // Idempotência: o mesmo contato só pode ter um card por funil
         // (constraint funnel_cards_unique_contact). Se já existir, apenas
@@ -111,13 +103,19 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
           const existing = existingRes.data;
           if (existing) {
             const { wa_contacts, ...rest } = existing as any;
-            const patch: { stage_id?: string; wa_contact_id?: string } = {};
+            const patch: { stage_id?: string; wa_contact_id?: string; title?: string } = {};
             if (existing.stage_id !== parsed.data.stage_id) patch.stage_id = parsed.data.stage_id;
             // Contato sincronizou depois do card já existir — aproveita
             // pra linkar o wa_contact_id agora, senão o próximo clique
             // (já com o id disponível) não ia encontrar esse card pelo
             // telefone e criaria outro duplicado.
             if (parsed.data.wa_contact_id && !existing.wa_contact_id) patch.wa_contact_id = parsed.data.wa_contact_id;
+            // Autocorreção: se o card foi criado antes de uma melhoria na
+            // identificação do nome (ex: "Dados do contato", texto da
+            // própria interface do WhatsApp lido por engano), qualquer
+            // toque novo nesse card já resolve com o nome certo — não
+            // fica preso pra sempre com o título errado da primeira vez.
+            if (parsed.data.title && parsed.data.title !== existing.title) patch.title = parsed.data.title;
             if (Object.keys(patch).length) {
               const { error: moveError } = await supabaseAdmin
                 .from("funnel_cards")
@@ -137,6 +135,7 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
                 profile_picture_url: wa_contacts?.profile_picture_url ?? null,
                 unread_count: wa_contacts?.unread_count ?? 0,
                 stage_id: parsed.data.stage_id,
+                title: patch.title ?? rest.title,
               },
             });
           }
