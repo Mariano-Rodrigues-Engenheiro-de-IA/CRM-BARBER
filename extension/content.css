@@ -476,16 +476,29 @@ html body.crm-shell #app {
 .crm-fn-pop-row:hover { background: var(--z-surface-2); }
 .crm-fn-pop-row:disabled { opacity: 0.5; cursor: default; }
 .crm-fn-pop-dot {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 999px;
   border: 2px solid var(--z-line);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 .crm-fn-pop-dot.is-on {
   background: var(--z-accent);
   border-color: var(--z-accent);
+}
+/* Check dentro da bolinha quando marcada — igual ao padrão nativo do
+   WhatsApp (círculo vazio / círculo cheio com check). */
+.crm-fn-pop-dot.is-on::after {
+  content: "";
+  width: 9px;
+  height: 5px;
+  border-left: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(-45deg) translate(1px, -1px);
 }
 .crm-fn-pop-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
