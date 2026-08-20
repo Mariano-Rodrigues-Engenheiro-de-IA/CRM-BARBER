@@ -447,55 +447,66 @@ html body.crm-shell #app {
   flex-direction: column;
   background: var(--z-surface);
   color: var(--z-text);
-  border: 1px solid var(--z-line);
-  border-radius: 16px;
-  padding: 16px 16px 12px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--z-line-soft);
+  border-radius: 20px;
+  padding: 20px 20px 16px;
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.28), 0 8px 20px rgba(15, 23, 42, 0.12);
 }
-.crm-qr-head { display: flex; align-items: center; gap: 8px; }
-.crm-qr-title { margin: 0; flex: 1; font-size: 15px; font-weight: 700; }
+.crm-qr-head { display: flex; align-items: center; gap: 10px; }
+.crm-qr-mark {
+  flex-shrink: 0; width: 32px; height: 32px; border-radius: 10px;
+  background: var(--z-accent); color: var(--z-on-accent);
+  display: flex; align-items: center; justify-content: center;
+}
+.crm-qr-mark svg { width: 16px; height: 16px; }
+.crm-qr-title { margin: 0; flex: 1; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
 .crm-qr-back {
   flex-shrink: 0; background: transparent; border: none; color: var(--z-accent);
   cursor: pointer; font-size: 12px; font-weight: 700; padding: 4px 2px 4px 0;
 }
 .crm-qr-back:hover { text-decoration: underline; }
 .crm-qr-close {
-  flex-shrink: 0; background: transparent; border: none; color: var(--z-text-dim); cursor: pointer; font-size: 16px; line-height: 1;
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 999px;
+  background: transparent; border: none; color: var(--z-text-dim); cursor: pointer;
+  font-size: 17px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  transition: background 0.12s ease, color 0.12s ease;
 }
-.crm-qr-close:hover { color: var(--z-accent); }
-.crm-qr-list { margin-top: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-.crm-qr-empty { margin: 12px 0; font-size: 13px; color: var(--z-text-dim); }
+.crm-qr-close:hover { background: var(--z-surface-2); color: var(--z-text); }
+.crm-qr-list { margin-top: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.crm-qr-empty { margin: 16px 0; font-size: 13px; color: var(--z-text-dim); text-align: center; }
 .crm-qr-item {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 12px 14px; border: 1px solid var(--z-line-soft); border-radius: 12px; background: var(--z-ink);
-  transition: border-color 0.12s ease;
+  padding: 13px 16px; border: 1px solid var(--z-line-soft); border-radius: 14px; background: var(--z-bar);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
-.crm-qr-item:hover { border-color: var(--z-line); }
+.crm-qr-item:hover { border-color: var(--z-accent); box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08); }
 .crm-qr-name {
-  margin: 0; font-size: 13.5px; font-weight: 600; min-width: 0;
+  margin: 0; font-size: 14px; font-weight: 600; min-width: 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .crm-qr-send {
-  flex-shrink: 0; padding: 7px 13px; border-radius: 8px;
+  flex-shrink: 0; padding: 8px 16px; border-radius: 10px;
   background: var(--z-accent); border: 1px solid var(--z-accent); color: var(--z-on-accent);
-  font-size: 12px; font-weight: 700; cursor: pointer; transition: background 0.12s ease;
+  font-size: 12.5px; font-weight: 700; cursor: pointer; transition: background 0.12s ease;
 }
 .crm-qr-send:hover { background: var(--z-accent-strong); }
 .crm-qr-send:disabled { opacity: 0.6; cursor: default; }
 .crm-chat-btn-icon { margin-left: 2px; }
 
-/* Badge de "já está aqui" ao lado do nome do funil/etapa. */
+/* Badge de "já está aqui" ao lado do nome do funil/etapa — pill sólido,
+   igual ao padrão de contagem usado em referências de produtos maduros. */
 .crm-fn-tag {
-  display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px;
-  background: var(--z-accent-soft); color: var(--z-accent); font-size: 10px; font-weight: 700;
+  display: inline-flex; align-items: center; margin-left: 6px; padding: 2px 9px; border-radius: 999px;
+  background: var(--z-accent); color: var(--z-on-accent); font-size: 10px; font-weight: 700;
   vertical-align: middle; white-space: nowrap;
 }
 /* Botão de remover — mesmo tamanho/posição do botão "Adicionar", só que
    com contorno vermelho, pra ficar claro que é uma ação diferente. */
 .crm-fn-remove-inline {
-  flex-shrink: 0; padding: 7px 13px; border-radius: 8px;
+  flex-shrink: 0; padding: 8px 16px; border-radius: 10px;
   background: transparent; border: 1px solid var(--z-danger); color: var(--z-danger);
-  font-size: 12px; font-weight: 700; cursor: pointer; transition: background 0.12s ease, color 0.12s ease;
+  font-size: 12.5px; font-weight: 700; cursor: pointer; transition: background 0.12s ease, color 0.12s ease;
 }
 .crm-fn-remove-inline:hover { background: var(--z-danger); color: #fff; }
 .crm-fn-remove-inline:disabled { opacity: 0.6; cursor: default; }

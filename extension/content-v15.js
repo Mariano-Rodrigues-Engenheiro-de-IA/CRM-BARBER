@@ -1364,6 +1364,7 @@
       <div class="crm-qr" role="dialog" aria-modal="true">
         <div class="crm-qr-head">
           <button class="crm-qr-back" hidden>&larr; Voltar</button>
+          <div class="crm-qr-mark">${ICONS.funnel}</div>
           <p class="crm-qr-title">Funis de vendas</p>
           <button class="crm-qr-close" title="Fechar">&times;</button>
         </div>
@@ -1526,8 +1527,9 @@
     overlay.innerHTML = `
       <div class="crm-qr" role="dialog" aria-modal="true">
         <div class="crm-qr-head">
+          <div class="crm-qr-mark">${BOLT_SVG}</div>
           <p class="crm-qr-title">Respostas rápidas</p>
-          <button class="crm-qr-close" title="Fechar">✕</button>
+          <button class="crm-qr-close" title="Fechar">&times;</button>
         </div>
         <div class="crm-qr-list"></div>
       </div>
