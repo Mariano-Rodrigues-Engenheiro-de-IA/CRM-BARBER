@@ -1293,7 +1293,7 @@
     qr.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      openQuickReplyModal(qr);
+      openQuickReplyModal();
     });
 
     const slot = headerActionsSlot(header);
@@ -1476,67 +1476,176 @@
   const PENCIL_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
   const TRASH_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>`;
 
+  const QR_STEP_TYPES = [
+    { type: "text", label: "Texto" },
+    { type: "image", label: "Imagem" },
+    { type: "video", label: "Vídeo" },
+    { type: "audio", label: "Áudio" },
+    { type: "funnel_add", label: "Mover no funil" },
+    { type: "funnel_remove", label: "Remover do funil" },
+  ];
+
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("Não consegui ler o arquivo"));
+      reader.readAsDataURL(file);
+    });
+  }
+
   // ---------------------------------------------------------------------
-  // Popover leve de Respostas rápidas — mesmo padrão do funil: ancorado no
-  // raiozinho, sem escurecer/desfocar o fundo. Cria, edita, exclui e envia
-  // tudo por aqui (só texto — resposta com mídia continua no CRM).
+  // Painel de Respostas rápidas — ancorado no canto da tela (não fecha
+  // sozinho, fica aberto pra disparar várias respostas durante o
+  // atendimento). Dois níveis: lista de respostas, e o editor de passos
+  // (texto/imagem/vídeo/áudio/funil) de uma resposta específica.
   // ---------------------------------------------------------------------
-  function openQuickReplyModal(anchor) {
+  function openQuickReplyModal() {
     prewarmEngine();
-    document.querySelector(".crm-qr-pop")?.remove();
-    const pop = document.createElement("div");
-    pop.className = "crm-qr-pop";
-    const rect = anchor.getBoundingClientRect();
-    pop.style.top = `${rect.bottom + 8}px`;
-    pop.style.left = `${Math.min(Math.max(8, rect.left), window.innerWidth - 300)}px`;
-    document.body.appendChild(pop);
-    animatePopIn(pop);
+    document.querySelector(".crm-qrp")?.remove();
+    const panel = document.createElement("div");
+    panel.className = "crm-qrp";
+    document.body.appendChild(panel);
+    animatePopIn(panel);
 
     let mode = "list";
     let editingId = null;
+    let steps = [];
+    let savingFile = false;
 
     function firstTextOf(reply) {
       return (reply?.actions || []).find((a) => a.type === "text")?.text || "";
+    }
+    function stepSummary(reply) {
+      const n = (reply?.actions || []).length;
+      return `${n} passo${n === 1 ? "" : "s"}`;
     }
 
     function renderList() {
       mode = "list";
       const rows = quickReplies.length
-        ? `<div class="crm-qr-pop-list">${quickReplies
+        ? `<div class="crm-qrp-list">${quickReplies
             .map(
-              (q, i) => `<div class="crm-qr-pop-row">
-                <button class="crm-qr-pop-send" data-send="${i}" title="Enviar">${BOLT_SVG}</button>
-                <span class="crm-qr-pop-name">${escapeHtml(q.title)}</span>
-                <button class="crm-qr-pop-icon" data-edit="${i}" title="Editar">${PENCIL_SVG}</button>
-                <button class="crm-qr-pop-icon crm-qr-pop-icon-danger" data-del="${i}" title="Excluir">${TRASH_SVG}</button>
+              (q, i) => `<div class="crm-qrp-row">
+                <div class="crm-qrp-row-info" data-edit="${i}">
+                  <p class="crm-qrp-row-name">${escapeHtml(q.title)}</p>
+                  <p class="crm-qrp-row-sub">${escapeHtml(stepSummary(q))}${firstTextOf(q) ? " · " + escapeHtml(firstTextOf(q)).slice(0, 40) : ""}</p>
+                </div>
+                <button class="crm-qrp-icon" data-edit="${i}" title="Editar">${PENCIL_SVG}</button>
+                <button class="crm-qrp-icon crm-qrp-icon-danger" data-del="${i}" title="Excluir">${TRASH_SVG}</button>
+                <button class="crm-qrp-send" data-send="${i}" title="Enviar">${ICONS.send}</button>
               </div>`,
             )
             .join("")}</div>`
-        : `<p class="crm-fn-pop-empty">Nenhuma resposta cadastrada ainda.</p>`;
-      pop.innerHTML = `
-        <div class="crm-qr-pop-head">
-          <p class="crm-qr-pop-title">Respostas rápidas</p>
-          <button class="crm-qr-pop-new" data-new>+ Nova</button>
+        : `<p class="crm-qrp-empty">Nenhuma resposta cadastrada ainda. Clica em "+ Nova" pra criar a primeira.</p>`;
+      panel.innerHTML = `
+        <div class="crm-qrp-head">
+          <div class="crm-qr-mark">${BOLT_SVG}</div>
+          <p class="crm-qrp-title">Respostas rápidas</p>
+          <button class="crm-qrp-new" data-new>+ Nova</button>
+          <button class="crm-qrp-close" data-close title="Fechar">&times;</button>
         </div>
-        ${rows}
+        <div class="crm-qrp-body">${rows}</div>
+      `;
+    }
+
+    function stepFieldsHtml(s, i) {
+      if (s.type === "text") {
+        return `<textarea class="crm-qrp-textarea" data-step-field="text" data-i="${i}" placeholder="Digite a mensagem…">${escapeHtml(s.text || "")}</textarea>`;
+      }
+      if (s.type === "image" || s.type === "video" || s.type === "audio") {
+        const fileLabel = s._uploading ? "Enviando..." : s.filename ? s.filename : "Nenhum arquivo escolhido";
+        return `
+          <div class="crm-qrp-file-row">
+            <label class="crm-qrp-file-btn">
+              Escolher arquivo
+              <input type="file" accept="${s.type}/*" data-step-file="${i}" hidden ${s._uploading ? "disabled" : ""} />
+            </label>
+            <span class="crm-qrp-file-name">${escapeHtml(fileLabel)}</span>
+          </div>
+          ${s.type !== "audio" ? `<input class="crm-qrp-input" data-step-field="caption" data-i="${i}" value="${escapeHtml(s.caption || "")}" placeholder="Legenda (opcional)" />` : ""}
+        `;
+      }
+      if (s.type === "funnel_add") {
+        const funnel = funnels.find((f) => f.id === s.funnel_id);
+        return `
+          <select class="crm-qrp-select" data-step-field="funnel_id" data-i="${i}">
+            <option value="">Escolher funil…</option>
+            ${funnels
+              .filter((f) => f.mode !== "label")
+              .map((f) => `<option value="${escapeHtml(f.id)}" ${f.id === s.funnel_id ? "selected" : ""}>${escapeHtml(f.name)}</option>`)
+              .join("")}
+          </select>
+          <select class="crm-qrp-select" data-step-field="stage_id" data-i="${i}">
+            <option value="">Escolher etapa…</option>
+            ${(funnel?.stages || [])
+              .map((st) => `<option value="${escapeHtml(st.id)}" ${st.id === s.stage_id ? "selected" : ""}>${escapeHtml(st.name)}</option>`)
+              .join("")}
+          </select>
+        `;
+      }
+      if (s.type === "funnel_remove") {
+        return `
+          <select class="crm-qrp-select" data-step-field="funnel_id" data-i="${i}">
+            <option value="">Escolher funil…</option>
+            ${funnels
+              .filter((f) => f.mode !== "label")
+              .map((f) => `<option value="${escapeHtml(f.id)}" ${f.id === s.funnel_id ? "selected" : ""}>${escapeHtml(f.name)}</option>`)
+              .join("")}
+          </select>
+        `;
+      }
+      return "";
+    }
+
+    function stepCardHtml(s, i) {
+      const showDelay = ["text", "image", "video", "audio"].includes(s.type);
+      return `
+        <div class="crm-qrp-step">
+          <div class="crm-qrp-step-head">
+            <span class="crm-qrp-step-num">${i + 1}</span>
+            <select class="crm-qrp-step-type" data-step-type="${i}">
+              ${QR_STEP_TYPES.map((t) => `<option value="${t.type}" ${t.type === s.type ? "selected" : ""}>${t.label}</option>`).join("")}
+            </select>
+            <button class="crm-qrp-icon crm-qrp-icon-danger" data-del-step="${i}" title="Remover passo">${TRASH_SVG}</button>
+          </div>
+          <div class="crm-qrp-step-body">${stepFieldsHtml(s, i)}</div>
+          ${showDelay ? `
+          <label class="crm-qrp-delay">
+            Aguardar
+            <input class="crm-qrp-delay-input" type="number" min="0" max="120" data-step-field="delay_seconds" data-i="${i}" value="${s.delay_seconds ?? ""}" placeholder="0" />
+            segundos antes do próximo passo
+          </label>` : ""}
+        </div>
       `;
     }
 
     function renderForm(reply) {
       mode = "form";
       editingId = reply?.id || null;
-      pop.innerHTML = `
-        <div class="crm-qr-pop-head">
-          <button class="crm-qr-pop-back" data-back title="Voltar">&larr;</button>
-          <p class="crm-qr-pop-title">${reply ? "Editar resposta" : "Nova resposta"}</p>
+      steps = reply ? JSON.parse(JSON.stringify(reply.actions || [])) : [{ type: "text", text: "" }];
+      paintForm(reply?.title || "");
+    }
+
+    function paintForm(titleValue) {
+      panel.innerHTML = `
+        <div class="crm-qrp-head">
+          <button class="crm-qrp-back" data-back title="Voltar">&larr;</button>
+          <input class="crm-qrp-title-input" data-field="title" value="${escapeHtml(titleValue)}" placeholder="Nome da resposta" maxlength="120" />
+          <button class="crm-qrp-close" data-close title="Fechar">&times;</button>
         </div>
-        <div class="crm-qr-pop-form">
-          <input class="crm-qr-pop-input" data-field="title" value="${escapeHtml(reply?.title || "")}" placeholder="Título (ex: Boas-vindas)" maxlength="120" />
-          <textarea class="crm-qr-pop-textarea" data-field="text" placeholder="Mensagem…" maxlength="4000">${escapeHtml(firstTextOf(reply))}</textarea>
-          <button class="crm-qr-pop-save" data-save>${reply ? "Salvar" : "Criar"}</button>
+        <div class="crm-qrp-body">
+          <div class="crm-qrp-steps">${steps.map((s, i) => stepCardHtml(s, i)).join("")}</div>
+          <button class="crm-qrp-add-step" data-add-step>+ Adicionar passo</button>
+        </div>
+        <div class="crm-qrp-foot">
+          <button class="crm-qrp-save" data-save ${savingFile ? "disabled" : ""}>${editingId ? "Salvar" : "Criar resposta"}</button>
         </div>
       `;
-      pop.querySelector('[data-field="title"]')?.focus();
+    }
+
+    function currentTitle() {
+      return panel.querySelector('[data-field="title"]')?.value.trim() || "";
     }
 
     renderList();
@@ -1544,16 +1653,10 @@
       if (mode === "list") renderList();
     });
 
-    const close = () => {
-      pop.remove();
-      document.removeEventListener("mousedown", onDoc, true);
-    };
-    function onDoc(ev) {
-      if (!pop.contains(ev.target) && ev.target !== anchor) close();
-    }
-    setTimeout(() => document.addEventListener("mousedown", onDoc, true), 0);
+    const close = () => panel.remove();
 
-    pop.addEventListener("click", async (e) => {
+    panel.addEventListener("click", async (e) => {
+      if (e.target.closest("[data-close]")) return close();
       if (e.target.closest("[data-new]")) return renderForm(null);
       if (e.target.closest("[data-back]")) return renderList();
 
@@ -1583,18 +1686,76 @@
         return;
       }
 
+      // Envia sem fechar o painel — o usuário pode disparar várias
+      // respostas seguidas durante o atendimento sem reabrir toda vez.
+      const send = e.target.closest("[data-send]");
+      if (send && !quickReplySending) {
+        const reply = quickReplies[Number(send.getAttribute("data-send"))];
+        if (!reply) return;
+        quickReplySending = true;
+        send.disabled = true;
+        const chat = await activeChat();
+        if (!chat) {
+          crmToast("Não consegui ler a conversa aberta.", "err");
+          quickReplySending = false;
+          send.disabled = false;
+          return;
+        }
+        try {
+          await sendQuickReply(reply, chat);
+        } finally {
+          quickReplySending = false;
+          send.disabled = false;
+        }
+        return;
+      }
+
+      if (mode !== "form") return;
+
+      const addStep = e.target.closest("[data-add-step]");
+      if (addStep) {
+        steps.push({ type: "text", text: "" });
+        paintForm(currentTitle());
+        return;
+      }
+
+      const delStep = e.target.closest("[data-del-step]");
+      if (delStep) {
+        steps.splice(Number(delStep.getAttribute("data-del-step")), 1);
+        if (!steps.length) steps.push({ type: "text", text: "" });
+        paintForm(currentTitle());
+        return;
+      }
+
       const saveBtn = e.target.closest("[data-save]");
       if (saveBtn) {
-        const title = pop.querySelector('[data-field="title"]').value.trim();
-        const text = pop.querySelector('[data-field="text"]').value.trim();
-        if (!title) { crmToast("Dá um título pra essa resposta.", "err"); return; }
-        if (!text) { crmToast("Escreve a mensagem.", "err"); return; }
+        const title = currentTitle();
+        if (!title) { crmToast("Dá um nome pra essa resposta.", "err"); return; }
+        const cleaned = steps
+          .map((s) => {
+            const out = { type: s.type, delay_seconds: s.delay_seconds };
+            if (s.type === "text") out.text = (s.text || "").trim();
+            if (["image", "video", "audio"].includes(s.type)) {
+              out.path = s.path;
+              out.mime = s.mime;
+              out.filename = s.filename;
+              if (s.caption) out.caption = s.caption;
+            }
+            if (s.type === "funnel_add") { out.funnel_id = s.funnel_id; out.stage_id = s.stage_id; }
+            if (s.type === "funnel_remove") out.funnel_id = s.funnel_id;
+            return out;
+          })
+          .filter((s) => {
+            if (s.type === "text") return !!s.text;
+            if (s.type === "funnel_add") return !!s.funnel_id && !!s.stage_id;
+            if (s.type === "funnel_remove") return !!s.funnel_id;
+            return !!s.path;
+          });
+        if (!cleaned.length) { crmToast("Preenche pelo menos um passo válido.", "err"); return; }
         saveBtn.disabled = true;
         saveBtn.textContent = "Salvando...";
-        const body = JSON.stringify({ title, actions: [{ type: "text", text }] });
-        const path = editingId
-          ? `/api/public/extension/quick-replies/${editingId}`
-          : "/api/public/extension/quick-replies";
+        const body = JSON.stringify({ title, actions: cleaned });
+        const path = editingId ? `/api/public/extension/quick-replies/${editingId}` : "/api/public/extension/quick-replies";
         const method = editingId ? "PATCH" : "POST";
         const r = await chrome.runtime.sendMessage({ type: "api", path, opts: { method, body } }).catch(() => null);
         if (r?.ok) {
@@ -1604,31 +1765,84 @@
         } else {
           crmToast(r?.error || "Não consegui salvar.", "err");
           saveBtn.disabled = false;
-          saveBtn.textContent = editingId ? "Salvar" : "Criar";
+          saveBtn.textContent = editingId ? "Salvar" : "Criar resposta";
         }
         return;
       }
+    });
 
-      const send = e.target.closest("[data-send]");
-      if (send && !quickReplySending) {
-        const reply = quickReplies[Number(send.getAttribute("data-send"))];
-        if (!reply) return;
-        quickReplySending = true;
-        send.disabled = true;
-        close();
-        const chat = await activeChat();
-        if (!chat) {
-          quickReplySending = false;
-          return;
+    panel.addEventListener("change", async (e) => {
+      const typeSel = e.target.closest("[data-step-type]");
+      if (typeSel) {
+        const i = Number(typeSel.getAttribute("data-step-type"));
+        steps[i] = { type: typeSel.value };
+        paintForm(currentTitle());
+        return;
+      }
+      const field = e.target.closest("[data-step-field]");
+      if (field) {
+        const i = Number(field.getAttribute("data-i"));
+        const key = field.getAttribute("data-step-field");
+        if (key === "delay_seconds") {
+          const v = field.value === "" ? undefined : Math.max(0, Math.min(120, Number(field.value)));
+          steps[i].delay_seconds = v;
+        } else {
+          steps[i][key] = field.value;
         }
+        if (key === "funnel_id" && steps[i].type === "funnel_add") {
+          steps[i].stage_id = "";
+          paintForm(currentTitle());
+        }
+        return;
+      }
+      const fileInput = e.target.closest("[data-step-file]");
+      if (fileInput) {
+        const i = Number(fileInput.getAttribute("data-step-file"));
+        const file = fileInput.files?.[0];
+        if (!file) return;
+        steps[i]._uploading = true;
+        savingFile = true;
+        paintForm(currentTitle());
         try {
-          await sendQuickReply(reply, chat);
+          const dataUrl = await fileToBase64(file);
+          const r = await chrome.runtime
+            .sendMessage({
+              type: "api",
+              path: "/api/public/extension/quick-replies/upload",
+              opts: { method: "POST", body: JSON.stringify({ filename: file.name, mime: file.type, data_base64: dataUrl }) },
+            })
+            .catch(() => null);
+          if (r?.ok) {
+            steps[i] = { ...steps[i], path: r.path, mime: r.mime, filename: r.filename, _uploading: false };
+            crmToast("Arquivo enviado");
+          } else {
+            steps[i]._uploading = false;
+            crmToast(r?.error || "Não consegui enviar o arquivo.", "err");
+          }
+        } catch (err) {
+          steps[i]._uploading = false;
+          crmToast(err?.message || "Não consegui ler o arquivo.", "err");
         } finally {
-          quickReplySending = false;
+          savingFile = false;
+          paintForm(currentTitle());
+        }
+      }
+    });
+
+    panel.addEventListener("input", (e) => {
+      const field = e.target.closest("[data-step-field]");
+      if (field && field.tagName !== "SELECT") {
+        const i = Number(field.getAttribute("data-i"));
+        const key = field.getAttribute("data-step-field");
+        if (key === "delay_seconds") {
+          steps[i].delay_seconds = field.value === "" ? undefined : Number(field.value);
+        } else {
+          steps[i][key] = field.value;
         }
       }
     });
   }
+
 
   async function sendQuickReply(reply, chat) {
     // O alvo correto é o próprio ID da conversa (wa_id). Usar só os dígitos do
@@ -1639,18 +1853,63 @@
     const sendable = (reply.actions || []).filter((a) =>
       ["text", "image", "video", "audio"].includes(a.type),
     );
-    if (!sendable.length) return;
-    const prefetched = await chrome.runtime
-      .sendMessage({ type: "prefetch_media", actions: sendable })
-      .catch(() => null);
-    const res = await handleWaAction({
-      phone: target,
-      waId,
-      name: chat.name || "",
-      actions: prefetched?.ok ? prefetched.actions : sendable,
-    });
-    // Sem confirmação de envio: só avisa quando falha.
-    if (!res?.ok) crmToast(res?.error || "Falha ao enviar", "err");
+    let res = { ok: true };
+    if (sendable.length) {
+      const prefetched = await chrome.runtime
+        .sendMessage({ type: "prefetch_media", actions: sendable })
+        .catch(() => null);
+      res = await handleWaAction({
+        phone: target,
+        waId,
+        name: chat.name || "",
+        actions: prefetched?.ok ? prefetched.actions : sendable,
+      });
+      // Sem confirmação de envio: só avisa quando falha.
+      if (!res?.ok) crmToast(res?.error || "Falha ao enviar", "err");
+    }
+    // Passos de "mover/remover no funil" — mesma coisa que o CRM já fazia,
+    // agora também acontece disparando pelo WhatsApp.
+    if (res?.ok) await applyQuickReplyFunnelActions(reply, chat);
+  }
+
+  /** Aplica os passos de funil (mover/remover) de uma resposta rápida
+   * depois do envio — espelha o que o CRM já faz ao disparar por lá. */
+  async function applyQuickReplyFunnelActions(reply, chat) {
+    const list = (reply.actions || []).filter((a) => a.type === "funnel_add" || a.type === "funnel_remove");
+    if (!list.length) return;
+    await loadFunnels();
+    for (const a of list) {
+      if (a.type === "funnel_add" && a.funnel_id && a.stage_id) {
+        await chrome.runtime
+          .sendMessage({
+            type: "api",
+            path: "/api/public/extension/funnel-cards",
+            opts: {
+              method: "POST",
+              body: JSON.stringify({
+                funnel_id: a.funnel_id,
+                stage_id: a.stage_id,
+                title: chat.name || chat.phone || "Contato",
+                phone: chat.phone || null,
+                wa_contact_id: chat.contact_db_id || null,
+              }),
+            },
+          })
+          .catch(() => null);
+      } else if (a.type === "funnel_remove" && a.funnel_id) {
+        const funnel = funnels.find((f) => f.id === a.funnel_id);
+        const matches = (funnel?.cards || []).filter(
+          (c) => (chat.wa_id && c.wa_id === chat.wa_id) || (chat.phone && c.phone === chat.phone),
+        );
+        for (const c of matches) {
+          await chrome.runtime
+            .sendMessage({ type: "api", path: "/api/public/extension/funnel-cards", opts: { method: "DELETE", body: JSON.stringify({ id: c.id }) } })
+            .catch(() => null);
+        }
+      }
+    }
+    await loadFunnels();
+    updateFunnelBadge();
   }
 
 

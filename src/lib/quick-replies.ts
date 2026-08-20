@@ -24,6 +24,9 @@ export const quickReplyActionSchema = z
     filename: z.string().max(200).optional(),
     funnel_id: z.string().uuid().optional(),
     stage_id: z.string().uuid().optional(),
+    // Segundos de espera depois de enviar esse passo, antes do próximo.
+    // Opcional — passos sem isso usam o intervalo padrão (700ms).
+    delay_seconds: z.number().min(0).max(120).optional(),
   })
   .refine(
     (a) =>
