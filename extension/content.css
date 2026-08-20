@@ -460,11 +460,6 @@ html body.crm-shell #app {
 }
 .crm-qr-mark svg { width: 16px; height: 16px; }
 .crm-qr-title { margin: 0; flex: 1; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
-.crm-qr-back {
-  flex-shrink: 0; background: transparent; border: none; color: var(--z-accent);
-  cursor: pointer; font-size: 12px; font-weight: 700; padding: 4px 2px 4px 0;
-}
-.crm-qr-back:hover { text-decoration: underline; }
 .crm-qr-close {
   flex-shrink: 0; width: 28px; height: 28px; border-radius: 999px;
   background: transparent; border: none; color: var(--z-text-dim); cursor: pointer;
@@ -478,9 +473,9 @@ html body.crm-shell #app {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 13px 16px; border: 1px solid var(--z-line-soft); border-radius: 14px; background: var(--z-bar);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+  transition: border-color 0.22s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.crm-qr-item:hover { border-color: var(--z-accent); box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08); }
+.crm-qr-item:hover { border-color: var(--z-accent); box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08); background: var(--z-surface); }
 .crm-qr-name {
   margin: 0; font-size: 14px; font-weight: 600; min-width: 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -488,11 +483,45 @@ html body.crm-shell #app {
 .crm-qr-send {
   flex-shrink: 0; padding: 8px 16px; border-radius: 10px;
   background: var(--z-accent); border: 1px solid var(--z-accent); color: var(--z-on-accent);
-  font-size: 12.5px; font-weight: 700; cursor: pointer; transition: background 0.12s ease;
+  font-size: 12.5px; font-weight: 700; cursor: pointer;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.15s ease;
 }
 .crm-qr-send:hover { background: var(--z-accent-strong); }
+.crm-qr-send:active { transform: scale(0.97); }
 .crm-qr-send:disabled { opacity: 0.6; cursor: default; }
 .crm-chat-btn-icon { margin-left: 2px; }
+
+/* Seletor de funil fixo no topo — escolhe uma vez, depois só transita
+   entre as etapas do funil escolhido, sem entrar/sair de telas. */
+.crm-fn-picker { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+.crm-fn-picker-label {
+  flex-shrink: 0; font-size: 10.5px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--z-text-dim);
+}
+.crm-fn-picker-wrap { position: relative; flex: 1; min-width: 0; }
+.crm-fn-picker-btn {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 9px 12px; border-radius: 10px; border: 1px solid var(--z-line); background: var(--z-bar);
+  color: var(--z-text); font-size: 13px; font-weight: 700; cursor: pointer;
+  transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.crm-fn-picker-btn:hover { border-color: var(--z-accent); }
+.crm-fn-picker-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.crm-fn-picker-btn svg { flex-shrink: 0; color: var(--z-text-dim); transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+.crm-fn-picker-btn[aria-expanded="true"] svg { transform: rotate(180deg); }
+.crm-fn-picker-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 5;
+  background: var(--z-bar); border: 1px solid var(--z-line); border-radius: 12px;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.22); padding: 6px;
+  max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px;
+}
+.crm-fn-picker-item {
+  text-align: left; padding: 9px 11px; border-radius: 8px; border: none; background: transparent;
+  font-size: 13px; font-weight: 600; color: var(--z-text); cursor: pointer;
+  transition: background-color 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.crm-fn-picker-item:hover { background: var(--z-surface-2); }
+.crm-fn-picker-item.is-active { color: var(--z-accent); background: var(--z-accent-soft); }
 
 /* Badge de "já está aqui" ao lado do nome do funil/etapa — pill sólido,
    igual ao padrão de contagem usado em referências de produtos maduros. */
@@ -506,7 +535,8 @@ html body.crm-shell #app {
 .crm-fn-remove-inline {
   flex-shrink: 0; padding: 8px 16px; border-radius: 10px;
   background: transparent; border: 1px solid var(--z-danger); color: var(--z-danger);
-  font-size: 12.5px; font-weight: 700; cursor: pointer; transition: background 0.12s ease, color 0.12s ease;
+  font-size: 12.5px; font-weight: 700; cursor: pointer;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .crm-fn-remove-inline:hover { background: var(--z-danger); color: #fff; }
 .crm-fn-remove-inline:disabled { opacity: 0.6; cursor: default; }
