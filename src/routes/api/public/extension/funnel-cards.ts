@@ -38,6 +38,13 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
           return jsonResponse(request, { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" }, { status: 400 });
         }
         const shop = auth.token.barbershop_id;
+        const normalizedPhone = normalizePhone(parsed.data.phone);
+        // Quando o contato ainda não foi sincronizado (sem wa_contact_id),
+        // o telefone é o único jeito de saber que é a mesma pessoa — sem
+        // isso, cada clique criava um card novo e o antigo nunca era
+        // removido (o lead parecia "travado" na etapa anterior).
+        const matchCol = parsed.data.wa_contact_id ? "wa_contact_id" : normalizedPhone ? "phone" : null;
+        const matchVal = parsed.data.wa_contact_id || normalizedPhone;
 
         const { data: stage } = await supabaseAdmin
           .from("funnel_stages")
@@ -55,22 +62,19 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
         // destino, tira ele de qualquer OUTRO funil em que já estivesse.
         // Cobre tanto o popup de funis do WhatsApp quanto o próprio
         // kanban do CRM, que passam pelo mesmo endpoint.
-        if (parsed.data.wa_contact_id || parsed.data.customer_id) {
-          let otherFunnelsQuery = supabaseAdmin
+        if (matchCol) {
+          await supabaseAdmin
             .from("funnel_cards")
             .delete()
             .eq("barbershop_id", shop)
-            .neq("funnel_id", parsed.data.funnel_id);
-          otherFunnelsQuery = parsed.data.wa_contact_id
-            ? otherFunnelsQuery.eq("wa_contact_id", parsed.data.wa_contact_id)
-            : otherFunnelsQuery.eq("customer_id", parsed.data.customer_id as string);
-          await otherFunnelsQuery;
+            .neq("funnel_id", parsed.data.funnel_id)
+            .eq(matchCol, matchVal as string);
         }
 
         // Idempotência: o mesmo contato só pode ter um card por funil
         // (constraint funnel_cards_unique_contact). Se já existir, apenas
         // movemos para a coluna alvo em vez de tentar inserir de novo.
-        if (parsed.data.wa_contact_id) {
+        if (matchCol) {
           let existingRes = await supabaseAdmin
             .from("funnel_cards")
             .select(
@@ -78,7 +82,7 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
             )
             .eq("barbershop_id", shop)
             .eq("funnel_id", parsed.data.funnel_id)
-            .eq("wa_contact_id", parsed.data.wa_contact_id)
+            .eq(matchCol, matchVal as string)
             .maybeSingle();
 
           if (existingRes.error?.message?.includes("unread_count")) {
@@ -89,7 +93,7 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
               )
               .eq("barbershop_id", shop)
               .eq("funnel_id", parsed.data.funnel_id)
-              .eq("wa_contact_id", parsed.data.wa_contact_id)
+              .eq(matchCol, matchVal as string)
               .maybeSingle();
           }
           if (existingRes.error?.message?.includes("profile_picture_url")) {
@@ -100,17 +104,24 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
               )
               .eq("barbershop_id", shop)
               .eq("funnel_id", parsed.data.funnel_id)
-              .eq("wa_contact_id", parsed.data.wa_contact_id)
+              .eq(matchCol, matchVal as string)
               .maybeSingle();
           }
 
           const existing = existingRes.data;
           if (existing) {
             const { wa_contacts, ...rest } = existing as any;
-            if (existing.stage_id !== parsed.data.stage_id) {
+            const patch: { stage_id?: string; wa_contact_id?: string } = {};
+            if (existing.stage_id !== parsed.data.stage_id) patch.stage_id = parsed.data.stage_id;
+            // Contato sincronizou depois do card já existir — aproveita
+            // pra linkar o wa_contact_id agora, senão o próximo clique
+            // (já com o id disponível) não ia encontrar esse card pelo
+            // telefone e criaria outro duplicado.
+            if (parsed.data.wa_contact_id && !existing.wa_contact_id) patch.wa_contact_id = parsed.data.wa_contact_id;
+            if (Object.keys(patch).length) {
               const { error: moveError } = await supabaseAdmin
                 .from("funnel_cards")
-                .update({ stage_id: parsed.data.stage_id })
+                .update(patch)
                 .eq("id", existing.id)
                 .eq("barbershop_id", shop);
               if (moveError) {

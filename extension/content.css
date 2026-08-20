@@ -44,7 +44,7 @@ html body.crm-shell {
    ele fazia esta reserva desaparecer em algumas versões do WhatsApp Web. */
 html body.crm-shell #app {
   position: absolute !important;
-  top: 40px !important;
+  top: 60px !important;
   left: 60px !important;
   right: 0 !important;
   bottom: 0 !important;
@@ -148,7 +148,7 @@ html body.crm-shell #app {
   top: 0;
   left: 60px;
   right: 0;
-  height: 40px;
+  height: 60px;
   background: linear-gradient(180deg, var(--z-ink) 0%, #edf0f4 100%);
   border-bottom: 1px solid var(--z-line-soft);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
@@ -167,14 +167,14 @@ html body.crm-shell #app {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 26px;
-  padding: 0 10px;
-  border-radius: 8px;
+  gap: 7px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 9px;
   border: 1px solid var(--z-line);
   background: var(--z-surface);
   color: var(--z-accent);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
@@ -211,15 +211,15 @@ html body.crm-shell #app {
 .crm-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   flex: 0 0 auto;
-  height: 30px;
-  padding: 0 10px;
+  height: 36px;
+  padding: 0 12px;
   border-radius: 999px;
   border: 1px solid var(--z-line);
   background: var(--z-surface);
   color: var(--z-accent);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.2px;
   text-transform: uppercase;
@@ -288,8 +288,8 @@ html body.crm-shell #app {
 }
 
 .crm-pill-add-icon {
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   flex: 0 0 auto;
   display: flex;
   align-items: center;

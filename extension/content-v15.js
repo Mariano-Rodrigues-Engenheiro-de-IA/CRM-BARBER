@@ -295,9 +295,9 @@
       const pill = e.target.closest(".crm-pill");
       if (!pill) return;
       const labelId = pill.getAttribute("data-label-id");
-      if (labelId) return filterByLabel(labelId, pill.getAttribute("data-name") || "", pill);
+      if (labelId) return filterByLabel(labelId, pill.getAttribute("data-name") || "");
       const stageId = pill.getAttribute("data-stage");
-      if (stageId) return filterByStage(pill.getAttribute("data-funnel"), stageId, pill);
+      if (stageId) return filterByStage(pill.getAttribute("data-funnel"), stageId);
     });
 
     renderTopbar();
@@ -504,22 +504,21 @@
 
   /** Lista (etiqueta do WhatsApp): filtra
    * a lista nativa de conversas pela etiqueta correspondente (inbox do WhatsApp). */
-  async function filterByLabel(labelId, labelName, anchor) {
+  async function filterByLabel(labelId, labelName) {
     const key = `label:${labelId}`;
     if (activeFilter?.key === key) return clearChatFilter();
     activeFilter = { key, kind: "label", id: labelId, name: labelName || "Lista" };
     renderTopbar();
-    if (anchor) openDrawer(anchor);
+    closeDrawer();
     await ensureFilterData("label");
     if (activeFilter?.key !== key) return; // usuário trocou de filtro no meio
-    renderDrawer();
     const waIds = [...(getActiveFilterWaIds() || [])];
     void applyNativeChatList("custom", waIds);
   }
 
   /** Etapa de funil: filtra a lista nativa de conversas
    * pelos wa_id correspondentes àquela etapa (inbox do WhatsApp). */
-  async function filterByStage(funnelId, stageId, anchor) {
+  async function filterByStage(funnelId, stageId) {
     const key = `stage:${stageId}`;
     if (activeFilter?.key === key) return clearChatFilter();
     // Reserva a intenção do clique antes de esperar os dados, com nome
@@ -527,10 +526,7 @@
     // de etapa rápido) aplique o filtro errado depois do await.
     activeFilter = { key, kind: "stage", id: stageId, funnelId, name: "Etapa", funnelName: "" };
     renderTopbar();
-    // Abre a gaveta com a lista de quem está nessa etapa — não depende do
-    // WhatsApp aceitar filtrar a lista nativa de conversas, então sempre
-    // funciona, mesmo se aquele filtro (abaixo) falhar silenciosamente.
-    if (anchor) openDrawer(anchor);
+    closeDrawer();
     await ensureFilterData("stage");
     if (activeFilter?.key !== key) return; // usuário trocou de filtro no meio
     const funnel = funnels.find((f) => f.id === funnelId);
@@ -545,7 +541,6 @@
       funnelName: funnel.name,
     };
     renderTopbar();
-    renderDrawer();
     const waIds = (funnel.cards || [])
       .filter((c) => c.stage_id === stageId && c.wa_id)
       .map((c) => c.wa_id);
