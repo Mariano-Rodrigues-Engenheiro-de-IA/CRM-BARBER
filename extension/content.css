@@ -45,7 +45,7 @@ html body.crm-shell {
 html body.crm-shell #app {
   position: absolute !important;
   top: 0 !important;
-  left: 46px !important;
+  left: 60px !important;
   right: 0 !important;
   bottom: 0 !important;
   width: auto !important;
@@ -75,11 +75,7 @@ html body.crm-shell #app {
   gap: 6px;
   padding: 10px 0;
   font-family: var(--z-font);
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: none;
 }
-#crm-rail::-webkit-scrollbar { display: none; }
 .crm-rail-mark {
   width: 38px;
   height: 38px;
