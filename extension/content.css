@@ -173,7 +173,7 @@ html body.crm-shell #app {
   border-radius: 9px;
   border: 1px solid var(--z-line);
   background: var(--z-surface);
-  color: var(--z-accent);
+  color: var(--z-text);
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
@@ -218,18 +218,18 @@ html body.crm-shell #app {
   border-radius: 999px;
   border: 1px solid var(--z-line);
   background: var(--z-surface);
-  color: var(--z-accent);
+  color: var(--z-text);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.2px;
   text-transform: uppercase;
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
 }
-/* Hover padrão — destaca com acento */
-.crm-pill:hover { border-color: var(--z-accent); background: var(--z-surface-2); color: var(--z-accent); }
-.crm-pill:hover .crm-pill-count { background: var(--z-accent-soft); color: var(--z-accent); }
+/* Hover padrão — destaca com acento, mas texto continua legível (preto) */
+.crm-pill:hover { border-color: var(--z-accent); background: var(--z-surface-2); }
+.crm-pill:hover .crm-pill-count { background: var(--z-accent-strong); }
 
 /* Pílula ativa — funil: azul da marca (mesma cor usada nos funis) */
 .crm-pill-on {
@@ -239,21 +239,23 @@ html body.crm-shell #app {
   box-shadow: 0 0 0 3px var(--z-accent-soft);
 }
 .crm-pill-on:hover { background: var(--z-accent-strong, var(--z-accent)); color: #ffffff; }
-.crm-pill-on:hover .crm-pill-count { background: rgba(255, 255, 255, 0.18); color: #ffffff; }
+.crm-pill-on:hover .crm-pill-count { background: rgba(255, 255, 255, 0.22); color: #ffffff; }
 .crm-pill-on .crm-pill-count, .crm-pill-on .crm-pill-value, .crm-pill-on .crm-pill-gear { color: #ffffff; }
 
 /* Pílula ativa — etiqueta: a cor inline (data-color) sobrescreve via JS */
-.crm-pill-value { font-weight: 500; color: var(--z-accent); text-transform: none; }
+.crm-pill-value { font-weight: 500; color: var(--z-text-dim); text-transform: none; }
+/* "Bolinha" de contagem — selo sólido colorido, não mais um tom apagado
+   de azul-sobre-azul (era o que sumia no meio do resto da barra). */
 .crm-pill-count {
   font-weight: 700;
-  color: var(--z-accent);
+  color: #ffffff;
   text-transform: none;
-  background: rgba(0, 0, 0, 0.06);
+  background: var(--z-accent);
   border-radius: 999px;
   padding: 2px 8px;
-  font-size: 12px;
+  font-size: 11.5px;
 }
-.crm-pill-on .crm-pill-count { background: rgba(255, 255, 255, 0.18); }
+.crm-pill-on .crm-pill-count { background: rgba(255, 255, 255, 0.22); }
 .crm-pill-dot {
   width: 7px;
   height: 7px;
@@ -264,7 +266,7 @@ html body.crm-shell #app {
 .crm-pill-gear {
   border: 0;
   background: transparent;
-  color: var(--z-accent);
+  color: var(--z-text-dim);
   cursor: pointer;
   padding: 0;
   display: inline-flex;
@@ -277,7 +279,7 @@ html body.crm-shell #app {
 .crm-pill-gear:focus-visible {
   opacity: 1;
 }
-.crm-pill-gear:hover { color: var(--z-accent-strong, var(--z-accent)); }
+.crm-pill-gear:hover { color: var(--z-accent); }
 
 .crm-topbar-divider {
   width: 1px;
