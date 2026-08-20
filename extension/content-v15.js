@@ -295,9 +295,9 @@
       const pill = e.target.closest(".crm-pill");
       if (!pill) return;
       const labelId = pill.getAttribute("data-label-id");
-      if (labelId) return filterByLabel(labelId, pill.getAttribute("data-name") || "");
+      if (labelId) return filterByLabel(labelId, pill.getAttribute("data-name") || "", pill);
       const stageId = pill.getAttribute("data-stage");
-      if (stageId) return filterByStage(pill.getAttribute("data-funnel"), stageId);
+      if (stageId) return filterByStage(pill.getAttribute("data-funnel"), stageId, pill);
     });
 
     renderTopbar();
@@ -347,29 +347,23 @@
   /** Nome do filtro ativo (usado no botão da barra). */
   function currentFilterLabel() {
     if (topbarFilter === "labels") return "LISTAS";
-    const f = currentFunnel();
-    return (f?.name || "FUNIL PRINCIPAL").toUpperCase();
+    return "FUNIL PRINCIPAL";
   }
 
-  /** Funil selecionado no topo (qualquer funil, não só o "tab"). */
+  /** Só existem duas opções aqui na barra do WhatsApp: o Funil principal
+   * (fixo) e as Listas (etiquetas do WhatsApp). Funis personalizados só
+   * são geridos dentro do CRM — aqui é ação rápida do dia a dia. */
   function currentFunnel() {
-    if (topbarFilter.startsWith("funnel:")) {
-      const id = topbarFilter.slice(7);
-      const found = funnels.find((f) => f.id === id);
-      if (found) return found;
-    }
-    return tabFunnel() || funnels.find((f) => f.mode !== "label") || null;
+    return tabFunnel();
   }
 
   function openFilterMenu(anchor) {
-    // "LISTAS" aqui vem direto das etiquetas do WhatsApp. O funil espelho
-    // (mode "label") fica de fora para não duplicar a opção no menu.
-    const items = [{ label: "LISTAS", onClick: () => setTopbarFilter("labels") }];
-    for (const f of funnels) {
-      if (f.mode === "label") continue;
-      items.push({ label: f.name.toUpperCase(), onClick: () => setTopbarFilter(`funnel:${f.id}`) });
-    }
-    openMenu(anchor, items);
+    // Só duas opções aqui — Funil principal e Listas. Funis personalizados
+    // continuam existindo, mas só são geridos dentro do CRM.
+    openMenu(anchor, [
+      { label: "FUNIL PRINCIPAL", onClick: () => setTopbarFilter("tabs") },
+      { label: "LISTAS", onClick: () => setTopbarFilter("labels") },
+    ]);
   }
 
   // ---------------------------------------------------------------------
@@ -510,21 +504,22 @@
 
   /** Lista (etiqueta do WhatsApp): filtra
    * a lista nativa de conversas pela etiqueta correspondente (inbox do WhatsApp). */
-  async function filterByLabel(labelId, labelName) {
+  async function filterByLabel(labelId, labelName, anchor) {
     const key = `label:${labelId}`;
     if (activeFilter?.key === key) return clearChatFilter();
     activeFilter = { key, kind: "label", id: labelId, name: labelName || "Lista" };
     renderTopbar();
-    closeDrawer();
+    if (anchor) openDrawer(anchor);
     await ensureFilterData("label");
     if (activeFilter?.key !== key) return; // usuário trocou de filtro no meio
+    renderDrawer();
     const waIds = [...(getActiveFilterWaIds() || [])];
     void applyNativeChatList("custom", waIds);
   }
 
   /** Etapa de funil: filtra a lista nativa de conversas
    * pelos wa_id correspondentes àquela etapa (inbox do WhatsApp). */
-  async function filterByStage(funnelId, stageId) {
+  async function filterByStage(funnelId, stageId, anchor) {
     const key = `stage:${stageId}`;
     if (activeFilter?.key === key) return clearChatFilter();
     // Reserva a intenção do clique antes de esperar os dados, com nome
@@ -532,7 +527,10 @@
     // de etapa rápido) aplique o filtro errado depois do await.
     activeFilter = { key, kind: "stage", id: stageId, funnelId, name: "Etapa", funnelName: "" };
     renderTopbar();
-    closeDrawer();
+    // Abre a gaveta com a lista de quem está nessa etapa — não depende do
+    // WhatsApp aceitar filtrar a lista nativa de conversas, então sempre
+    // funciona, mesmo se aquele filtro (abaixo) falhar silenciosamente.
+    if (anchor) openDrawer(anchor);
     await ensureFilterData("stage");
     if (activeFilter?.key !== key) return; // usuário trocou de filtro no meio
     const funnel = funnels.find((f) => f.id === funnelId);
@@ -547,6 +545,7 @@
       funnelName: funnel.name,
     };
     renderTopbar();
+    renderDrawer();
     const waIds = (funnel.cards || [])
       .filter((c) => c.stage_id === stageId && c.wa_id)
       .map((c) => c.wa_id);
@@ -1364,18 +1363,8 @@
       <div class="crm-qr" role="dialog" aria-modal="true">
         <div class="crm-qr-head">
           <div class="crm-qr-mark">${ICONS.funnel}</div>
-          <p class="crm-qr-title">Funis de vendas</p>
+          <p class="crm-qr-title">Funil principal</p>
           <button class="crm-qr-close" title="Fechar">&times;</button>
-        </div>
-        <div class="crm-fn-picker">
-          <span class="crm-fn-picker-label">Funil</span>
-          <div class="crm-fn-picker-wrap">
-            <button class="crm-fn-picker-btn" type="button" aria-expanded="false">
-              <span class="crm-fn-picker-name">Carregando...</span>
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-            </button>
-            <div class="crm-fn-picker-menu" hidden></div>
-          </div>
         </div>
         <div class="crm-qr-list"></div>
       </div>
@@ -1386,66 +1375,24 @@
     document.body.appendChild(overlay);
 
     const list = overlay.querySelector(".crm-qr-list");
-    const pickerBtn = overlay.querySelector(".crm-fn-picker-btn");
-    const pickerName = overlay.querySelector(".crm-fn-picker-name");
-    const pickerMenu = overlay.querySelector(".crm-fn-picker-menu");
-
     let chat = null;
-    let selectedFunnelId = null;
-    let userPickedFunnel = false;
 
-    const nonLabelFunnels = () => funnels.filter((f) => f.mode !== "label");
-
-    // Ao abrir, já cai direto no funil onde o lead está (se estiver em
-    // algum) — só escolhe o primeiro da lista como último recurso, e só
-    // se o usuário ainda não tiver escolhido manualmente nesta sessão.
-    const ensureDefaultFunnel = () => {
-      if (userPickedFunnel) return;
-      const memberships = chat ? membershipsFor(chat) : [];
-      if (memberships.length) { selectedFunnelId = memberships[0].funnel.id; return; }
-      if (!selectedFunnelId) selectedFunnelId = nonLabelFunnels()[0]?.id ?? null;
-    };
-
-    const renderPicker = () => {
-      const funnel = nonLabelFunnels().find((f) => f.id === selectedFunnelId);
-      pickerName.textContent = funnel ? funnel.name : "Escolher funil";
-    };
-
-    const renderPickerMenu = () => {
-      const items = nonLabelFunnels();
-      if (!items.length) {
-        pickerMenu.innerHTML = `<p class="crm-qr-empty">Nenhum funil cadastrado ainda.</p>`;
-        return;
-      }
-      pickerMenu.innerHTML = items
-        .map(
-          (f) => `<button class="crm-fn-picker-item${f.id === selectedFunnelId ? " is-active" : ""}" data-pick-funnel="${escapeHtml(f.id)}">${escapeHtml(f.name)}</button>`,
-        )
-        .join("");
-    };
-
-    const closePickerMenu = () => {
-      pickerMenu.hidden = true;
-      pickerBtn.setAttribute("aria-expanded", "false");
-    };
-
-    // Uma lista só, sempre do funil selecionado no seletor de cima — sem
-    // navegar entre telas. Trocar de etapa aqui já move o lead na hora
-    // (e sai de qualquer outro funil/etapa automaticamente).
+    // Só existe UM funil aqui na conversa: o Funil principal. Pra colocar
+    // um lead em outro funil (dos personalizados), é preciso ir no CRM —
+    // aqui é só pra ação rápida do dia a dia.
     const renderStageList = () => {
-      const funnel = nonLabelFunnels().find((f) => f.id === selectedFunnelId);
+      const funnel = tabFunnel();
       if (!funnel) {
-        list.innerHTML = `<p class="crm-qr-empty">Nenhum funil cadastrado ainda.</p>`;
+        list.innerHTML = `<p class="crm-qr-empty">Funil principal ainda não foi criado.</p>`;
         return;
       }
       const stages = funnel.stages || [];
       if (!stages.length) {
-        list.innerHTML = `<p class="crm-qr-empty">Este funil ainda não tem etapas.</p>`;
+        list.innerHTML = `<p class="crm-qr-empty">O funil principal ainda não tem etapas.</p>`;
         return;
       }
       const memberships = chat ? membershipsFor(chat) : [];
       const inThisFunnel = memberships.find((m) => m.funnel.id === funnel.id);
-      const hasAnyMembership = memberships.length > 0;
       list.innerHTML = stages
         .map((st) => {
           const isCurrent = inThisFunnel?.stage?.id === st.id;
@@ -1455,46 +1402,19 @@
               <button class="crm-fn-remove-inline" data-remove-card="${escapeHtml(inThisFunnel.card.id)}">Remover do funil</button>
             </div>`;
           }
-          const label = hasAnyMembership ? "Mover para cá" : "Adicionar";
+          const label = inThisFunnel ? "Mover para cá" : "Adicionar";
           return `<div class="crm-qr-item">
             <p class="crm-qr-name">${escapeHtml(st.name)}</p>
-            <button class="crm-qr-send" data-stage="${escapeHtml(st.id)}" data-funnel="${escapeHtml(funnel.id)}">${label}</button>
+            <button class="crm-qr-send" data-stage="${escapeHtml(st.id)}">${label}</button>
           </div>`;
         })
         .join("");
     };
 
-    const renderAll = () => {
-      ensureDefaultFunnel();
-      renderPicker();
-      renderStageList();
-    };
-
     // Abre na hora com o cache e recarrega em segundo plano.
-    renderAll();
-    activeChat().then((c) => { chat = c; renderAll(); });
-    void loadFunnels().then(() => renderAll());
-
-    pickerBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const willOpen = pickerMenu.hidden;
-      if (willOpen) renderPickerMenu();
-      pickerMenu.hidden = !willOpen;
-      pickerBtn.setAttribute("aria-expanded", String(willOpen));
-    });
-    pickerMenu.addEventListener("click", (e) => {
-      const item = e.target.closest("[data-pick-funnel]");
-      if (!item) return;
-      selectedFunnelId = item.getAttribute("data-pick-funnel");
-      userPickedFunnel = true;
-      closePickerMenu();
-      renderPicker();
-      renderStageList();
-    });
-    document.addEventListener("click", (e) => {
-      if (!overlay.isConnected) return;
-      if (!e.target.closest(".crm-fn-picker-wrap")) closePickerMenu();
-    });
+    renderStageList();
+    activeChat().then((c) => { chat = c; renderStageList(); });
+    void loadFunnels().then(() => renderStageList());
 
     list.addEventListener("click", async (e) => {
       // Já está aqui → remove direto, sem precisar escolher etapa de novo
@@ -1521,7 +1441,7 @@
 
       const pickStage = e.target.closest("[data-stage]");
       if (!pickStage) return;
-      const funnel = nonLabelFunnels().find((f) => f.id === pickStage.getAttribute("data-funnel"));
+      const funnel = tabFunnel();
       const stage = funnel && (funnel.stages || []).find((s) => s.id === pickStage.getAttribute("data-stage"));
       if (!funnel || !stage) return;
       pickStage.disabled = true;
@@ -1553,7 +1473,7 @@
         })
         .catch(() => null);
       if (r?.ok) {
-        crmToast(`Adicionado em ${funnel.name} \u00b7 ${stage.name}`);
+        crmToast(`Adicionado em ${stage.name}`);
         await loadFunnels();
         renderStageList();
       } else {

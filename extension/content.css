@@ -44,7 +44,7 @@ html body.crm-shell {
    ele fazia esta reserva desaparecer em algumas versões do WhatsApp Web. */
 html body.crm-shell #app {
   position: absolute !important;
-  top: 0 !important;
+  top: 40px !important;
   left: 60px !important;
   right: 0 !important;
   bottom: 0 !important;
@@ -140,21 +140,16 @@ html body.crm-shell #app {
 }
 .crm-rail-btn:hover::after { opacity: 1; }
 
-/* Barra de abas no topo — mesma identidade do trilho */
-/* Filtro de Listas/Funil temporariamente oculto — o WhatsApp mudou a
-   estrutura interna da página e quebrou a filtragem visual das
-   conversas. Código intacto por baixo, só escondido — pra reativar,
-   remove esse "display: none". Ver commits de investigação de
-   06-08/07-08 no histórico do git. */
-#crm-topbar { display: none !important; }
-
+/* Barra de abas no topo — mesma identidade do trilho, mesma cor de fundo.
+   Mostra as etapas do Funil principal (ou as Listas/etiquetas), com botão
+   pra adicionar etapa e engrenagem pra renomear/excluir cada uma. */
 #crm-topbar {
   position: fixed;
   top: 0;
-  left: 46px;
+  left: 60px;
   right: 0;
   height: 40px;
-  background: var(--z-bar);
+  background: linear-gradient(180deg, var(--z-ink) 0%, #edf0f4 100%);
   border-bottom: 1px solid var(--z-line-soft);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   z-index: 1000000;
@@ -490,38 +485,6 @@ html body.crm-shell #app {
 .crm-qr-send:active { transform: scale(0.97); }
 .crm-qr-send:disabled { opacity: 0.6; cursor: default; }
 .crm-chat-btn-icon { margin-left: 2px; }
-
-/* Seletor de funil fixo no topo — escolhe uma vez, depois só transita
-   entre as etapas do funil escolhido, sem entrar/sair de telas. */
-.crm-fn-picker { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
-.crm-fn-picker-label {
-  flex-shrink: 0; font-size: 10.5px; font-weight: 800; text-transform: uppercase;
-  letter-spacing: 0.05em; color: var(--z-text-dim);
-}
-.crm-fn-picker-wrap { position: relative; flex: 1; min-width: 0; }
-.crm-fn-picker-btn {
-  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  padding: 9px 12px; border-radius: 10px; border: 1px solid var(--z-line); background: var(--z-bar);
-  color: var(--z-text); font-size: 13px; font-weight: 700; cursor: pointer;
-  transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.crm-fn-picker-btn:hover { border-color: var(--z-accent); }
-.crm-fn-picker-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.crm-fn-picker-btn svg { flex-shrink: 0; color: var(--z-text-dim); transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-.crm-fn-picker-btn[aria-expanded="true"] svg { transform: rotate(180deg); }
-.crm-fn-picker-menu {
-  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 5;
-  background: var(--z-bar); border: 1px solid var(--z-line); border-radius: 12px;
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.22); padding: 6px;
-  max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px;
-}
-.crm-fn-picker-item {
-  text-align: left; padding: 9px 11px; border-radius: 8px; border: none; background: transparent;
-  font-size: 13px; font-weight: 600; color: var(--z-text); cursor: pointer;
-  transition: background-color 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.crm-fn-picker-item:hover { background: var(--z-surface-2); }
-.crm-fn-picker-item.is-active { color: var(--z-accent); background: var(--z-accent-soft); }
 
 /* Badge de "já está aqui" ao lado do nome do funil/etapa — pill sólido,
    igual ao padrão de contagem usado em referências de produtos maduros. */
