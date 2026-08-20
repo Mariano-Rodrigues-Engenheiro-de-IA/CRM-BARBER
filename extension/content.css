@@ -178,9 +178,9 @@ html body.crm-shell #app {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  cursor: pointer;
 }
-.crm-filter:hover { background: var(--z-surface-2); border-color: var(--z-accent); }
+/* Só o Funil principal existe aqui agora — rótulo fixo, sem menu. */
+.crm-filter-static { cursor: default; }
 
 .crm-menu {
   position: fixed;
@@ -437,17 +437,25 @@ html body.crm-shell #app {
 /* Popover leve do funil — ancorado no ícone, sem escurecer nem desfocar o
  * fundo (não é modal de tela cheia). Uma bolinha por etapa: vazia = clica
  * pra adicionar, cheia = clica pra remover. */
-.crm-fn-pop {
+.crm-fn-pop, .crm-qr-pop {
   position: fixed;
-  width: 240px;
   background: var(--z-surface);
   border: 1px solid var(--z-line);
   border-radius: 12px;
-  padding: 10px;
   z-index: 2147483646;
   font-family: var(--z-font);
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.18);
+  /* Transição suave de entrada — some/aparece com leve movimento, em vez
+     de simplesmente "estalar" na tela. */
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+  transition: opacity 0.16s cubic-bezier(0.4, 0, 0.2, 1), transform 0.16s cubic-bezier(0.4, 0, 0.2, 1);
 }
+.crm-fn-pop.is-in, .crm-qr-pop.is-in {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.crm-fn-pop { width: 240px; padding: 10px; }
 .crm-fn-pop-title {
   margin: 0 4px 6px;
   font-size: 11px;
@@ -501,6 +509,60 @@ html body.crm-shell #app {
   transform: rotate(-45deg) translate(1px, -1px);
 }
 .crm-fn-pop-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Popover de Respostas rápidas — lista com enviar/editar/excluir, e um
+   formulário simples (título + mensagem) pra criar/editar sem sair do
+   WhatsApp. Media (imagem/áudio/vídeo) continua sendo cadastrada no CRM. */
+.crm-qr-pop { width: 288px; padding: 12px; max-height: 420px; display: flex; flex-direction: column; }
+.crm-qr-pop-head { display: flex; align-items: center; gap: 8px; }
+.crm-qr-pop-title { flex: 1; margin: 0; font-size: 13px; font-weight: 700; color: var(--z-text); }
+.crm-qr-pop-new {
+  flex-shrink: 0; border: 1px solid var(--z-accent); background: transparent; color: var(--z-accent);
+  border-radius: 8px; padding: 5px 10px; font-size: 11.5px; font-weight: 700; cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.crm-qr-pop-new:hover { background: var(--z-accent); color: #fff; }
+.crm-qr-pop-back {
+  flex-shrink: 0; width: 26px; height: 26px; border-radius: 8px; border: 0; background: transparent;
+  color: var(--z-text-dim); font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background-color 0.15s ease;
+}
+.crm-qr-pop-back:hover { background: var(--z-surface-2); color: var(--z-text); }
+.crm-qr-pop-list { margin-top: 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.crm-qr-pop-row {
+  display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-radius: 8px;
+  transition: background-color 0.12s ease;
+}
+.crm-qr-pop-row:hover { background: var(--z-surface-2); }
+.crm-qr-pop-row:hover .crm-qr-pop-icon { opacity: 1; }
+.crm-qr-pop-send {
+  flex-shrink: 0; width: 26px; height: 26px; border-radius: 999px; border: 0;
+  background: var(--z-accent); color: #fff; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background-color 0.15s ease;
+}
+.crm-qr-pop-send:hover { background: var(--z-accent-strong); }
+.crm-qr-pop-send:disabled { opacity: 0.5; cursor: default; }
+.crm-qr-pop-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; font-weight: 600; color: var(--z-text); }
+.crm-qr-pop-icon {
+  flex-shrink: 0; width: 24px; height: 24px; border-radius: 7px; border: 0; background: transparent;
+  color: var(--z-text-dim); display: flex; align-items: center; justify-content: center; cursor: pointer;
+  opacity: 0; transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease;
+}
+.crm-qr-pop-icon:hover { background: var(--z-surface-2); color: var(--z-accent); }
+.crm-qr-pop-icon-danger:hover { color: var(--z-danger); }
+.crm-qr-pop-form { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.crm-qr-pop-input, .crm-qr-pop-textarea {
+  width: 100%; border: 1px solid var(--z-line); border-radius: 9px; background: var(--z-bar);
+  color: var(--z-text); font-family: var(--z-font); font-size: 12.5px; padding: 8px 10px; box-sizing: border-box;
+}
+.crm-qr-pop-input:focus, .crm-qr-pop-textarea:focus { outline: none; border-color: var(--z-accent); }
+.crm-qr-pop-textarea { min-height: 90px; resize: vertical; }
+.crm-qr-pop-save {
+  border: 0; border-radius: 9px; background: var(--z-accent); color: #fff; font-size: 12.5px; font-weight: 700;
+  padding: 9px; cursor: pointer; transition: background-color 0.15s ease;
+}
+.crm-qr-pop-save:hover { background: var(--z-accent-strong); }
+.crm-qr-pop-save:disabled { opacity: 0.6; cursor: default; }
 
 /* Aviso rápido das ações feitas dentro da conversa. */
 .crm-toast {

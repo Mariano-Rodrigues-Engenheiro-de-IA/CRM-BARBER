@@ -204,7 +204,7 @@
     gear: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 7 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H1a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 2.6 7"/></svg>`,
     exit: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>`,
     send: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/></svg>`,
-    chat: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-4.9A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/></svg>`,
+    chat: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>`,
     calendar: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>`,
     badge: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.3 11 14.8l4.5-5"/></svg>`,
     ranking: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="13" width="4.5" height="7" rx="1"/><rect x="9.75" y="9" width="4.5" height="11" rx="1"/><rect x="16" y="4.5" width="4.5" height="15.5" rx="1"/></svg>`,
@@ -275,9 +275,6 @@
     });
 
     topbar.addEventListener("click", (e) => {
-      const filterBtn = e.target.closest(".crm-filter");
-      if (filterBtn) return openFilterMenu(filterBtn);
-
       const gear = e.target.closest(".crm-pill-gear");
       if (gear) {
         e.stopPropagation();
@@ -295,8 +292,6 @@
 
       const pill = e.target.closest(".crm-pill");
       if (!pill) return;
-      const labelId = pill.getAttribute("data-label-id");
-      if (labelId) return filterByLabel(labelId, pill.getAttribute("data-name") || "");
       const stageId = pill.getAttribute("data-stage");
       if (stageId) return filterByStage(pill.getAttribute("data-funnel"), stageId);
     });
@@ -309,6 +304,11 @@
   }
 
   /** Menu flutuante ancorado a um elemento (substitui menus nativos). */
+  /** Transição suave de entrada — evita o popover "estalar" na tela. */
+  function animatePopIn(pop) {
+    requestAnimationFrame(() => requestAnimationFrame(() => pop.classList.add("is-in")));
+  }
+
   function openMenu(anchor, items) {
     document.querySelector(".crm-menu")?.remove();
     const rect = anchor.getBoundingClientRect();
@@ -345,26 +345,16 @@
     renderTopbar();
   }
 
-  /** Nome do filtro ativo (usado no botão da barra). */
+  /** Nome do filtro ativo (usado no botão da barra) — só existe o Funil
+   * principal agora. "Listas" saiu: o filtro de etiquetas do WhatsApp
+   * estava instável (funcionava numa hora, na outra não) e a prioridade
+   * é ter o Funil principal funcionando 100% do tempo. */
   function currentFilterLabel() {
-    if (topbarFilter === "labels") return "LISTAS";
     return "FUNIL PRINCIPAL";
   }
 
-  /** Só existem duas opções aqui na barra do WhatsApp: o Funil principal
-   * (fixo) e as Listas (etiquetas do WhatsApp). Funis personalizados só
-   * são geridos dentro do CRM — aqui é ação rápida do dia a dia. */
   function currentFunnel() {
     return tabFunnel();
-  }
-
-  function openFilterMenu(anchor) {
-    // Só duas opções aqui — Funil principal e Listas. Funis personalizados
-    // continuam existindo, mas só são geridos dentro do CRM.
-    openMenu(anchor, [
-      { label: "FUNIL PRINCIPAL", onClick: () => setTopbarFilter("tabs") },
-      { label: "LISTAS", onClick: () => setTopbarFilter("labels") },
-    ]);
   }
 
   // ---------------------------------------------------------------------
@@ -933,35 +923,10 @@
       return;
     }
 
-    const filter = `<button class="crm-filter">${FILTER_SVG}${escapeHtml(currentFilterLabel())}</button>`;
-
-    if (topbarFilter === "labels") {
-      const pills = (waData.labels || [])
-        .map((l) => {
-          const id = l.id || l.wa_label_id;
-          const on = activeFilter?.key === `label:${id}`;
-          const labelColor = l.color || "";
-          // Quando ativa, aplica a cor da etiqueta no background (inline override)
-          const activeStyle = on && labelColor
-            ? `background-color:${escapeHtml(labelColor)};border-color:${escapeHtml(labelColor)};box-shadow:0 0 0 3px ${escapeHtml(labelColor)}22;`
-            : "";
-          const countStyle = l.color
-            ? ` style="background-color:${escapeHtml(l.color)};color:#fff"`
-            : "";
-          return `<button class="crm-pill${on ? " crm-pill-on" : ""}" data-label-id="${escapeHtml(id)}" data-name="${escapeHtml(l.name)}"${activeStyle ? ` style="${activeStyle}"` : ""}>
-              ${escapeHtml(l.name)}
-              <span class="crm-pill-count"${countStyle}>${Number(l.count ?? l.conversation_count ?? 0)}</span>
-            </button>`;
-        })
-        .join("");
-      topbarRef.innerHTML = `${filter}<span class="crm-topbar-divider"></span>${
-        pills ||
-        `<span class="crm-topbar-hint">${
-          syncing ? "sincronizando listas…" : "Nenhuma lista sincronizada ainda."
-        }</span>`
-      }${premiumPill()}`;
-      return;
-    }
+    // "Listas" (etiquetas do WhatsApp) saiu do topbar — instável, dava
+    // erro de filtro. Só existe o Funil principal aqui agora; o rótulo
+    // vira só uma etiqueta fixa, não abre menu.
+    const filter = `<span class="crm-filter crm-filter-static">${FILTER_SVG}${escapeHtml(currentFilterLabel())}</span>`;
 
     const f = currentFunnel();
     const pills = ((f?.stages) || [])
@@ -1316,7 +1281,7 @@
     qr.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      openQuickReplyModal();
+      openQuickReplyModal(qr);
     });
 
     const slot = headerActionsSlot(header);
@@ -1413,6 +1378,7 @@
     };
 
     document.body.appendChild(pop);
+    animatePopIn(pop);
     let chat = null;
     renderRows(null);
     activeChat().then((c) => { chat = c; renderRows(chat); });
@@ -1495,64 +1461,159 @@
   // Pop-up de Respostas Rápidas — só selecionar e disparar.
   // A criação/edição continua no painel do CRM.
   // ---------------------------------------------------------------------
-  function openQuickReplyModal() {
+  const PENCIL_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
+  const TRASH_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>`;
+
+  // ---------------------------------------------------------------------
+  // Popover leve de Respostas rápidas — mesmo padrão do funil: ancorado no
+  // raiozinho, sem escurecer/desfocar o fundo. Cria, edita, exclui e envia
+  // tudo por aqui (só texto — resposta com mídia continua no CRM).
+  // ---------------------------------------------------------------------
+  function openQuickReplyModal(anchor) {
     prewarmEngine();
-    document.querySelector(".crm-qr-overlay")?.remove();
-    const overlay = document.createElement("div");
-    overlay.className = "crm-modal-overlay crm-qr-overlay";
-    overlay.innerHTML = `
-      <div class="crm-qr" role="dialog" aria-modal="true">
-        <div class="crm-qr-head">
-          <div class="crm-qr-mark">${BOLT_SVG}</div>
-          <p class="crm-qr-title">Respostas rápidas</p>
-          <button class="crm-qr-close" title="Fechar">&times;</button>
+    document.querySelector(".crm-qr-pop")?.remove();
+    const pop = document.createElement("div");
+    pop.className = "crm-qr-pop";
+    const rect = anchor.getBoundingClientRect();
+    pop.style.top = `${rect.bottom + 8}px`;
+    pop.style.left = `${Math.min(Math.max(8, rect.left), window.innerWidth - 300)}px`;
+    document.body.appendChild(pop);
+    animatePopIn(pop);
+
+    let mode = "list";
+    let editingId = null;
+
+    function firstTextOf(reply) {
+      return (reply?.actions || []).find((a) => a.type === "text")?.text || "";
+    }
+
+    function renderList() {
+      mode = "list";
+      const rows = quickReplies.length
+        ? `<div class="crm-qr-pop-list">${quickReplies
+            .map(
+              (q, i) => `<div class="crm-qr-pop-row">
+                <button class="crm-qr-pop-send" data-send="${i}" title="Enviar">${BOLT_SVG}</button>
+                <span class="crm-qr-pop-name">${escapeHtml(q.title)}</span>
+                <button class="crm-qr-pop-icon" data-edit="${i}" title="Editar">${PENCIL_SVG}</button>
+                <button class="crm-qr-pop-icon crm-qr-pop-icon-danger" data-del="${i}" title="Excluir">${TRASH_SVG}</button>
+              </div>`,
+            )
+            .join("")}</div>`
+        : `<p class="crm-fn-pop-empty">Nenhuma resposta cadastrada ainda.</p>`;
+      pop.innerHTML = `
+        <div class="crm-qr-pop-head">
+          <p class="crm-qr-pop-title">Respostas rápidas</p>
+          <button class="crm-qr-pop-new" data-new>+ Nova</button>
         </div>
-        <div class="crm-qr-list"></div>
-      </div>
-    `;
-    const close = () => overlay.remove();
-    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
-    overlay.querySelector(".crm-qr-close").addEventListener("click", close);
-    document.body.appendChild(overlay);
+        ${rows}
+      `;
+    }
 
-    const render = () => {
-      const list = overlay.querySelector(".crm-qr-list");
-      if (!list) return;
-      if (!quickReplies.length) {
-        list.innerHTML = `<p class="crm-qr-empty">Nenhuma resposta rápida cadastrada ainda.</p>`;
-        return;
-      }
-      list.innerHTML = quickReplies
-        .map(
-          (q, i) => `<div class="crm-qr-item">
-            <p class="crm-qr-name">${escapeHtml(q.title)}</p>
-            <button class="crm-qr-send" data-send="${i}">Disparar</button>
-          </div>`,
-        )
-        .join("");
+    function renderForm(reply) {
+      mode = "form";
+      editingId = reply?.id || null;
+      pop.innerHTML = `
+        <div class="crm-qr-pop-head">
+          <button class="crm-qr-pop-back" data-back title="Voltar">&larr;</button>
+          <p class="crm-qr-pop-title">${reply ? "Editar resposta" : "Nova resposta"}</p>
+        </div>
+        <div class="crm-qr-pop-form">
+          <input class="crm-qr-pop-input" data-field="title" value="${escapeHtml(reply?.title || "")}" placeholder="Título (ex: Boas-vindas)" maxlength="120" />
+          <textarea class="crm-qr-pop-textarea" data-field="text" placeholder="Mensagem…" maxlength="4000">${escapeHtml(firstTextOf(reply))}</textarea>
+          <button class="crm-qr-pop-save" data-save>${reply ? "Salvar" : "Criar"}</button>
+        </div>
+      `;
+      pop.querySelector('[data-field="title"]')?.focus();
+    }
+
+    renderList();
+    void loadQuickReplies().then(() => {
+      if (mode === "list") renderList();
+    });
+
+    const close = () => {
+      pop.remove();
+      document.removeEventListener("mousedown", onDoc, true);
     };
+    function onDoc(ev) {
+      if (!pop.contains(ev.target) && ev.target !== anchor) close();
+    }
+    setTimeout(() => document.addEventListener("mousedown", onDoc, true), 0);
 
-    // Abre na hora com o cache; a lista só é recarregada em segundo plano.
-    render();
-    void loadQuickReplies().then(render);
+    pop.addEventListener("click", async (e) => {
+      if (e.target.closest("[data-new]")) return renderForm(null);
+      if (e.target.closest("[data-back]")) return renderList();
 
-    overlay.querySelector(".crm-qr-list").addEventListener("click", async (e) => {
-      const send = e.target.closest("[data-send]");
-      if (!send || quickReplySending) return;
-      const reply = quickReplies[Number(send.getAttribute("data-send"))];
-      if (!reply) return;
-      quickReplySending = true;
-      send.disabled = true;
-      close();
-      const chat = await activeChat();
-      if (!chat) {
-        quickReplySending = false;
+      const editBtn = e.target.closest("[data-edit]");
+      if (editBtn) return renderForm(quickReplies[Number(editBtn.getAttribute("data-edit"))]);
+
+      const delBtn = e.target.closest("[data-del]");
+      if (delBtn) {
+        const reply = quickReplies[Number(delBtn.getAttribute("data-del"))];
+        if (!reply) return;
+        const ok = await crmConfirm({
+          title: "Excluir resposta rápida?",
+          body: `"${reply.title}" será removida.`,
+          confirmLabel: "Excluir",
+        });
+        if (!ok) return;
+        const r = await chrome.runtime
+          .sendMessage({ type: "api", path: `/api/public/extension/quick-replies/${reply.id}`, opts: { method: "DELETE" } })
+          .catch(() => null);
+        if (r?.ok) {
+          crmToast("Resposta excluída");
+          await loadQuickReplies();
+          renderList();
+        } else {
+          crmToast(r?.error || "Não consegui excluir.", "err");
+        }
         return;
       }
-      try {
-        await sendQuickReply(reply, chat);
-      } finally {
-        quickReplySending = false;
+
+      const saveBtn = e.target.closest("[data-save]");
+      if (saveBtn) {
+        const title = pop.querySelector('[data-field="title"]').value.trim();
+        const text = pop.querySelector('[data-field="text"]').value.trim();
+        if (!title) { crmToast("Dá um título pra essa resposta.", "err"); return; }
+        if (!text) { crmToast("Escreve a mensagem.", "err"); return; }
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Salvando...";
+        const body = JSON.stringify({ title, actions: [{ type: "text", text }] });
+        const path = editingId
+          ? `/api/public/extension/quick-replies/${editingId}`
+          : "/api/public/extension/quick-replies";
+        const method = editingId ? "PATCH" : "POST";
+        const r = await chrome.runtime.sendMessage({ type: "api", path, opts: { method, body } }).catch(() => null);
+        if (r?.ok) {
+          crmToast(editingId ? "Resposta atualizada" : "Resposta criada");
+          await loadQuickReplies();
+          renderList();
+        } else {
+          crmToast(r?.error || "Não consegui salvar.", "err");
+          saveBtn.disabled = false;
+          saveBtn.textContent = editingId ? "Salvar" : "Criar";
+        }
+        return;
+      }
+
+      const send = e.target.closest("[data-send]");
+      if (send && !quickReplySending) {
+        const reply = quickReplies[Number(send.getAttribute("data-send"))];
+        if (!reply) return;
+        quickReplySending = true;
+        send.disabled = true;
+        close();
+        const chat = await activeChat();
+        if (!chat) {
+          quickReplySending = false;
+          return;
+        }
+        try {
+          await sendQuickReply(reply, chat);
+        } finally {
+          quickReplySending = false;
+        }
       }
     });
   }

@@ -295,12 +295,12 @@ function IconGear({ size = 18 }: { size?: number }) {
     </svg>
   );
 }
-/** Balão de conversa com indicador de "resposta pronta" (pontinhos). */
+/** Raio — Respostas rápidas. Mesmo ícone usado no rail do WhatsApp e dentro
+ * de cada conversa, pra ficar padronizado em todo o sistema. */
 function IconChat() {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-4.9A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z" />
-      <path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01" strokeWidth="2.6" />
+      <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" />
     </svg>
   );
 }
