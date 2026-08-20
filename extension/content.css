@@ -395,6 +395,31 @@ html body.crm-shell #app {
 .crm-chat-btn:hover { background: rgba(0, 0, 0, 0.06); color: var(--z-accent); }
 .crm-chat-btn svg { width: 22px; height: 22px; }
 
+/* Tooltip dos botões da conversa (Funis de vendas / Respostas rápidas) —
+   mesma identidade visual do trilho lateral: fundo azul sólido, texto
+   branco, aparece por cima de tudo. */
+.crm-chat-btn { position: relative; }
+.crm-chat-btn::after {
+  content: attr(data-label);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--z-accent);
+  color: var(--z-on-accent);
+  border-radius: 8px;
+  padding: 6px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  z-index: 1000001;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+.crm-chat-btn:hover::after { opacity: 1; }
+
 /* Aviso rápido das ações feitas dentro da conversa. */
 .crm-toast {
   position: fixed;
@@ -450,6 +475,29 @@ html body.crm-shell #app {
 }
 .crm-qr-send:hover { background: var(--z-accent-strong); }
 .crm-chat-btn-icon { margin-left: 2px; }
+
+/* Status atual do lead nos funis — mostra de cara onde ele já está,
+   com botão pra remover, antes da lista de "adicionar a". */
+.crm-fn-current:empty { display: none; }
+.crm-fn-current { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.crm-fn-badge {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 12px; border-radius: 10px;
+  background: var(--z-accent-soft); border: 1px solid var(--z-accent);
+  font-size: 12px; color: var(--z-text);
+}
+.crm-fn-remove {
+  flex-shrink: 0; padding: 5px 10px; border-radius: 8px;
+  background: transparent; border: 1px solid var(--z-danger); color: var(--z-danger);
+  font-size: 11px; font-weight: 700; cursor: pointer;
+}
+.crm-fn-remove:hover { background: var(--z-danger); color: #fff; }
+.crm-fn-remove:disabled { opacity: 0.5; cursor: default; }
+.crm-fn-tag {
+  display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px;
+  background: var(--z-accent-soft); color: var(--z-accent); font-size: 10px; font-weight: 700;
+  vertical-align: middle;
+}
 
 /* ------------------------------------------------------------------ */
 /* Popover de contatos — abre abaixo da aba clicada, centralizado */

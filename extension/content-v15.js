@@ -1190,11 +1190,15 @@
     const header = document.querySelector("#main header");
     if (!header) return null;
 
+    // Filtra textos que são da própria interface do WhatsApp (botões do
+    // cabeçalho como "Dados do contato", "Pesquisar" etc.) — sem isso, às
+    // vezes um desses textos era lido como se fosse o nome do contato.
+    const CHROME_STRINGS = /^(menu|pesquisar|buscar|dados do contato|informações do contato|informações do grupo|chamada de voz|chamada de vídeo|mais opções|anexar|emoji|figurinhas|status)$/i;
     const candidates = Array.from(
       header.querySelectorAll('[title], span[dir="auto"], h1, h2'),
     )
       .map((node) => String(node.getAttribute?.("title") || node.textContent || "").trim())
-      .filter((value) => value && value.length <= 160 && !/^(menu|pesquisar|buscar)$/i.test(value));
+      .filter((value) => value && value.length <= 160 && !CHROME_STRINGS.test(value));
     const name = candidates[0] || "Contato";
     const digits = String(header.textContent || "").replace(/\D/g, "");
     const visiblePhone = digits.length >= 10 && digits.length <= 13 ? digits : null;
@@ -1205,9 +1209,15 @@
     const matches = (waData.contacts || []).filter(
       (contact) => String(contact.name || "").trim().toLocaleLowerCase("pt-BR") === normalizedName,
     );
+    // Cache sincronizada é mais confiável que o texto lido do cabeçalho —
+    // prioriza nome/telefone de lá quando o contato já foi sincronizado.
     const cached = byId || (matches.length === 1 ? matches[0] : null);
     return {
       wa_id: waId || cached?.wa_id || null,
+      // id interno (uuid) da tabela wa_contacts — é o que a API espera em
+      // wa_contact_id, NUNCA o wa_id (que é o identificador do WhatsApp,
+      // tipo "5511999999999@c.us", e não passa na validação de uuid).
+      contact_db_id: cached?.id || null,
       phone: visiblePhone || cached?.phone || null,
       name: cached?.name || name,
       is_group: (waId || "").endsWith("@g.us") || cached?.is_group || false,
@@ -1229,10 +1239,12 @@
     // ChatStore, que é a fonte de verdade.
     const fromBridge = await askBridge("active_chat_v290", "active_chat_done_v290", {}, 8000);
     if (fromBridge && (fromBridge.wa_id || fromBridge.phone)) {
+      const cached = fromBridge.wa_id ? (waData.contacts || []).find((c) => c.wa_id === fromBridge.wa_id) : null;
       return {
         wa_id: fromBridge.wa_id || null,
-        phone: fromBridge.phone || null,
-        name: fromBridge.name || dom?.name || "Contato",
+        contact_db_id: cached?.id || null,
+        phone: fromBridge.phone || cached?.phone || null,
+        name: cached?.name || fromBridge.name || dom?.name || "Contato",
         is_group: !!fromBridge.is_group,
       };
     }
@@ -1285,7 +1297,7 @@
     const btn = document.createElement("button");
     btn.id = CHAT_BTN_ID;
     btn.type = "button";
-    btn.title = "Adicionar este contato a um funil";
+    btn.setAttribute("data-label", "Funis de vendas");
     btn.className = "crm-chat-btn crm-chat-btn-icon";
     btn.innerHTML = ICONS.funnel;
     btn.addEventListener("mouseenter", prewarmEngine);
@@ -1299,7 +1311,7 @@
     qr.id = QR_BTN_ID;
     qr.className = "crm-chat-btn crm-chat-btn-icon";
     qr.type = "button";
-    qr.title = "Respostas rápidas";
+    qr.setAttribute("data-label", "Respostas rápidas");
     qr.innerHTML = BOLT_SVG;
     // Aquece o motor antes do clique: era daí que vinha o atraso do 1º envio.
     qr.addEventListener("mouseenter", prewarmEngine);
@@ -1321,9 +1333,29 @@
 
 
   // ---------------------------------------------------------------------
-  // Pop-up de Funis — mesmo formato do pop-up de respostas rápidas:
-  // lista os funis, entra nas etapas e adiciona o contato da conversa.
+  // Pop-up de Funis — lista os funis, entra nas etapas, adiciona o contato
+  // da conversa, E mostra de cara se o lead já está em algum funil (com
+  // botão de remover), pra nunca ficar em dúvida nem duplicado em duas
+  // etapas ao mesmo tempo.
   // ---------------------------------------------------------------------
+
+  /** Todos os cards (em qualquer funil) que já são esse contato. */
+  function membershipsFor(chat) {
+    const out = [];
+    for (const f of funnels) {
+      if (f.mode === "label") continue;
+      for (const c of f.cards || []) {
+        const matchId = chat.wa_id && c.wa_id === chat.wa_id;
+        const matchPhone = !matchId && chat.phone && c.phone === chat.phone;
+        if (matchId || matchPhone) {
+          const stage = (f.stages || []).find((s) => s.id === c.stage_id);
+          out.push({ funnel: f, stage, card: c });
+        }
+      }
+    }
+    return out;
+  }
+
   function openFunnelModal() {
     document.querySelector(".crm-fn-overlay")?.remove();
     const overlay = document.createElement("div");
@@ -1331,9 +1363,10 @@
     overlay.innerHTML = `
       <div class="crm-qr" role="dialog" aria-modal="true">
         <div class="crm-qr-head">
-          <p class="crm-qr-title">Adicionar a um funil</p>
+          <p class="crm-qr-title">Funis de vendas</p>
           <button class="crm-qr-close" title="Fechar">✕</button>
         </div>
+        <div class="crm-fn-current"></div>
         <div class="crm-qr-list"></div>
       </div>
     `;
@@ -1342,23 +1375,47 @@
     overlay.querySelector(".crm-qr-close").addEventListener("click", close);
     document.body.appendChild(overlay);
 
+    const current = overlay.querySelector(".crm-fn-current");
     const list = overlay.querySelector(".crm-qr-list");
     const title = overlay.querySelector(".crm-qr-title");
 
+    let chat = null;
+    let selected = null;
+
+    const renderCurrent = () => {
+      if (!chat) return;
+      const memberships = membershipsFor(chat);
+      if (!memberships.length) {
+        current.innerHTML = "";
+        return;
+      }
+      current.innerHTML = memberships
+        .map(
+          (m, i) => `<div class="crm-fn-badge">
+            <span>Já está em <strong>${escapeHtml(m.funnel.name)}</strong> · ${escapeHtml(m.stage?.name || "—")}</span>
+            <button class="crm-fn-remove" data-remove-idx="${i}">Remover do funil</button>
+          </div>`,
+        )
+        .join("");
+      current.dataset.memberships = JSON.stringify(memberships.map((m) => ({ id: m.card.id, funnelName: m.funnel.name })));
+    };
+
     const renderFunnels = () => {
-      title.textContent = "Adicionar a um funil";
+      title.textContent = "Funis de vendas";
       const items = funnels.filter((f) => f.mode !== "label");
       if (!items.length) {
         list.innerHTML = `<p class="crm-qr-empty">Nenhum funil cadastrado ainda.</p>`;
         return;
       }
+      const memberships = chat ? membershipsFor(chat) : [];
       list.innerHTML = items
-        .map(
-          (f) => `<div class="crm-qr-item">
-            <p class="crm-qr-name">${escapeHtml(f.name)}</p>
-            <button class="crm-qr-send" data-funnel="${escapeHtml(f.id)}">Escolher etapa</button>
-          </div>`,
-        )
+        .map((f) => {
+          const inThisFunnel = memberships.find((m) => m.funnel.id === f.id);
+          return `<div class="crm-qr-item">
+            <p class="crm-qr-name">${escapeHtml(f.name)}${inThisFunnel ? ` <span class="crm-fn-tag">${escapeHtml(inThisFunnel.stage?.name || "")}</span>` : ""}</p>
+            <button class="crm-qr-send" data-funnel="${escapeHtml(f.id)}">${inThisFunnel ? "Mover de etapa" : "Escolher etapa"}</button>
+          </div>`;
+        })
         .join("");
     };
 
@@ -1369,20 +1426,55 @@
         list.innerHTML = `<p class="crm-qr-empty">Este funil ainda não tem etapas.</p>`;
         return;
       }
+      const memberships = chat ? membershipsFor(chat) : [];
+      const inThisFunnel = memberships.find((m) => m.funnel.id === funnel.id);
       list.innerHTML = stages
-        .map(
-          (st) => `<div class="crm-qr-item">
-            <p class="crm-qr-name">${escapeHtml(st.name)}</p>
-            <button class="crm-qr-send" data-stage="${escapeHtml(st.id)}">Adicionar</button>
-          </div>`,
-        )
+        .map((st) => {
+          const isCurrent = inThisFunnel?.stage?.id === st.id;
+          return `<div class="crm-qr-item">
+            <p class="crm-qr-name">${escapeHtml(st.name)}${isCurrent ? ` <span class="crm-fn-tag">atual</span>` : ""}</p>
+            <button class="crm-qr-send" data-stage="${escapeHtml(st.id)}" ${isCurrent ? "disabled" : ""}>${isCurrent ? "Já está aqui" : inThisFunnel ? "Mover para cá" : "Adicionar"}</button>
+          </div>`;
+        })
         .join("");
     };
 
-    let selected = null;
     // Abre na hora com o cache e recarrega em segundo plano.
     renderFunnels();
-    void loadFunnels().then(() => { if (!selected) renderFunnels(); });
+    activeChat().then((c) => {
+      chat = c;
+      renderCurrent();
+      if (!selected) renderFunnels();
+    });
+    void loadFunnels().then(() => {
+      renderCurrent();
+      if (!selected) renderFunnels();
+      else renderStages(selected);
+    });
+
+    current.addEventListener("click", async (e) => {
+      const removeBtn = e.target.closest("[data-remove-idx]");
+      if (!removeBtn) return;
+      const idx = Number(removeBtn.getAttribute("data-remove-idx"));
+      const memberships = JSON.parse(current.dataset.memberships || "[]");
+      const target = memberships[idx];
+      if (!target) return;
+      removeBtn.disabled = true;
+      removeBtn.textContent = "Removendo...";
+      const r = await chrome.runtime
+        .sendMessage({ type: "api", path: "/api/public/extension/funnel-cards", opts: { method: "DELETE", body: JSON.stringify({ id: target.id }) } })
+        .catch(() => null);
+      if (r?.ok) {
+        crmToast(`Removido de ${target.funnelName}`);
+        await loadFunnels();
+        renderCurrent();
+        if (selected) renderStages(selected); else renderFunnels();
+      } else {
+        crmToast(r?.error || "Não consegui remover.", "err");
+        removeBtn.disabled = false;
+        removeBtn.textContent = "Remover do funil";
+      }
+    });
 
     list.addEventListener("click", async (e) => {
       const pickFunnel = e.target.closest("[data-funnel]");
@@ -1392,14 +1484,17 @@
         return;
       }
       const pickStage = e.target.closest("[data-stage]");
-      if (!pickStage || !selected) return;
+      if (!pickStage || !selected || pickStage.disabled) return;
       const stage = (selected.stages || []).find((s) => s.id === pickStage.getAttribute("data-stage"));
       if (!stage) return;
       pickStage.disabled = true;
+      pickStage.textContent = "Adicionando...";
       const funnel = selected;
-      close();
-      const chat = await activeChat();
-      if (!chat) return crmToast("Não consegui ler a conversa aberta.", "err");
+      if (!chat) chat = await activeChat();
+      if (!chat) {
+        crmToast("Não consegui ler a conversa aberta.", "err");
+        return;
+      }
       const r = await chrome.runtime
         .sendMessage({
           type: "api",
@@ -1411,16 +1506,25 @@
               stage_id: stage.id,
               title: chat.name || chat.phone || "Contato",
               phone: chat.phone || null,
-              wa_contact_id: chat.wa_id || null,
+              // id interno (uuid) do contato — NUNCA o wa_id (formato
+              // "5511...@c.us"), que não é um uuid válido e derrubava a
+              // validação com "Dados inválidos". Quando o contato ainda
+              // não foi sincronizado, manda null (a sincronização
+              // automática cobre isso nos minutos seguintes).
+              wa_contact_id: chat.contact_db_id || null,
             }),
           },
         })
         .catch(() => null);
       if (r?.ok) {
         crmToast(`Adicionado em ${funnel.name} · ${stage.name}`);
-        loadFunnels();
+        await loadFunnels();
+        renderCurrent();
+        renderStages(funnel);
       } else {
         crmToast(r?.error || "Não consegui adicionar ao funil.", "err");
+        pickStage.disabled = false;
+        pickStage.textContent = "Adicionar";
       }
     });
   }

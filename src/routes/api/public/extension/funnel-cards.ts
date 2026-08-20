@@ -35,7 +35,7 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
         }
         const parsed = cardCreateSchema.safeParse(payload);
         if (!parsed.success) {
-          return jsonResponse(request, { ok: false, error: "Dados inválidos" }, { status: 400 });
+          return jsonResponse(request, { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" }, { status: 400 });
         }
         const shop = auth.token.barbershop_id;
 
@@ -189,7 +189,7 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
         }
         const parsed = cardPatchSchema.safeParse(payload);
         if (!parsed.success) {
-          return jsonResponse(request, { ok: false, error: "Dados inválidos" }, { status: 400 });
+          return jsonResponse(request, { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" }, { status: 400 });
         }
         const { id, ...rest } = parsed.data;
         const patch: {
@@ -230,7 +230,7 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
         }
         const parsed = deleteSchema.safeParse(payload);
         if (!parsed.success) {
-          return jsonResponse(request, { ok: false, error: "Dados inválidos" }, { status: 400 });
+          return jsonResponse(request, { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" }, { status: 400 });
         }
         const { error } = await supabaseAdmin
           .from("funnel_cards")
