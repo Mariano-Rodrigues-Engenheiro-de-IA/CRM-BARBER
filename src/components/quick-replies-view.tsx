@@ -1,10 +1,12 @@
 // Respostas rápidas — criação e gestão no painel do CRM.
 //
-// Cada resposta rápida tem título + lista ordenada de ações
-// (texto, imagem, vídeo, áudio). A mesma lista é consumida pela extensão
-// dentro do WhatsApp Web para enviar tudo em sequência.
+// Cada resposta rápida tem título + lista ordenada de passos (texto, imagem,
+// vídeo, áudio, mover/remover no funil), cada um com um tempo de espera
+// opcional antes do próximo. A mesma lista é consumida pela extensão dentro
+// do WhatsApp Web — os dois lugares têm que ficar sempre no mesmo padrão.
 
 import { useEffect, useRef, useState } from "react";
+import { useConfirm } from "@/components/confirm-dialog";
 import type { Funnel } from "@/lib/funnels";
 import {
   actionLabel,
@@ -55,7 +57,37 @@ function resolveMime(file: File, type: QuickReplyActionType) {
 /** Cache entre navegações: reabrir a aba não deve piscar "Carregando...". */
 let repliesCache: QuickReply[] | null = null;
 
+// ---------------------------------------------------------------------
+// Ícones — mesmo traço/peso usado no resto do painel (18px, stroke 1.8).
+// ---------------------------------------------------------------------
+function IconMini({ type }: { type: QuickReplyActionType | "clock" }) {
+  const common = { viewBox: "0 0 24 24", width: 13, height: 13, fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  if (type === "text") return <svg {...common}><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-4.9A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z" /></svg>;
+  if (type === "image") return <svg {...common}><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>;
+  if (type === "video") return <svg {...common}><rect x="2.5" y="5.5" width="14" height="13" rx="2" /><path d="M16.5 10.5 21 7.5v9l-4.5-3" /></svg>;
+  if (type === "audio") return <svg {...common}><path d="M9 18V6l10-2v12" /><circle cx="6" cy="18" r="3" /><circle cx="17" cy="16" r="3" /></svg>;
+  if (type === "clock") return <svg {...common}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></svg>;
+  // funnel_add / funnel_remove
+  return <svg {...common}><path d="M3 4h18l-7 8v7l-4 2v-9L3 4z" /></svg>;
+}
+
+function typesIn(qr: QuickReply): QuickReplyActionType[] {
+  const seen = new Set<QuickReplyActionType>();
+  const out: QuickReplyActionType[] = [];
+  for (const a of qr.actions) {
+    if (!seen.has(a.type)) { seen.add(a.type); out.push(a.type); }
+  }
+  return out;
+}
+function firstText(qr: QuickReply) {
+  return qr.actions.find((a) => a.type === "text")?.text?.trim() || "";
+}
+function hasDelay(qr: QuickReply) {
+  return qr.actions.some((a) => typeof a.delay_seconds === "number" && a.delay_seconds > 0);
+}
+
 export function QuickRepliesView({ token, api }: { token: string; api: ApiFn }) {
+  const { confirm, dialog } = useConfirm();
   const [replies, setReplies] = useState<QuickReply[]>(() => repliesCache ?? []);
   const [loading, setLoading] = useState(repliesCache === null);
   const [editing, setEditing] = useState<QuickReply | "new" | null>(null);
@@ -77,15 +109,21 @@ export function QuickRepliesView({ token, api }: { token: string; api: ApiFn }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-
-  async function remove(id: string) {
-    await api(`/api/public/extension/quick-replies/${id}`, { method: "DELETE" });
+  async function remove(qr: QuickReply) {
+    const ok = await confirm({
+      title: "Excluir resposta rápida?",
+      description: `"${qr.title}" será removida.`,
+      confirmLabel: "Excluir",
+      destructive: true,
+    });
+    if (!ok) return;
+    await api(`/api/public/extension/quick-replies/${qr.id}`, { method: "DELETE" });
     void reload();
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-end gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <button
           onClick={() => setEditing("new")}
           className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong"
@@ -97,31 +135,65 @@ export function QuickRepliesView({ token, api }: { token: string; api: ApiFn }) 
       {err && <p className="text-sm text-red-500">{err}</p>}
       {loading && <p className="text-sm text-neutral-500">Carregando...</p>}
 
-      <div className="divide-y divide-neutral-200 rounded-xl border border-neutral-300 bg-white">
+      {!loading && replies.length === 0 && (
+        <p className="rounded-xl border border-dashed border-neutral-300 bg-white px-4 py-8 text-center text-sm text-neutral-500">
+          Nenhuma resposta rápida criada ainda.
+        </p>
+      )}
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {replies.map((qr) => (
-          <div key={qr.id} className="flex items-center justify-between gap-3 px-4 py-3">
-            <span className="min-w-0 truncate text-sm font-medium text-neutral-900">{qr.title}</span>
-            <div className="flex shrink-0 gap-1">
+          <div
+            key={qr.id}
+            className="flex flex-col rounded-xl border border-neutral-200 bg-white p-4 shadow-sm transition hover:border-neutral-300 hover:shadow"
+          >
+            <p className="truncate text-sm font-semibold text-neutral-900">{qr.title}</p>
+
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {typesIn(qr).map((t) => (
+                <span
+                  key={t}
+                  title={actionLabel(t)}
+                  className="flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-600"
+                >
+                  <IconMini type={t} />
+                  {actionLabel(t)}
+                </span>
+              ))}
+              {hasDelay(qr) && (
+                <span title="Tem tempo de espera configurado" className="flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-600">
+                  <IconMini type="clock" />
+                  Temporizado
+                </span>
+              )}
+            </div>
+
+            {firstText(qr) && (
+              <p className="mt-2 line-clamp-2 flex-1 text-xs text-neutral-500">{firstText(qr)}</p>
+            )}
+            {!firstText(qr) && <div className="flex-1" />}
+
+            <p className="mt-3 text-[11px] font-medium text-neutral-400">
+              {qr.actions.length} passo{qr.actions.length === 1 ? "" : "s"}
+            </p>
+
+            <div className="mt-3 flex gap-2 border-t border-neutral-100 pt-3">
               <button
                 onClick={() => setEditing(qr)}
-                className="rounded px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-100"
+                className="flex-1 rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
               >
                 Editar
               </button>
               <button
-                onClick={() => remove(qr.id)}
-                className="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                onClick={() => remove(qr)}
+                className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
               >
                 Excluir
               </button>
             </div>
           </div>
         ))}
-        {!loading && replies.length === 0 && (
-          <p className="px-4 py-3 text-sm text-neutral-500">Nenhuma resposta rápida criada ainda.</p>
-        )}
       </div>
-
 
       {editing && (
         <QuickReplyEditor
@@ -134,6 +206,7 @@ export function QuickRepliesView({ token, api }: { token: string; api: ApiFn }) 
           }}
         />
       )}
+      {dialog}
     </div>
   );
 }
@@ -150,7 +223,9 @@ function QuickReplyEditor({
   onSaved: () => void;
 }) {
   const [title, setTitle] = useState(initial?.title ?? "");
-  const [actions, setActions] = useState<QuickReplyAction[]>(initial?.actions ?? [{ type: "text", text: "" }]);
+  const [actions, setActions] = useState<QuickReplyAction[]>(
+    initial?.actions ?? [{ type: "text", text: "", delay_seconds: 5 }],
+  );
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const uploadIndex = useRef<number | null>(null);
@@ -168,7 +243,15 @@ function QuickReplyEditor({
     setActions((list) => list.map((a, idx) => (idx === i ? { ...a, ...patch } : a)));
   }
   function addAction(type: QuickReplyActionType) {
-    setActions((list) => [...list, type === "text" ? { type, text: "" } : { type }]);
+    const messageType = (QUICK_REPLY_ACTION_TYPES as readonly string[]).includes(type);
+    setActions((list) => [
+      ...list,
+      type === "text"
+        ? { type, text: "", delay_seconds: 5 }
+        : messageType
+          ? { type, delay_seconds: 5 }
+          : { type },
+    ]);
   }
   function removeAction(i: number) {
     setActions((list) => list.filter((_, idx) => idx !== i));
@@ -216,7 +299,7 @@ function QuickReplyEditor({
 
   async function save() {
     const clean = actions
-      .map((a) => (a.type === "text" ? { type: a.type, text: (a.text || "").trim() } : a))
+      .map((a) => (a.type === "text" ? { ...a, text: (a.text || "").trim() } : a))
       .filter((a) =>
         a.type === "text"
           ? !!a.text
@@ -244,7 +327,7 @@ function QuickReplyEditor({
     onSaved();
   }
 
-  
+  const isMessageStep = (t: QuickReplyActionType) => (QUICK_REPLY_ACTION_TYPES as readonly string[]).includes(t);
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
@@ -273,8 +356,11 @@ function QuickReplyEditor({
             {actions.map((a, i) => (
               <div key={i} className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="rounded bg-yellow-100 px-2 py-0.5 text-[11px] font-semibold text-yellow-800">
-                    {i + 1}. {actionLabel(a.type)}
+                  <span className="flex items-center gap-1.5 rounded-full bg-brand/10 px-2.5 py-1 text-[11px] font-semibold text-brand">
+                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-brand text-[9px] font-bold text-white">
+                      {i + 1}
+                    </span>
+                    {actionLabel(a.type)}
                   </span>
                   <div className="flex gap-1 text-xs">
                     <button onClick={() => move(i, -1)} className="rounded px-2 py-1 hover:bg-neutral-200">↑</button>
@@ -345,6 +431,24 @@ function QuickReplyEditor({
                       className={inputCls}
                     />
                   </div>
+                )}
+
+                {isMessageStep(a.type) && (
+                  <label className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11px] text-neutral-500">
+                    Aguardar
+                    <input
+                      type="number"
+                      min={0}
+                      max={120}
+                      value={a.delay_seconds ?? ""}
+                      onChange={(e) =>
+                        update(i, { delay_seconds: e.target.value === "" ? undefined : Math.max(0, Math.min(120, Number(e.target.value))) })
+                      }
+                      placeholder="5"
+                      className="w-14 rounded-md border border-neutral-300 bg-white px-1.5 py-1 text-center text-xs text-neutral-900 outline-none focus:border-neutral-900"
+                    />
+                    segundos antes do próximo passo
+                  </label>
                 )}
               </div>
             ))}

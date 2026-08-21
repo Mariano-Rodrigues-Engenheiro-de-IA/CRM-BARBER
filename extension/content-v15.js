@@ -1395,6 +1395,12 @@
     qr.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
+      // Clicar de novo com o painel já aberto fecha, em vez de recriar.
+      if (document.querySelector(".crm-qrp")) {
+        document.querySelector(".crm-qrp")?.remove();
+        document.body.classList.remove("crm-qr-open");
+        return;
+      }
       openQuickReplyModal();
     });
 
@@ -1458,14 +1464,34 @@
   // ---------------------------------------------------------------------
   function openFunnelModal(anchor) {
     document.querySelector(".crm-fn-pop")?.remove();
-    const funnel = tabFunnel();
     const pop = document.createElement("div");
     pop.className = "crm-fn-pop";
     const rect = anchor.getBoundingClientRect();
     pop.style.top = `${rect.bottom + 8}px`;
     pop.style.left = `${Math.min(Math.max(8, rect.left), window.innerWidth - 268)}px`;
 
-    const renderRows = (chat) => {
+    let chat = null;
+    // Estado conhecido da etapa atual, guardado localmente. NÃO comparamos
+    // mais contra o array global `funnels` a cada render: ele é trocado por
+    // inteiro a cada loadFunnels() (rodando em segundo plano o tempo
+    // todo), e comparar contra um snapshot antigo é a causa exata do bug
+    // "preciso clicar duas vezes" — o clique fazia efeito no servidor, mas
+    // a tela só reconhecia isso na consulta seguinte.
+    let currentCardId = null;
+    let currentStageId = null;
+
+    function syncFromFunnels() {
+      const funnel = tabFunnel();
+      if (!funnel || !chat) { currentCardId = null; currentStageId = null; return; }
+      const card = (funnel.cards || []).find(
+        (c) => (chat.wa_id && c.wa_id === chat.wa_id) || (chat.phone && c.phone === chat.phone),
+      );
+      currentCardId = card?.id || null;
+      currentStageId = card?.stage_id || null;
+    }
+
+    const renderRows = () => {
+      const funnel = tabFunnel();
       if (!funnel) {
         pop.innerHTML = `<p class="crm-fn-pop-title">Funil principal</p><p class="crm-fn-pop-empty">Funil principal ainda não foi criado.</p>`;
         return;
@@ -1475,13 +1501,11 @@
         pop.innerHTML = `<p class="crm-fn-pop-title">Funil principal</p><p class="crm-fn-pop-empty">Ainda não tem etapas.</p>`;
         return;
       }
-      const memberships = chat ? membershipsFor(chat) : [];
-      const inFunnel = memberships.find((m) => m.funnel.id === funnel.id);
       pop.innerHTML = `
         <p class="crm-fn-pop-title">Funil principal</p>
         ${stages
           .map((st) => {
-            const isOn = inFunnel?.stage?.id === st.id;
+            const isOn = st.id === currentStageId;
             return `<button class="crm-fn-pop-row" data-stage="${escapeHtml(st.id)}">
               <span class="crm-fn-pop-dot${isOn ? " is-on" : ""}"></span>
               <span class="crm-fn-pop-name">${escapeHtml(st.name)}</span>
@@ -1493,10 +1517,16 @@
 
     document.body.appendChild(pop);
     animatePopIn(pop);
-    let chat = null;
-    renderRows(null);
-    activeChat().then((c) => { chat = c; renderRows(chat); });
-    void loadFunnels().then(() => renderRows(chat));
+    renderRows();
+    activeChat().then((c) => {
+      chat = c;
+      syncFromFunnels();
+      renderRows();
+    });
+    void loadFunnels().then(() => {
+      syncFromFunnels();
+      renderRows();
+    });
 
     const close = () => {
       pop.remove();
@@ -1510,9 +1540,8 @@
     pop.addEventListener("click", async (e) => {
       const row = e.target.closest("[data-stage]");
       if (!row || row.disabled) return;
-      const dot = row.querySelector(".crm-fn-pop-dot");
-      const wasOn = dot.classList.contains("is-on");
       const stageId = row.getAttribute("data-stage");
+      const funnel = tabFunnel();
       const stage = funnel && (funnel.stages || []).find((s) => s.id === stageId);
       if (!funnel || !stage) return;
       row.disabled = true;
@@ -1522,21 +1551,20 @@
         row.disabled = false;
         return;
       }
+      const wasOn = stageId === currentStageId;
+
       if (wasOn) {
         // Já estava aqui → remove.
-        const memberships = membershipsFor(chat);
-        const card = memberships.find((m) => m.funnel.id === funnel.id)?.card;
-        if (!card) { row.disabled = false; return; }
+        if (!currentCardId) { row.disabled = false; return; }
         const r = await chrome.runtime
-          .sendMessage({ type: "api", path: "/api/public/extension/funnel-cards", opts: { method: "DELETE", body: JSON.stringify({ id: card.id }) } })
+          .sendMessage({ type: "api", path: "/api/public/extension/funnel-cards", opts: { method: "DELETE", body: JSON.stringify({ id: currentCardId } ) } })
           .catch(() => null);
         if (r?.ok) {
           crmToast("Removido do funil", "ok", anchor);
-          // Atualiza local na hora (sem esperar rede) — a reconciliação
-          // completa acontece em segundo plano, sem travar a interação.
-          funnel.cards = (funnel.cards || []).filter((c) => c.id !== card.id);
+          currentCardId = null;
+          currentStageId = null;
           updateFunnelBadge();
-          renderRows(chat);
+          renderRows();
           void loadFunnels();
         } else {
           crmToast(r?.error || "Não consegui remover.", "err", anchor);
@@ -1544,8 +1572,9 @@
         }
         return;
       }
-      // Não estava aqui → adiciona/move (o servidor já remove de qualquer
-      // outra etapa/funil automaticamente).
+
+      // Não estava aqui → adiciona/move (o servidor já move de etapa
+      // dentro do mesmo funil automaticamente).
       const r = await chrome.runtime
         .sendMessage({
           type: "api",
@@ -1564,14 +1593,10 @@
         .catch(() => null);
       if (r?.ok) {
         crmToast(`Adicionado em ${stage.name}`, "ok", anchor);
-        if (r.card) {
-          funnel.cards = funnel.cards || [];
-          const idx = funnel.cards.findIndex((c) => c.id === r.card.id);
-          if (idx >= 0) funnel.cards[idx] = { ...funnel.cards[idx], ...r.card };
-          else funnel.cards.push(r.card);
-        }
+        currentCardId = r.card?.id || currentCardId;
+        currentStageId = stage.id;
         updateFunnelBadge();
-        renderRows(chat);
+        renderRows();
         void loadFunnels();
       } else {
         crmToast(r?.error || "Não consegui adicionar ao funil.", "err", anchor);
