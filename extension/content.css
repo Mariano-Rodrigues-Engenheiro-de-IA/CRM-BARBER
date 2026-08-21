@@ -60,7 +60,7 @@ html body.crm-shell #app {
 /* Painel de Respostas rápidas aberto — reserva o espaço dele de verdade
    (como uma aba lateral), em vez de sobrepor por cima da conversa. */
 html body.crm-shell.crm-qr-open #app {
-  right: 396px !important;
+  right: 380px !important;
 }
 
 /* Trilho lateral — só ícones. Largura alinhada com a barra nativa do
@@ -460,7 +460,7 @@ html body.crm-shell.crm-qr-open #app {
 /* Popover leve do funil — ancorado no ícone, sem escurecer nem desfocar o
  * fundo (não é modal de tela cheia). Uma bolinha por etapa: vazia = clica
  * pra adicionar, cheia = clica pra remover. */
-.crm-fn-pop, .crm-qr-pop {
+.crm-fn-pop, .crm-qr-pop, .crm-lite-pop {
   position: fixed;
   background: var(--z-surface);
   border: 1px solid var(--z-line);
@@ -474,7 +474,7 @@ html body.crm-shell.crm-qr-open #app {
   transform: translateY(-6px) scale(0.98);
   transition: opacity 0.16s cubic-bezier(0.4, 0, 0.2, 1), transform 0.16s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.crm-fn-pop.is-in, .crm-qr-pop.is-in {
+.crm-fn-pop.is-in, .crm-qr-pop.is-in, .crm-lite-pop.is-in {
   opacity: 1;
   transform: translateY(0) scale(1);
 }
@@ -488,6 +488,21 @@ html body.crm-shell.crm-qr-open #app {
   color: var(--z-text-dim);
 }
 .crm-fn-pop-empty { margin: 4px; font-size: 12px; color: var(--z-text-dim); }
+
+/* Prompt leve (ex: nome de nova etapa) — mesmo padrão dos outros popovers,
+   sem escurecer a tela. */
+.crm-lite-pop { width: 240px; padding: 12px; }
+.crm-lite-pop-title { margin: 0 0 8px; font-size: 12px; font-weight: 700; color: var(--z-text); }
+.crm-lite-pop-input {
+  width: 100%; box-sizing: border-box; border: 1px solid var(--z-line); border-radius: 8px;
+  background: var(--z-bar); color: var(--z-text); font-family: var(--z-font); font-size: 13px; padding: 8px 10px;
+}
+.crm-lite-pop-input:focus { outline: none; border-color: var(--z-accent); }
+.crm-lite-pop-confirm {
+  width: 100%; margin-top: 8px; border: 0; border-radius: 8px; background: var(--z-accent); color: #fff;
+  font-size: 12.5px; font-weight: 700; padding: 8px; cursor: pointer; transition: background-color 0.15s ease;
+}
+.crm-lite-pop-confirm:hover { background: var(--z-accent-strong); }
 .crm-fn-pop-row {
   display: flex;
   align-items: center;
@@ -541,24 +556,24 @@ html body.crm-shell.crm-qr-open #app {
    --------------------------------------------------------------------- */
 .crm-qrp {
   position: fixed;
-  top: 76px;
-  right: 16px;
-  bottom: 16px;
+  top: 60px;
+  right: 0;
+  bottom: 0;
   width: 380px;
-  max-width: calc(100vw - 32px);
+  max-width: 100vw;
   background: var(--z-surface);
-  border: 1px solid var(--z-line);
-  border-radius: 14px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+  border-left: 1px solid var(--z-line);
+  border-radius: 0;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.14);
   font-family: var(--z-font);
   z-index: 2147483646;
   display: flex;
   flex-direction: column;
   opacity: 0;
-  transform: translateY(-6px) scale(0.98);
+  transform: translateX(12px);
   transition: opacity 0.16s cubic-bezier(0.4, 0, 0.2, 1), transform 0.16s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.crm-qrp.is-in { opacity: 1; transform: translateY(0) scale(1); }
+.crm-qrp.is-in { opacity: 1; transform: translateX(0); }
 
 .crm-qrp-head {
   flex: 0 0 auto;
@@ -608,6 +623,13 @@ html body.crm-shell.crm-qr-open #app {
 }
 .crm-qrp-icon:hover { background: var(--z-surface-2); color: var(--z-accent); }
 .crm-qrp-icon-danger:hover { color: var(--z-danger); }
+.crm-qrp-icon-danger.is-confirming { opacity: 1; color: #fff; background: var(--z-danger); }
+.crm-qrp-icon-danger.is-confirming:hover { color: #fff; background: var(--z-danger); }
+/* No editor de passos o ícone de remover fica sempre visível — ali não é
+   uma linha de lista com hover-reveal, é a única ação daquele cabeçalho
+   (a lixeira estava com opacity:0 sem nenhum ":hover" pai que a revelasse,
+   por isso ficava "invisível" mas ainda clicável). */
+.crm-qrp-step-head .crm-qrp-icon { opacity: 1; }
 .crm-qrp-send {
   flex-shrink: 0; width: 30px; height: 30px; border-radius: 999px; border: 0;
   background: var(--z-accent); color: #fff; display: flex; align-items: center; justify-content: center;

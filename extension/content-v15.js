@@ -288,7 +288,7 @@
       }
 
       const addBtn = e.target.closest(".crm-pill-add-icon");
-      if (addBtn) return createTab();
+      if (addBtn) return createTab(addBtn);
 
       const pill = e.target.closest(".crm-pill");
       if (!pill) return;
@@ -307,6 +307,43 @@
   /** Transição suave de entrada — evita o popover "estalar" na tela. */
   function animatePopIn(pop) {
     requestAnimationFrame(() => requestAnimationFrame(() => pop.classList.add("is-in")));
+  }
+
+  /** Prompt leve — ancorado no botão que abriu, sem escurecer/desfocar a
+   * tela. Usado no lugar do crmPrompt() (modal cheio) nos pontos em que
+   * queremos a sensação de algo nativo do WhatsApp — ex: nova etapa. */
+  function openInlinePrompt(anchor, { title, value = "", confirmLabel = "Salvar" }) {
+    return new Promise((resolve) => {
+      document.querySelector(".crm-lite-pop")?.remove();
+      const pop = document.createElement("div");
+      pop.className = "crm-lite-pop";
+      const rect = anchor.getBoundingClientRect();
+      pop.style.top = `${rect.bottom + 8}px`;
+      pop.style.left = `${Math.min(Math.max(8, rect.left), window.innerWidth - 260)}px`;
+      pop.innerHTML = `
+        <p class="crm-lite-pop-title">${escapeHtml(title)}</p>
+        <input class="crm-lite-pop-input" value="${escapeHtml(value)}" maxlength="60" />
+        <button class="crm-lite-pop-confirm">${escapeHtml(confirmLabel)}</button>
+      `;
+      document.body.appendChild(pop);
+      animatePopIn(pop);
+      const input = pop.querySelector(".crm-lite-pop-input");
+      const done = (v) => {
+        pop.remove();
+        document.removeEventListener("mousedown", onDoc, true);
+        resolve(v);
+      };
+      function onDoc(ev) {
+        if (!pop.contains(ev.target) && ev.target !== anchor) done(null);
+      }
+      setTimeout(() => document.addEventListener("mousedown", onDoc, true), 0);
+      pop.querySelector(".crm-lite-pop-confirm").addEventListener("click", () => done(input.value.trim() || null));
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") done(input.value.trim() || null);
+        if (e.key === "Escape") done(null);
+      });
+      setTimeout(() => input.focus(), 30);
+    });
   }
 
   function openMenu(anchor, items) {
@@ -896,8 +933,8 @@
     ]);
   }
 
-  async function createTab() {
-    const name = await crmPrompt({ title: "Nova etapa", value: "" });
+  async function createTab(anchor) {
+    const name = await openInlinePrompt(anchor, { title: "Nova etapa", confirmLabel: "Adicionar" });
     if (!name) return;
     const funnel = currentFunnel();
     if (funnel) {
@@ -1165,7 +1202,7 @@
     // Filtra textos que são da própria interface do WhatsApp (botões do
     // cabeçalho como "Dados do contato", "Pesquisar" etc.) — sem isso, às
     // vezes um desses textos era lido como se fosse o nome do contato.
-    const CHROME_STRINGS = /^(menu|pesquisar|buscar|dados do contato|informações do contato|informações do grupo|chamada de voz|chamada de vídeo|mais opções|anexar|emoji|figurinhas|status)$/i;
+    const CHROME_STRINGS = /^(menu|pesquisar|buscar|dados do contato|dados do perfil|informações do contato|informações do perfil|informações do grupo|ver perfil|abrir perfil|chamada de voz|chamada de vídeo|mais opções|anexar|emoji|figurinhas|status)$/i;
     const candidates = Array.from(
       header.querySelectorAll('[title], span[dir="auto"], h1, h2'),
     )
@@ -1199,23 +1236,36 @@
 
 
   async function activeChat() {
-    // Ler o cabeçalho é instantâneo e não carrega o wa-js. O motor interno só
-    // é necessário para sincronizar e enviar mensagens; injetá-lo ao clicar no
-    // funil era a origem do atraso e dos erros de módulos vistos no console.
+    // Ler o cabeçalho é instantâneo, mas o NOME que vem de lá é escaneado
+    // de qualquer elemento com atributo "title" no cabeçalho — inclusive
+    // botões da própria interface do WhatsApp ("Dados do contato", "Dados
+    // do perfil", etc.), que mudam de texto entre versões/idiomas do
+    // WhatsApp. Isso é frágil por natureza: bloquear string por string
+    // (como fizemos antes) só resolve até aparecer a próxima variação.
+    //
+    // A fonte confiável de nome é: (1) o cache já sincronizado (voltou do
+    // ContactStore de verdade, não da tela), ou (2) perguntar pra ponte,
+    // que lê resolveName() direto do ContactStore/ChatStore do WhatsApp —
+    // não escaneia texto de botões. DOM só decide o wa_id/telefone (rápido)
+    // e serve de last-resort se a ponte falhar.
     const dom = activeChatFromDom();
-    if (dom && (dom.wa_id || dom.phone)) return dom;
 
-    // Fallback determinístico: conversa nova/sem mensagens carregadas, ou o
-    // WhatsApp mudou o data-id das linhas — aí o DOM não devolve o wa_id e o
-    // envio falhava com "Contato sem telefone". A ponte lê o ID direto do
-    // ChatStore, que é a fonte de verdade.
+    if (dom?.wa_id) {
+      const cached = (waData.contacts || []).find((c) => c.wa_id === dom.wa_id);
+      if (cached?.name) {
+        return { ...dom, name: cached.name, contact_db_id: cached.id || dom.contact_db_id || null };
+      }
+    }
+
     const fromBridge = await askBridge("active_chat_v290", "active_chat_done_v290", {}, 8000);
     if (fromBridge && (fromBridge.wa_id || fromBridge.phone)) {
       const cached = fromBridge.wa_id ? (waData.contacts || []).find((c) => c.wa_id === fromBridge.wa_id) : null;
       return {
-        wa_id: fromBridge.wa_id || null,
-        contact_db_id: cached?.id || null,
-        phone: fromBridge.phone || cached?.phone || null,
+        wa_id: fromBridge.wa_id || dom?.wa_id || null,
+        contact_db_id: cached?.id || dom?.contact_db_id || null,
+        phone: fromBridge.phone || cached?.phone || dom?.phone || null,
+        // A ponte lê o nome direto do ContactStore — fonte confiável.
+        // Só cai pro nome "de tela" (dom) em último caso.
         name: cached?.name || fromBridge.name || dom?.name || "Contato",
         is_group: !!fromBridge.is_group,
       };
@@ -1475,6 +1525,7 @@
   // ---------------------------------------------------------------------
   const PENCIL_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
   const TRASH_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>`;
+  const CHECK_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
 
   const QR_STEP_TYPES = [
     { type: "text", label: "Texto" },
@@ -1660,6 +1711,14 @@
     };
 
     panel.addEventListener("click", async (e) => {
+      // Qualquer clique fora do próprio botão de excluir cancela a
+      // confirmação inline pendente (evita ficar preso em "confirmar?").
+      if (!e.target.closest("[data-del]")) {
+        panel.querySelectorAll(".crm-qrp-icon-danger.is-confirming").forEach((b) => {
+          b.classList.remove("is-confirming");
+          b.innerHTML = TRASH_SVG;
+        });
+      }
       if (e.target.closest("[data-close]")) return close();
       if (e.target.closest("[data-new]")) return renderForm(null);
       if (e.target.closest("[data-back]")) return renderList();
@@ -1671,12 +1730,19 @@
       if (delBtn) {
         const reply = quickReplies[Number(delBtn.getAttribute("data-del"))];
         if (!reply) return;
-        const ok = await crmConfirm({
-          title: "Excluir resposta rápida?",
-          body: `"${reply.title}" será removida.`,
-          confirmLabel: "Excluir",
-        });
-        if (!ok) return;
+        // Confirmação inline, sem popup: primeiro clique vira "Confirmar?"
+        // (vermelho), segundo clique de fato exclui. Clicar em qualquer
+        // outro lugar do painel volta ao normal.
+        if (!delBtn.classList.contains("is-confirming")) {
+          panel.querySelectorAll(".crm-qrp-icon-danger.is-confirming").forEach((b) => {
+            b.classList.remove("is-confirming");
+            b.innerHTML = TRASH_SVG;
+          });
+          delBtn.classList.add("is-confirming");
+          delBtn.innerHTML = CHECK_SVG;
+          delBtn.title = "Confirmar exclusão";
+          return;
+        }
         const r = await chrome.runtime
           .sendMessage({ type: "api", path: `/api/public/extension/quick-replies/${reply.id}`, opts: { method: "DELETE" } })
           .catch(() => null);
