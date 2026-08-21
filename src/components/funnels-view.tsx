@@ -9,6 +9,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
+  formatBRL,
   type Funnel,
   type FunnelCard,
   type FunnelMode,
@@ -45,13 +46,16 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
   const [err, setErr] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [detail, setDetail] = useState<FunnelCard | null>(null);
-  const [detailTab, setDetailTab] = useState<"notes" | "schedule">("notes");
+  const [detailTab, setDetailTab] = useState<"notes" | "schedule" | "profile" | "deal">("notes");
   const [inboxQuery, setInboxQuery] = useState("");
   const [renamingStage, setRenamingStage] = useState<string | null>(null);
   const [stageSearch, setStageSearch] = useState<Record<string, string>>({});
   const [dropIndicator, setDropIndicator] = useState<{ stageId: string; index: number } | null>(null);
   const draggedCardHeight = useRef<number>(72);
   const [stageDropIndicator, setStageDropIndicator] = useState<number | null>(null);
+  // Valor do cliente somado — carregado uma vez, em lote, pra mostrar tanto
+  // o valor individual em cada card quanto o total parado em cada etapa.
+  const [dealValues, setDealValues] = useState<Array<{ wa_contact_id: string | null; phone: string | null; value_cents: number | null }>>([]);
   const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
   // Snapshot ESTÁTICO das posições dos cards de uma coluna, capturado uma
   // única vez ao entrar nela durante o arraste — evita o loop de
@@ -223,8 +227,26 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       const base = created ? await reload() : r;
       if (await syncLabelFunnel(base.list, base.labels, base.contacts)) await reload();
     })();
+    api("/api/public/extension/customer-deal").then((r) => {
+      if (r?.ok) setDealValues((r.deals as typeof dealValues) || []);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const dealValueByKey = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const d of dealValues) {
+      const key = d.wa_contact_id || d.phone;
+      if (!key || d.value_cents == null) continue;
+      map.set(key, (map.get(key) || 0) + d.value_cents);
+    }
+    return map;
+  }, [dealValues]);
+
+  function stageTotalValue(stageId: string): number {
+    const cards = active?.cards.filter((c) => c.stage_id === stageId) ?? [];
+    return cards.reduce((sum, c) => sum + (dealValueByKey.get(c.wa_contact_id || c.phone || "") || 0), 0);
+  }
 
   const active = funnels.find((f) => f.id === activeId) || null;
 
@@ -845,6 +867,14 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                       <span className="shrink-0 rounded-full bg-neutral-200 px-2.5 py-1 text-xs font-bold text-neutral-700">
                         {allCards.length}
                       </span>
+                      {stageTotalValue(stage.id) > 0 && (
+                        <span
+                          title="Soma do 'Valor do cliente' de todos os leads dessa etapa"
+                          className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700"
+                        >
+                          {formatBRL(stageTotalValue(stage.id))}
+                        </span>
+                      )}
                       {active.mode !== "label" && (
                         <DotsMenu
                           items={[
@@ -990,6 +1020,31 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                           >
                             <IconClock />
                           </CardAction>
+                          <CardAction
+                            title="Perfil do cliente"
+                            colorClass="text-violet-600 hover:bg-violet-50"
+                            onClick={() => {
+                              setDetailTab("profile");
+                              setDetail(card);
+                            }}
+                          >
+                            <IconProfile />
+                          </CardAction>
+                          <CardAction
+                            title="Valor do cliente"
+                            colorClass="text-emerald-700 hover:bg-emerald-50"
+                            onClick={() => {
+                              setDetailTab("deal");
+                              setDetail(card);
+                            }}
+                          >
+                            <IconDeal />
+                          </CardAction>
+                          {dealValueByKey.get(card.wa_contact_id || card.phone || "") ? (
+                            <span className="ml-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
+                              {formatBRL(dealValueByKey.get(card.wa_contact_id || card.phone || "") || 0)}
+                            </span>
+                          ) : null}
                           {(card.label_ids ?? []).length > 0 ? (
                             (card.label_ids ?? []).map((labelId) => {
                               const lbl = labels.find((l) => l.wa_label_id === labelId);
@@ -1029,6 +1084,11 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
           onClose={() => {
             setDetail(null);
             void reload();
+          }}
+          onDealSaved={() => {
+            api("/api/public/extension/customer-deal").then((r) => {
+              if (r?.ok) setDealValues((r.deals as typeof dealValues) || []);
+            });
           }}
         />
       )}
@@ -1284,6 +1344,19 @@ const IconClock = () => (
     <path d="M8.2 2.6h5.6M18.5 5l1.6-1.6" />
   </svg>
 );
+const IconProfile = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7" />
+  </svg>
+);
+const IconDeal = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v10" />
+    <path d="M9 9.5c0-1.4 1.3-2.5 3-2.5s3 .9 3 2.1c0 1.7-1.6 2.2-3.2 2.7-1.6.5-2.8 1.1-2.8 2.6 0 1.2 1.3 2.1 3 2.1s3-1 3-2.3" />
+  </svg>
+);
 
 /** Ícone de etiqueta (formato de bandeirinha inclinada), colorido com a cor
  * real da etiqueta do WhatsApp. Mostra o nome só no hover (title), sem
@@ -1357,11 +1430,13 @@ function CardDrawer({
   card,
   initialTab,
   onClose,
+  onDealSaved,
 }: {
   api: ApiFn;
   card: FunnelCard;
   initialTab: "notes" | "schedule" | "profile" | "deal";
   onClose: () => void;
+  onDealSaved?: () => void;
 }) {
   const [tab, setTab] = useState(initialTab);
   const [notes, setNotes] = useState(card.notes ?? "");
@@ -1417,19 +1492,29 @@ function CardDrawer({
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [deal, setDeal] = useState<Record<string, unknown> | null>(null);
   const [dealLoaded, setDealLoaded] = useState(false);
+  // Campo de texto solto do valor — não deriva de deal.value_cents a cada
+  // tecla (isso reformatava o campo no meio da digitação e travava em 1
+  // dígito). Só vira number de verdade na hora de salvar.
+  const [dealValueText, setDealValueText] = useState("");
   const [cpBusy, setCpBusy] = useState(false);
   const [cpSaved, setCpSaved] = useState(false);
 
   useEffect(() => {
     if (tab === "profile" && !profileLoaded && contactQuery) {
       api(`/api/public/extension/customer-profile?${contactQuery}`).then((r) => {
-        setProfile(((r?.ok ? r.profile : null) as Record<string, unknown> | null) || {});
+        const p = ((r?.ok ? r.profile : null) as Record<string, unknown> | null) || {};
+        // Se ainda não tem nome salvo no perfil, usa o nome que o card já
+        // tem (o mesmo resolvido lá na conversa do WhatsApp).
+        if (!p.name && card.title) p.name = card.title;
+        setProfile(p);
         setProfileLoaded(true);
       });
     }
     if (tab === "deal" && !dealLoaded && contactQuery) {
       api(`/api/public/extension/customer-deal?${contactQuery}`).then((r) => {
-        setDeal(((r?.ok ? r.deal : null) as Record<string, unknown> | null) || {});
+        const d = ((r?.ok ? r.deal : null) as Record<string, unknown> | null) || {};
+        setDeal(d);
+        setDealValueText(d.value_cents != null ? ((d.value_cents as number) / 100).toFixed(2).replace(".", ",") : "");
         setDealLoaded(true);
       });
     }
@@ -1451,12 +1536,25 @@ function CardDrawer({
   async function saveDeal() {
     if (!deal) return;
     setCpBusy(true);
+    const num = parseFloat(dealValueText.replace(/\./g, "").replace(",", "."));
+    const value_cents = dealValueText.trim() === "" ? null : Number.isFinite(num) ? Math.round(num * 100) : null;
+    // Espelha na anotação do card do funil também — é a mesma "Anotações"
+    // que já existe no CRM, só editável agora pelo WhatsApp também.
+    if (card.id && typeof deal.notes === "string" && deal.notes !== (card.notes ?? "")) {
+      await api("/api/public/extension/funnel-cards", {
+        method: "PATCH",
+        body: JSON.stringify({ id: card.id, notes: deal.notes || null }),
+      });
+      setNotes(deal.notes as string);
+    }
     await api("/api/public/extension/customer-deal", {
       method: "PATCH",
-      body: JSON.stringify({ wa_contact_id: card.wa_contact_id || null, phone: card.phone || null, ...deal }),
+      body: JSON.stringify({ wa_contact_id: card.wa_contact_id || null, phone: card.phone || null, ...deal, value_cents }),
     });
+    setDeal({ ...deal, value_cents });
     setCpBusy(false);
     setCpSaved(true);
+    onDealSaved?.();
     setTimeout(() => setCpSaved(false), 1800);
   }
 
@@ -1653,12 +1751,10 @@ function CardDrawer({
                 <Field label="Valor do negócio (R$)">
                   <input
                     className={inputCls}
-                    value={deal.value_cents != null ? ((deal.value_cents as number) / 100).toFixed(2) : ""}
-                    onChange={(e) => {
-                      const num = parseFloat(e.target.value.replace(",", "."));
-                      setDeal({ ...deal, value_cents: Number.isFinite(num) ? Math.round(num * 100) : null });
-                    }}
+                    value={dealValueText}
+                    onChange={(e) => setDealValueText(e.target.value)}
                     placeholder="0,00"
+                    inputMode="decimal"
                   />
                 </Field>
                 <Field label="Empresa">

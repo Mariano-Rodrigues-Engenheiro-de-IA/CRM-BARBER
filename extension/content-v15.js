@@ -1726,6 +1726,19 @@
     if (!panel.isConnected) return;
     const record = (r?.ok ? (kind === "profile" ? r.profile : r.deal) : null) || {};
 
+    // As "Observações" do valor são a MESMA anotação já usada no card do
+    // funil (aba Anotações do CRM) — sincroniza os dois lados em vez de
+    // manter dois textos soltos e desencontrados.
+    let matchedCard = null;
+    if (kind === "deal") {
+      const funnel = tabFunnel();
+      matchedCard =
+        (funnel?.cards || []).find(
+          (c) => (chat.wa_id && c.wa_id === chat.wa_id) || (chat.phone && c.phone === chat.phone),
+        ) || null;
+      if (!record.notes && matchedCard?.notes) record.notes = matchedCard.notes;
+    }
+
     const body = panel.querySelector(".crm-qrp-body");
     const foot = document.createElement("div");
     foot.className = "crm-qrp-foot";
@@ -1789,6 +1802,16 @@
       });
       saveBtn.disabled = true;
       saveBtn.textContent = "Salvando...";
+      if (kind === "deal" && matchedCard && fields.notes !== (matchedCard.notes || null)) {
+        await chrome.runtime
+          .sendMessage({
+            type: "api",
+            path: "/api/public/extension/funnel-cards",
+            opts: { method: "PATCH", body: JSON.stringify({ id: matchedCard.id, notes: fields.notes }) },
+          })
+          .catch(() => null);
+        matchedCard.notes = fields.notes;
+      }
       const r2 = await chrome.runtime
         .sendMessage({
           type: "api",

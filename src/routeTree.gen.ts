@@ -38,6 +38,8 @@ import { Route as ApiPublicExtensionAiDemoLeadsRouteImport } from './routes/api/
 import { Route as ApiPublicExtensionAppointmentsRouteImport } from './routes/api/public/extension/appointments'
 import { Route as ApiPublicExtensionBillingRouteImport } from './routes/api/public/extension/billing'
 import { Route as ApiPublicExtensionCampaignsRouteImport } from './routes/api/public/extension/campaigns'
+import { Route as ApiPublicExtensionCustomerDealRouteImport } from './routes/api/public/extension/customer-deal'
+import { Route as ApiPublicExtensionCustomerProfileRouteImport } from './routes/api/public/extension/customer-profile'
 import { Route as ApiPublicExtensionCustomersRouteImport } from './routes/api/public/extension/customers'
 import { Route as ApiPublicExtensionFunnelCardsRouteImport } from './routes/api/public/extension/funnel-cards'
 import { Route as ApiPublicExtensionFunnelsRouteImport } from './routes/api/public/extension/funnels'
@@ -230,6 +232,18 @@ const ApiPublicExtensionCampaignsRoute =
   ApiPublicExtensionCampaignsRouteImport.update({
     id: '/api/public/extension/campaigns',
     path: '/api/public/extension/campaigns',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionCustomerDealRoute =
+  ApiPublicExtensionCustomerDealRouteImport.update({
+    id: '/api/public/extension/customer-deal',
+    path: '/api/public/extension/customer-deal',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionCustomerProfileRoute =
+  ApiPublicExtensionCustomerProfileRouteImport.update({
+    id: '/api/public/extension/customer-profile',
+    path: '/api/public/extension/customer-profile',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicExtensionCustomersRoute =
@@ -494,6 +508,8 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/appointments': typeof ApiPublicExtensionAppointmentsRouteWithChildren
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
+  '/api/public/extension/customer-deal': typeof ApiPublicExtensionCustomerDealRoute
+  '/api/public/extension/customer-profile': typeof ApiPublicExtensionCustomerProfileRoute
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRouteWithChildren
@@ -564,6 +580,8 @@ export interface FileRoutesByTo {
   '/api/public/extension/appointments': typeof ApiPublicExtensionAppointmentsRouteWithChildren
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
+  '/api/public/extension/customer-deal': typeof ApiPublicExtensionCustomerDealRoute
+  '/api/public/extension/customer-profile': typeof ApiPublicExtensionCustomerProfileRoute
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRouteWithChildren
@@ -635,6 +653,8 @@ export interface FileRoutesById {
   '/api/public/extension/appointments': typeof ApiPublicExtensionAppointmentsRouteWithChildren
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
+  '/api/public/extension/customer-deal': typeof ApiPublicExtensionCustomerDealRoute
+  '/api/public/extension/customer-profile': typeof ApiPublicExtensionCustomerProfileRoute
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRouteWithChildren
@@ -707,6 +727,8 @@ export interface FileRouteTypes {
     | '/api/public/extension/appointments'
     | '/api/public/extension/billing'
     | '/api/public/extension/campaigns'
+    | '/api/public/extension/customer-deal'
+    | '/api/public/extension/customer-profile'
     | '/api/public/extension/customers'
     | '/api/public/extension/funnel-cards'
     | '/api/public/extension/funnels'
@@ -777,6 +799,8 @@ export interface FileRouteTypes {
     | '/api/public/extension/appointments'
     | '/api/public/extension/billing'
     | '/api/public/extension/campaigns'
+    | '/api/public/extension/customer-deal'
+    | '/api/public/extension/customer-profile'
     | '/api/public/extension/customers'
     | '/api/public/extension/funnel-cards'
     | '/api/public/extension/funnels'
@@ -847,6 +871,8 @@ export interface FileRouteTypes {
     | '/api/public/extension/appointments'
     | '/api/public/extension/billing'
     | '/api/public/extension/campaigns'
+    | '/api/public/extension/customer-deal'
+    | '/api/public/extension/customer-profile'
     | '/api/public/extension/customers'
     | '/api/public/extension/funnel-cards'
     | '/api/public/extension/funnels'
@@ -917,6 +943,8 @@ export interface RootRouteChildren {
   ApiPublicExtensionAppointmentsRoute: typeof ApiPublicExtensionAppointmentsRouteWithChildren
   ApiPublicExtensionBillingRoute: typeof ApiPublicExtensionBillingRoute
   ApiPublicExtensionCampaignsRoute: typeof ApiPublicExtensionCampaignsRouteWithChildren
+  ApiPublicExtensionCustomerDealRoute: typeof ApiPublicExtensionCustomerDealRoute
+  ApiPublicExtensionCustomerProfileRoute: typeof ApiPublicExtensionCustomerProfileRoute
   ApiPublicExtensionCustomersRoute: typeof ApiPublicExtensionCustomersRouteWithChildren
   ApiPublicExtensionFunnelCardsRoute: typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   ApiPublicExtensionFunnelsRoute: typeof ApiPublicExtensionFunnelsRouteWithChildren
@@ -1149,6 +1177,20 @@ declare module '@tanstack/react-router' {
       path: '/api/public/extension/campaigns'
       fullPath: '/api/public/extension/campaigns'
       preLoaderRoute: typeof ApiPublicExtensionCampaignsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/customer-deal': {
+      id: '/api/public/extension/customer-deal'
+      path: '/api/public/extension/customer-deal'
+      fullPath: '/api/public/extension/customer-deal'
+      preLoaderRoute: typeof ApiPublicExtensionCustomerDealRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/customer-profile': {
+      id: '/api/public/extension/customer-profile'
+      path: '/api/public/extension/customer-profile'
+      fullPath: '/api/public/extension/customer-profile'
+      preLoaderRoute: typeof ApiPublicExtensionCustomerProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/extension/customers': {
@@ -1621,6 +1663,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicExtensionBillingRoute: ApiPublicExtensionBillingRoute,
   ApiPublicExtensionCampaignsRoute:
     ApiPublicExtensionCampaignsRouteWithChildren,
+  ApiPublicExtensionCustomerDealRoute: ApiPublicExtensionCustomerDealRoute,
+  ApiPublicExtensionCustomerProfileRoute:
+    ApiPublicExtensionCustomerProfileRoute,
   ApiPublicExtensionCustomersRoute:
     ApiPublicExtensionCustomersRouteWithChildren,
   ApiPublicExtensionFunnelCardsRoute:

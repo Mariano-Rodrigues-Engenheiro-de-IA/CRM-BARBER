@@ -39,8 +39,16 @@ export const Route = createFileRoute("/api/public/extension/customer-deal")({
         const url = new URL(request.url);
         const waContactId = url.searchParams.get("wa_contact_id");
         const phone = url.searchParams.get("phone");
+        // Sem contato especificado: devolve todos os valores da barbearia
+        // (usado pra somar o total parado em cada funil/etapa no CRM).
         if (!waContactId && !phone) {
-          return jsonResponse(request, { ok: true, deal: null });
+          const { data, error } = await supabaseAdmin
+            .from("customer_deals")
+            .select("wa_contact_id, phone, value_cents")
+            .eq("barbershop_id", shop)
+            .not("value_cents", "is", null);
+          if (error) return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
+          return jsonResponse(request, { ok: true, deal: null, deals: data ?? [] });
         }
         let query = supabaseAdmin.from("customer_deals").select(SELECT).eq("barbershop_id", shop);
         query = waContactId ? query.eq("wa_contact_id", waContactId) : query.eq("phone", phone as string);
