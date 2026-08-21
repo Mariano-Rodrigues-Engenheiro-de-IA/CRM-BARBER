@@ -63,15 +63,18 @@ function Assinar() {
     <div className="min-h-screen bg-background">
       <PaymentTestModeBanner />
       <div className="mx-auto max-w-3xl px-4 py-10">
-        <h1 className="text-2xl font-semibold tracking-tight">Zetta CRM Premium</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Zaylo CRM Premium</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {plan === "promo" ? (
             <>
-              Oferta de lançamento: <strong>{PROMO_PRICE_LABEL}</strong> (depois {PREMIUM_PRICE_LABEL}) · contatos e
-              disparos ilimitados, gestão de equipe, funis e respostas rápidas.
+              Oferta especial: <strong>{PROMO_PRICE_LABEL}</strong> (valor normal {PREMIUM_PRICE_LABEL}) · contatos e
+              disparos ilimitados, IA, funis, agenda, automações e gestão de equipe.
             </>
           ) : (
-            <>{PREMIUM_PRICE_LABEL} · contatos e disparos ilimitados, gestão de equipe, funis e respostas rápidas.</>
+            <>
+              {PREMIUM_PRICE_LABEL} · contatos e disparos ilimitados, IA, funis, agenda, automações e gestão de
+              equipe.
+            </>
           )}
         </p>
 
