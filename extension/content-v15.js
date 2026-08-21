@@ -315,6 +315,63 @@
     requestAnimationFrame(() => requestAnimationFrame(() => pop.classList.add("is-in")));
   }
 
+  // ---------------------------------------------------------------------
+  // Painel único docado — raio, funil, perfil e valor compartilham o MESMO
+  // container. Clicar num ícone diferente troca o conteúdo (com uma
+  // bolinha de carregamento rápida) em vez de fechar e abrir de novo; só
+  // clicar de novo no MESMO ícone fecha.
+  // ---------------------------------------------------------------------
+  let activePanelKind = null; // "qr" | "funnel" | "profile" | "deal" | null
+  // O painel é reaproveitado entre trocas de ícone (não criado do zero a
+  // cada vez), então NÃO dá pra usar addEventListener direto em cada
+  // render — acumularia um listener por cada troca. Um listener só,
+  // fixado na criação do painel, delega pro handler da função atual.
+  let panelClickHandler = null;
+  let panelChangeHandler = null;
+  let panelInputHandler = null;
+
+  function ensureSharedPanel() {
+    let panel = document.querySelector(".crm-qrp");
+    if (panel) return panel;
+    panel = document.createElement("div");
+    panel.className = "crm-qrp";
+    panel.addEventListener("click", (e) => panelClickHandler?.(e));
+    panel.addEventListener("change", (e) => panelChangeHandler?.(e));
+    panel.addEventListener("input", (e) => panelInputHandler?.(e));
+    document.body.appendChild(panel);
+    document.body.classList.add("crm-qr-open");
+    animatePopIn(panel);
+    return panel;
+  }
+
+  function closeSharedPanel() {
+    document.querySelector(".crm-qrp")?.remove();
+    document.body.classList.remove("crm-qr-open");
+    activePanelKind = null;
+  }
+
+  function showPanelSpinner(panel) {
+    panel.innerHTML = `<div class="crm-qrp-swap-loading"><span class="crm-qrp-spin-lg"></span></div>`;
+  }
+
+  async function openSharedPanel(kind) {
+    if (activePanelKind === kind) {
+      closeSharedPanel();
+      return;
+    }
+    const isSwap = activePanelKind !== null;
+    activePanelKind = kind;
+    panelClickHandler = null;
+    panelChangeHandler = null;
+    panelInputHandler = null;
+    const panel = ensureSharedPanel();
+    if (isSwap) showPanelSpinner(panel);
+    if (kind === "qr") await renderQuickReplyPanel(panel);
+    else if (kind === "funnel") await renderFunnelPanel(panel);
+    else if (kind === "profile") await renderCustomerPanel(panel, "profile");
+    else if (kind === "deal") await renderCustomerPanel(panel, "deal");
+  }
+
   /** Prompt leve — ancorado no botão que abriu, sem escurecer/desfocar a
    * tela. Usado no lugar do crmPrompt() (modal cheio) nos pontos em que
    * queremos a sensação de algo nativo do WhatsApp — ex: nova etapa. */
@@ -1391,11 +1448,7 @@
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (document.querySelector(".crm-fn-pop")) {
-        document.querySelector(".crm-fn-pop")?.remove();
-        return;
-      }
-      openFunnelModal(btn);
+      void openSharedPanel("funnel");
     });
 
     const qr = document.createElement("button");
@@ -1409,13 +1462,7 @@
     qr.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      // Clicar de novo com o painel já aberto fecha, em vez de recriar.
-      if (document.querySelector(".crm-qrp")) {
-        document.querySelector(".crm-qrp")?.remove();
-        document.body.classList.remove("crm-qr-open");
-        return;
-      }
-      openQuickReplyModal();
+      void openSharedPanel("qr");
     });
 
     const profileBtn = document.createElement("button");
@@ -1427,12 +1474,7 @@
     profileBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (document.querySelector(".crm-qrp")) {
-        document.querySelector(".crm-qrp")?.remove();
-        document.body.classList.remove("crm-qr-open");
-        return;
-      }
-      openCustomerPanel("profile");
+      void openSharedPanel("profile");
     });
 
     const dealBtn = document.createElement("button");
@@ -1444,12 +1486,7 @@
     dealBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (document.querySelector(".crm-qrp")) {
-        document.querySelector(".crm-qrp")?.remove();
-        document.body.classList.remove("crm-qr-open");
-        return;
-      }
-      openCustomerPanel("deal");
+      void openSharedPanel("deal");
     });
 
     const slot = headerActionsSlot(header);
@@ -1514,14 +1551,7 @@
   // fundo (não é mais um modal de tela cheia). Lista as etapas do Funil
   // principal; clicar na bolinha adiciona (se vazia) ou remove (se cheia).
   // ---------------------------------------------------------------------
-  function openFunnelModal(anchor) {
-    document.querySelector(".crm-fn-pop")?.remove();
-    const pop = document.createElement("div");
-    pop.className = "crm-fn-pop";
-    const rect = anchor.getBoundingClientRect();
-    pop.style.top = `${rect.bottom + 8}px`;
-    pop.style.left = `${Math.min(Math.max(8, rect.left), window.innerWidth - 268)}px`;
-
+  async function renderFunnelPanel(panel) {
     let chat = null;
     // Estado conhecido da etapa atual, guardado localmente. NÃO comparamos
     // mais contra o array global `funnels` a cada render: ele é trocado por
@@ -1543,32 +1573,34 @@
     }
 
     const renderRows = () => {
+      if (activePanelKind !== "funnel" || !panel.isConnected) return;
       const funnel = tabFunnel();
+      const head = `<div class="crm-qrp-head"><div class="crm-qr-mark">${ICONS.funnel}</div><p class="crm-qrp-title">Funil principal</p><button class="crm-qrp-close" data-close title="Fechar">&times;</button></div>`;
       if (!funnel) {
-        pop.innerHTML = `<p class="crm-fn-pop-title">Funil principal</p><p class="crm-fn-pop-empty">Funil principal ainda não foi criado.</p>`;
+        panel.innerHTML = `${head}<div class="crm-qrp-body"><p class="crm-fn-pop-empty">Funil principal ainda não foi criado.</p></div>`;
         return;
       }
       const stages = funnel.stages || [];
       if (!stages.length) {
-        pop.innerHTML = `<p class="crm-fn-pop-title">Funil principal</p><p class="crm-fn-pop-empty">Ainda não tem etapas.</p>`;
+        panel.innerHTML = `${head}<div class="crm-qrp-body"><p class="crm-fn-pop-empty">Ainda não tem etapas.</p></div>`;
         return;
       }
-      pop.innerHTML = `
-        <p class="crm-fn-pop-title">Funil principal</p>
-        ${stages
-          .map((st) => {
-            const isOn = st.id === currentStageId;
-            return `<button class="crm-fn-pop-row" data-stage="${escapeHtml(st.id)}">
-              <span class="crm-fn-pop-dot${isOn ? " is-on" : ""}"></span>
-              <span class="crm-fn-pop-name">${escapeHtml(st.name)}</span>
-            </button>`;
-          })
-          .join("")}
+      panel.innerHTML = `
+        ${head}
+        <div class="crm-qrp-body">
+          ${stages
+            .map((st) => {
+              const isOn = st.id === currentStageId;
+              return `<button class="crm-fn-pop-row" data-stage="${escapeHtml(st.id)}">
+                <span class="crm-fn-pop-dot${isOn ? " is-on" : ""}"></span>
+                <span class="crm-fn-pop-name">${escapeHtml(st.name)}</span>
+              </button>`;
+            })
+            .join("")}
+        </div>
       `;
     };
 
-    document.body.appendChild(pop);
-    animatePopIn(pop);
     renderRows();
     activeChat().then((c) => {
       chat = c;
@@ -1580,16 +1612,9 @@
       renderRows();
     });
 
-    const close = () => {
-      pop.remove();
-      document.removeEventListener("mousedown", onDoc, true);
-    };
-    function onDoc(ev) {
-      if (!pop.contains(ev.target) && ev.target !== anchor) close();
-    }
-    setTimeout(() => document.addEventListener("mousedown", onDoc, true), 0);
+    panelClickHandler = async (e) => {
+      if (e.target.closest("[data-close]")) return closeSharedPanel();
 
-    pop.addEventListener("click", async (e) => {
       const row = e.target.closest("[data-stage]");
       if (!row || row.disabled) return;
       const stageId = row.getAttribute("data-stage");
@@ -1599,7 +1624,7 @@
       row.disabled = true;
       if (!chat) chat = await activeChat();
       if (!chat) {
-        crmToast("Não consegui ler a conversa aberta.", "err", anchor);
+        crmToast("Não consegui ler a conversa aberta.", "err");
         row.disabled = false;
         return;
       }
@@ -1612,14 +1637,14 @@
           .sendMessage({ type: "api", path: "/api/public/extension/funnel-cards", opts: { method: "DELETE", body: JSON.stringify({ id: currentCardId } ) } })
           .catch(() => null);
         if (r?.ok) {
-          crmToast("Removido do funil", "ok", anchor);
+          crmToast("Removido do funil");
           currentCardId = null;
           currentStageId = null;
           updateFunnelBadge();
           renderRows();
           void loadFunnels();
         } else {
-          crmToast(r?.error || "Não consegui remover.", "err", anchor);
+          crmToast(r?.error || "Não consegui remover.", "err");
           row.disabled = false;
         }
         return;
@@ -1644,17 +1669,17 @@
         })
         .catch(() => null);
       if (r?.ok) {
-        crmToast(`Adicionado em ${stage.name}`, "ok", anchor);
+        crmToast(`Adicionado em ${stage.name}`);
         currentCardId = r.card?.id || currentCardId;
         currentStageId = stage.id;
         updateFunnelBadge();
         renderRows();
         void loadFunnels();
       } else {
-        crmToast(r?.error || "Não consegui adicionar ao funil.", "err", anchor);
+        crmToast(r?.error || "Não consegui adicionar ao funil.", "err");
         row.disabled = false;
       }
-    });
+    };
   }
 
   // ---------------------------------------------------------------------
@@ -1663,6 +1688,8 @@
   // ---------------------------------------------------------------------
   const PENCIL_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
   const TRASH_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>`;
+  const UP_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg>`;
+  const DOWN_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M18 13l-6 6-6-6"/></svg>`;
 
   const QR_STEP_TYPES = [
     { type: "text", label: "Texto" },
@@ -1693,20 +1720,13 @@
   // docado do painel de respostas rápidas (não sobrepõe a conversa),
   // buscando e salvando pelos dois endpoints novos.
   // ---------------------------------------------------------------------
-  async function openCustomerPanel(kind) {
-    document.querySelector(".crm-qrp")?.remove();
-    const panel = document.createElement("div");
-    panel.className = "crm-qrp";
-    document.body.appendChild(panel);
-    document.body.classList.add("crm-qr-open");
-    animatePopIn(panel);
-
+  async function renderCustomerPanel(panel, kind) {
     const title = kind === "profile" ? "Perfil do cliente" : "Valor do cliente";
-    panel.innerHTML = `<div class="crm-qrp-head"><p class="crm-qrp-title">${title}</p><button class="crm-qrp-close" data-close title="Fechar">&times;</button></div><div class="crm-qrp-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
-    panel.querySelector("[data-close]").addEventListener("click", () => {
-      panel.remove();
-      document.body.classList.remove("crm-qr-open");
-    });
+    const icon = kind === "profile" ? PROFILE_SVG : DEAL_SVG;
+    panel.innerHTML = `<div class="crm-qrp-head"><div class="crm-qr-mark">${icon}</div><p class="crm-qrp-title">${title}</p><button class="crm-qrp-close" data-close title="Fechar">&times;</button></div><div class="crm-qrp-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
+    panelClickHandler = (e) => {
+      if (e.target.closest("[data-close]")) closeSharedPanel();
+    };
 
     const chat = await activeChat();
     const contactQuery = chat?.contact_db_id
@@ -1715,7 +1735,7 @@
         ? `phone=${encodeURIComponent(chat.phone)}`
         : null;
 
-    if (!panel.isConnected) return; // usuário fechou enquanto carregava
+    if (activePanelKind !== kind || !panel.isConnected) return; // usuário trocou/fechou enquanto carregava
     if (!chat || !contactQuery) {
       panel.querySelector(".crm-qrp-body").innerHTML = `<p class="crm-fn-pop-empty">Não consegui identificar o contato dessa conversa.</p>`;
       return;
@@ -1723,7 +1743,7 @@
 
     const path = kind === "profile" ? "/api/public/extension/customer-profile" : "/api/public/extension/customer-deal";
     const r = await chrome.runtime.sendMessage({ type: "api", path: `${path}?${contactQuery}` }).catch(() => null);
-    if (!panel.isConnected) return;
+    if (activePanelKind !== kind || !panel.isConnected) return;
     const record = (r?.ok ? (kind === "profile" ? r.profile : r.deal) : null) || {};
 
     // As "Observações" do valor são a MESMA anotação já usada no card do
@@ -1788,7 +1808,9 @@
       `;
     }
 
-    panel.querySelector("[data-save]").addEventListener("click", async () => {
+    panelClickHandler = async (e) => {
+      if (e.target.closest("[data-close]")) return closeSharedPanel();
+      if (!e.target.closest("[data-save]")) return;
       const saveBtn = panel.querySelector("[data-save]");
       const fields = {};
       panel.querySelectorAll("[data-f]").forEach((el) => {
@@ -1828,19 +1850,13 @@
         .catch(() => null);
       saveBtn.disabled = false;
       saveBtn.textContent = "Salvar";
-      if (r2?.ok) crmToast("Salvo", "ok", panel.querySelector(".crm-qrp-close"));
-      else crmToast(r2?.error || "Não consegui salvar.", "err", panel.querySelector(".crm-qrp-close"));
-    });
+      if (r2?.ok) crmToast("Salvo");
+      else crmToast(r2?.error || "Não consegui salvar.", "err");
+    };
   }
 
-  function openQuickReplyModal() {
+  async function renderQuickReplyPanel(panel) {
     prewarmEngine();
-    document.querySelector(".crm-qrp")?.remove();
-    const panel = document.createElement("div");
-    panel.className = "crm-qrp";
-    document.body.appendChild(panel);
-    document.body.classList.add("crm-qr-open");
-    animatePopIn(panel);
 
     let mode = "list";
     let editingId = null;
@@ -1856,6 +1872,7 @@
     }
 
     function renderList() {
+      if (activePanelKind !== "qr" || !panel.isConnected) return;
       mode = "list";
       const rows = quickReplies.length
         ? `<div class="crm-qrp-list">${quickReplies
@@ -1942,7 +1959,7 @@
       return "";
     }
 
-    function stepCardHtml(s, i) {
+    function stepCardHtml(s, i, total) {
       const showDelay = ["text", "image", "video", "audio"].includes(s.type);
       return `
         <div class="crm-qrp-step">
@@ -1951,6 +1968,8 @@
             <select class="crm-qrp-step-type" data-step-type="${i}">
               ${QR_STEP_TYPES.map((t) => `<option value="${t.type}" ${t.type === s.type ? "selected" : ""}>${t.label}</option>`).join("")}
             </select>
+            <button class="crm-qrp-icon" data-move-step="${i}" data-dir="-1" title="Mover pra cima" ${i === 0 ? "disabled" : ""}>${UP_SVG}</button>
+            <button class="crm-qrp-icon" data-move-step="${i}" data-dir="1" title="Mover pra baixo" ${i === total - 1 ? "disabled" : ""}>${DOWN_SVG}</button>
             <button class="crm-qrp-icon crm-qrp-icon-danger" data-del-step="${i}" title="Remover passo">${TRASH_SVG}</button>
           </div>
           <div class="crm-qrp-step-body">${stepFieldsHtml(s, i)}</div>
@@ -1979,7 +1998,7 @@
           <button class="crm-qrp-close" data-close title="Fechar">&times;</button>
         </div>
         <div class="crm-qrp-body">
-          <div class="crm-qrp-steps">${steps.map((s, i) => stepCardHtml(s, i)).join("")}</div>
+          <div class="crm-qrp-steps">${steps.map((s, i) => stepCardHtml(s, i, steps.length)).join("")}</div>
           <button class="crm-qrp-add-step" data-add-step>+ Adicionar passo</button>
         </div>
         <div class="crm-qrp-foot">
@@ -1997,13 +2016,8 @@
       if (mode === "list") renderList();
     });
 
-    const close = () => {
-      panel.remove();
-      document.body.classList.remove("crm-qr-open");
-    };
-
-    panel.addEventListener("click", async (e) => {
-      if (e.target.closest("[data-close]")) return close();
+    panelClickHandler = async (e) => {
+      if (e.target.closest("[data-close]")) return closeSharedPanel();
       if (e.target.closest("[data-new]")) return renderForm(null);
       if (e.target.closest("[data-back]")) return renderList();
 
@@ -2073,6 +2087,18 @@
         return;
       }
 
+      const moveStep = e.target.closest("[data-move-step]");
+      if (moveStep && !moveStep.disabled) {
+        const i = Number(moveStep.getAttribute("data-move-step"));
+        const dir = Number(moveStep.getAttribute("data-dir"));
+        const j = i + dir;
+        if (j >= 0 && j < steps.length) {
+          [steps[i], steps[j]] = [steps[j], steps[i]];
+          paintForm(currentTitle());
+        }
+        return;
+      }
+
       const saveBtn = e.target.closest("[data-save]");
       if (saveBtn) {
         const title = currentTitle();
@@ -2115,9 +2141,9 @@
         }
         return;
       }
-    });
+    };
 
-    panel.addEventListener("change", async (e) => {
+    panelChangeHandler = async (e) => {
       const typeSel = e.target.closest("[data-step-type]");
       if (typeSel) {
         const i = Number(typeSel.getAttribute("data-step-type"));
@@ -2175,9 +2201,9 @@
           paintForm(currentTitle());
         }
       }
-    });
+    };
 
-    panel.addEventListener("input", (e) => {
+    panelInputHandler = (e) => {
       const field = e.target.closest("[data-step-field]");
       if (field && field.tagName !== "SELECT") {
         const i = Number(field.getAttribute("data-i"));
@@ -2188,7 +2214,7 @@
           steps[i][key] = field.value;
         }
       }
-    });
+    };
   }
 
 

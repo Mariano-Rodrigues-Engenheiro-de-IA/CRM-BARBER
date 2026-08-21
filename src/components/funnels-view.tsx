@@ -1438,7 +1438,9 @@ function CardDrawer({
   onClose: () => void;
   onDealSaved?: () => void;
 }) {
-  const [tab, setTab] = useState(initialTab);
+  // Cada ícone do card abre um painel dedicado, sem sub-abas pra trocar —
+  // por isso não precisa de estado próprio, só usa o que veio de fora.
+  const tab = initialTab;
   const [notes, setNotes] = useState(card.notes ?? "");
   const [saved, setSaved] = useState(false);
   const [msg, setMsg] = useState("");
@@ -1605,27 +1607,14 @@ function CardDrawer({
           </div>
         )}
 
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1 rounded-lg bg-neutral-100 p-1">
-            {(["notes", "schedule", "profile", "deal"] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={
-                  "rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition " +
-                  (tab === t
-                    ? "bg-white text-neutral-900 shadow-sm"
-                    : "text-neutral-500 hover:text-neutral-900")
-                }
-              >
-                {t === "notes" ? "Anotações" : t === "schedule" ? "Mensagens agendadas" : t === "profile" ? "Perfil" : "Valor"}
-              </button>
-            ))}
-          </div>
+        <div className="flex items-center justify-between gap-2">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            {tab === "notes" ? "Anotações" : tab === "schedule" ? "Mensagens agendadas" : tab === "profile" ? "Perfil do cliente" : "Valor do cliente"}
+          </h4>
           {canOpenWhatsapp(card.phone, card.wa_id) && (
             <button
               onClick={() => void openWhatsappChat(card.phone || "", card.title, card.wa_id)}
-              className="ml-auto flex items-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
+              className="flex items-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
             >
               <IconWhatsapp /> WhatsApp
             </button>

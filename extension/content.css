@@ -591,6 +591,14 @@ html body.crm-shell.crm-qr-open #app {
   transition: opacity 0.16s cubic-bezier(0.4, 0, 0.2, 1), transform 0.16s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .crm-qrp.is-in { opacity: 1; transform: translateX(0); }
+/* Troca de conteúdo (raio ↔ funil ↔ perfil ↔ valor) reaproveitando o mesmo
+   painel — bolinha central rápida em vez de fechar/reabrir. */
+.crm-qrp-swap-loading { flex: 1; display: flex; align-items: center; justify-content: center; }
+.crm-qrp-spin-lg {
+  width: 26px; height: 26px; border-radius: 999px;
+  border: 3px solid var(--z-line); border-top-color: var(--z-accent);
+  animation: crm-spin 0.7s linear infinite;
+}
 
 .crm-qrp-head {
   flex: 0 0 auto;
@@ -639,6 +647,7 @@ html body.crm-shell.crm-qr-open #app {
   opacity: 0; transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease;
 }
 .crm-qrp-icon:hover { background: var(--z-surface-2); color: var(--z-accent); }
+.crm-qrp-icon:disabled { opacity: 0.25 !important; cursor: default; }
 .crm-qrp-icon-danger:hover { color: var(--z-danger); }
 /* No editor de passos o ícone de remover fica sempre visível — ali não é
    uma linha de lista com hover-reveal, é a única ação daquele cabeçalho
