@@ -1342,7 +1342,11 @@
 
   const CHAT_BTN_ID = "crm-chat-action";
   const QR_BTN_ID = "crm-chat-quickreply";
+  const PROFILE_BTN_ID = "crm-chat-profile";
+  const DEAL_BTN_ID = "crm-chat-deal";
   const BOLT_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>`;
+  const PROFILE_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>`;
+  const DEAL_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10"/><path d="M9 9.5c0-1.4 1.3-2.5 3-2.5s3 .9 3 2.1c0 1.7-1.6 2.2-3.2 2.7-1.6.5-2.8 1.1-2.8 2.6 0 1.2 1.3 2.1 3 2.1s3-1 3-2.3"/></svg>`;
 
 
   /**
@@ -1414,13 +1418,51 @@
       openQuickReplyModal();
     });
 
+    const profileBtn = document.createElement("button");
+    profileBtn.id = PROFILE_BTN_ID;
+    profileBtn.className = "crm-chat-btn crm-chat-btn-icon";
+    profileBtn.type = "button";
+    profileBtn.setAttribute("data-label", "Perfil do cliente");
+    profileBtn.innerHTML = PROFILE_SVG;
+    profileBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (document.querySelector(".crm-qrp")) {
+        document.querySelector(".crm-qrp")?.remove();
+        document.body.classList.remove("crm-qr-open");
+        return;
+      }
+      openCustomerPanel("profile");
+    });
+
+    const dealBtn = document.createElement("button");
+    dealBtn.id = DEAL_BTN_ID;
+    dealBtn.className = "crm-chat-btn crm-chat-btn-icon";
+    dealBtn.type = "button";
+    dealBtn.setAttribute("data-label", "Valor do cliente");
+    dealBtn.innerHTML = DEAL_SVG;
+    dealBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (document.querySelector(".crm-qrp")) {
+        document.querySelector(".crm-qrp")?.remove();
+        document.body.classList.remove("crm-qr-open");
+        return;
+      }
+      openCustomerPanel("deal");
+    });
+
     const slot = headerActionsSlot(header);
     if (slot === header) {
       header.appendChild(btn);
       header.appendChild(qr);
+      header.appendChild(dealBtn);
+      header.appendChild(profileBtn);
     } else {
       slot.insertAdjacentElement("beforebegin", btn);
       btn.insertAdjacentElement("afterend", qr);
+      qr.insertAdjacentElement("afterend", dealBtn);
+      dealBtn.insertAdjacentElement("afterend", profileBtn);
     }
     updateFunnelBadge();
   }
@@ -1646,6 +1688,128 @@
   // atendimento). Dois níveis: lista de respostas, e o editor de passos
   // (texto/imagem/vídeo/áudio/funil) de uma resposta específica.
   // ---------------------------------------------------------------------
+  // ---------------------------------------------------------------------
+  // Painel de Perfil do cliente / Valor do cliente — mesmo container
+  // docado do painel de respostas rápidas (não sobrepõe a conversa),
+  // buscando e salvando pelos dois endpoints novos.
+  // ---------------------------------------------------------------------
+  async function openCustomerPanel(kind) {
+    document.querySelector(".crm-qrp")?.remove();
+    const panel = document.createElement("div");
+    panel.className = "crm-qrp";
+    document.body.appendChild(panel);
+    document.body.classList.add("crm-qr-open");
+    animatePopIn(panel);
+
+    const title = kind === "profile" ? "Perfil do cliente" : "Valor do cliente";
+    panel.innerHTML = `<div class="crm-qrp-head"><p class="crm-qrp-title">${title}</p><button class="crm-qrp-close" data-close title="Fechar">&times;</button></div><div class="crm-qrp-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
+    panel.querySelector("[data-close]").addEventListener("click", () => {
+      panel.remove();
+      document.body.classList.remove("crm-qr-open");
+    });
+
+    const chat = await activeChat();
+    const contactQuery = chat?.contact_db_id
+      ? `wa_contact_id=${encodeURIComponent(chat.contact_db_id)}`
+      : chat?.phone
+        ? `phone=${encodeURIComponent(chat.phone)}`
+        : null;
+
+    if (!panel.isConnected) return; // usuário fechou enquanto carregava
+    if (!chat || !contactQuery) {
+      panel.querySelector(".crm-qrp-body").innerHTML = `<p class="crm-fn-pop-empty">Não consegui identificar o contato dessa conversa.</p>`;
+      return;
+    }
+
+    const path = kind === "profile" ? "/api/public/extension/customer-profile" : "/api/public/extension/customer-deal";
+    const r = await chrome.runtime.sendMessage({ type: "api", path: `${path}?${contactQuery}` }).catch(() => null);
+    if (!panel.isConnected) return;
+    const record = (r?.ok ? (kind === "profile" ? r.profile : r.deal) : null) || {};
+
+    const body = panel.querySelector(".crm-qrp-body");
+    const foot = document.createElement("div");
+    foot.className = "crm-qrp-foot";
+    foot.innerHTML = `<button class="crm-qrp-save" data-save>Salvar</button>`;
+    panel.appendChild(foot);
+
+    if (kind === "profile") {
+      const initial = (record.name || chat.name || chat.phone || "?").trim().charAt(0).toUpperCase();
+      body.innerHTML = `
+        <div class="crm-cp-avatar-row">
+          <div class="crm-cp-avatar">${escapeHtml(initial)}</div>
+          <div>
+            <p class="crm-cp-name">${escapeHtml(record.name || chat.name || "Contato")}</p>
+            <p class="crm-cp-phone">${escapeHtml(chat.phone || "")}</p>
+          </div>
+        </div>
+        <label class="crm-cp-field"><span>Nome</span><input class="crm-qrp-input" data-f="name" value="${escapeHtml(record.name || chat.name || "")}" /></label>
+        <label class="crm-cp-field"><span>Email</span><input class="crm-qrp-input" data-f="email" value="${escapeHtml(record.email || "")}" placeholder="email@exemplo.com" /></label>
+        <label class="crm-cp-field"><span>Sexo</span>
+          <select class="crm-qrp-select" data-f="gender">
+            <option value="">Selecione um sexo</option>
+            <option value="feminino" ${record.gender === "feminino" ? "selected" : ""}>Feminino</option>
+            <option value="masculino" ${record.gender === "masculino" ? "selected" : ""}>Masculino</option>
+            <option value="outro" ${record.gender === "outro" ? "selected" : ""}>Outro</option>
+            <option value="prefiro_nao_dizer" ${record.gender === "prefiro_nao_dizer" ? "selected" : ""}>Prefiro não dizer</option>
+          </select>
+        </label>
+        <label class="crm-cp-field"><span>Data de nascimento</span><input class="crm-qrp-input" type="date" data-f="birth_date" value="${escapeHtml(record.birth_date || "")}" /></label>
+        <label class="crm-cp-field"><span>Idioma</span><input class="crm-qrp-input" data-f="language" value="${escapeHtml(record.language || "")}" placeholder="Português" /></label>
+        <label class="crm-cp-field"><span>País</span><input class="crm-qrp-input" data-f="country" value="${escapeHtml(record.country || "")}" placeholder="Brasil" /></label>
+        <label class="crm-cp-field"><span>Cidade</span><input class="crm-qrp-input" data-f="city" value="${escapeHtml(record.city || "")}" /></label>
+      `;
+    } else {
+      body.innerHTML = `
+        <label class="crm-cp-field"><span>Estágio do contato</span><input class="crm-qrp-input" data-f="stage_label" value="${escapeHtml(record.stage_label || "")}" placeholder="Ex: Qualificando" /></label>
+        <label class="crm-cp-field"><span>Estado</span><input class="crm-qrp-input" data-f="state" value="${escapeHtml(record.state || "")}" placeholder="Ex: SP" /></label>
+        <label class="crm-cp-field"><span>Origem do lead</span><input class="crm-qrp-input" data-f="lead_source" value="${escapeHtml(record.lead_source || "")}" placeholder="Ex: Instagram, indicação..." /></label>
+        <div class="crm-cp-row2">
+          <label class="crm-cp-field"><span>Data de entrada</span><input class="crm-qrp-input" type="date" data-f="entry_date" value="${escapeHtml(record.entry_date || "")}" /></label>
+          <label class="crm-cp-field"><span>Data de saída</span><input class="crm-qrp-input" type="date" data-f="exit_date" value="${escapeHtml(record.exit_date || "")}" /></label>
+        </div>
+        <label class="crm-cp-field"><span>Valor do negócio (R$)</span><input class="crm-qrp-input" data-f="value_reais" value="${record.value_cents != null ? (record.value_cents / 100).toFixed(2) : ""}" placeholder="0,00" /></label>
+        <label class="crm-cp-field"><span>Empresa</span><input class="crm-qrp-input" data-f="company" value="${escapeHtml(record.company || "")}" placeholder="Nome da empresa" /></label>
+        <label class="crm-cp-field"><span>Cargo</span><input class="crm-qrp-input" data-f="role" value="${escapeHtml(record.role || "")}" placeholder="Cargo do contato" /></label>
+        <label class="crm-cp-field"><span>Produtos de interesse</span><input class="crm-qrp-input" data-f="products_of_interest" value="${escapeHtml(record.products_of_interest || "")}" /></label>
+        <label class="crm-cp-field"><span>Observações</span><textarea class="crm-qrp-textarea" data-f="notes" placeholder="Adicione uma observação">${escapeHtml(record.notes || "")}</textarea></label>
+      `;
+    }
+
+    panel.querySelector("[data-save]").addEventListener("click", async () => {
+      const saveBtn = panel.querySelector("[data-save]");
+      const fields = {};
+      panel.querySelectorAll("[data-f]").forEach((el) => {
+        const key = el.getAttribute("data-f");
+        if (key === "value_reais") {
+          const num = parseFloat(String(el.value).replace(",", "."));
+          fields.value_cents = Number.isFinite(num) ? Math.round(num * 100) : null;
+        } else {
+          fields[key] = el.value.trim() || null;
+        }
+      });
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Salvando...";
+      const r2 = await chrome.runtime
+        .sendMessage({
+          type: "api",
+          path,
+          opts: {
+            method: "PATCH",
+            body: JSON.stringify({
+              wa_contact_id: chat.contact_db_id || null,
+              phone: chat.phone || null,
+              ...fields,
+            }),
+          },
+        })
+        .catch(() => null);
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Salvar";
+      if (r2?.ok) crmToast("Salvo", "ok", panel.querySelector(".crm-qrp-close"));
+      else crmToast(r2?.error || "Não consegui salvar.", "err", panel.querySelector(".crm-qrp-close"));
+    });
+  }
+
   function openQuickReplyModal() {
     prewarmEngine();
     document.querySelector(".crm-qrp")?.remove();

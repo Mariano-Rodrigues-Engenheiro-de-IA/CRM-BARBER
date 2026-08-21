@@ -706,6 +706,21 @@ html body.crm-shell.crm-qr-open #app {
 .crm-qrp-save:hover { background: var(--z-accent-strong); }
 .crm-qrp-save:disabled { opacity: 0.6; cursor: default; }
 
+/* Perfil do cliente / Valor do cliente — reaproveita os campos do painel
+   de respostas rápidas (mesmo input/select/textarea), só adiciona o
+   cabeçalho com avatar e o espaçamento de formulário vertical. */
+.crm-cp-avatar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.crm-cp-avatar {
+  flex-shrink: 0; width: 44px; height: 44px; border-radius: 999px; background: var(--z-accent);
+  color: #fff; font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+}
+.crm-cp-name { margin: 0; font-size: 13.5px; font-weight: 700; color: var(--z-text); }
+.crm-cp-phone { margin: 1px 0 0; font-size: 11.5px; color: var(--z-text-dim); }
+.crm-cp-field { display: block; margin-bottom: 10px; }
+.crm-cp-field span { display: block; margin-bottom: 4px; font-size: 11px; font-weight: 700; color: var(--z-text-dim); }
+.crm-cp-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.crm-cp-row2 .crm-cp-field { margin-bottom: 10px; }
+
 /* Aviso rápido das ações feitas dentro da conversa. */
 .crm-toast {
   position: fixed;

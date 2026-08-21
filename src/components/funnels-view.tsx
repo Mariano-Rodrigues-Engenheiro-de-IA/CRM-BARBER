@@ -6,7 +6,7 @@
 // Os cards seguem o mesmo padrão dos kanbans de assinaturas:
 // anotações, mensagem agendada e disparo/abrir conversa no WhatsApp.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   type Funnel,
@@ -1341,6 +1341,16 @@ function Overlay({
   );
 }
 
+/** Rótulo + campo — usado nas abas de Perfil e Valor do cliente. */
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-medium text-neutral-600">{label}</span>
+      {children}
+    </label>
+  );
+}
+
 /** Pipeline do lead do funil: anotações + mensagem agendada/disparo. */
 function CardDrawer({
   api,
@@ -1350,7 +1360,7 @@ function CardDrawer({
 }: {
   api: ApiFn;
   card: FunnelCard;
-  initialTab: "notes" | "schedule";
+  initialTab: "notes" | "schedule" | "profile" | "deal";
   onClose: () => void;
 }) {
   const [tab, setTab] = useState(initialTab);
@@ -1394,6 +1404,60 @@ function CardDrawer({
     setErr(null);
     setSaved(true);
     setTimeout(() => setSaved(false), 1800);
+  }
+
+  // Perfil do cliente / Valor do cliente — mesmos dados acessíveis pela
+  // extensão do WhatsApp (ícones na conversa), aqui dentro do card do funil.
+  const contactQuery = card.wa_contact_id
+    ? `wa_contact_id=${encodeURIComponent(card.wa_contact_id)}`
+    : card.phone
+      ? `phone=${encodeURIComponent(card.phone)}`
+      : null;
+  const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [deal, setDeal] = useState<Record<string, unknown> | null>(null);
+  const [dealLoaded, setDealLoaded] = useState(false);
+  const [cpBusy, setCpBusy] = useState(false);
+  const [cpSaved, setCpSaved] = useState(false);
+
+  useEffect(() => {
+    if (tab === "profile" && !profileLoaded && contactQuery) {
+      api(`/api/public/extension/customer-profile?${contactQuery}`).then((r) => {
+        setProfile(((r?.ok ? r.profile : null) as Record<string, unknown> | null) || {});
+        setProfileLoaded(true);
+      });
+    }
+    if (tab === "deal" && !dealLoaded && contactQuery) {
+      api(`/api/public/extension/customer-deal?${contactQuery}`).then((r) => {
+        setDeal(((r?.ok ? r.deal : null) as Record<string, unknown> | null) || {});
+        setDealLoaded(true);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
+  async function saveProfile() {
+    if (!profile) return;
+    setCpBusy(true);
+    await api("/api/public/extension/customer-profile", {
+      method: "PATCH",
+      body: JSON.stringify({ wa_contact_id: card.wa_contact_id || null, phone: card.phone || null, ...profile }),
+    });
+    setCpBusy(false);
+    setCpSaved(true);
+    setTimeout(() => setCpSaved(false), 1800);
+  }
+
+  async function saveDeal() {
+    if (!deal) return;
+    setCpBusy(true);
+    await api("/api/public/extension/customer-deal", {
+      method: "PATCH",
+      body: JSON.stringify({ wa_contact_id: card.wa_contact_id || null, phone: card.phone || null, ...deal }),
+    });
+    setCpBusy(false);
+    setCpSaved(true);
+    setTimeout(() => setCpSaved(false), 1800);
   }
 
   async function schedule() {
@@ -1445,7 +1509,7 @@ function CardDrawer({
 
         <div className="flex items-center gap-2">
           <div className="flex gap-1 rounded-lg bg-neutral-100 p-1">
-            {(["notes", "schedule"] as const).map((t) => (
+            {(["notes", "schedule", "profile", "deal"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -1456,7 +1520,7 @@ function CardDrawer({
                     : "text-neutral-500 hover:text-neutral-900")
                 }
               >
-                {t === "notes" ? "Anotações" : "Mensagens agendadas"}
+                {t === "notes" ? "Anotações" : t === "schedule" ? "Mensagens agendadas" : t === "profile" ? "Perfil" : "Valor"}
               </button>
             ))}
           </div>
@@ -1517,6 +1581,107 @@ function CardDrawer({
               {busy ? "Enviando..." : when ? "Agendar mensagem" : "Enviar mensagem"}
             </button>
           </>
+        )}
+
+        {tab === "profile" && (
+          <div className="space-y-3">
+            {!contactQuery && <p className="text-sm text-neutral-500">Sem telefone/contato vinculado a esse lead.</p>}
+            {contactQuery && !profileLoaded && <p className="text-sm text-neutral-400">Carregando...</p>}
+            {contactQuery && profileLoaded && profile && (
+              <>
+                <Field label="Nome">
+                  <input className={inputCls} value={(profile.name as string) ?? ""} onChange={(e) => setProfile({ ...profile, name: e.target.value })} />
+                </Field>
+                <Field label="Email">
+                  <input className={inputCls} value={(profile.email as string) ?? ""} onChange={(e) => setProfile({ ...profile, email: e.target.value })} placeholder="email@exemplo.com" />
+                </Field>
+                <Field label="Sexo">
+                  <select className={inputCls} value={(profile.gender as string) ?? ""} onChange={(e) => setProfile({ ...profile, gender: e.target.value })}>
+                    <option value="">Selecione um sexo</option>
+                    <option value="feminino">Feminino</option>
+                    <option value="masculino">Masculino</option>
+                    <option value="outro">Outro</option>
+                    <option value="prefiro_nao_dizer">Prefiro não dizer</option>
+                  </select>
+                </Field>
+                <Field label="Data de nascimento">
+                  <input type="date" className={inputCls} value={(profile.birth_date as string) ?? ""} onChange={(e) => setProfile({ ...profile, birth_date: e.target.value })} />
+                </Field>
+                <Field label="Idioma">
+                  <input className={inputCls} value={(profile.language as string) ?? ""} onChange={(e) => setProfile({ ...profile, language: e.target.value })} placeholder="Português" />
+                </Field>
+                <Field label="País">
+                  <input className={inputCls} value={(profile.country as string) ?? ""} onChange={(e) => setProfile({ ...profile, country: e.target.value })} placeholder="Brasil" />
+                </Field>
+                <Field label="Cidade">
+                  <input className={inputCls} value={(profile.city as string) ?? ""} onChange={(e) => setProfile({ ...profile, city: e.target.value })} />
+                </Field>
+                <div className="flex items-center gap-3">
+                  <button onClick={saveProfile} disabled={cpBusy} className="rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50">
+                    Salvar perfil
+                  </button>
+                  {cpSaved && <span className="text-xs font-medium text-emerald-600">Salvo ✔</span>}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {tab === "deal" && (
+          <div className="space-y-3">
+            {!contactQuery && <p className="text-sm text-neutral-500">Sem telefone/contato vinculado a esse lead.</p>}
+            {contactQuery && !dealLoaded && <p className="text-sm text-neutral-400">Carregando...</p>}
+            {contactQuery && dealLoaded && deal && (
+              <>
+                <Field label="Estágio do contato">
+                  <input className={inputCls} value={(deal.stage_label as string) ?? ""} onChange={(e) => setDeal({ ...deal, stage_label: e.target.value })} placeholder="Ex: Qualificando" />
+                </Field>
+                <Field label="Estado">
+                  <input className={inputCls} value={(deal.state as string) ?? ""} onChange={(e) => setDeal({ ...deal, state: e.target.value })} placeholder="Ex: SP" />
+                </Field>
+                <Field label="Origem do lead">
+                  <input className={inputCls} value={(deal.lead_source as string) ?? ""} onChange={(e) => setDeal({ ...deal, lead_source: e.target.value })} placeholder="Ex: Instagram, indicação..." />
+                </Field>
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="Data de entrada">
+                    <input type="date" className={inputCls} value={(deal.entry_date as string) ?? ""} onChange={(e) => setDeal({ ...deal, entry_date: e.target.value })} />
+                  </Field>
+                  <Field label="Data de saída">
+                    <input type="date" className={inputCls} value={(deal.exit_date as string) ?? ""} onChange={(e) => setDeal({ ...deal, exit_date: e.target.value })} />
+                  </Field>
+                </div>
+                <Field label="Valor do negócio (R$)">
+                  <input
+                    className={inputCls}
+                    value={deal.value_cents != null ? ((deal.value_cents as number) / 100).toFixed(2) : ""}
+                    onChange={(e) => {
+                      const num = parseFloat(e.target.value.replace(",", "."));
+                      setDeal({ ...deal, value_cents: Number.isFinite(num) ? Math.round(num * 100) : null });
+                    }}
+                    placeholder="0,00"
+                  />
+                </Field>
+                <Field label="Empresa">
+                  <input className={inputCls} value={(deal.company as string) ?? ""} onChange={(e) => setDeal({ ...deal, company: e.target.value })} placeholder="Nome da empresa" />
+                </Field>
+                <Field label="Cargo">
+                  <input className={inputCls} value={(deal.role as string) ?? ""} onChange={(e) => setDeal({ ...deal, role: e.target.value })} placeholder="Cargo do contato" />
+                </Field>
+                <Field label="Produtos de interesse">
+                  <input className={inputCls} value={(deal.products_of_interest as string) ?? ""} onChange={(e) => setDeal({ ...deal, products_of_interest: e.target.value })} />
+                </Field>
+                <Field label="Observações">
+                  <textarea rows={3} className={inputCls} value={(deal.notes as string) ?? ""} onChange={(e) => setDeal({ ...deal, notes: e.target.value })} placeholder="Adicione uma observação" />
+                </Field>
+                <div className="flex items-center gap-3">
+                  <button onClick={saveDeal} disabled={cpBusy} className="rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50">
+                    Salvar
+                  </button>
+                  {cpSaved && <span className="text-xs font-medium text-emerald-600">Salvo ✔</span>}
+                </div>
+              </>
+            )}
+          </div>
         )}
 
         {err && <p className="text-sm text-red-500">{err}</p>}
