@@ -16,7 +16,7 @@ import { DispatchCenter } from "@/components/dispatch-view";
 import { sendWaAction, isRealPhone, openWhatsappChat, applyFunnelActions } from "@/lib/wa-actions";
 
 import { sendableActions, type QuickReply } from "@/lib/quick-replies";
-import { FREE_LIMITS, PROMO_PRICE_LABEL, type BillingStatus } from "@/lib/billing";
+import { FREE_LIMITS, PREMIUM_PRICE_LABEL, type BillingStatus } from "@/lib/billing";
 
 import { useConfirm } from "@/components/confirm-dialog";
 import { AgendaView } from "@/components/agenda-view";
@@ -544,7 +544,7 @@ function Painel() {
 
   /** Abre o checkout do Premium em nova aba, já identificando a barbearia. */
   function openCheckout() {
-    const params = new URLSearchParams({ plano: "promo" });
+    const params = new URLSearchParams({ plano: "premium" });
     const raw = localStorage.getItem(TOKEN_KEY);
     if (raw && raw.startsWith("ext_")) params.set("token", raw);
     else if (shop?.id) params.set("shop", shop.id);
@@ -738,7 +738,7 @@ function Painel() {
               onClick={openCheckout}
               className="mt-3 w-full rounded-lg bg-brand px-3 py-2 text-xs font-bold text-yellow-400 transition hover:bg-brand-strong"
             >
-              Assinar Premium · {PROMO_PRICE_LABEL}
+              Assinar Premium · {PREMIUM_PRICE_LABEL}
             </button>
           </div>
         )}
@@ -970,7 +970,7 @@ function Painel() {
                     onClick={openCheckout}
                     className="mt-6 w-full rounded-xl bg-yellow-400 px-4 py-3 text-sm font-bold text-neutral-950 transition hover:bg-yellow-300"
                   >
-                    Assinar Premium por {PROMO_PRICE_LABEL}
+                    Assinar Premium por {PREMIUM_PRICE_LABEL}
                   </button>
                 </div>
               ) : (
