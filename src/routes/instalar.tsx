@@ -76,7 +76,7 @@ function Install() {
               <Button
                 asChild
                 size="lg"
-                className="w-full bg-yellow-400 font-bold text-neutral-950 hover:bg-yellow-300"
+                className="w-full bg-brand font-bold text-white hover:bg-brand-strong"
               >
                 <a href={CHROME_STORE_URL} target="_blank" rel="noreferrer">
                   ADICIONAR AO CHROME
@@ -92,7 +92,7 @@ function Install() {
             <>
               <Button
                 size="lg"
-                className="w-full bg-yellow-400 font-bold text-neutral-950 hover:bg-yellow-300"
+                className="w-full bg-brand font-bold text-white hover:bg-brand-strong"
                 onClick={downloadZip}
               >
                 Baixar extensão v0.35.48 (.zip)
