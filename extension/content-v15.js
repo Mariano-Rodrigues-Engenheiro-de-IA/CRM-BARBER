@@ -1414,7 +1414,7 @@
   }
 
   const CHAT_BTN_ID = "crm-chat-action";
-  const PROFILE_BTN_ID = "crm-chat-profile";
+  const RAIO_BTN_ID = "crm-chat-bolt";
   const BOLT_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>`;
   const PROFILE_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>`;
   const DEAL_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10"/><path d="M9 9.5c0-1.4 1.3-2.5 3-2.5s3 .9 3 2.1c0 1.7-1.6 2.2-3.2 2.7-1.6.5-2.8 1.1-2.8 2.6 0 1.2 1.3 2.1 3 2.1s3-1 3-2.3"/></svg>`;
@@ -1444,13 +1444,13 @@
     const header = document.querySelector("#main header");
     if (!header) return;
     const hasCrm = document.getElementById(CHAT_BTN_ID);
-    const hasProfile = document.getElementById(PROFILE_BTN_ID);
-    if (hasCrm && hasProfile && header.contains(hasCrm) && header.contains(hasProfile)) {
+    const hasBolt = document.getElementById(RAIO_BTN_ID);
+    if (hasCrm && hasBolt && header.contains(hasCrm) && header.contains(hasBolt)) {
       updateFunnelBadge();
       return;
     }
     hasCrm?.remove();
-    hasProfile?.remove();
+    hasBolt?.remove();
 
     const btn = document.createElement("button");
     btn.id = CHAT_BTN_ID;
@@ -1471,18 +1471,18 @@
       openFunnelPopover(btn);
     });
 
-    // Só um segundo botão na conversa agora: "Perfil". Ele é a porta de
+    // Só um segundo botão na conversa agora: o raio. Ele é a porta de
     // entrada do painel grande, que já nasce mostrando Respostas rápidas
     // — dentro dele tem os 3 ícones (raio/perfil/valor) pra trocar sem
-    // fechar nada.
-    const profileBtn = document.createElement("button");
-    profileBtn.id = PROFILE_BTN_ID;
-    profileBtn.className = "crm-chat-btn crm-chat-btn-icon";
-    profileBtn.type = "button";
-    profileBtn.setAttribute("data-label", "Perfil do cliente");
-    profileBtn.innerHTML = PROFILE_SVG;
-    profileBtn.addEventListener("mouseenter", prewarmEngine);
-    profileBtn.addEventListener("click", (e) => {
+    // fechar nada. Fica colado no menu de 3 pontinhos do WhatsApp.
+    const boltBtn = document.createElement("button");
+    boltBtn.id = RAIO_BTN_ID;
+    boltBtn.className = "crm-chat-btn crm-chat-btn-icon";
+    boltBtn.type = "button";
+    boltBtn.setAttribute("data-label", "Respostas rápidas");
+    boltBtn.innerHTML = BOLT_SVG;
+    boltBtn.addEventListener("mouseenter", prewarmEngine);
+    boltBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
       void openSharedPanel("qr");
@@ -1491,10 +1491,10 @@
     const slot = headerActionsSlot(header);
     if (slot === header) {
       header.appendChild(btn);
-      header.appendChild(profileBtn);
+      header.appendChild(boltBtn);
     } else {
       slot.insertAdjacentElement("beforebegin", btn);
-      btn.insertAdjacentElement("afterend", profileBtn);
+      btn.insertAdjacentElement("afterend", boltBtn);
     }
     updateFunnelBadge();
   }
@@ -1914,56 +1914,16 @@
       `;
     }
 
-    // A página do WhatsApp bloqueia carregar <img>/<video>/<audio> de uma
-    // URL externa (mesma restrição de CSP que já lidávamos no envio) — por
-    // isso a prévia nunca aparecia. Baixa a mídia pela mesma ponte que já
-    // usamos pra enviar (roda no service worker, fora da CSP da página) e
-    // usa um blob local como fonte.
-    async function ensurePreviewBlob(step) {
-      if (step._previewBlobUrl || step._previewLoading || !step.url) return;
-      step._previewLoading = true;
-      const r = await chrome.runtime
-        .sendMessage({ type: "prefetch_media", actions: [{ type: step.type, url: step.url, mime: step.mime }] })
-        .catch(() => null);
-      step._previewLoading = false;
-      const item = r?.ok ? r.actions?.[0] : null;
-      if (!item?.data_base64) return;
-      try {
-        const bin = atob(item.data_base64);
-        const bytes = new Uint8Array(bin.length);
-        for (let k = 0; k < bin.length; k += 1) bytes[k] = bin.charCodeAt(k);
-        const blob = new Blob([bytes], { type: item.mime || step.mime || "application/octet-stream" });
-        step._previewBlobUrl = URL.createObjectURL(blob);
-      } catch {
-        /* sem preview, segue sem quebrar o resto do formulário */
-      }
-    }
-
     function stepFieldsHtml(s, i) {
       if (s.type === "text") {
         return `<textarea class="crm-qrp-textarea" data-step-field="text" data-i="${i}" placeholder="Digite a mensagem…">${escapeHtml(s.text || "")}</textarea>`;
       }
       if (s.type === "image" || s.type === "video" || s.type === "audio") {
         const fileLabel = s._uploading ? "Enviando..." : s.filename ? s.filename : "Nenhum arquivo escolhido";
-        const previewSrc = s._previewBlobUrl || null;
-        const preview = s._uploading
-          ? ""
-          : previewSrc && s.type === "image"
-            ? `<img src="${escapeHtml(previewSrc)}" class="crm-qrp-preview-img" alt="" />`
-            : previewSrc && s.type === "video"
-              ? `<video src="${escapeHtml(previewSrc)}" class="crm-qrp-preview-video" controls></video>`
-              : previewSrc && s.type === "audio"
-                ? `<audio src="${escapeHtml(previewSrc)}" class="crm-qrp-preview-audio" controls></audio>`
-                : s.url
-                  ? `<p class="crm-qrp-preview-loading">Carregando prévia...</p>`
-                  : "";
-        if (s.url && !previewSrc && !s._uploading) {
-          void ensurePreviewBlob(s).then(() => {
-            if (activePanelKind === "qr" && mode === "form") paintForm(currentTitle());
-          });
-        }
+        // Visualizar a mídia aqui dava um loop de tentativas travando o
+        // navegador quando o download falhava (sem forma de detectar isso
+        // e desistir) — por pedido, fica só o nome do arquivo mesmo.
         return `
-          ${preview}
           <div class="crm-qrp-file-row">
             <label class="crm-qrp-file-btn">
               ${s.url ? "Trocar arquivo" : "Escolher arquivo"}
@@ -2243,9 +2203,6 @@
               mime: r.mime,
               filename: r.filename,
               _uploading: false,
-              // Já temos o arquivo local — usa ele direto, sem baixar de
-              // volta pra mostrar a prévia.
-              _previewBlobUrl: URL.createObjectURL(file),
             };
             crmToast("Arquivo enviado");
           } else {
