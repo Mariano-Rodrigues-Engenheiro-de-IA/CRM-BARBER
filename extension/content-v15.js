@@ -288,7 +288,13 @@
       }
 
       const addBtn = e.target.closest(".crm-pill-add-icon");
-      if (addBtn) return createTab(addBtn);
+      if (addBtn) {
+        if (document.querySelector(".crm-lite-pop")) {
+          document.querySelector(".crm-lite-pop")?.remove();
+          return;
+        }
+        return createTab(addBtn);
+      }
 
       const pill = e.target.closest(".crm-pill");
       if (!pill) return;
@@ -1381,6 +1387,10 @@
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
+      if (document.querySelector(".crm-fn-pop")) {
+        document.querySelector(".crm-fn-pop")?.remove();
+        return;
+      }
       openFunnelModal(btn);
     });
 
@@ -1692,10 +1702,20 @@
       }
       if (s.type === "image" || s.type === "video" || s.type === "audio") {
         const fileLabel = s._uploading ? "Enviando..." : s.filename ? s.filename : "Nenhum arquivo escolhido";
+        const preview = s._uploading
+          ? ""
+          : s.type === "image" && s.url
+            ? `<img src="${escapeHtml(s.url)}" class="crm-qrp-preview-img" alt="" />`
+            : s.type === "video" && s.url
+              ? `<video src="${escapeHtml(s.url)}" class="crm-qrp-preview-video" controls></video>`
+              : s.type === "audio" && s.url
+                ? `<audio src="${escapeHtml(s.url)}" class="crm-qrp-preview-audio" controls></audio>`
+                : "";
         return `
+          ${preview}
           <div class="crm-qrp-file-row">
             <label class="crm-qrp-file-btn">
-              Escolher arquivo
+              ${s.url ? "Trocar arquivo" : "Escolher arquivo"}
               <input type="file" accept="${s.type}/*" data-step-file="${i}" hidden ${s._uploading ? "disabled" : ""} />
             </label>
             <span class="crm-qrp-file-name">${escapeHtml(fileLabel)}</span>
@@ -1954,7 +1974,7 @@
             })
             .catch(() => null);
           if (r?.ok) {
-            steps[i] = { ...steps[i], path: r.path, mime: r.mime, filename: r.filename, _uploading: false };
+            steps[i] = { ...steps[i], path: r.path, url: r.url, mime: r.mime, filename: r.filename, _uploading: false };
             crmToast("Arquivo enviado");
           } else {
             steps[i]._uploading = false;

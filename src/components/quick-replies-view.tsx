@@ -71,27 +71,13 @@ function IconMini({ type }: { type: QuickReplyActionType | "clock" }) {
   return <svg {...common}><path d="M3 4h18l-7 8v7l-4 2v-9L3 4z" /></svg>;
 }
 
-function typesIn(qr: QuickReply): QuickReplyActionType[] {
-  const seen = new Set<QuickReplyActionType>();
-  const out: QuickReplyActionType[] = [];
-  for (const a of qr.actions) {
-    if (!seen.has(a.type)) { seen.add(a.type); out.push(a.type); }
-  }
-  return out;
-}
-function firstText(qr: QuickReply) {
-  return qr.actions.find((a) => a.type === "text")?.text?.trim() || "";
-}
-function hasDelay(qr: QuickReply) {
-  return qr.actions.some((a) => typeof a.delay_seconds === "number" && a.delay_seconds > 0);
-}
-
 export function QuickRepliesView({ token, api }: { token: string; api: ApiFn }) {
   const { confirm, dialog } = useConfirm();
   const [replies, setReplies] = useState<QuickReply[]>(() => repliesCache ?? []);
   const [loading, setLoading] = useState(repliesCache === null);
   const [editing, setEditing] = useState<QuickReply | "new" | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [funnels, setFunnels] = useState<Funnel[]>([]);
 
   async function reload() {
     const r = await api("/api/public/extension/quick-replies");
@@ -106,8 +92,18 @@ export function QuickRepliesView({ token, api }: { token: string; api: ApiFn }) 
 
   useEffect(() => {
     void reload();
+    api("/api/public/extension/funnels").then((r) => {
+      if (r?.ok) setFunnels((r.funnels as Funnel[]) || []);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  function funnelName(id?: string) {
+    return funnels.find((f) => f.id === id)?.name || "funil";
+  }
+  function stageName(funnelId?: string, stageId?: string) {
+    return funnels.find((f) => f.id === funnelId)?.stages?.find((s) => s.id === stageId)?.name || "etapa";
+  }
 
   async function remove(qr: QuickReply) {
     const ok = await confirm({
@@ -141,7 +137,7 @@ export function QuickRepliesView({ token, api }: { token: string; api: ApiFn }) 
         </p>
       )}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {replies.map((qr) => (
           <div
             key={qr.id}
@@ -149,33 +145,68 @@ export function QuickRepliesView({ token, api }: { token: string; api: ApiFn }) 
           >
             <p className="truncate text-sm font-semibold text-neutral-900">{qr.title}</p>
 
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              {typesIn(qr).map((t) => (
-                <span
-                  key={t}
-                  title={actionLabel(t)}
-                  className="flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-600"
-                >
-                  <IconMini type={t} />
-                  {actionLabel(t)}
-                </span>
+            <div className="mt-3 flex-1 space-y-2">
+              {qr.actions.map((a, i) => (
+                <div key={i}>
+                  <div className="rounded-lg bg-neutral-50 p-2">
+                    {a.type === "text" && (
+                      <p className="text-xs text-neutral-700">
+                        <span className="font-semibold text-neutral-500">Texto: </span>
+                        {a.text}
+                      </p>
+                    )}
+                    {a.type === "image" && (
+                      <div>
+                        <p className="mb-1 text-[11px] font-semibold text-neutral-500">Imagem</p>
+                        {a.url ? (
+                          <img src={a.url} alt="" className="h-24 w-full rounded-md object-cover" />
+                        ) : (
+                          <p className="text-xs text-neutral-400">arquivo não disponível</p>
+                        )}
+                      </div>
+                    )}
+                    {a.type === "video" && (
+                      <div>
+                        <p className="mb-1 text-[11px] font-semibold text-neutral-500">Vídeo</p>
+                        {a.url ? (
+                          <video src={a.url} controls className="h-28 w-full rounded-md bg-black" />
+                        ) : (
+                          <p className="text-xs text-neutral-400">arquivo não disponível</p>
+                        )}
+                      </div>
+                    )}
+                    {a.type === "audio" && (
+                      <div>
+                        <p className="mb-1 text-[11px] font-semibold text-neutral-500">Áudio</p>
+                        {a.url ? (
+                          <audio src={a.url} controls className="h-8 w-full" />
+                        ) : (
+                          <p className="text-xs text-neutral-400">arquivo não disponível</p>
+                        )}
+                      </div>
+                    )}
+                    {a.type === "funnel_add" && (
+                      <p className="text-xs text-neutral-700">
+                        <span className="font-semibold text-neutral-500">Adicionar ao funil: </span>
+                        {funnelName(a.funnel_id)} · {stageName(a.funnel_id, a.stage_id)}
+                      </p>
+                    )}
+                    {a.type === "funnel_remove" && (
+                      <p className="text-xs text-neutral-700">
+                        <span className="font-semibold text-neutral-500">Remover do funil: </span>
+                        {funnelName(a.funnel_id)}
+                      </p>
+                    )}
+                  </div>
+                  {typeof a.delay_seconds === "number" && a.delay_seconds > 0 && i < qr.actions.length - 1 && (
+                    <p className="mt-1 flex items-center gap-1 pl-1 text-[10px] text-neutral-400">
+                      <IconMini type="clock" />
+                      Aguardar {a.delay_seconds}s
+                    </p>
+                  )}
+                </div>
               ))}
-              {hasDelay(qr) && (
-                <span title="Tem tempo de espera configurado" className="flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-600">
-                  <IconMini type="clock" />
-                  Temporizado
-                </span>
-              )}
             </div>
-
-            {firstText(qr) && (
-              <p className="mt-2 line-clamp-2 flex-1 text-xs text-neutral-500">{firstText(qr)}</p>
-            )}
-            {!firstText(qr) && <div className="flex-1" />}
-
-            <p className="mt-3 text-[11px] font-medium text-neutral-400">
-              {qr.actions.length} passo{qr.actions.length === 1 ? "" : "s"}
-            </p>
 
             <div className="mt-3 flex gap-2 border-t border-neutral-100 pt-3">
               <button
