@@ -503,6 +503,23 @@ html body.crm-shell.crm-qr-open #app {
   font-size: 12.5px; font-weight: 700; padding: 8px; cursor: pointer; transition: background-color 0.15s ease;
 }
 .crm-lite-pop-confirm:hover { background: var(--z-accent-strong); }
+
+/* Confirmação leve de exclusão — "tem certeza?" ancorado, nada de modal
+   escurecendo a tela. */
+.crm-confirm-pop { width: 220px; padding: 12px; position: fixed; z-index: 2147483646; background: var(--z-surface); border: 1px solid var(--z-line); border-radius: 12px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.18); opacity: 0; transform: translateY(-6px) scale(0.98); transition: opacity 0.16s cubic-bezier(0.4, 0, 0.2, 1), transform 0.16s cubic-bezier(0.4, 0, 0.2, 1); }
+.crm-confirm-pop.is-in { opacity: 1; transform: translateY(0) scale(1); }
+.crm-confirm-pop-text { margin: 0 0 10px; font-size: 12.5px; font-weight: 600; color: var(--z-text); line-height: 1.4; }
+.crm-confirm-pop-actions { display: flex; gap: 6px; }
+.crm-confirm-pop-cancel, .crm-confirm-pop-yes {
+  flex: 1; border: 0; border-radius: 8px; padding: 7px; font-size: 12px; font-weight: 700; cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.crm-confirm-pop-cancel { background: var(--z-surface-2); color: var(--z-text); }
+.crm-confirm-pop-cancel:hover { background: var(--z-line-soft); }
+.crm-confirm-pop-yes { background: var(--z-accent); color: #fff; }
+.crm-confirm-pop-yes:hover { background: var(--z-accent-strong); }
+.crm-confirm-pop-yes.is-danger { background: var(--z-danger); }
+.crm-confirm-pop-yes.is-danger:hover { background: var(--z-danger); filter: brightness(0.9); }
 .crm-fn-pop-row {
   display: flex;
   align-items: center;
@@ -623,8 +640,6 @@ html body.crm-shell.crm-qr-open #app {
 }
 .crm-qrp-icon:hover { background: var(--z-surface-2); color: var(--z-accent); }
 .crm-qrp-icon-danger:hover { color: var(--z-danger); }
-.crm-qrp-icon-danger.is-confirming { opacity: 1; color: #fff; background: var(--z-danger); }
-.crm-qrp-icon-danger.is-confirming:hover { color: #fff; background: var(--z-danger); }
 /* No editor de passos o ícone de remover fica sempre visível — ali não é
    uma linha de lista com hover-reveal, é a única ação daquele cabeçalho
    (a lixeira estava com opacity:0 sem nenhum ":hover" pai que a revelasse,
@@ -705,6 +720,13 @@ html body.crm-shell.crm-qr-open #app {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 .crm-toast-err { border-left-color: var(--z-danger); }
+.crm-toast-anchored {
+  position: fixed;
+  bottom: auto;
+  left: auto;
+  transform: none;
+  max-width: 240px;
+}
 
 /* ---- Pop-up de Respostas Rápidas / Funis (compartilham a mesma base) ---- */
 .crm-qr {

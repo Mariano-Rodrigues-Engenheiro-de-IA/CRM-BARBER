@@ -346,6 +346,40 @@
     });
   }
 
+  /** Confirmação leve — ancorada no botão que abriu, tipo "tem certeza?"
+   * nativo do WhatsApp. Usada em exclusões dentro dos painéis (sem
+   * escurecer a tela, sem modal pesado). */
+  function openConfirmPop(anchor, { text, confirmLabel = "Confirmar", danger = true }) {
+    return new Promise((resolve) => {
+      document.querySelectorAll(".crm-lite-pop, .crm-confirm-pop").forEach((el) => el.remove());
+      const pop = document.createElement("div");
+      pop.className = "crm-confirm-pop";
+      const rect = anchor.getBoundingClientRect();
+      pop.style.top = `${rect.bottom + 8}px`;
+      pop.style.left = `${Math.min(Math.max(8, rect.left - 200), window.innerWidth - 240)}px`;
+      pop.innerHTML = `
+        <p class="crm-confirm-pop-text">${escapeHtml(text)}</p>
+        <div class="crm-confirm-pop-actions">
+          <button class="crm-confirm-pop-cancel">Cancelar</button>
+          <button class="crm-confirm-pop-yes${danger ? " is-danger" : ""}">${escapeHtml(confirmLabel)}</button>
+        </div>
+      `;
+      document.body.appendChild(pop);
+      animatePopIn(pop);
+      const done = (v) => {
+        pop.remove();
+        document.removeEventListener("mousedown", onDoc, true);
+        resolve(v);
+      };
+      function onDoc(ev) {
+        if (!pop.contains(ev.target) && ev.target !== anchor) done(false);
+      }
+      setTimeout(() => document.addEventListener("mousedown", onDoc, true), 0);
+      pop.querySelector(".crm-confirm-pop-cancel").addEventListener("click", () => done(false));
+      pop.querySelector(".crm-confirm-pop-yes").addEventListener("click", () => done(true));
+    });
+  }
+
   function openMenu(anchor, items) {
     document.querySelector(".crm-menu")?.remove();
     const rect = anchor.getBoundingClientRect();
@@ -572,9 +606,19 @@
       funnelName: funnel.name,
     };
     renderTopbar();
-    const waIds = (funnel.cards || [])
-      .filter((c) => c.stage_id === stageId && c.wa_id)
-      .map((c) => c.wa_id);
+    // Nem todo card tem wa_contact_id vinculado (ex: lead adicionado pelo
+    // CRM antes de o contato sincronizar, ou nunca sincronizou ainda) — sem
+    // isso, o card ficava de fora do filtro mesmo contando no total. Cobre
+    // esse buraco casando pelo telefone contra o que já sincronizamos.
+    const stageCards = (funnel.cards || []).filter((c) => c.stage_id === stageId);
+    const waIds = stageCards
+      .map((c) => c.wa_id || (waData.contacts || []).find((w) => w.phone && c.phone && w.phone === c.phone)?.wa_id)
+      .filter(Boolean);
+    if (waIds.length < stageCards.length) {
+      console.info(
+        `[CRM] Etapa "${stage?.name}": ${stageCards.length} lead(s) no total, ${waIds.length} com conversa do WhatsApp encontrada.`,
+      );
+    }
     // O motor do WhatsApp pode demorar (ou ainda estar de aquecendo logo
     // após abrir a página) — a pílula fica "carregando" até confirmar,
     // pra não parecer que o clique não registrou.
@@ -1274,10 +1318,18 @@
   }
 
 
-  function crmToast(text, kind = "ok") {
+  function crmToast(text, kind = "ok", anchor = null) {
     const el = document.createElement("div");
     el.className = `crm-toast${kind === "err" ? " crm-toast-err" : ""}`;
     el.textContent = text;
+    if (anchor) {
+      // Perto da ação que a gerou (ex: ícone do funil), em vez do aviso
+      // genérico lá embaixo no canto da tela.
+      const rect = anchor.getBoundingClientRect();
+      el.classList.add("crm-toast-anchored");
+      el.style.top = `${rect.bottom + 8}px`;
+      el.style.left = `${Math.min(Math.max(8, rect.left), window.innerWidth - 260)}px`;
+    }
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 3200);
   }
@@ -1466,7 +1518,7 @@
       row.disabled = true;
       if (!chat) chat = await activeChat();
       if (!chat) {
-        crmToast("Não consegui ler a conversa aberta.", "err");
+        crmToast("Não consegui ler a conversa aberta.", "err", anchor);
         row.disabled = false;
         return;
       }
@@ -1479,12 +1531,15 @@
           .sendMessage({ type: "api", path: "/api/public/extension/funnel-cards", opts: { method: "DELETE", body: JSON.stringify({ id: card.id }) } })
           .catch(() => null);
         if (r?.ok) {
-          crmToast("Removido do funil");
-          await loadFunnels();
+          crmToast("Removido do funil", "ok", anchor);
+          // Atualiza local na hora (sem esperar rede) — a reconciliação
+          // completa acontece em segundo plano, sem travar a interação.
+          funnel.cards = (funnel.cards || []).filter((c) => c.id !== card.id);
           updateFunnelBadge();
           renderRows(chat);
+          void loadFunnels();
         } else {
-          crmToast(r?.error || "Não consegui remover.", "err");
+          crmToast(r?.error || "Não consegui remover.", "err", anchor);
           row.disabled = false;
         }
         return;
@@ -1508,12 +1563,18 @@
         })
         .catch(() => null);
       if (r?.ok) {
-        crmToast(`Adicionado em ${stage.name}`);
-        await loadFunnels();
+        crmToast(`Adicionado em ${stage.name}`, "ok", anchor);
+        if (r.card) {
+          funnel.cards = funnel.cards || [];
+          const idx = funnel.cards.findIndex((c) => c.id === r.card.id);
+          if (idx >= 0) funnel.cards[idx] = { ...funnel.cards[idx], ...r.card };
+          else funnel.cards.push(r.card);
+        }
         updateFunnelBadge();
         renderRows(chat);
+        void loadFunnels();
       } else {
-        crmToast(r?.error || "Não consegui adicionar ao funil.", "err");
+        crmToast(r?.error || "Não consegui adicionar ao funil.", "err", anchor);
         row.disabled = false;
       }
     });
@@ -1525,7 +1586,6 @@
   // ---------------------------------------------------------------------
   const PENCIL_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
   const TRASH_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>`;
-  const CHECK_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
 
   const QR_STEP_TYPES = [
     { type: "text", label: "Texto" },
@@ -1711,14 +1771,6 @@
     };
 
     panel.addEventListener("click", async (e) => {
-      // Qualquer clique fora do próprio botão de excluir cancela a
-      // confirmação inline pendente (evita ficar preso em "confirmar?").
-      if (!e.target.closest("[data-del]")) {
-        panel.querySelectorAll(".crm-qrp-icon-danger.is-confirming").forEach((b) => {
-          b.classList.remove("is-confirming");
-          b.innerHTML = TRASH_SVG;
-        });
-      }
       if (e.target.closest("[data-close]")) return close();
       if (e.target.closest("[data-new]")) return renderForm(null);
       if (e.target.closest("[data-back]")) return renderList();
@@ -1730,28 +1782,20 @@
       if (delBtn) {
         const reply = quickReplies[Number(delBtn.getAttribute("data-del"))];
         if (!reply) return;
-        // Confirmação inline, sem popup: primeiro clique vira "Confirmar?"
-        // (vermelho), segundo clique de fato exclui. Clicar em qualquer
-        // outro lugar do painel volta ao normal.
-        if (!delBtn.classList.contains("is-confirming")) {
-          panel.querySelectorAll(".crm-qrp-icon-danger.is-confirming").forEach((b) => {
-            b.classList.remove("is-confirming");
-            b.innerHTML = TRASH_SVG;
-          });
-          delBtn.classList.add("is-confirming");
-          delBtn.innerHTML = CHECK_SVG;
-          delBtn.title = "Confirmar exclusão";
-          return;
-        }
+        const ok = await openConfirmPop(delBtn, {
+          text: `Tem certeza que quer excluir "${reply.title}"?`,
+          confirmLabel: "Sim, excluir",
+        });
+        if (!ok) return;
         const r = await chrome.runtime
           .sendMessage({ type: "api", path: `/api/public/extension/quick-replies/${reply.id}`, opts: { method: "DELETE" } })
           .catch(() => null);
         if (r?.ok) {
-          crmToast("Resposta excluída");
+          crmToast("Resposta excluída", "ok", delBtn);
           await loadQuickReplies();
           renderList();
         } else {
-          crmToast(r?.error || "Não consegui excluir.", "err");
+          crmToast(r?.error || "Não consegui excluir.", "err", delBtn);
         }
         return;
       }
