@@ -95,10 +95,10 @@ function Assinar() {
             }}
           >
             <p className="text-sm text-muted-foreground">
-              Informe o WhatsApp da barbearia — é por ele que a extensão libera o Premium.
+              Informe o WhatsApp da empresa — é por ele que a extensão libera o Premium.
             </p>
             <div className="space-y-2">
-              <Label htmlFor="name">Nome da barbearia</Label>
+              <Label htmlFor="name">Nome da empresa</Label>
               <Input id="name" value={form.name} maxLength={120} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
             </div>
             <div className="space-y-2">
