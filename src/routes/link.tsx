@@ -5,23 +5,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { PREMIUM_PRICE_LABEL, PROMO_PRICE_LABEL, FREE_LIMITS } from "@/lib/billing";
-import zettaLogo from "@/assets/zetta-logo.png.asset.json";
+import { PREMIUM_PRICE_LABEL, FREE_LIMITS } from "@/lib/billing";
 
 export const Route = createFileRoute("/link")({
   head: () => ({
     meta: [
-      { title: "CRM Zaylo" },
+      { title: "Zaylo CRM — CRM completo dentro do WhatsApp" },
       {
         name: "description",
         content:
-          "Gerencie assinaturas, vendas, funis, disparos em massa e sua equipe direto no WhatsApp Web, com a extensão de Chrome do CRM Zaylo para barbearias.",
+          "Conheça o Zaylo CRM: disparo em massa, agente de IA, funis, automações, agenda, respostas rápidas e gestão de equipe dentro do WhatsApp da sua empresa.",
       },
-      { property: "og:title", content: "CRM Zaylo" },
+      { property: "og:title", content: "Zaylo CRM — CRM completo dentro do WhatsApp" },
       {
         property: "og:description",
         content:
-          "Gerencie assinaturas, vendas, funis, disparos em massa e sua equipe direto no WhatsApp Web, com a extensão de Chrome do CRM Zaylo para barbearias.",
+          "Conheça o Zaylo CRM: disparo em massa, agente de IA, funis, automações, agenda, respostas rápidas e gestão de equipe dentro do WhatsApp da sua empresa.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -37,27 +36,37 @@ const formSchema = z.object({
 });
 
 const DORES = [
-  "Cliente e assinante espalhados entre planilha, agenda e caderno",
-  "Cobrança e follow-up feitos na mão, um por um, no WhatsApp",
+  "Leads chegam no WhatsApp e se perdem no meio das conversas",
+  "Follow-up e cobrança feitos na mão, um cliente por vez",
   "Nenhum funil: o orçamento some na conversa e ninguém retoma",
-  "Sem controle de vendas por barbeiro nem histórico do cliente",
+  "Sem controle de vendas por vendedor, nem histórico do cliente",
 ];
 
 const RECURSOS = [
   {
-    titulo: "Gestão de assinaturas",
+    titulo: "Disparo em massa",
     texto:
-      "Kanban de ativos, a vencer, inadimplentes e cancelados, com meta do mês e faturamento por coluna.",
+      "Campanhas com texto, imagem, áudio e vídeo em ritmo humano, direto do seu número, sem abrir conversa por conversa.",
+  },
+  {
+    titulo: "Agente de IA",
+    texto:
+      "IA que entende a intenção do cliente, responde, qualifica o lead e move o card no funil sozinha.",
   },
   {
     titulo: "Funis de vendas",
     texto:
-      "Funil próprio e listas reais do WhatsApp, arrastando o lead de etapa em etapa direto na conversa.",
+      "Funis próprios e listas reais do WhatsApp, arrastando o lead de etapa em etapa dentro da conversa.",
   },
   {
-    titulo: "Disparo em massa",
+    titulo: "Automações",
     texto:
-      "Campanhas com texto, imagem, áudio e vídeo em ritmo humano, sem abrir conversa por conversa.",
+      "Follow-up, lembrete e reativação disparando na hora certa, sem ninguém precisar lembrar.",
+  },
+  {
+    titulo: "Agenda e agendamento online",
+    texto:
+      "Agenda por profissional, bloqueios, status do atendimento e link público para o cliente agendar sozinho.",
   },
   {
     titulo: "Respostas rápidas",
@@ -65,42 +74,40 @@ const RECURSOS = [
       "Atalho ⚡ dentro da conversa para enviar mensagens e mídias prontas de cobrança, orçamento e reativação.",
   },
   {
-    titulo: "Gestão de equipe e vendas",
+    titulo: "Equipe e vendas",
     texto:
-      "Lançamento de venda por barbeiro, ranking gamificado, ranking de clientes e histórico de consumo.",
+      "Lançamento de venda por vendedor, ranking gamificado, ranking de clientes e histórico de consumo.",
+  },
+  {
+    titulo: "Treinamentos e aulas",
+    texto:
+      "Área de aulas dentro do próprio CRM para treinar o time e colocar todo mundo vendendo do mesmo jeito.",
   },
   {
     titulo: "Base de clientes unificada",
     texto:
-      "Importação de planilha (App Barber, Cash Barber, Frizzar), contatos do WhatsApp e cadastro manual, sem duplicar.",
+      "Importação de planilha, contatos do WhatsApp e cadastro manual em uma base só, sem duplicar contato.",
   },
-];
-
-const PASSOS = [
-  { n: "1", t: "Crie sua conta", d: "Nome, e-mail e o WhatsApp da barbearia. Leva menos de um minuto." },
-  { n: "2", t: "Adicione ao Chrome", d: "Instalação em um clique — nada pra configurar em servidor." },
-  { n: "3", t: "Abra o WhatsApp Web", d: "O CRM aparece colado na tela, reconhece seu número e já funciona." },
 ];
 
 const FAQ = [
   {
     q: "Precisa de outro número de WhatsApp?",
-    a: "Não. O CRM usa a sua própria sessão do WhatsApp Web, o mesmo número que você já usa na barbearia.",
+    a: "Não. O CRM usa a sua própria sessão do WhatsApp Web, o mesmo número que a sua empresa já usa.",
   },
   {
-    q: "Meus contatos ficam salvos onde?",
-    a: "Na sua conta do CRM, isolada por barbearia. Ninguém além de você acessa a sua base.",
+    q: "Serve para qualquer tipo de empresa?",
+    a: "Sim. Se o seu atendimento e a sua venda acontecem no WhatsApp, o Zaylo CRM se encaixa — serviços, comércio, clínicas, agências e assinaturas.",
   },
   {
     q: "Consigo testar antes de pagar?",
-    a: `Sim. O plano grátis libera até ${FREE_LIMITS.customers} contatos e disparos de até ${FREE_LIMITS.dispatchBatch} contatos por vez. Gestão de equipe e disparo em massa são do plano pago.`,
+    a: `Sim. O plano grátis libera até ${FREE_LIMITS.customers} contatos e disparos de até ${FREE_LIMITS.dispatchBatch} contatos por vez. Disparo em massa e gestão de equipe são do plano pago.`,
   },
   {
     q: "Posso cancelar quando quiser?",
     a: "Pode. A assinatura é mensal, sem fidelidade, e você cancela pelo próprio painel.",
   },
 ];
-
 
 function Landing() {
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
@@ -128,14 +135,14 @@ function Landing() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
+    <div className="min-h-screen bg-[#0a1120] text-slate-100">
       {/* Top bar */}
       <header className="border-b border-white/10">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
-          <img src={zettaLogo.url} alt="Zetta CRM" className="h-7 w-auto" />
+          <img src="/brand/zaylo-logo.png" alt="Zaylo CRM" className="h-7 w-auto object-contain" />
           <button
             onClick={scrollToForm}
-            className="rounded-lg bg-yellow-400 px-4 py-2 text-xs font-bold text-neutral-950 hover:bg-yellow-300"
+            className="rounded-lg bg-[#2f6df6] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#1f5ae0]"
           >
             QUERO CONHECER
           </button>
@@ -143,81 +150,49 @@ function Landing() {
       </header>
 
       {/* Hero */}
-      <section className="mx-auto grid max-w-6xl gap-10 px-5 py-16 md:grid-cols-2 md:items-center md:py-24">
-        <div className="space-y-6">
-          <span className="inline-block rounded-full border border-yellow-400/40 bg-yellow-400/10 px-3 py-1 text-[11px] font-semibold tracking-wider text-yellow-400">
-            OFERTA DE LANÇAMENTO · 5 VAGAS
+      <section className="relative overflow-hidden">
+        <div className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[820px] -translate-x-1/2 rounded-full bg-[#2f6df6]/20 blur-3xl" />
+        <div className="relative mx-auto max-w-4xl px-5 py-16 text-center md:py-24">
+          <span className="inline-block rounded-full border border-[#8fb6ff]/40 bg-[#2f6df6]/10 px-3 py-1 text-[11px] font-semibold tracking-wider text-[#8fb6ff]">
+            CRM · IA · AUTOMAÇÃO NO WHATSAPP
           </span>
-          <h1 className="text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl">
-            O CRM completo da sua barbearia{" "}
-            <span className="text-yellow-400">dentro do WhatsApp</span>
+          <h1 className="mt-5 text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl md:text-6xl">
+            O CRM completo integrado ao{" "}
+            <span className="text-[#4f8bff]">WhatsApp</span> para sua empresa vender mais
           </h1>
-          <p className="text-lg text-neutral-300">
-            Assinaturas, vendas, funis, disparo em massa, respostas rápidas e gestão de equipe —
-            tudo em um só lugar, no seu próprio número, sem trocar de ferramenta e sem abrir
-            conversa por conversa.
+          <p className="mx-auto mt-5 max-w-2xl text-base text-slate-300 md:text-lg">
+            Disparo em massa, agente de IA, funis, automações, agenda, respostas rápidas,
+            treinamentos e gestão de equipe — tudo dentro do WhatsApp que você já usa.
           </p>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button size="lg" className="bg-yellow-400 font-bold text-neutral-950 hover:bg-yellow-300" onClick={scrollToForm}>
-              QUERO TESTAR GRÁTIS
+          <div className="mt-8 flex flex-col items-center gap-3">
+            <Button
+              size="lg"
+              className="w-full max-w-[280px] bg-[#2f6df6] px-8 py-5 text-base font-bold text-white hover:bg-[#1f5ae0]"
+              onClick={scrollToForm}
+            >
+              QUERO CONHECER
             </Button>
-            <span className="text-xs text-neutral-400">
-              Sem cartão para começar · {PROMO_PRICE_LABEL} no lançamento (depois {PREMIUM_PRICE_LABEL})
+            <span className="text-xs text-slate-400">
+              Sem cartão para começar · {PREMIUM_PRICE_LABEL} quando quiser liberar tudo
             </span>
-          </div>
-
-          <div className="flex flex-wrap gap-6 pt-2 text-sm text-neutral-400">
-            <span>✓ Usa seu número atual</span>
-            <span>✓ Instala em 1 clique</span>
-            <span>✓ Cancela quando quiser</span>
-          </div>
-        </div>
-
-        {/* Mock do painel */}
-        <div className="rounded-3xl border border-white/10 bg-neutral-900 p-4 shadow-2xl">
-          <div className="mb-3 flex gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-neutral-700" />
-            <span className="h-2.5 w-2.5 rounded-full bg-neutral-700" />
-            <span className="h-2.5 w-2.5 rounded-full bg-yellow-400" />
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { t: "Ativos", n: "184", c: "text-emerald-400" },
-              { t: "A vencer", n: "37", c: "text-yellow-400" },
-              { t: "Inadimplentes", n: "22", c: "text-red-400" },
-            ].map((col) => (
-              <div key={col.t} className="rounded-xl bg-neutral-950 p-3">
-                <p className="text-[10px] uppercase tracking-wider text-neutral-500">{col.t}</p>
-                <p className={`mt-1 text-2xl font-bold ${col.c}`}>{col.n}</p>
-                <div className="mt-3 space-y-2">
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} className="h-7 rounded-md bg-neutral-800/80" />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-3 rounded-xl bg-neutral-950 p-3">
-            <p className="text-[10px] uppercase tracking-wider text-neutral-500">Campanha rodando</p>
-            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-neutral-800">
-              <div className="h-full w-2/3 rounded-full bg-yellow-400" />
-            </div>
-            <p className="mt-2 text-xs text-neutral-400">64 de 96 cobranças enviadas · ritmo humano</p>
           </div>
         </div>
       </section>
 
       {/* Dores */}
-      <section className="border-y border-white/10 bg-neutral-900/50">
+      <section className="border-y border-white/10 bg-[#0d1830]">
         <div className="mx-auto max-w-6xl px-5 py-14">
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
             Se você se identifica com isso, o problema não é o seu time — é a falta de processo
           </h2>
           <ul className="mt-8 grid gap-4 sm:grid-cols-2">
             {DORES.map((d) => (
-              <li key={d} className="flex items-start gap-3 rounded-xl border border-white/10 bg-neutral-950 p-4">
-                <span className="mt-0.5 text-red-400">✕</span>
-                <span className="text-sm text-neutral-300">{d}</span>
+              <li
+                key={d}
+                className="flex items-start gap-3 rounded-xl border border-white/10 bg-[#0a1120] p-4"
+              >
+                <span className="mt-0.5 text-rose-400">✕</span>
+                <span className="text-sm text-slate-300">{d}</span>
               </li>
             ))}
           </ul>
@@ -227,33 +202,18 @@ function Landing() {
       {/* Recursos */}
       <section className="mx-auto max-w-6xl px-5 py-16">
         <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          Tudo que você precisa, <span className="text-yellow-400">sem sair do WhatsApp</span>
+          Tudo que sua operação precisa, <span className="text-[#4f8bff]">sem sair do WhatsApp</span>
         </h2>
         <div className="mt-10 grid gap-5 md:grid-cols-3">
           {RECURSOS.map((r) => (
-            <div key={r.titulo} className="rounded-2xl border border-white/10 bg-neutral-900 p-5">
-              <h3 className="font-semibold text-yellow-400">{r.titulo}</h3>
-              <p className="mt-2 text-sm text-neutral-300">{r.texto}</p>
+            <div
+              key={r.titulo}
+              className="rounded-2xl border border-white/10 bg-[#0d1830] p-5 transition hover:border-[#2f6df6]/50"
+            >
+              <h3 className="font-semibold text-[#8fb6ff]">{r.titulo}</h3>
+              <p className="mt-2 text-sm text-slate-300">{r.texto}</p>
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* Passos */}
-      <section className="border-y border-white/10 bg-neutral-900/50">
-        <div className="mx-auto max-w-6xl px-5 py-16">
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Funcionando em 3 minutos</h2>
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {PASSOS.map((p) => (
-              <div key={p.n} className="rounded-2xl border border-white/10 bg-neutral-950 p-6">
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-yellow-400 text-lg font-bold text-neutral-950">
-                  {p.n}
-                </span>
-                <h3 className="mt-4 font-semibold">{p.t}</h3>
-                <p className="mt-1 text-sm text-neutral-400">{p.d}</p>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -262,56 +222,52 @@ function Landing() {
         <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
           Comece grátis. Assine quando fizer sentido.
         </h2>
-        <p className="mt-3 text-center text-sm text-yellow-400">
-          Oferta de lançamento: {PROMO_PRICE_LABEL} para as 5 primeiras barbearias (depois {PREMIUM_PRICE_LABEL}).
-        </p>
         <div className="mt-10 grid gap-6 md:grid-cols-2">
-          <div className="rounded-2xl border border-white/10 bg-neutral-900 p-6">
-            <p className="text-sm font-semibold text-neutral-400">Grátis</p>
+          <div className="rounded-2xl border border-white/10 bg-[#0d1830] p-6">
+            <p className="text-sm font-semibold text-slate-400">Grátis</p>
             <p className="mt-2 text-3xl font-bold">R$ 0</p>
-            <ul className="mt-5 space-y-2 text-sm text-neutral-300">
+            <ul className="mt-5 space-y-2 text-sm text-slate-300">
               <li>✓ Até {FREE_LIMITS.customers} contatos</li>
               <li>✓ Disparo de até {FREE_LIMITS.dispatchBatch} contatos por vez</li>
-              <li>✓ Kanban, funis e importação de planilha</li>
-              <li className="text-neutral-500">✕ Gestão de equipe e vendas</li>
+              <li>✓ Funis, agenda e importação de planilha</li>
+              <li className="text-slate-500">✕ Gestão de equipe e vendas</li>
             </ul>
             <Button variant="secondary" className="mt-6 w-full" onClick={scrollToForm}>
               Quero conhecer
             </Button>
           </div>
-          <div className="rounded-2xl border-2 border-yellow-400 bg-neutral-900 p-6">
-            <p className="text-sm font-semibold text-yellow-400">Premium · lançamento</p>
+          <div className="rounded-2xl border-2 border-[#2f6df6] bg-[#0d1830] p-6 shadow-[0_0_60px_-20px_#2f6df6]">
+            <p className="text-sm font-semibold text-[#8fb6ff]">Premium</p>
             <p className="mt-2 text-3xl font-bold">
-              R$ 47<span className="text-base font-medium text-neutral-400">/mês</span>
-              <span className="ml-2 align-middle text-sm font-medium text-neutral-500 line-through">R$ 97</span>
+              R$ 97<span className="text-base font-medium text-slate-400">/mês</span>
             </p>
-            <ul className="mt-5 space-y-2 text-sm text-neutral-200">
+            <ul className="mt-5 space-y-2 text-sm text-slate-200">
               <li>✓ Contatos ilimitados</li>
               <li>✓ Disparos e campanhas ilimitados</li>
+              <li>✓ Funis, automações e agenda completos</li>
               <li>✓ Gestão de equipe, vendas e rankings</li>
-              <li>✓ Respostas rápidas com mídia</li>
+              <li>✓ Respostas rápidas com mídia e treinamentos</li>
               <li>✓ Suporte prioritário</li>
             </ul>
             <Button
-              className="mt-6 w-full bg-yellow-400 font-bold text-neutral-950 hover:bg-yellow-300"
+              className="mt-6 w-full bg-[#2f6df6] font-bold text-white hover:bg-[#1f5ae0]"
               onClick={scrollToForm}
             >
-              Garantir vaga de lançamento
+              Quero o Premium
             </Button>
           </div>
         </div>
       </section>
 
-
       {/* FAQ */}
-      <section className="border-t border-white/10 bg-neutral-900/50">
+      <section className="border-t border-white/10 bg-[#0d1830]">
         <div className="mx-auto max-w-3xl px-5 py-16">
           <h2 className="text-2xl font-bold tracking-tight">Perguntas frequentes</h2>
           <div className="mt-8 space-y-4">
             {FAQ.map((f) => (
-              <div key={f.q} className="rounded-xl border border-white/10 bg-neutral-950 p-5">
-                <p className="font-semibold text-yellow-400">{f.q}</p>
-                <p className="mt-2 text-sm text-neutral-300">{f.a}</p>
+              <div key={f.q} className="rounded-xl border border-white/10 bg-[#0a1120] p-5">
+                <p className="font-semibold text-[#8fb6ff]">{f.q}</p>
+                <p className="mt-2 text-sm text-slate-300">{f.a}</p>
               </div>
             ))}
           </div>
@@ -320,18 +276,18 @@ function Landing() {
 
       {/* Cadastro */}
       <section id="cadastro" className="px-5 py-20">
-        <div className="mx-auto max-w-md rounded-3xl border border-yellow-400/30 bg-neutral-900 p-7">
+        <div className="mx-auto max-w-md rounded-3xl border border-[#2f6df6]/40 bg-[#0d1830] p-7">
           {sent ? (
             <div className="py-6 text-center">
               <h2 className="text-2xl font-bold tracking-tight">Tudo certo!</h2>
-              <p className="mt-2 text-sm text-neutral-400">
+              <p className="mt-2 text-sm text-slate-400">
                 Em breve um especialista entrará em contato.
               </p>
             </div>
           ) : (
             <>
-              <h2 className="text-2xl font-bold tracking-tight">Quero conhecer o Zetta CRM</h2>
-              <p className="mt-2 text-sm text-neutral-400">
+              <h2 className="text-2xl font-bold tracking-tight">Quero conhecer o Zaylo CRM</h2>
+              <p className="mt-2 text-sm text-slate-400">
                 Preencha seus dados que entramos em contato com você. Leva menos de um minuto.
               </p>
               <form onSubmit={onSubmit} className="mt-6 space-y-4">
@@ -374,7 +330,7 @@ function Landing() {
                 <Button
                   type="submit"
                   size="lg"
-                  className="w-full bg-yellow-400 font-bold text-neutral-950 hover:bg-yellow-300"
+                  className="w-full bg-[#2f6df6] font-bold text-white hover:bg-[#1f5ae0]"
                   disabled={loading}
                 >
                   {loading ? "Enviando…" : "QUERO CONHECER"}
@@ -386,9 +342,9 @@ function Landing() {
       </section>
 
       <footer className="border-t border-white/10 py-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-5 text-xs text-neutral-500">
-          <span>Zetta CRM · CRM de assinaturas para barbearias</span>
-          <Link to="/politicas" className="text-neutral-400 transition-colors hover:text-yellow-400">
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-5 text-xs text-slate-500">
+          <span>Zaylo CRM · CRM completo integrado ao WhatsApp</span>
+          <Link to="/politicas" className="text-slate-400 transition-colors hover:text-[#8fb6ff]">
             Política de Privacidade e Termos de Uso
           </Link>
         </div>
