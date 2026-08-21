@@ -367,9 +367,25 @@
     const panel = ensureSharedPanel();
     if (isSwap) showPanelSpinner(panel);
     if (kind === "qr") await renderQuickReplyPanel(panel);
-    else if (kind === "funnel") await renderFunnelPanel(panel);
     else if (kind === "profile") await renderCustomerPanel(panel, "profile");
     else if (kind === "deal") await renderCustomerPanel(panel, "deal");
+  }
+
+  /** Fileira de 3 ícones (raio / perfil / valor) que fica no topo do
+   * painel compartilhado, pra trocar de seção sem fechar nada. */
+  function panelSwitcherHtml(activeKind) {
+    const items = [
+      { kind: "qr", icon: BOLT_SVG, label: "Respostas rápidas" },
+      { kind: "profile", icon: PROFILE_SVG, label: "Perfil do cliente" },
+      { kind: "deal", icon: DEAL_SVG, label: "Valor do cliente" },
+    ];
+    return `<div class="crm-qrp-switcher">
+      ${items
+        .map(
+          (it) => `<button class="crm-qrp-switch-btn${it.kind === activeKind ? " is-active" : ""}" data-switch="${it.kind}" title="${escapeHtml(it.label)}">${it.icon}</button>`,
+        )
+        .join("")}
+    </div>`;
   }
 
   /** Prompt leve — ancorado no botão que abriu, sem escurecer/desfocar a
@@ -1398,9 +1414,7 @@
   }
 
   const CHAT_BTN_ID = "crm-chat-action";
-  const QR_BTN_ID = "crm-chat-quickreply";
   const PROFILE_BTN_ID = "crm-chat-profile";
-  const DEAL_BTN_ID = "crm-chat-deal";
   const BOLT_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>`;
   const PROFILE_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>`;
   const DEAL_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10"/><path d="M9 9.5c0-1.4 1.3-2.5 3-2.5s3 .9 3 2.1c0 1.7-1.6 2.2-3.2 2.7-1.6.5-2.8 1.1-2.8 2.6 0 1.2 1.3 2.1 3 2.1s3-1 3-2.3"/></svg>`;
@@ -1430,13 +1444,13 @@
     const header = document.querySelector("#main header");
     if (!header) return;
     const hasCrm = document.getElementById(CHAT_BTN_ID);
-    const hasQr = document.getElementById(QR_BTN_ID);
-    if (hasCrm && hasQr && header.contains(hasCrm) && header.contains(hasQr)) {
+    const hasProfile = document.getElementById(PROFILE_BTN_ID);
+    if (hasCrm && hasProfile && header.contains(hasCrm) && header.contains(hasProfile)) {
       updateFunnelBadge();
       return;
     }
     hasCrm?.remove();
-    hasQr?.remove();
+    hasProfile?.remove();
 
     const btn = document.createElement("button");
     btn.id = CHAT_BTN_ID;
@@ -1448,58 +1462,39 @@
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      void openSharedPanel("funnel");
+      // Independente do painel grande — popover leve ancorado, como
+      // sempre foi.
+      if (document.querySelector(".crm-fn-pop")) {
+        document.querySelector(".crm-fn-pop")?.remove();
+        return;
+      }
+      openFunnelPopover(btn);
     });
 
-    const qr = document.createElement("button");
-    qr.id = QR_BTN_ID;
-    qr.className = "crm-chat-btn crm-chat-btn-icon";
-    qr.type = "button";
-    qr.setAttribute("data-label", "Respostas rápidas");
-    qr.innerHTML = BOLT_SVG;
-    // Aquece o motor antes do clique: era daí que vinha o atraso do 1º envio.
-    qr.addEventListener("mouseenter", prewarmEngine);
-    qr.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      void openSharedPanel("qr");
-    });
-
+    // Só um segundo botão na conversa agora: "Perfil". Ele é a porta de
+    // entrada do painel grande, que já nasce mostrando Respostas rápidas
+    // — dentro dele tem os 3 ícones (raio/perfil/valor) pra trocar sem
+    // fechar nada.
     const profileBtn = document.createElement("button");
     profileBtn.id = PROFILE_BTN_ID;
     profileBtn.className = "crm-chat-btn crm-chat-btn-icon";
     profileBtn.type = "button";
     profileBtn.setAttribute("data-label", "Perfil do cliente");
     profileBtn.innerHTML = PROFILE_SVG;
+    profileBtn.addEventListener("mouseenter", prewarmEngine);
     profileBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      void openSharedPanel("profile");
-    });
-
-    const dealBtn = document.createElement("button");
-    dealBtn.id = DEAL_BTN_ID;
-    dealBtn.className = "crm-chat-btn crm-chat-btn-icon";
-    dealBtn.type = "button";
-    dealBtn.setAttribute("data-label", "Valor do cliente");
-    dealBtn.innerHTML = DEAL_SVG;
-    dealBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      void openSharedPanel("deal");
+      void openSharedPanel("qr");
     });
 
     const slot = headerActionsSlot(header);
     if (slot === header) {
       header.appendChild(btn);
-      header.appendChild(qr);
-      header.appendChild(dealBtn);
       header.appendChild(profileBtn);
     } else {
       slot.insertAdjacentElement("beforebegin", btn);
-      btn.insertAdjacentElement("afterend", qr);
-      qr.insertAdjacentElement("afterend", dealBtn);
-      dealBtn.insertAdjacentElement("afterend", profileBtn);
+      btn.insertAdjacentElement("afterend", profileBtn);
     }
     updateFunnelBadge();
   }
@@ -1551,7 +1546,19 @@
   // fundo (não é mais um modal de tela cheia). Lista as etapas do Funil
   // principal; clicar na bolinha adiciona (se vazia) ou remove (se cheia).
   // ---------------------------------------------------------------------
-  async function renderFunnelPanel(panel) {
+  // ---------------------------------------------------------------------
+  // Popover leve do funil — independente do painel grande (raio/perfil/
+  // valor). Fica ancorado no próprio ícone, fecha ao clicar fora, como
+  // era originalmente.
+  // ---------------------------------------------------------------------
+  function openFunnelPopover(anchor) {
+    document.querySelector(".crm-fn-pop")?.remove();
+    const pop = document.createElement("div");
+    pop.className = "crm-fn-pop";
+    const rect = anchor.getBoundingClientRect();
+    pop.style.top = `${rect.bottom + 8}px`;
+    pop.style.left = `${Math.min(Math.max(8, rect.left), window.innerWidth - 268)}px`;
+
     let chat = null;
     // Estado conhecido da etapa atual, guardado localmente. NÃO comparamos
     // mais contra o array global `funnels` a cada render: ele é trocado por
@@ -1573,34 +1580,32 @@
     }
 
     const renderRows = () => {
-      if (activePanelKind !== "funnel" || !panel.isConnected) return;
       const funnel = tabFunnel();
-      const head = `<div class="crm-qrp-head"><div class="crm-qr-mark">${ICONS.funnel}</div><p class="crm-qrp-title">Funil principal</p><button class="crm-qrp-close" data-close title="Fechar">&times;</button></div>`;
       if (!funnel) {
-        panel.innerHTML = `${head}<div class="crm-qrp-body"><p class="crm-fn-pop-empty">Funil principal ainda não foi criado.</p></div>`;
+        pop.innerHTML = `<p class="crm-fn-pop-title">Funil principal</p><p class="crm-fn-pop-empty">Funil principal ainda não foi criado.</p>`;
         return;
       }
       const stages = funnel.stages || [];
       if (!stages.length) {
-        panel.innerHTML = `${head}<div class="crm-qrp-body"><p class="crm-fn-pop-empty">Ainda não tem etapas.</p></div>`;
+        pop.innerHTML = `<p class="crm-fn-pop-title">Funil principal</p><p class="crm-fn-pop-empty">Ainda não tem etapas.</p>`;
         return;
       }
-      panel.innerHTML = `
-        ${head}
-        <div class="crm-qrp-body">
-          ${stages
-            .map((st) => {
-              const isOn = st.id === currentStageId;
-              return `<button class="crm-fn-pop-row" data-stage="${escapeHtml(st.id)}">
-                <span class="crm-fn-pop-dot${isOn ? " is-on" : ""}"></span>
-                <span class="crm-fn-pop-name">${escapeHtml(st.name)}</span>
-              </button>`;
-            })
-            .join("")}
-        </div>
+      pop.innerHTML = `
+        <p class="crm-fn-pop-title">Funil principal</p>
+        ${stages
+          .map((st) => {
+            const isOn = st.id === currentStageId;
+            return `<button class="crm-fn-pop-row" data-stage="${escapeHtml(st.id)}">
+              <span class="crm-fn-pop-dot${isOn ? " is-on" : ""}"></span>
+              <span class="crm-fn-pop-name">${escapeHtml(st.name)}</span>
+            </button>`;
+          })
+          .join("")}
       `;
     };
 
+    document.body.appendChild(pop);
+    animatePopIn(pop);
     renderRows();
     activeChat().then((c) => {
       chat = c;
@@ -1612,9 +1617,16 @@
       renderRows();
     });
 
-    panelClickHandler = async (e) => {
-      if (e.target.closest("[data-close]")) return closeSharedPanel();
+    const close = () => {
+      pop.remove();
+      document.removeEventListener("mousedown", onDoc, true);
+    };
+    function onDoc(ev) {
+      if (!pop.contains(ev.target) && ev.target !== anchor) close();
+    }
+    setTimeout(() => document.addEventListener("mousedown", onDoc, true), 0);
 
+    pop.addEventListener("click", async (e) => {
       const row = e.target.closest("[data-stage]");
       if (!row || row.disabled) return;
       const stageId = row.getAttribute("data-stage");
@@ -1624,34 +1636,31 @@
       row.disabled = true;
       if (!chat) chat = await activeChat();
       if (!chat) {
-        crmToast("Não consegui ler a conversa aberta.", "err");
+        crmToast("Não consegui ler a conversa aberta.", "err", anchor);
         row.disabled = false;
         return;
       }
       const wasOn = stageId === currentStageId;
 
       if (wasOn) {
-        // Já estava aqui → remove.
         if (!currentCardId) { row.disabled = false; return; }
         const r = await chrome.runtime
           .sendMessage({ type: "api", path: "/api/public/extension/funnel-cards", opts: { method: "DELETE", body: JSON.stringify({ id: currentCardId } ) } })
           .catch(() => null);
         if (r?.ok) {
-          crmToast("Removido do funil");
+          crmToast("Removido do funil", "ok", anchor);
           currentCardId = null;
           currentStageId = null;
           updateFunnelBadge();
           renderRows();
           void loadFunnels();
         } else {
-          crmToast(r?.error || "Não consegui remover.", "err");
+          crmToast(r?.error || "Não consegui remover.", "err", anchor);
           row.disabled = false;
         }
         return;
       }
 
-      // Não estava aqui → adiciona/move (o servidor já move de etapa
-      // dentro do mesmo funil automaticamente).
       const r = await chrome.runtime
         .sendMessage({
           type: "api",
@@ -1669,17 +1678,17 @@
         })
         .catch(() => null);
       if (r?.ok) {
-        crmToast(`Adicionado em ${stage.name}`);
+        crmToast(`Adicionado em ${stage.name}`, "ok", anchor);
         currentCardId = r.card?.id || currentCardId;
         currentStageId = stage.id;
         updateFunnelBadge();
         renderRows();
         void loadFunnels();
       } else {
-        crmToast(r?.error || "Não consegui adicionar ao funil.", "err");
+        crmToast(r?.error || "Não consegui adicionar ao funil.", "err", anchor);
         row.disabled = false;
       }
-    };
+    });
   }
 
   // ---------------------------------------------------------------------
@@ -1723,9 +1732,11 @@
   async function renderCustomerPanel(panel, kind) {
     const title = kind === "profile" ? "Perfil do cliente" : "Valor do cliente";
     const icon = kind === "profile" ? PROFILE_SVG : DEAL_SVG;
-    panel.innerHTML = `<div class="crm-qrp-head"><div class="crm-qr-mark">${icon}</div><p class="crm-qrp-title">${title}</p><button class="crm-qrp-close" data-close title="Fechar">&times;</button></div><div class="crm-qrp-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
+    panel.innerHTML = `<div class="crm-qrp-head"><div class="crm-qr-mark">${icon}</div><p class="crm-qrp-title">${title}</p><button class="crm-qrp-close" data-close title="Fechar">&times;</button></div>${panelSwitcherHtml(kind)}<div class="crm-qrp-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
     panelClickHandler = (e) => {
-      if (e.target.closest("[data-close]")) closeSharedPanel();
+      if (e.target.closest("[data-close]")) return closeSharedPanel();
+      const sw = e.target.closest("[data-switch]");
+      if (sw) return void openSharedPanel(sw.getAttribute("data-switch"));
     };
 
     const chat = await activeChat();
@@ -1810,6 +1821,8 @@
 
     panelClickHandler = async (e) => {
       if (e.target.closest("[data-close]")) return closeSharedPanel();
+      const sw = e.target.closest("[data-switch]");
+      if (sw) return void openSharedPanel(sw.getAttribute("data-switch"));
       if (!e.target.closest("[data-save]")) return;
       const saveBtn = panel.querySelector("[data-save]");
       const fields = {};
@@ -1896,8 +1909,34 @@
           <button class="crm-qrp-new" data-new>+ Nova</button>
           <button class="crm-qrp-close" data-close title="Fechar">&times;</button>
         </div>
+        ${panelSwitcherHtml("qr")}
         <div class="crm-qrp-body">${rows}</div>
       `;
+    }
+
+    // A página do WhatsApp bloqueia carregar <img>/<video>/<audio> de uma
+    // URL externa (mesma restrição de CSP que já lidávamos no envio) — por
+    // isso a prévia nunca aparecia. Baixa a mídia pela mesma ponte que já
+    // usamos pra enviar (roda no service worker, fora da CSP da página) e
+    // usa um blob local como fonte.
+    async function ensurePreviewBlob(step) {
+      if (step._previewBlobUrl || step._previewLoading || !step.url) return;
+      step._previewLoading = true;
+      const r = await chrome.runtime
+        .sendMessage({ type: "prefetch_media", actions: [{ type: step.type, url: step.url, mime: step.mime }] })
+        .catch(() => null);
+      step._previewLoading = false;
+      const item = r?.ok ? r.actions?.[0] : null;
+      if (!item?.data_base64) return;
+      try {
+        const bin = atob(item.data_base64);
+        const bytes = new Uint8Array(bin.length);
+        for (let k = 0; k < bin.length; k += 1) bytes[k] = bin.charCodeAt(k);
+        const blob = new Blob([bytes], { type: item.mime || step.mime || "application/octet-stream" });
+        step._previewBlobUrl = URL.createObjectURL(blob);
+      } catch {
+        /* sem preview, segue sem quebrar o resto do formulário */
+      }
     }
 
     function stepFieldsHtml(s, i) {
@@ -1906,15 +1945,23 @@
       }
       if (s.type === "image" || s.type === "video" || s.type === "audio") {
         const fileLabel = s._uploading ? "Enviando..." : s.filename ? s.filename : "Nenhum arquivo escolhido";
+        const previewSrc = s._previewBlobUrl || null;
         const preview = s._uploading
           ? ""
-          : s.type === "image" && s.url
-            ? `<img src="${escapeHtml(s.url)}" class="crm-qrp-preview-img" alt="" />`
-            : s.type === "video" && s.url
-              ? `<video src="${escapeHtml(s.url)}" class="crm-qrp-preview-video" controls></video>`
-              : s.type === "audio" && s.url
-                ? `<audio src="${escapeHtml(s.url)}" class="crm-qrp-preview-audio" controls></audio>`
-                : "";
+          : previewSrc && s.type === "image"
+            ? `<img src="${escapeHtml(previewSrc)}" class="crm-qrp-preview-img" alt="" />`
+            : previewSrc && s.type === "video"
+              ? `<video src="${escapeHtml(previewSrc)}" class="crm-qrp-preview-video" controls></video>`
+              : previewSrc && s.type === "audio"
+                ? `<audio src="${escapeHtml(previewSrc)}" class="crm-qrp-preview-audio" controls></audio>`
+                : s.url
+                  ? `<p class="crm-qrp-preview-loading">Carregando prévia...</p>`
+                  : "";
+        if (s.url && !previewSrc && !s._uploading) {
+          void ensurePreviewBlob(s).then(() => {
+            if (activePanelKind === "qr" && mode === "form") paintForm(currentTitle());
+          });
+        }
         return `
           ${preview}
           <div class="crm-qrp-file-row">
@@ -1992,7 +2039,7 @@
 
     function paintForm(titleValue) {
       panel.innerHTML = `
-        <div class="crm-qrp-head">
+        <div class="crm-qrp-head" style="border-bottom:1px solid var(--z-line-soft)">
           <button class="crm-qrp-back" data-back title="Voltar">&larr;</button>
           <input class="crm-qrp-title-input" data-field="title" value="${escapeHtml(titleValue)}" placeholder="Nome da resposta" maxlength="120" />
           <button class="crm-qrp-close" data-close title="Fechar">&times;</button>
@@ -2018,6 +2065,8 @@
 
     panelClickHandler = async (e) => {
       if (e.target.closest("[data-close]")) return closeSharedPanel();
+      const sw = e.target.closest("[data-switch]");
+      if (sw) return void openSharedPanel(sw.getAttribute("data-switch"));
       if (e.target.closest("[data-new]")) return renderForm(null);
       if (e.target.closest("[data-back]")) return renderList();
 
@@ -2187,7 +2236,17 @@
             })
             .catch(() => null);
           if (r?.ok) {
-            steps[i] = { ...steps[i], path: r.path, url: r.url, mime: r.mime, filename: r.filename, _uploading: false };
+            steps[i] = {
+              ...steps[i],
+              path: r.path,
+              url: r.url,
+              mime: r.mime,
+              filename: r.filename,
+              _uploading: false,
+              // Já temos o arquivo local — usa ele direto, sem baixar de
+              // volta pra mostrar a prévia.
+              _previewBlobUrl: URL.createObjectURL(file),
+            };
             crmToast("Arquivo enviado");
           } else {
             steps[i]._uploading = false;

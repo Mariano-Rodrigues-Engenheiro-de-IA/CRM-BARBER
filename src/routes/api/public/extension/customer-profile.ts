@@ -19,7 +19,7 @@ const patchSchema = z.object({
   avatar_url: z.string().max(500000).nullable().optional(),
 });
 
-const SELECT = "id, wa_contact_id, phone, name, email, gender, birth_date, language, country, city, avatar_url";
+const SELECT = "id, wa_contact_id, phone, name, email, gender, birth_date, language, country, city, avatar_url, ai_summary, ai_summary_updated_at";
 
 export const Route = createFileRoute("/api/public/extension/customer-profile")({
   server: {

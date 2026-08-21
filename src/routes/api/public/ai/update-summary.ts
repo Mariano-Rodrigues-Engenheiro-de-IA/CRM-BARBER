@@ -45,28 +45,33 @@ export const Route = createFileRoute("/api/public/ai/update-summary")({
         }
         const { phone, summary } = parsed.data;
         const digits = phone.replace(/\D/g, "");
+        const now = new Date().toISOString();
 
-        const { data: customer } = await supabaseAdmin
-          .from("customers")
+        // Antes isso procurava na tabela de assinantes (customers) — só que
+        // a maioria dos leads que passam pela IA no WhatsApp nunca vira
+        // assinante, então o resumo era silenciosamente descartado
+        // ("cliente não encontrado"). customer_profiles casa por telefone
+        // com QUALQUER lead, e cria o registro na hora se ainda não existir.
+        const { data: existing } = await supabaseAdmin
+          .from("customer_profiles")
           .select("id")
           .eq("barbershop_id", shop)
           .eq("phone", digits)
           .maybeSingle();
 
-        if (!customer) {
-          // Cliente ainda não existe no CRM — não é erro, a IA pode estar
-          // conversando com alguém que ainda não virou lead por aqui.
-          return jsonResponse(request, { ok: true, skipped: "customer_not_found" });
+        if (existing) {
+          const { error } = await supabaseAdmin
+            .from("customer_profiles")
+            .update({ ai_summary: summary, ai_summary_updated_at: now })
+            .eq("id", existing.id);
+          if (error) return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
+          return jsonResponse(request, { ok: true });
         }
 
         const { error } = await supabaseAdmin
-          .from("customers")
-          .update({ ai_summary: summary, ai_summary_updated_at: new Date().toISOString() })
-          .eq("id", customer.id);
-        if (error) {
-          return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
-        }
-
+          .from("customer_profiles")
+          .insert({ barbershop_id: shop, phone: digits, ai_summary: summary, ai_summary_updated_at: now });
+        if (error) return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
         return jsonResponse(request, { ok: true });
       },
     },

@@ -1059,6 +1059,8 @@ export type Database = {
       }
       customer_profiles: {
         Row: {
+          ai_summary: string | null
+          ai_summary_updated_at: string | null
           avatar_url: string | null
           barbershop_id: string
           birth_date: string | null
@@ -1075,6 +1077,8 @@ export type Database = {
           wa_contact_id: string | null
         }
         Insert: {
+          ai_summary?: string | null
+          ai_summary_updated_at?: string | null
           avatar_url?: string | null
           barbershop_id: string
           birth_date?: string | null
@@ -1091,6 +1095,8 @@ export type Database = {
           wa_contact_id?: string | null
         }
         Update: {
+          ai_summary?: string | null
+          ai_summary_updated_at?: string | null
           avatar_url?: string | null
           barbershop_id?: string
           birth_date?: string | null

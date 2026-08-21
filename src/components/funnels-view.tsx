@@ -19,7 +19,6 @@ import {
 import {
   applyFunnelActions,
   canOpenWhatsapp,
-  isRealPhone,
   openWhatsappChat,
 } from "@/lib/wa-actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -1453,19 +1452,35 @@ function CardDrawer({
   const [aiSummary, setAiSummary] = useState<{ text: string; updatedAt: string | null } | null>(null);
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
 
+  // Perfil do cliente / Valor do cliente / Resumo da IA — mesma identidade
+  // de contato acessível pela extensão do WhatsApp (ícones na conversa).
+  const contactQuery = card.wa_contact_id
+    ? `wa_contact_id=${encodeURIComponent(card.wa_contact_id)}`
+    : card.phone
+      ? `phone=${encodeURIComponent(card.phone)}`
+      : null;
+
   useEffect(() => {
-    if (!isRealPhone(card.phone)) return;
+    // O resumo da IA vive em customer_profiles agora (casa com QUALQUER
+    // lead por wa_contact_id/telefone) — antes vivia na tabela de
+    // assinantes, e por isso quase nunca era encontrado: a IA mandava
+    // certinho, mas o CRM descartava em silêncio por "cliente não
+    // encontrado", dando a impressão de bug de tela ("carrega e some").
+    if (!contactQuery) return;
     setAiSummaryLoading(true);
-    api(`/api/public/extension/customers?phone=${encodeURIComponent(card.phone || "")}`)
+    api(`/api/public/extension/customer-profile?${contactQuery}`)
       .then((r) => {
-        const customers = (r as Record<string, unknown>).customers;
-        if (!Array.isArray(customers) || customers.length === 0) return;
-        const c = customers[0] as Record<string, unknown>;
-        if (c?.ai_summary) setAiSummary({ text: c.ai_summary as string, updatedAt: (c.ai_summary_updated_at ?? null) as string | null });
+        const profile = (r as { ok?: boolean; profile?: Record<string, unknown> | null })?.profile;
+        if (profile?.ai_summary) {
+          setAiSummary({
+            text: profile.ai_summary as string,
+            updatedAt: (profile.ai_summary_updated_at ?? null) as string | null,
+          });
+        }
       })
       .finally(() => setAiSummaryLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [card.phone]);
+  }, [contactQuery]);
 
   async function saveNotes() {
     setBusy(true);
@@ -1483,13 +1498,6 @@ function CardDrawer({
     setTimeout(() => setSaved(false), 1800);
   }
 
-  // Perfil do cliente / Valor do cliente — mesmos dados acessíveis pela
-  // extensão do WhatsApp (ícones na conversa), aqui dentro do card do funil.
-  const contactQuery = card.wa_contact_id
-    ? `wa_contact_id=${encodeURIComponent(card.wa_contact_id)}`
-    : card.phone
-      ? `phone=${encodeURIComponent(card.phone)}`
-      : null;
   const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [deal, setDeal] = useState<Record<string, unknown> | null>(null);
@@ -1582,18 +1590,14 @@ function CardDrawer({
   }
 
   return (
-    <Overlay title={card.title} onClose={onClose}>
+    <Overlay title={tab === "profile" ? "Perfil do cliente" : card.title} onClose={onClose}>
       <div className="space-y-4">
-        <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-700">
-          {isRealPhone(card.phone) ? card.phone : "sem telefone"}
-        </div>
-
-        {aiSummaryLoading && (
+        {tab !== "profile" && aiSummaryLoading && (
           <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-3 text-xs text-neutral-400">
             Carregando resumo da IA...
           </div>
         )}
-        {aiSummary && (
+        {tab !== "profile" && aiSummary && (
           <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
             <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-blue-700">
               <span>✨</span> Resumo da IA
@@ -1607,9 +1611,10 @@ function CardDrawer({
           </div>
         )}
 
+        {tab !== "profile" && (
         <div className="flex items-center justify-between gap-2">
           <h4 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-            {tab === "notes" ? "Anotações" : tab === "schedule" ? "Mensagens agendadas" : tab === "profile" ? "Perfil do cliente" : "Valor do cliente"}
+            {tab === "notes" ? "Anotações" : tab === "schedule" ? "Mensagens agendadas" : "Valor do cliente"}
           </h4>
           {canOpenWhatsapp(card.phone, card.wa_id) && (
             <button
@@ -1620,6 +1625,7 @@ function CardDrawer({
             </button>
           )}
         </div>
+        )}
 
         {tab === "notes" && (
           <>

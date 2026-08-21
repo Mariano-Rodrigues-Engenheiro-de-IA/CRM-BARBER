@@ -606,8 +606,33 @@ html body.crm-shell.crm-qr-open #app {
   align-items: center;
   gap: 8px;
   padding: 14px 14px 12px;
-  border-bottom: 1px solid var(--z-line-soft);
 }
+/* Fileira de troca (raio / perfil / valor) — os três moram no mesmo
+   painel; clicar num diferente troca o conteúdo sem fechar nada. */
+.crm-qrp-switcher {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 4px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--z-line-soft);
+  background: var(--z-bar);
+}
+.crm-qrp-switch-btn {
+  flex: 1;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--z-text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+.crm-qrp-switch-btn svg { width: 16px; height: 16px; }
+.crm-qrp-switch-btn:hover { background: var(--z-surface-2); color: var(--z-text); }
+.crm-qrp-switch-btn.is-active { background: var(--z-accent); color: #fff; border-color: var(--z-accent); }
 .crm-qrp-title { flex: 1; margin: 0; font-size: 14px; font-weight: 700; color: var(--z-text); }
 .crm-qrp-title-input {
   flex: 1; min-width: 0; border: 1px solid var(--z-line); border-radius: 8px; background: var(--z-bar);
@@ -686,6 +711,7 @@ html body.crm-shell.crm-qr-open #app {
 .crm-qrp-preview-img { width: 100%; max-height: 140px; object-fit: cover; border-radius: 8px; margin-bottom: 6px; display: block; }
 .crm-qrp-preview-video { width: 100%; max-height: 160px; border-radius: 8px; margin-bottom: 6px; display: block; background: #000; }
 .crm-qrp-preview-audio { width: 100%; height: 32px; margin-bottom: 6px; display: block; }
+.crm-qrp-preview-loading { margin: 0 0 6px; font-size: 11.5px; color: var(--z-text-dim); }
 .crm-qrp-file-btn {
   flex-shrink: 0; border: 1px solid var(--z-accent); border-radius: 8px; padding: 6px 10px; font-size: 11.5px;
   font-weight: 700; color: var(--z-accent); cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease;
