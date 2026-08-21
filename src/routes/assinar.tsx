@@ -29,14 +29,15 @@ const TOKEN_KEY = "crm_ext_token_v1";
 type Identity = { token?: string; barbershopId?: string; phone?: string; email?: string; name?: string };
 
 function Assinar() {
-  const [plan, setPlan] = useState<PlanId>("promo");
+  const [plan, setPlan] = useState<PlanId>("premium");
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
 
   useEffect(() => {
     const url = new URL(window.location.href);
     const planParam = url.searchParams.get("plano");
-    setPlan(planParam === "premium" ? "premium" : "promo");
+    // Premium (R$ 97) é o plano padrão; a promo só sai por link explícito.
+    setPlan(planParam === "promo" ? "promo" : "premium");
 
     const stored = localStorage.getItem(TOKEN_KEY);
     const token = url.searchParams.get("token") ?? (stored && stored.startsWith("ext_") ? stored : undefined);
@@ -62,15 +63,18 @@ function Assinar() {
     <div className="min-h-screen bg-background">
       <PaymentTestModeBanner />
       <div className="mx-auto max-w-3xl px-4 py-10">
-        <h1 className="text-2xl font-semibold tracking-tight">Zetta CRM Premium</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Zaylo CRM Premium</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {plan === "promo" ? (
             <>
-              Oferta de lançamento: <strong>{PROMO_PRICE_LABEL}</strong> (depois {PREMIUM_PRICE_LABEL}) · contatos e
-              disparos ilimitados, gestão de equipe, funis e respostas rápidas.
+              Oferta especial: <strong>{PROMO_PRICE_LABEL}</strong> (valor normal {PREMIUM_PRICE_LABEL}) · contatos e
+              disparos ilimitados, IA, funis, agenda, automações e gestão de equipe.
             </>
           ) : (
-            <>{PREMIUM_PRICE_LABEL} · contatos e disparos ilimitados, gestão de equipe, funis e respostas rápidas.</>
+            <>
+              {PREMIUM_PRICE_LABEL} · contatos e disparos ilimitados, IA, funis, agenda, automações e gestão de
+              equipe.
+            </>
           )}
         </p>
 
@@ -91,10 +95,10 @@ function Assinar() {
             }}
           >
             <p className="text-sm text-muted-foreground">
-              Informe o WhatsApp da barbearia — é por ele que a extensão libera o Premium.
+              Informe o WhatsApp da empresa — é por ele que a extensão libera o Premium.
             </p>
             <div className="space-y-2">
-              <Label htmlFor="name">Nome da barbearia</Label>
+              <Label htmlFor="name">Nome da empresa</Label>
               <Input id="name" value={form.name} maxLength={120} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
             </div>
             <div className="space-y-2">

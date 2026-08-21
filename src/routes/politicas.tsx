@@ -7,13 +7,13 @@ export const Route = createFileRoute("/politicas")({
       {
         name: "description",
         content:
-          "Política de privacidade e termos de uso do Zetta CRM, extensão de Chrome para gestão de assinantes e campanhas no WhatsApp Web.",
+          "Política de privacidade e termos de uso do Zaylo CRM, extensão de Chrome para gestão de assinantes e campanhas no WhatsApp Web.",
       },
       { property: "og:title", content: "Política de Privacidade e Termos — CRM Zaylo" },
       {
         property: "og:description",
         content:
-          "Como o Zetta CRM coleta, usa e protege seus dados, e as regras de uso da extensão.",
+          "Como o Zaylo CRM coleta, usa e protege seus dados, e as regras de uso da extensão.",
       },
       { property: "og:type", content: "article" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -87,13 +87,13 @@ function PoliticasPage() {
         <div className="mt-12 space-y-12">
           <Section id="privacidade" titulo="1. Política de Privacidade">
             <p>
-              Esta Política de Privacidade descreve como o Zetta CRM ("nós", "a plataforma") coleta,
+              Esta Política de Privacidade descreve como o Zaylo CRM ("nós", "a plataforma") coleta,
               usa e protege as informações dos usuários ("você") ao utilizar nossa extensão de Chrome
-              e o painel web associado. Ao usar o Zetta CRM, você concorda com as práticas descritas
+              e o painel web associado. Ao usar o Zaylo CRM, você concorda com as práticas descritas
               neste documento.
             </p>
             <p>
-              O Zetta CRM é uma ferramenta de gestão de assinantes e campanhas de mensagens que opera
+              O Zaylo CRM é uma ferramenta de gestão de assinantes e campanhas de mensagens que opera
               sobre a sua própria sessão do WhatsApp Web. Não somos afiliados ao WhatsApp nem à Meta.
             </p>
           </Section>
@@ -171,12 +171,12 @@ function PoliticasPage() {
 
           <Section id="termos" titulo="8. Termos de Uso">
             <p>
-              Ao instalar e usar o Zetta CRM, você concorda com estes Termos. A plataforma é
+              Ao instalar e usar o Zaylo CRM, você concorda com estes Termos. A plataforma é
               fornecida "como está", sem garantias de disponibilidade ininterrupta ou ausência total
               de erros.
             </p>
             <p>
-              O Zetta CRM é uma ferramenta de gestão e automação de envios. É de sua
+              O Zaylo CRM é uma ferramenta de gestão e automação de envios. É de sua
               responsabilidade utilizar a plataforma em conformidade com os termos de serviço do
               WhatsApp e com a legislação aplicável, incluindo regras de envio de mensagens em massa
               e consentimento de contatos.
@@ -199,7 +199,7 @@ function PoliticasPage() {
 
           <Section id="pagamentos" titulo="10. Planos e pagamentos">
             <p>
-              O Zetta CRM oferece um plano gratuito com limites de uso (assinalantes e mensagens) e
+              O Zaylo CRM oferece um plano gratuito com limites de uso (assinalantes e mensagens) e
               um plano Premium (R$ 97/mês) com uso ampliado. A cobrança do Premium é processada pela
               Stripe e é recorrente mensalmente, sem fidelidade — você pode cancelar quando quiser.
             </p>
@@ -211,7 +211,7 @@ function PoliticasPage() {
 
           <Section id="limitacao" titulo="11. Limitação de responsabilidade">
             <p>
-              O Zetta CRM não se responsabiliza por bloqueios, suspensões ou banimentos de números
+              O Zaylo CRM não se responsabiliza por bloqueios, suspensões ou banimentos de números
               de WhatsApp decorrentes do uso da plataforma, especialmente quando o envio ocorre por
               provedores não oficiais ou em desacordo com os termos do WhatsApp. A escolha do
               provedor e o volume de envios são de sua responsabilidade.
@@ -233,7 +233,7 @@ function PoliticasPage() {
 
         <div className="mt-16 rounded-2xl border border-white/10 bg-neutral-900 p-5 text-center">
           <p className="text-sm text-neutral-300">
-            Ainda tem dúvidas sobre como o Zetta CRM funciona?
+            Ainda tem dúvidas sobre como o Zaylo CRM funciona?
           </p>
           <Link
             to="/"
@@ -245,7 +245,7 @@ function PoliticasPage() {
       </div>
 
       <footer className="border-t border-white/10 py-8 text-center text-xs text-neutral-500">
-        Zetta CRM · CRM de assinaturas para barbearias
+        Zaylo CRM · CRM completo integrado ao WhatsApp
       </footer>
     </div>
   );
