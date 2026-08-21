@@ -29,14 +29,15 @@ const TOKEN_KEY = "crm_ext_token_v1";
 type Identity = { token?: string; barbershopId?: string; phone?: string; email?: string; name?: string };
 
 function Assinar() {
-  const [plan, setPlan] = useState<PlanId>("promo");
+  const [plan, setPlan] = useState<PlanId>("premium");
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
 
   useEffect(() => {
     const url = new URL(window.location.href);
     const planParam = url.searchParams.get("plano");
-    setPlan(planParam === "premium" ? "premium" : "promo");
+    // Premium (R$ 97) é o plano padrão; a promo só sai por link explícito.
+    setPlan(planParam === "promo" ? "promo" : "premium");
 
     const stored = localStorage.getItem(TOKEN_KEY);
     const token = url.searchParams.get("token") ?? (stored && stored.startsWith("ext_") ? stored : undefined);
