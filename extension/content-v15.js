@@ -367,17 +367,16 @@
     const panel = ensureSharedPanel();
     if (isSwap) showPanelSpinner(panel);
     if (kind === "qr") await renderQuickReplyPanel(panel);
-    else if (kind === "profile") await renderCustomerPanel(panel, "profile");
-    else if (kind === "deal") await renderCustomerPanel(panel, "deal");
+    else if (kind === "profile" || kind === "deal") await renderProfilePanel(panel);
   }
 
-  /** Fileira de 3 ícones (raio / perfil / valor) que fica no topo do
-   * painel compartilhado, pra trocar de seção sem fechar nada. */
+  /** Fileira de 2 ícones (raio / perfil) que fica no topo do painel
+   * compartilhado, pra trocar de seção sem fechar nada. Perfil e Valor do
+   * cliente viraram um formulário só. */
   function panelSwitcherHtml(activeKind) {
     const items = [
       { kind: "qr", icon: BOLT_SVG, label: "Respostas rápidas" },
       { kind: "profile", icon: PROFILE_SVG, label: "Perfil do cliente" },
-      { kind: "deal", icon: DEAL_SVG, label: "Valor do cliente" },
     ];
     return `<div class="crm-qrp-switcher">
       ${items
@@ -1417,7 +1416,7 @@
   const RAIO_BTN_ID = "crm-chat-bolt";
   const BOLT_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>`;
   const PROFILE_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>`;
-  const DEAL_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10"/><path d="M9 9.5c0-1.4 1.3-2.5 3-2.5s3 .9 3 2.1c0 1.7-1.6 2.2-3.2 2.7-1.6.5-2.8 1.1-2.8 2.6 0 1.2 1.3 2.1 3 2.1s3-1 3-2.3"/></svg>`;
+  const DEAL_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9v.01M18 15v.01"/></svg>`;
 
 
   /**
@@ -1729,10 +1728,9 @@
   // docado do painel de respostas rápidas (não sobrepõe a conversa),
   // buscando e salvando pelos dois endpoints novos.
   // ---------------------------------------------------------------------
-  async function renderCustomerPanel(panel, kind) {
-    const title = kind === "profile" ? "Perfil do cliente" : "Valor do cliente";
-    const icon = kind === "profile" ? PROFILE_SVG : DEAL_SVG;
-    panel.innerHTML = `<div class="crm-qrp-head"><div class="crm-qr-mark">${icon}</div><p class="crm-qrp-title">${title}</p><button class="crm-qrp-close" data-close title="Fechar">&times;</button></div>${panelSwitcherHtml(kind)}<div class="crm-qrp-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
+  async function renderProfilePanel(panel) {
+    const kind = "profile";
+    panel.innerHTML = `<div class="crm-qrp-head"><div class="crm-qr-mark">${PROFILE_SVG}</div><p class="crm-qrp-title">Perfil do cliente</p><button class="crm-qrp-close" data-close title="Fechar">&times;</button></div>${panelSwitcherHtml(kind)}<div class="crm-qrp-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
     panelClickHandler = (e) => {
       if (e.target.closest("[data-close]")) return closeSharedPanel();
       const sw = e.target.closest("[data-switch]");
@@ -1752,119 +1750,137 @@
       return;
     }
 
-    const path = kind === "profile" ? "/api/public/extension/customer-profile" : "/api/public/extension/customer-deal";
-    const r = await chrome.runtime.sendMessage({ type: "api", path: `${path}?${contactQuery}` }).catch(() => null);
+    // Perfil e Valor viram um formulário só — busca os dois em paralelo,
+    // junto com a foto real do WhatsApp (cache primeiro, ponte se faltar).
+    const cached = (waData.contacts || []).find((c) => chat.wa_id && c.wa_id === chat.wa_id);
+    const [profileRes, dealRes, photo] = await Promise.all([
+      chrome.runtime.sendMessage({ type: "api", path: `/api/public/extension/customer-profile?${contactQuery}` }).catch(() => null),
+      chrome.runtime.sendMessage({ type: "api", path: `/api/public/extension/customer-deal?${contactQuery}` }).catch(() => null),
+      cached?.profile_picture_url
+        ? Promise.resolve(cached.profile_picture_url)
+        : chat.wa_id
+          ? askBridge("profile_picture_v1", "profile_picture_done_v1", { waId: chat.wa_id }, 8000).then((r) => r?.url || null)
+          : Promise.resolve(null),
+    ]);
     if (activePanelKind !== kind || !panel.isConnected) return;
-    const record = (r?.ok ? (kind === "profile" ? r.profile : r.deal) : null) || {};
+    const profile = (profileRes?.ok ? profileRes.profile : null) || {};
+    const deal = (dealRes?.ok ? dealRes.deal : null) || {};
 
-    // As "Observações" do valor são a MESMA anotação já usada no card do
-    // funil (aba Anotações do CRM) — sincroniza os dois lados em vez de
-    // manter dois textos soltos e desencontrados.
-    let matchedCard = null;
-    if (kind === "deal") {
-      const funnel = tabFunnel();
-      matchedCard =
-        (funnel?.cards || []).find(
-          (c) => (chat.wa_id && c.wa_id === chat.wa_id) || (chat.phone && c.phone === chat.phone),
-        ) || null;
-      if (!record.notes && matchedCard?.notes) record.notes = matchedCard.notes;
-    }
+    // "Observações" é a MESMA anotação já usada no card do funil (aba
+    // Anotações do CRM) — sincroniza os dois lados em vez de manter dois
+    // textos soltos e desencontrados.
+    const funnel = tabFunnel();
+    const matchedCard =
+      (funnel?.cards || []).find(
+        (c) => (chat.wa_id && c.wa_id === chat.wa_id) || (chat.phone && c.phone === chat.phone),
+      ) || null;
+    if (!deal.notes && matchedCard?.notes) deal.notes = matchedCard.notes;
 
     const body = panel.querySelector(".crm-qrp-body");
+    const initial = (profile.name || chat.name || chat.phone || "?").trim().charAt(0).toUpperCase();
+    body.innerHTML = `
+      <div class="crm-cp-avatar-row">
+        ${photo ? `<img src="${escapeHtml(photo)}" class="crm-cp-avatar-photo" alt="" />` : `<div class="crm-cp-avatar">${escapeHtml(initial)}</div>`}
+        <div>
+          <p class="crm-cp-name">${escapeHtml(profile.name || chat.name || "Contato")}</p>
+          <p class="crm-cp-phone">${escapeHtml(chat.phone || "")}</p>
+        </div>
+      </div>
+      <label class="crm-cp-field"><span>Nome</span><input class="crm-qrp-input" data-f="name" value="${escapeHtml(profile.name || chat.name || "")}" /></label>
+      <label class="crm-cp-field"><span>Email</span><input class="crm-qrp-input" data-f="email" value="${escapeHtml(profile.email || "")}" placeholder="email@exemplo.com" /></label>
+      <label class="crm-cp-field"><span>Sexo</span>
+        <select class="crm-qrp-select" data-f="gender">
+          <option value="">Selecione um sexo</option>
+          <option value="feminino" ${profile.gender === "feminino" ? "selected" : ""}>Feminino</option>
+          <option value="masculino" ${profile.gender === "masculino" ? "selected" : ""}>Masculino</option>
+          <option value="outro" ${profile.gender === "outro" ? "selected" : ""}>Outro</option>
+          <option value="prefiro_nao_dizer" ${profile.gender === "prefiro_nao_dizer" ? "selected" : ""}>Prefiro não dizer</option>
+        </select>
+      </label>
+      <label class="crm-cp-field"><span>Data de nascimento</span><input class="crm-qrp-input" type="date" data-f="birth_date" value="${escapeHtml(profile.birth_date || "")}" /></label>
+      <label class="crm-cp-field"><span>Cidade</span><input class="crm-qrp-input" data-f="city" value="${escapeHtml(profile.city || "")}" /></label>
+      <div class="crm-cp-divider"></div>
+      <label class="crm-cp-field"><span>Origem do lead</span><input class="crm-qrp-input" data-f="lead_source" value="${escapeHtml(deal.lead_source || "")}" placeholder="Ex: Instagram, indicação..." /></label>
+      <label class="crm-cp-field"><span>Estágio do contato</span><input class="crm-qrp-input" data-f="stage_label" value="${escapeHtml(deal.stage_label || "")}" placeholder="Ex: Qualificando" /></label>
+      <div class="crm-cp-row2">
+        <label class="crm-cp-field"><span>Data de entrada</span><input class="crm-qrp-input" type="date" data-f="entry_date" value="${escapeHtml(deal.entry_date || "")}" /></label>
+        <label class="crm-cp-field"><span>Data de saída</span><input class="crm-qrp-input" type="date" data-f="exit_date" value="${escapeHtml(deal.exit_date || "")}" /></label>
+      </div>
+      <label class="crm-cp-field"><span>${DEAL_SVG} Valor do negócio (R$)</span><input class="crm-qrp-input" data-f="value_reais" value="${deal.value_cents != null ? (deal.value_cents / 100).toFixed(2) : ""}" placeholder="0,00" /></label>
+      <label class="crm-cp-field"><span>Produto de interesse</span><input class="crm-qrp-input" data-f="products_of_interest" value="${escapeHtml(deal.products_of_interest || "")}" /></label>
+      <label class="crm-cp-field"><span>Observações</span><textarea class="crm-qrp-textarea" data-f="notes" placeholder="Adicione uma observação">${escapeHtml(deal.notes || "")}</textarea></label>
+    `;
+
     const foot = document.createElement("div");
     foot.className = "crm-qrp-foot";
-    foot.innerHTML = `<button class="crm-qrp-save" data-save>Salvar</button>`;
+    foot.innerHTML = `<button class="crm-qrp-save" data-save disabled>Salvar</button>`;
     panel.appendChild(foot);
+    const saveBtn = foot.querySelector("[data-save]");
 
-    if (kind === "profile") {
-      const initial = (record.name || chat.name || chat.phone || "?").trim().charAt(0).toUpperCase();
-      body.innerHTML = `
-        <div class="crm-cp-avatar-row">
-          <div class="crm-cp-avatar">${escapeHtml(initial)}</div>
-          <div>
-            <p class="crm-cp-name">${escapeHtml(record.name || chat.name || "Contato")}</p>
-            <p class="crm-cp-phone">${escapeHtml(chat.phone || "")}</p>
-          </div>
-        </div>
-        <label class="crm-cp-field"><span>Nome</span><input class="crm-qrp-input" data-f="name" value="${escapeHtml(record.name || chat.name || "")}" /></label>
-        <label class="crm-cp-field"><span>Email</span><input class="crm-qrp-input" data-f="email" value="${escapeHtml(record.email || "")}" placeholder="email@exemplo.com" /></label>
-        <label class="crm-cp-field"><span>Sexo</span>
-          <select class="crm-qrp-select" data-f="gender">
-            <option value="">Selecione um sexo</option>
-            <option value="feminino" ${record.gender === "feminino" ? "selected" : ""}>Feminino</option>
-            <option value="masculino" ${record.gender === "masculino" ? "selected" : ""}>Masculino</option>
-            <option value="outro" ${record.gender === "outro" ? "selected" : ""}>Outro</option>
-            <option value="prefiro_nao_dizer" ${record.gender === "prefiro_nao_dizer" ? "selected" : ""}>Prefiro não dizer</option>
-          </select>
-        </label>
-        <label class="crm-cp-field"><span>Data de nascimento</span><input class="crm-qrp-input" type="date" data-f="birth_date" value="${escapeHtml(record.birth_date || "")}" /></label>
-        <label class="crm-cp-field"><span>Idioma</span><input class="crm-qrp-input" data-f="language" value="${escapeHtml(record.language || "")}" placeholder="Português" /></label>
-        <label class="crm-cp-field"><span>País</span><input class="crm-qrp-input" data-f="country" value="${escapeHtml(record.country || "")}" placeholder="Brasil" /></label>
-        <label class="crm-cp-field"><span>Cidade</span><input class="crm-qrp-input" data-f="city" value="${escapeHtml(record.city || "")}" /></label>
-      `;
-    } else {
-      body.innerHTML = `
-        <label class="crm-cp-field"><span>Estágio do contato</span><input class="crm-qrp-input" data-f="stage_label" value="${escapeHtml(record.stage_label || "")}" placeholder="Ex: Qualificando" /></label>
-        <label class="crm-cp-field"><span>Estado</span><input class="crm-qrp-input" data-f="state" value="${escapeHtml(record.state || "")}" placeholder="Ex: SP" /></label>
-        <label class="crm-cp-field"><span>Origem do lead</span><input class="crm-qrp-input" data-f="lead_source" value="${escapeHtml(record.lead_source || "")}" placeholder="Ex: Instagram, indicação..." /></label>
-        <div class="crm-cp-row2">
-          <label class="crm-cp-field"><span>Data de entrada</span><input class="crm-qrp-input" type="date" data-f="entry_date" value="${escapeHtml(record.entry_date || "")}" /></label>
-          <label class="crm-cp-field"><span>Data de saída</span><input class="crm-qrp-input" type="date" data-f="exit_date" value="${escapeHtml(record.exit_date || "")}" /></label>
-        </div>
-        <label class="crm-cp-field"><span>Valor do negócio (R$)</span><input class="crm-qrp-input" data-f="value_reais" value="${record.value_cents != null ? (record.value_cents / 100).toFixed(2) : ""}" placeholder="0,00" /></label>
-        <label class="crm-cp-field"><span>Empresa</span><input class="crm-qrp-input" data-f="company" value="${escapeHtml(record.company || "")}" placeholder="Nome da empresa" /></label>
-        <label class="crm-cp-field"><span>Cargo</span><input class="crm-qrp-input" data-f="role" value="${escapeHtml(record.role || "")}" placeholder="Cargo do contato" /></label>
-        <label class="crm-cp-field"><span>Produtos de interesse</span><input class="crm-qrp-input" data-f="products_of_interest" value="${escapeHtml(record.products_of_interest || "")}" /></label>
-        <label class="crm-cp-field"><span>Observações</span><textarea class="crm-qrp-textarea" data-f="notes" placeholder="Adicione uma observação">${escapeHtml(record.notes || "")}</textarea></label>
-      `;
-    }
+    // Só liga o botão quando algo de fato mudou — evita a "mensagem de
+    // salvo" no meio da tela: o próprio botão desabilitado já comunica
+    // isso.
+    const markDirty = () => { saveBtn.disabled = false; };
+    panelInputHandler = markDirty;
+    panelChangeHandler = markDirty;
 
     panelClickHandler = async (e) => {
       if (e.target.closest("[data-close]")) return closeSharedPanel();
       const sw = e.target.closest("[data-switch]");
       if (sw) return void openSharedPanel(sw.getAttribute("data-switch"));
-      if (!e.target.closest("[data-save]")) return;
-      const saveBtn = panel.querySelector("[data-save]");
-      const fields = {};
+      if (!e.target.closest("[data-save]") || saveBtn.disabled) return;
+
+      const profileFields = {};
+      const dealFields = {};
+      const dealKeys = ["lead_source", "stage_label", "entry_date", "exit_date", "products_of_interest", "notes"];
       panel.querySelectorAll("[data-f]").forEach((el) => {
         const key = el.getAttribute("data-f");
         if (key === "value_reais") {
           const num = parseFloat(String(el.value).replace(",", "."));
-          fields.value_cents = Number.isFinite(num) ? Math.round(num * 100) : null;
+          dealFields.value_cents = Number.isFinite(num) ? Math.round(num * 100) : null;
+        } else if (dealKeys.includes(key)) {
+          dealFields[key] = el.value.trim() || null;
         } else {
-          fields[key] = el.value.trim() || null;
+          profileFields[key] = el.value.trim() || null;
         }
       });
+
       saveBtn.disabled = true;
       saveBtn.textContent = "Salvando...";
-      if (kind === "deal" && matchedCard && fields.notes !== (matchedCard.notes || null)) {
+
+      if (matchedCard && dealFields.notes !== (matchedCard.notes || null)) {
         await chrome.runtime
           .sendMessage({
             type: "api",
             path: "/api/public/extension/funnel-cards",
-            opts: { method: "PATCH", body: JSON.stringify({ id: matchedCard.id, notes: fields.notes }) },
+            opts: { method: "PATCH", body: JSON.stringify({ id: matchedCard.id, notes: dealFields.notes }) },
           })
           .catch(() => null);
-        matchedCard.notes = fields.notes;
+        matchedCard.notes = dealFields.notes;
       }
-      const r2 = await chrome.runtime
-        .sendMessage({
+
+      const [r1, r2] = await Promise.all([
+        chrome.runtime.sendMessage({
           type: "api",
-          path,
-          opts: {
-            method: "PATCH",
-            body: JSON.stringify({
-              wa_contact_id: chat.contact_db_id || null,
-              phone: chat.phone || null,
-              ...fields,
-            }),
-          },
-        })
-        .catch(() => null);
-      saveBtn.disabled = false;
+          path: "/api/public/extension/customer-profile",
+          opts: { method: "PATCH", body: JSON.stringify({ wa_contact_id: chat.contact_db_id || null, phone: chat.phone || null, ...profileFields }) },
+        }).catch(() => null),
+        chrome.runtime.sendMessage({
+          type: "api",
+          path: "/api/public/extension/customer-deal",
+          opts: { method: "PATCH", body: JSON.stringify({ wa_contact_id: chat.contact_db_id || null, phone: chat.phone || null, ...dealFields }) },
+        }).catch(() => null),
+      ]);
+
       saveBtn.textContent = "Salvar";
-      if (r2?.ok) crmToast("Salvo");
-      else crmToast(r2?.error || "Não consegui salvar.", "err");
+      // Sem toast de "salvo" no meio da tela — o botão ficar desabilitado
+      // já é a confirmação. Só avisa em caso de erro de verdade.
+      if (r1?.ok && r2?.ok) {
+        saveBtn.disabled = true;
+      } else {
+        saveBtn.disabled = false;
+        crmToast((r1 && !r1.ok && r1.error) || (r2 && !r2.ok && r2.error) || "Não consegui salvar.", "err");
+      }
     };
   }
 

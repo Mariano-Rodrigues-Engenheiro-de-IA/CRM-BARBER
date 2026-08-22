@@ -732,6 +732,17 @@
       return;
     }
 
+    if (d.__crm === "profile_picture_v1") {
+      try {
+        await waitForWpp();
+        const url = await resolveProfilePicture(d.waId);
+        window.postMessage({ __crm: "profile_picture_done_v1", id: d.id, ok: true, data: { url: url || null } }, "*");
+      } catch (e) {
+        window.postMessage({ __crm: "profile_picture_done_v1", id: d.id, ok: false, error: e?.message || String(e) }, "*");
+      }
+      return;
+    }
+
     if (d.__crm === "active_chat_v290") {
       try {
         await waitForWpp();

@@ -45,7 +45,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
   const [err, setErr] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [detail, setDetail] = useState<FunnelCard | null>(null);
-  const [detailTab, setDetailTab] = useState<"notes" | "schedule" | "profile" | "deal">("notes");
+  const [detailTab, setDetailTab] = useState<"notes" | "schedule" | "profile">("notes");
   const [inboxQuery, setInboxQuery] = useState("");
   const [renamingStage, setRenamingStage] = useState<string | null>(null);
   const [stageSearch, setStageSearch] = useState<Record<string, string>>({});
@@ -1020,7 +1020,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                             <IconClock />
                           </CardAction>
                           <CardAction
-                            title="Perfil do cliente"
+                            title="Perfil e valor do cliente"
                             colorClass="text-violet-600 hover:bg-violet-50"
                             onClick={() => {
                               setDetailTab("profile");
@@ -1028,16 +1028,6 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                             }}
                           >
                             <IconProfile />
-                          </CardAction>
-                          <CardAction
-                            title="Valor do cliente"
-                            colorClass="text-emerald-700 hover:bg-emerald-50"
-                            onClick={() => {
-                              setDetailTab("deal");
-                              setDetail(card);
-                            }}
-                          >
-                            <IconDeal />
                           </CardAction>
                           {dealValueByKey.get(card.wa_contact_id || card.phone || "") ? (
                             <span className="ml-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
@@ -1350,10 +1340,10 @@ const IconProfile = () => (
   </svg>
 );
 const IconDeal = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <circle cx="12" cy="12" r="9" />
-    <path d="M12 7v10" />
-    <path d="M9 9.5c0-1.4 1.3-2.5 3-2.5s3 .9 3 2.1c0 1.7-1.6 2.2-3.2 2.7-1.6.5-2.8 1.1-2.8 2.6 0 1.2 1.3 2.1 3 2.1s3-1 3-2.3" />
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <rect x="2" y="6" width="20" height="12" rx="2.5" />
+    <circle cx="12" cy="12" r="2.6" />
+    <path d="M6 9v.01M18 15v.01" />
   </svg>
 );
 
@@ -1433,7 +1423,7 @@ function CardDrawer({
 }: {
   api: ApiFn;
   card: FunnelCard;
-  initialTab: "notes" | "schedule" | "profile" | "deal";
+  initialTab: "notes" | "schedule" | "profile";
   onClose: () => void;
   onDealSaved?: () => void;
 }) {
@@ -1498,53 +1488,40 @@ function CardDrawer({
     setTimeout(() => setSaved(false), 1800);
   }
 
+  // Perfil e Valor do cliente viraram um formulário só (mesma unificação
+  // feita na extensão do WhatsApp) — um só carregamento, um só salvamento.
   const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
-  const [profileLoaded, setProfileLoaded] = useState(false);
   const [deal, setDeal] = useState<Record<string, unknown> | null>(null);
-  const [dealLoaded, setDealLoaded] = useState(false);
-  // Campo de texto solto do valor — não deriva de deal.value_cents a cada
-  // tecla (isso reformatava o campo no meio da digitação e travava em 1
-  // dígito). Só vira number de verdade na hora de salvar.
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [dealValueText, setDealValueText] = useState("");
   const [cpBusy, setCpBusy] = useState(false);
-  const [cpSaved, setCpSaved] = useState(false);
+  // Botão "Salvar" só liga quando algo muda de fato — sem mensagem de
+  // "salvo" no meio da tela, o próprio botão desabilitado já confirma.
+  const [cpDirty, setCpDirty] = useState(false);
 
   useEffect(() => {
     if (tab === "profile" && !profileLoaded && contactQuery) {
-      api(`/api/public/extension/customer-profile?${contactQuery}`).then((r) => {
-        const p = ((r?.ok ? r.profile : null) as Record<string, unknown> | null) || {};
+      Promise.all([
+        api(`/api/public/extension/customer-profile?${contactQuery}`),
+        api(`/api/public/extension/customer-deal?${contactQuery}`),
+      ]).then(([rp, rd]) => {
+        const p = ((rp?.ok ? rp.profile : null) as Record<string, unknown> | null) || {};
         // Se ainda não tem nome salvo no perfil, usa o nome que o card já
         // tem (o mesmo resolvido lá na conversa do WhatsApp).
         if (!p.name && card.title) p.name = card.title;
+        const d = ((rd?.ok ? rd.deal : null) as Record<string, unknown> | null) || {};
+        if (!d.notes && card.notes) d.notes = card.notes;
         setProfile(p);
-        setProfileLoaded(true);
-      });
-    }
-    if (tab === "deal" && !dealLoaded && contactQuery) {
-      api(`/api/public/extension/customer-deal?${contactQuery}`).then((r) => {
-        const d = ((r?.ok ? r.deal : null) as Record<string, unknown> | null) || {};
         setDeal(d);
         setDealValueText(d.value_cents != null ? ((d.value_cents as number) / 100).toFixed(2).replace(".", ",") : "");
-        setDealLoaded(true);
+        setProfileLoaded(true);
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
   async function saveProfile() {
-    if (!profile) return;
-    setCpBusy(true);
-    await api("/api/public/extension/customer-profile", {
-      method: "PATCH",
-      body: JSON.stringify({ wa_contact_id: card.wa_contact_id || null, phone: card.phone || null, ...profile }),
-    });
-    setCpBusy(false);
-    setCpSaved(true);
-    setTimeout(() => setCpSaved(false), 1800);
-  }
-
-  async function saveDeal() {
-    if (!deal) return;
+    if (!profile || !deal) return;
     setCpBusy(true);
     const num = parseFloat(dealValueText.replace(/\./g, "").replace(",", "."));
     const value_cents = dealValueText.trim() === "" ? null : Number.isFinite(num) ? Math.round(num * 100) : null;
@@ -1557,15 +1534,24 @@ function CardDrawer({
       });
       setNotes(deal.notes as string);
     }
-    await api("/api/public/extension/customer-deal", {
-      method: "PATCH",
-      body: JSON.stringify({ wa_contact_id: card.wa_contact_id || null, phone: card.phone || null, ...deal, value_cents }),
-    });
+    const [r1, r2] = await Promise.all([
+      api("/api/public/extension/customer-profile", {
+        method: "PATCH",
+        body: JSON.stringify({ wa_contact_id: card.wa_contact_id || null, phone: card.phone || null, ...profile }),
+      }),
+      api("/api/public/extension/customer-deal", {
+        method: "PATCH",
+        body: JSON.stringify({ wa_contact_id: card.wa_contact_id || null, phone: card.phone || null, ...deal, value_cents }),
+      }),
+    ]);
     setDeal({ ...deal, value_cents });
     setCpBusy(false);
-    setCpSaved(true);
-    onDealSaved?.();
-    setTimeout(() => setCpSaved(false), 1800);
+    if (r1?.ok && r2?.ok) {
+      setCpDirty(false);
+      onDealSaved?.();
+    } else {
+      setErr((!r1?.ok && (r1?.error as string)) || (!r2?.ok && (r2?.error as string)) || "Erro ao salvar");
+    }
   }
 
   async function schedule() {
@@ -1614,7 +1600,7 @@ function CardDrawer({
         {tab !== "profile" && (
         <div className="flex items-center justify-between gap-2">
           <h4 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-            {tab === "notes" ? "Anotações" : tab === "schedule" ? "Mensagens agendadas" : "Valor do cliente"}
+            {tab === "notes" ? "Anotações" : "Mensagens agendadas"}
           </h4>
           {canOpenWhatsapp(card.phone, card.wa_id) && (
             <button
@@ -1680,16 +1666,30 @@ function CardDrawer({
           <div className="space-y-3">
             {!contactQuery && <p className="text-sm text-neutral-500">Sem telefone/contato vinculado a esse lead.</p>}
             {contactQuery && !profileLoaded && <p className="text-sm text-neutral-400">Carregando...</p>}
-            {contactQuery && profileLoaded && profile && (
+            {contactQuery && profileLoaded && profile && deal && (
               <>
+                <div className="mb-1 flex items-center gap-3">
+                  {card.profile_picture_url ? (
+                    <img src={card.profile_picture_url} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover" />
+                  ) : (
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand text-base font-bold text-white">
+                      {((profile.name as string) || card.title || "?").trim().charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm font-semibold text-neutral-900">{(profile.name as string) || card.title}</p>
+                    <p className="text-xs text-neutral-500">{card.phone}</p>
+                  </div>
+                </div>
+
                 <Field label="Nome">
-                  <input className={inputCls} value={(profile.name as string) ?? ""} onChange={(e) => setProfile({ ...profile, name: e.target.value })} />
+                  <input className={inputCls} value={(profile.name as string) ?? ""} onChange={(e) => { setProfile({ ...profile, name: e.target.value }); setCpDirty(true); }} />
                 </Field>
                 <Field label="Email">
-                  <input className={inputCls} value={(profile.email as string) ?? ""} onChange={(e) => setProfile({ ...profile, email: e.target.value })} placeholder="email@exemplo.com" />
+                  <input className={inputCls} value={(profile.email as string) ?? ""} onChange={(e) => { setProfile({ ...profile, email: e.target.value }); setCpDirty(true); }} placeholder="email@exemplo.com" />
                 </Field>
                 <Field label="Sexo">
-                  <select className={inputCls} value={(profile.gender as string) ?? ""} onChange={(e) => setProfile({ ...profile, gender: e.target.value })}>
+                  <select className={inputCls} value={(profile.gender as string) ?? ""} onChange={(e) => { setProfile({ ...profile, gender: e.target.value }); setCpDirty(true); }}>
                     <option value="">Selecione um sexo</option>
                     <option value="feminino">Feminino</option>
                     <option value="masculino">Masculino</option>
@@ -1698,78 +1698,54 @@ function CardDrawer({
                   </select>
                 </Field>
                 <Field label="Data de nascimento">
-                  <input type="date" className={inputCls} value={(profile.birth_date as string) ?? ""} onChange={(e) => setProfile({ ...profile, birth_date: e.target.value })} />
-                </Field>
-                <Field label="Idioma">
-                  <input className={inputCls} value={(profile.language as string) ?? ""} onChange={(e) => setProfile({ ...profile, language: e.target.value })} placeholder="Português" />
-                </Field>
-                <Field label="País">
-                  <input className={inputCls} value={(profile.country as string) ?? ""} onChange={(e) => setProfile({ ...profile, country: e.target.value })} placeholder="Brasil" />
+                  <input type="date" className={inputCls} value={(profile.birth_date as string) ?? ""} onChange={(e) => { setProfile({ ...profile, birth_date: e.target.value }); setCpDirty(true); }} />
                 </Field>
                 <Field label="Cidade">
-                  <input className={inputCls} value={(profile.city as string) ?? ""} onChange={(e) => setProfile({ ...profile, city: e.target.value })} />
+                  <input className={inputCls} value={(profile.city as string) ?? ""} onChange={(e) => { setProfile({ ...profile, city: e.target.value }); setCpDirty(true); }} />
                 </Field>
-                <div className="flex items-center gap-3">
-                  <button onClick={saveProfile} disabled={cpBusy} className="rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50">
-                    Salvar perfil
-                  </button>
-                  {cpSaved && <span className="text-xs font-medium text-emerald-600">Salvo ✔</span>}
-                </div>
-              </>
-            )}
-          </div>
-        )}
 
-        {tab === "deal" && (
-          <div className="space-y-3">
-            {!contactQuery && <p className="text-sm text-neutral-500">Sem telefone/contato vinculado a esse lead.</p>}
-            {contactQuery && !dealLoaded && <p className="text-sm text-neutral-400">Carregando...</p>}
-            {contactQuery && dealLoaded && deal && (
-              <>
-                <Field label="Estágio do contato">
-                  <input className={inputCls} value={(deal.stage_label as string) ?? ""} onChange={(e) => setDeal({ ...deal, stage_label: e.target.value })} placeholder="Ex: Qualificando" />
-                </Field>
-                <Field label="Estado">
-                  <input className={inputCls} value={(deal.state as string) ?? ""} onChange={(e) => setDeal({ ...deal, state: e.target.value })} placeholder="Ex: SP" />
-                </Field>
+                <div className="my-1 border-t border-neutral-100" />
+
                 <Field label="Origem do lead">
-                  <input className={inputCls} value={(deal.lead_source as string) ?? ""} onChange={(e) => setDeal({ ...deal, lead_source: e.target.value })} placeholder="Ex: Instagram, indicação..." />
+                  <input className={inputCls} value={(deal.lead_source as string) ?? ""} onChange={(e) => { setDeal({ ...deal, lead_source: e.target.value }); setCpDirty(true); }} placeholder="Ex: Instagram, indicação..." />
+                </Field>
+                <Field label="Estágio do contato">
+                  <input className={inputCls} value={(deal.stage_label as string) ?? ""} onChange={(e) => { setDeal({ ...deal, stage_label: e.target.value }); setCpDirty(true); }} placeholder="Ex: Qualificando" />
                 </Field>
                 <div className="grid grid-cols-2 gap-2">
                   <Field label="Data de entrada">
-                    <input type="date" className={inputCls} value={(deal.entry_date as string) ?? ""} onChange={(e) => setDeal({ ...deal, entry_date: e.target.value })} />
+                    <input type="date" className={inputCls} value={(deal.entry_date as string) ?? ""} onChange={(e) => { setDeal({ ...deal, entry_date: e.target.value }); setCpDirty(true); }} />
                   </Field>
                   <Field label="Data de saída">
-                    <input type="date" className={inputCls} value={(deal.exit_date as string) ?? ""} onChange={(e) => setDeal({ ...deal, exit_date: e.target.value })} />
+                    <input type="date" className={inputCls} value={(deal.exit_date as string) ?? ""} onChange={(e) => { setDeal({ ...deal, exit_date: e.target.value }); setCpDirty(true); }} />
                   </Field>
                 </div>
                 <Field label="Valor do negócio (R$)">
-                  <input
-                    className={inputCls}
-                    value={dealValueText}
-                    onChange={(e) => setDealValueText(e.target.value)}
-                    placeholder="0,00"
-                    inputMode="decimal"
-                  />
+                  <div className="flex items-center gap-2">
+                    <IconDeal />
+                    <input
+                      className={inputCls}
+                      value={dealValueText}
+                      onChange={(e) => { setDealValueText(e.target.value); setCpDirty(true); }}
+                      placeholder="0,00"
+                      inputMode="decimal"
+                    />
+                  </div>
                 </Field>
-                <Field label="Empresa">
-                  <input className={inputCls} value={(deal.company as string) ?? ""} onChange={(e) => setDeal({ ...deal, company: e.target.value })} placeholder="Nome da empresa" />
-                </Field>
-                <Field label="Cargo">
-                  <input className={inputCls} value={(deal.role as string) ?? ""} onChange={(e) => setDeal({ ...deal, role: e.target.value })} placeholder="Cargo do contato" />
-                </Field>
-                <Field label="Produtos de interesse">
-                  <input className={inputCls} value={(deal.products_of_interest as string) ?? ""} onChange={(e) => setDeal({ ...deal, products_of_interest: e.target.value })} />
+                <Field label="Produto de interesse">
+                  <input className={inputCls} value={(deal.products_of_interest as string) ?? ""} onChange={(e) => { setDeal({ ...deal, products_of_interest: e.target.value }); setCpDirty(true); }} />
                 </Field>
                 <Field label="Observações">
-                  <textarea rows={3} className={inputCls} value={(deal.notes as string) ?? ""} onChange={(e) => setDeal({ ...deal, notes: e.target.value })} placeholder="Adicione uma observação" />
+                  <textarea rows={3} className={inputCls} value={(deal.notes as string) ?? ""} onChange={(e) => { setDeal({ ...deal, notes: e.target.value }); setCpDirty(true); }} placeholder="Adicione uma observação" />
                 </Field>
-                <div className="flex items-center gap-3">
-                  <button onClick={saveDeal} disabled={cpBusy} className="rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50">
-                    Salvar
-                  </button>
-                  {cpSaved && <span className="text-xs font-medium text-emerald-600">Salvo ✔</span>}
-                </div>
+
+                <button
+                  onClick={saveProfile}
+                  disabled={cpBusy || !cpDirty}
+                  className="w-full rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong disabled:cursor-default disabled:opacity-40"
+                >
+                  {cpBusy ? "Salvando..." : "Salvar"}
+                </button>
               </>
             )}
           </div>
