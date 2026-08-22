@@ -70,12 +70,13 @@ export const Route = createFileRoute("/api/public/extension/lead-schedule/$id")(
         if (!auth.ok) {
           return jsonResponse(request, { ok: false, error: auth.error }, { status: auth.status });
         }
+        // Excluir vale pra qualquer status — cancela se ainda estiver
+        // pendente, ou só limpa do histórico se já foi enviada/falhou.
         const { error } = await supabaseAdmin
           .from("message_jobs")
           .delete()
           .eq("id", params.id)
-          .eq("barbershop_id", auth.token.barbershop_id)
-          .eq("status", "pending");
+          .eq("barbershop_id", auth.token.barbershop_id);
         if (error) return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
         return jsonResponse(request, { ok: true });
       },

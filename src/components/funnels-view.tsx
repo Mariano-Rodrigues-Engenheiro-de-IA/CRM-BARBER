@@ -1516,6 +1516,7 @@ function CardDrawer({
   const noteFileRef = useRef<HTMLInputElement | null>(null);
   const [noteUploaded, setNoteUploaded] = useState<{ path: string; mime: string; filename: string } | null>(null);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [noteStage, setNoteStage] = useState<"list" | "form">("list");
 
   async function loadNotes() {
     if (!contactQuery) return;
@@ -1523,7 +1524,7 @@ function CardDrawer({
     setNotesList((r?.ok ? (r.notes as LeadNote[]) : []) || []);
   }
   useEffect(() => {
-    if (tab === "notes") void loadNotes();
+    if (tab === "notes") { setNoteStage("list"); void loadNotes(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
@@ -1539,7 +1540,7 @@ function CardDrawer({
   }
 
   async function addNote() {
-    if (!newNoteBody.trim() && !noteUploaded) return;
+    if (!newNoteBody.trim() && !noteUploaded) return false;
     setBusy(true);
     const r = editingNoteId
       ? await api(`/api/public/extension/lead-notes/${editingNoteId}`, {
@@ -1565,13 +1566,14 @@ function CardDrawer({
     setBusy(false);
     if (!r?.ok) {
       setErr((r?.error as string) || "Erro ao salvar anotação");
-      return;
+      return false;
     }
     setErr(null);
     setNewNoteBody("");
     setNoteUploaded(null);
     setEditingNoteId(null);
     void loadNotes();
+    return true;
   }
 
   async function removeNote(id: string) {
@@ -1603,10 +1605,26 @@ function CardDrawer({
 
   // Mensagens agendadas — MESMA fila usada no ícone de Mensagens Agendadas
   // do WhatsApp (lead-schedule), pra ficar sincronizado nos dois lugares.
-  type ScheduledJob = { id: string; rendered_body: string; scheduled_for: string; status: string; last_error: string | null };
+  type QuickReplyAction = { type: string; text?: string | null; path?: string | null; url?: string | null; mime?: string | null; filename?: string | null; caption?: string | null };
+  type ScheduledJob = {
+    id: string;
+    rendered_body: string;
+    message_actions?: QuickReplyAction[] | null;
+    scheduled_for: string;
+    status: string;
+    last_error: string | null;
+  };
   const [jobsList, setJobsList] = useState<ScheduledJob[] | null>(null);
+  const [scheduleStage, setScheduleStage] = useState<"list" | "form">("list");
   const [msg, setMsg] = useState("");
   const [when, setWhen] = useState("");
+  const [editingJobId, setEditingJobId] = useState<string | null>(null);
+  const [scheduleType, setScheduleType] = useState<"text" | "image" | "audio" | "qr">("text");
+  const [scheduleUploaded, setScheduleUploaded] = useState<{ path: string; mime: string; filename: string } | null>(null);
+  const [scheduleCaption, setScheduleCaption] = useState("");
+  const [scheduleQrId, setScheduleQrId] = useState("");
+  const [availableQuickReplies, setAvailableQuickReplies] = useState<{ id: string; title: string; actions: QuickReplyAction[] }[] | null>(null);
+  const scheduleFileRef = useRef<HTMLInputElement | null>(null);
 
   async function loadJobs() {
     if (!card.phone) return;
@@ -1614,32 +1632,99 @@ function CardDrawer({
     setJobsList((r?.ok ? (r.jobs as ScheduledJob[]) : []) || []);
   }
   useEffect(() => {
-    if (tab === "schedule") void loadJobs();
+    if (tab === "schedule") { setScheduleStage("list"); void loadJobs(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
+  function resetScheduleForm() {
+    setEditingJobId(null);
+    setMsg("");
+    setWhen("");
+    setScheduleType("text");
+    setScheduleUploaded(null);
+    setScheduleCaption("");
+    setScheduleQrId("");
+  }
+  function startEditJob(j: ScheduledJob) {
+    setEditingJobId(j.id);
+    setMsg(j.rendered_body);
+    const d = new Date(j.scheduled_for);
+    setWhen(
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}T${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`,
+    );
+    setScheduleType("text");
+    setScheduleUploaded(null);
+    setScheduleCaption("");
+    setScheduleQrId("");
+  }
+
+  async function ensureQuickReplies() {
+    if (availableQuickReplies !== null) return;
+    const r = await api("/api/public/extension/quick-replies");
+    setAvailableQuickReplies((r?.ok ? (r.quick_replies as typeof availableQuickReplies) : []) || []);
+  }
+
+  async function onPickScheduleFile(file: File) {
+    setBusy(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
+        reader.readAsDataURL(file);
+      });
+      const r = await api("/api/public/extension/quick-replies/upload", {
+        method: "POST",
+        body: JSON.stringify({ filename: file.name, mime: file.type, data_base64: dataUrl }),
+      });
+      if (r?.ok) setScheduleUploaded({ path: r.path as string, mime: r.mime as string, filename: r.filename as string });
+      else setErr((r?.error as string) || "Não consegui enviar o arquivo.");
+    } catch (e) {
+      setErr(String((e as Error)?.message || e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function schedule() {
-    if (!msg.trim() || !card.phone) return;
+    if (!card.phone) return false;
+    let body: Record<string, unknown>;
+    if (scheduleType === "text") {
+      if (!msg.trim()) { setErr("Escreva a mensagem."); return false; }
+      body = { message: msg.trim() };
+    } else if (scheduleType === "image" || scheduleType === "audio") {
+      if (!scheduleUploaded) { setErr("Escolha um arquivo."); return false; }
+      body = { actions: [{ type: scheduleType, path: scheduleUploaded.path, mime: scheduleUploaded.mime, filename: scheduleUploaded.filename, caption: scheduleCaption.trim() || undefined }] };
+    } else {
+      const qr = availableQuickReplies?.find((q) => q.id === scheduleQrId);
+      if (!qr) { setErr("Escolha uma resposta rápida."); return false; }
+      body = { actions: qr.actions.filter((a) => ["text", "image", "audio", "video"].includes(a.type)) };
+    }
     setBusy(true);
     setErr(null);
-    const r = await api("/api/public/extension/lead-schedule", {
-      method: "POST",
-      body: JSON.stringify({
-        wa_contact_id: card.wa_contact_id || null,
-        phone: card.phone,
-        name: card.title,
-        message: msg.trim(),
-        scheduled_for: when ? new Date(when).toISOString() : undefined,
-      }),
-    });
+    const r = editingJobId
+      ? await api(`/api/public/extension/lead-schedule/${editingJobId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ ...body, scheduled_for: when ? new Date(when).toISOString() : undefined }),
+        })
+      : await api("/api/public/extension/lead-schedule", {
+          method: "POST",
+          body: JSON.stringify({
+            wa_contact_id: card.wa_contact_id || null,
+            phone: card.phone,
+            name: card.title,
+            scheduled_for: when ? new Date(when).toISOString() : undefined,
+            ...body,
+          }),
+        });
     setBusy(false);
     if (!r?.ok) {
       setErr((r?.error as string) || "Erro ao agendar");
-      return;
+      return false;
     }
-    setMsg("");
-    setWhen("");
+    resetScheduleForm();
     void loadJobs();
+    return true;
   }
 
   async function cancelJob(id: string) {
@@ -1745,131 +1830,307 @@ function CardDrawer({
         </div>
         )}
 
-        {tab === "notes" && (
+        {tab === "notes" && noteStage === "list" && (
           <>
-            <div className="space-y-2">
-              {editingNoteId && (
-                <p className="flex items-center justify-between text-xs font-semibold text-brand">
-                  Editando anotação
-                  <button onClick={cancelEditNote} className="font-medium text-neutral-500 hover:text-neutral-800">Cancelar edição</button>
-                </p>
-              )}
-              <label className="flex items-center gap-2 rounded-xl border border-dashed border-neutral-300 px-3 py-2 text-xs font-medium text-neutral-600 hover:border-brand">
-                <input
-                  ref={noteFileRef}
-                  type="file"
-                  accept="image/*,audio/*,video/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) void onPickNoteFile(f);
-                  }}
-                />
-                <button type="button" onClick={() => noteFileRef.current?.click()} className="shrink-0 rounded-lg border border-neutral-300 px-2 py-1">
-                  Anexar
-                </button>
-                <span className="truncate">{noteUploaded ? noteUploaded.filename : "Imagem, áudio ou vídeo (opcional)"}</span>
-              </label>
-              <textarea
-                value={newNoteBody}
-                onChange={(e) => setNewNoteBody(e.target.value)}
-                rows={3}
-                maxLength={4000}
-                placeholder="Escreva uma nova anotação..."
-                className={inputCls}
-              />
-              <button
-                onClick={addNote}
-                disabled={busy || (!newNoteBody.trim() && !noteUploaded)}
-                className="w-full rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong disabled:cursor-default disabled:opacity-40"
-              >
-                {busy ? "Salvando..." : editingNoteId ? "Salvar edição" : "Adicionar anotação"}
-              </button>
-            </div>
-
-            <div className="mt-4 space-y-2">
-              {notesList === null && <p className="text-sm text-neutral-400">Carregando...</p>}
-              {notesList?.length === 0 && <p className="text-sm text-neutral-400">Nenhuma anotação ainda.</p>}
-              {notesList?.map((n) => (
-                <div key={n.id} className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-[11px] text-neutral-400">
-                      {new Date(n.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                    <div className="flex shrink-0 gap-1">
-                      <button onClick={() => startEditNote(n)} className="rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-brand">
-                        <IconPencilMini />
-                      </button>
-                      <button onClick={() => void removeNote(n.id)} className="rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-red-600">
-                        <IconTrashMini />
-                      </button>
-                    </div>
-                  </div>
-                  {n.body && <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-800">{n.body}</p>}
-                  {n.media_url && n.media_mime?.startsWith("image/") && <img src={n.media_url} alt="" className="mt-2 max-h-40 rounded-lg object-cover" />}
-                  {n.media_url && n.media_mime?.startsWith("video/") && <video src={n.media_url} controls className="mt-2 max-h-40 rounded-lg" />}
-                  {n.media_url && n.media_mime?.startsWith("audio/") && <audio src={n.media_url} controls className="mt-2 h-8 w-full" />}
+            {notesList === null && <p className="py-6 text-center text-sm text-neutral-400">Carregando...</p>}
+            {notesList?.length === 0 && (
+              <div className="flex flex-col items-center px-2 pb-2 pt-7 text-center">
+                <div className="mb-3.5 text-neutral-300">
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="5" y="4" width="14" height="17" rx="2" />
+                    <path d="M9 4V3.3A1.3 1.3 0 0 1 10.3 2h3.4A1.3 1.3 0 0 1 15 3.3V4" />
+                    <path d="m10 17 6.2-6.2a1.15 1.15 0 0 0-1.6-1.6L8.4 15.4l-.5 2.1z" />
+                  </svg>
                 </div>
-              ))}
-            </div>
+                <p className="mb-2 text-base font-extrabold text-neutral-900">Nenhuma nota encontrada</p>
+                <p className="mb-5 max-w-xs text-[13px] leading-relaxed text-neutral-500">
+                  Parece que você ainda não adicionou nenhuma nota. Clique no botão abaixo para criar uma nova nota.
+                </p>
+                <button
+                  onClick={() => { cancelEditNote(); setNoteStage("form"); }}
+                  className="rounded-lg bg-brand px-5 py-2.5 text-[13.5px] font-bold text-white hover:bg-brand-strong"
+                >
+                  Criar anotação
+                </button>
+              </div>
+            )}
+            {notesList && notesList.length > 0 && (
+              <>
+                <div className="mb-3 flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wide text-neutral-400">
+                    {notesList.length} nota{notesList.length === 1 ? "" : "s"}
+                  </h4>
+                  <button
+                    onClick={() => { cancelEditNote(); setNoteStage("form"); }}
+                    className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-strong"
+                  >
+                    + Nova
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {notesList.map((n) => (
+                    <div key={n.id} className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-[11px] text-neutral-400">
+                          {new Date(n.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                        <div className="flex shrink-0 gap-1">
+                          <button onClick={() => { startEditNote(n); setNoteStage("form"); }} className="rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-brand">
+                            <IconPencilMini />
+                          </button>
+                          <button onClick={() => void removeNote(n.id)} className="rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-red-600">
+                            <IconTrashMini />
+                          </button>
+                        </div>
+                      </div>
+                      {n.body && <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-800">{n.body}</p>}
+                      {n.media_url && n.media_mime?.startsWith("image/") && <img src={n.media_url} alt="" className="mt-2 max-h-40 rounded-lg object-cover" />}
+                      {n.media_url && n.media_mime?.startsWith("video/") && <video src={n.media_url} controls className="mt-2 max-h-40 rounded-lg" />}
+                      {n.media_url && n.media_mime?.startsWith("audio/") && <audio src={n.media_url} controls className="mt-2 h-8 w-full" />}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </>
         )}
 
-        {tab === "schedule" && (
+        {tab === "notes" && noteStage === "form" && (
+          <div className="space-y-2">
+            <label className="mb-1 block text-xs font-bold text-neutral-700">Adicione uma mídia na anotação</label>
+            <label className="flex items-center gap-2 rounded-xl border border-dashed border-neutral-300 px-3 py-2.5 text-xs font-medium text-neutral-600 hover:border-brand">
+              <input
+                ref={noteFileRef}
+                type="file"
+                accept="image/*,audio/*,video/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void onPickNoteFile(f);
+                }}
+              />
+              <button type="button" onClick={() => noteFileRef.current?.click()} className="shrink-0 rounded-lg border border-neutral-300 px-2 py-1">
+                Escolher arquivo
+              </button>
+              <span className="truncate">{noteUploaded ? noteUploaded.filename : "Imagem, áudio ou vídeo (opcional)"}</span>
+            </label>
+            <label className="mb-1 mt-3 block text-xs font-bold text-neutral-700">Insira uma anotação</label>
+            <textarea
+              value={newNoteBody}
+              onChange={(e) => setNewNoteBody(e.target.value)}
+              rows={4}
+              maxLength={4000}
+              placeholder="Escreva sua nota..."
+              className={inputCls}
+            />
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                onClick={() => { cancelEditNote(); setNoteStage("list"); }}
+                className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => { if (await addNote()) setNoteStage("list"); }}
+                disabled={busy || (!newNoteBody.trim() && !noteUploaded)}
+                className="rounded-lg bg-brand px-5 py-2 text-sm font-bold text-white hover:bg-brand-strong disabled:cursor-default disabled:opacity-40"
+              >
+                {busy ? "Salvando..." : "Salvar"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {tab === "schedule" && scheduleStage === "list" && (
           <>
-            <div className="space-y-2">
+            {jobsList === null && <p className="py-6 text-center text-sm text-neutral-400">Carregando...</p>}
+            {jobsList?.length === 0 && (
+              <div className="flex flex-col items-center px-2 pb-2 pt-7 text-center">
+                <div className="mb-3.5 text-neutral-300">
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 9.5h11" />
+                    <path d="M14.5 4.5H5.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2H10" />
+                    <path d="M8 3v3M12 3v3" />
+                    <circle cx="16.5" cy="15.5" r="5" />
+                    <path d="M16.5 13v2.5l1.7 1" />
+                  </svg>
+                </div>
+                <p className="mb-2 text-base font-extrabold text-neutral-900">Nenhum agendamento encontrado</p>
+                <p className="mb-5 max-w-xs text-[13px] leading-relaxed text-neutral-500">
+                  Não há agendamentos programados no momento. Para adicionar um novo, clique no botão de criação.
+                </p>
+                <button
+                  onClick={() => { resetScheduleForm(); setScheduleStage("form"); }}
+                  className="rounded-lg bg-brand px-5 py-2.5 text-[13.5px] font-bold text-white hover:bg-brand-strong"
+                >
+                  Adicionar
+                </button>
+              </div>
+            )}
+            {jobsList && jobsList.length > 0 && (
+              <>
+                <div className="mb-3 flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wide text-neutral-400">
+                    {jobsList.length} agendamento{jobsList.length === 1 ? "" : "s"}
+                  </h4>
+                  <button
+                    onClick={() => { resetScheduleForm(); setScheduleStage("form"); }}
+                    className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-strong"
+                  >
+                    + Novo
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {jobsList.map((j) => {
+                    const mediaActions = (j.message_actions || []).filter((a) => a.type !== "text" && a.url);
+                    return (
+                      <div key={j.id} className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-[11px] text-neutral-400">
+                            {new Date(j.scheduled_for).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                            <span
+                              className={
+                                "ml-2 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase " +
+                                (j.status === "sent" ? "bg-emerald-100 text-emerald-700" : j.status === "failed" ? "bg-red-100 text-red-600" : "bg-blue-100 text-blue-700")
+                              }
+                            >
+                              {j.status === "sent" ? "Enviada" : j.status === "failed" ? "Falhou" : "Agendada"}
+                            </span>
+                          </p>
+                          <div className="flex shrink-0 gap-1">
+                            {j.status === "pending" && (
+                              <button onClick={() => { startEditJob(j); setScheduleStage("form"); }} className="rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-brand">
+                                <IconPencilMini />
+                              </button>
+                            )}
+                            <button onClick={() => void cancelJob(j.id)} className="rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-red-600">
+                              <IconTrashMini />
+                            </button>
+                          </div>
+                        </div>
+                        <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-800">{j.rendered_body}</p>
+                        {mediaActions.map((a, i) => (
+                          <div key={i}>
+                            {a.type === "image" && a.url && <img src={a.url} alt="" className="mt-2 max-h-40 rounded-lg object-cover" />}
+                            {a.type === "video" && a.url && <video src={a.url} controls className="mt-2 max-h-40 rounded-lg" />}
+                            {a.type === "audio" && a.url && <audio src={a.url} controls className="mt-2 h-8 w-full" />}
+                          </div>
+                        ))}
+                        {j.status === "failed" && j.last_error && <p className="mt-1 text-xs text-red-500">{j.last_error}</p>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {tab === "schedule" && scheduleStage === "form" && (
+          <div className="space-y-2">
+            <div className="mb-3 flex gap-1 rounded-xl border border-neutral-200 bg-neutral-50 p-1">
+              {([
+                { key: "text", label: "Texto" },
+                { key: "image", label: "Imagem" },
+                { key: "audio", label: "Áudio" },
+                { key: "qr", label: "Resposta rápida" },
+              ] as const).map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => { setScheduleType(t.key); if (t.key === "qr") void ensureQuickReplies(); }}
+                  className={
+                    "flex-1 rounded-lg px-2 py-1.5 text-[11.5px] font-bold transition-colors " +
+                    (scheduleType === t.key ? "bg-brand text-white" : "text-neutral-500 hover:bg-neutral-100")
+                  }
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {scheduleType === "text" && (
               <textarea
                 value={msg}
                 onChange={(e) => setMsg(e.target.value)}
-                rows={3}
+                rows={4}
                 maxLength={4000}
-                placeholder="Oi {nome}, tudo bem?"
+                placeholder="Digite a mensagem que será enviada..."
+                className={inputCls}
+              />
+            )}
+
+            {(scheduleType === "image" || scheduleType === "audio") && (
+              <>
+                <label className="flex items-center gap-2 rounded-xl border border-dashed border-neutral-300 px-3 py-2.5 text-xs font-medium text-neutral-600 hover:border-brand">
+                  <input
+                    ref={scheduleFileRef}
+                    type="file"
+                    accept={`${scheduleType}/*`}
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void onPickScheduleFile(f);
+                    }}
+                  />
+                  <button type="button" onClick={() => scheduleFileRef.current?.click()} className="shrink-0 rounded-lg border border-neutral-300 px-2 py-1">
+                    Escolher arquivo
+                  </button>
+                  <span className="truncate">{scheduleUploaded ? scheduleUploaded.filename : `Arquivo de ${scheduleType === "image" ? "imagem" : "áudio"}`}</span>
+                </label>
+                {scheduleType === "image" && (
+                  <input
+                    value={scheduleCaption}
+                    onChange={(e) => setScheduleCaption(e.target.value)}
+                    placeholder="Legenda (opcional)"
+                    className={inputCls}
+                  />
+                )}
+              </>
+            )}
+
+            {scheduleType === "qr" && (
+              <>
+                <select value={scheduleQrId} onChange={(e) => setScheduleQrId(e.target.value)} className={inputCls}>
+                  <option value="">Escolha uma resposta rápida...</option>
+                  {availableQuickReplies?.map((q) => (
+                    <option key={q.id} value={q.id}>{q.title}</option>
+                  ))}
+                </select>
+                {availableQuickReplies?.length === 0 && <p className="text-xs text-neutral-400">Nenhuma resposta rápida cadastrada ainda.</p>}
+              </>
+            )}
+
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="date"
+                value={when.split("T")[0] || ""}
+                onChange={(e) => setWhen(`${e.target.value}T${when.split("T")[1] || "00:00"}`)}
                 className={inputCls}
               />
               <input
-                type="datetime-local"
-                value={when}
-                onChange={(e) => setWhen(e.target.value)}
+                type="time"
+                value={when.split("T")[1] || ""}
+                onChange={(e) => setWhen(`${when.split("T")[0] || new Date().toISOString().slice(0, 10)}T${e.target.value}`)}
                 className={inputCls}
               />
-              <button
-                onClick={schedule}
-                disabled={busy || !msg.trim() || !card.phone}
-                className="w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:cursor-default disabled:opacity-40"
-              >
-                {busy ? "Agendando..." : "Agendar mensagem"}
-              </button>
             </div>
 
-            <div className="mt-4 space-y-2">
-              {jobsList === null && <p className="text-sm text-neutral-400">Carregando...</p>}
-              {jobsList?.length === 0 && <p className="text-sm text-neutral-400">Nenhum agendamento ainda.</p>}
-              {jobsList?.map((j) => (
-                <div key={j.id} className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-[11px] text-neutral-400">
-                      {new Date(j.scheduled_for).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                      <span
-                        className={
-                          "ml-2 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase " +
-                          (j.status === "sent" ? "bg-emerald-100 text-emerald-700" : j.status === "failed" ? "bg-red-100 text-red-600" : "bg-blue-100 text-blue-700")
-                        }
-                      >
-                        {j.status === "sent" ? "Enviada" : j.status === "failed" ? "Falhou" : "Agendada"}
-                      </span>
-                    </p>
-                    {j.status === "pending" && (
-                      <button onClick={() => void cancelJob(j.id)} className="shrink-0 rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-red-600">
-                        <IconTrashMini />
-                      </button>
-                    )}
-                  </div>
-                  <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-800">{j.rendered_body}</p>
-                  {j.status === "failed" && j.last_error && <p className="mt-1 text-xs text-red-500">{j.last_error}</p>}
-                </div>
-              ))}
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                onClick={() => { resetScheduleForm(); setScheduleStage("list"); }}
+                className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => { if (await schedule()) setScheduleStage("list"); }}
+                disabled={busy}
+                className="rounded-lg bg-brand px-5 py-2 text-sm font-bold text-white hover:bg-brand-strong disabled:cursor-default disabled:opacity-40"
+              >
+                {busy ? "Salvando..." : editingJobId ? "Salvar" : "Criar"}
+              </button>
             </div>
-          </>
+          </div>
         )}
 
         {tab === "profile" && (
@@ -1887,12 +2148,15 @@ function CardDrawer({
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <input
-                      className="w-full border-0 border-b border-transparent bg-transparent py-0.5 text-sm font-extrabold text-neutral-900 outline-none transition-colors hover:border-neutral-200 focus:border-brand"
-                      value={(profile.name as string) ?? ""}
-                      placeholder="Nome do contato"
-                      onChange={(e) => { setProfile({ ...profile, name: e.target.value }); setCpDirty(true); }}
-                    />
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        className="min-w-0 flex-1 border-0 border-b border-transparent bg-transparent py-0.5 text-sm font-extrabold text-neutral-900 outline-none transition-colors hover:border-neutral-200 focus:border-brand"
+                        value={(profile.name as string) ?? ""}
+                        placeholder="Nome do contato"
+                        onChange={(e) => { setProfile({ ...profile, name: e.target.value }); setCpDirty(true); }}
+                      />
+                      <span className="shrink-0 text-neutral-300"><IconPencilMini /></span>
+                    </div>
                     <p className="text-xs text-neutral-500">{card.phone}</p>
                   </div>
                 </div>

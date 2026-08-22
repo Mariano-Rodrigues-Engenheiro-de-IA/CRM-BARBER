@@ -1785,7 +1785,7 @@
                   <p class="crm-dialog-item-meta">${formatDateTime(j.scheduled_for)}${statusBadge(j)}</p>
                   <div style="display:flex;gap:2px">
                     ${j.status === "pending" ? `<button class="crm-dialog-item-del" data-edit="${escapeHtml(j.id)}" title="Editar">${PENCIL_SVG}</button>` : ""}
-                    ${j.status === "pending" ? `<button class="crm-dialog-item-del" data-cancel="${escapeHtml(j.id)}" title="Cancelar">${TRASH_SVG}</button>` : ""}
+                    <button class="crm-dialog-item-del" data-cancel="${escapeHtml(j.id)}" title="${j.status === "pending" ? "Cancelar" : "Excluir"}">${TRASH_SVG}</button>
                   </div>
                 </div>
                 <p class="crm-dialog-item-body">${escapeHtml(j.rendered_body)}</p>
@@ -2442,7 +2442,10 @@
       <div class="crm-cp-avatar-row">
         ${photo ? `<img src="${escapeHtml(photo)}" class="crm-cp-avatar-photo" alt="" />` : `<div class="crm-cp-avatar">${escapeHtml(initial)}</div>`}
         <div class="crm-cp-avatar-info">
-          <input class="crm-cp-name-input" data-f="name" value="${escapeHtml(profile.name || chat.name || "")}" placeholder="Nome do contato" />
+          <div class="crm-cp-name-row">
+            <input class="crm-cp-name-input" data-f="name" value="${escapeHtml(profile.name || chat.name || "")}" placeholder="Nome do contato" />
+            <span class="crm-cp-name-pencil">${PENCIL_SVG}</span>
+          </div>
           <p class="crm-cp-phone">${escapeHtml(chat.phone || "")}</p>
         </div>
       </div>
