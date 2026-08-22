@@ -122,6 +122,10 @@ export const Route = createFileRoute("/api/public/extension/lead-schedule")({
             status: "pending",
             scheduled_for: new Date(scheduled).toISOString(),
             expires_at: new Date(scheduled + TTL_HOURS * 3600 * 1000).toISOString(),
+            // Sempre vai pela extensão — não depende de conexão oficial
+            // (que pode estar com token inválido/expirado sem o usuário
+            // saber, travando o envio em silêncio).
+            force_extension: true,
           })
           .select("id, rendered_body, scheduled_for, status")
           .single();

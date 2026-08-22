@@ -106,6 +106,10 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
             .select("id, customer_id, rendered_body, message_actions, template_name, template_language, campaign_id, attempts")
             .eq("barbershop_id", inst.barbershop_id)
             .eq("status", "pending")
+            // Jobs marcados force_extension nunca passam pela API oficial
+            // (agendamento criado pelo ícone da conversa no WhatsApp) —
+            // só a extensão do navegador envia esses.
+            .eq("force_extension", false)
             .lte("scheduled_for", nowIso)
             .order("scheduled_for", { ascending: true })
             .limit(200);

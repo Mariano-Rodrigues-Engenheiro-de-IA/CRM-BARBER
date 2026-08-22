@@ -1350,6 +1350,13 @@ const IconDeal = () => (
     <path d="M6 9v.01M18 15v.01" />
   </svg>
 );
+const IconTrashMini = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M3 6h18" />
+    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+  </svg>
+);
 
 /** Ícone de etiqueta (formato de bandeirinha inclinada), colorido com a cor
  * real da etiqueta do WhatsApp. Mostra o nome só no hover (title), sem
@@ -1434,13 +1441,8 @@ function CardDrawer({
   // Cada ícone do card abre um painel dedicado, sem sub-abas pra trocar —
   // por isso não precisa de estado próprio, só usa o que veio de fora.
   const tab = initialTab;
-  const [notes, setNotes] = useState(card.notes ?? "");
-  const [saved, setSaved] = useState(false);
-  const [msg, setMsg] = useState("");
-  const [when, setWhen] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
   // Resumo gerado pela IA (projeto IA-BARBER-AGENDA) — busca separada,
   // pra não pesar a lista geral de clientes com esse campo toda vez.
   const [aiSummary, setAiSummary] = useState<{ text: string; updatedAt: string | null } | null>(null);
@@ -1476,11 +1478,37 @@ function CardDrawer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contactQuery]);
 
-  async function saveNotes() {
+  // Anotações — MESMA lead_notes usada no ícone de Anotações do WhatsApp
+  // (várias notas, texto e/ou mídia), não mais um campo único.
+  type LeadNote = { id: string; body: string | null; media_url: string | null; media_mime: string | null; created_at: string };
+  const [notesList, setNotesList] = useState<LeadNote[] | null>(null);
+  const [newNoteBody, setNewNoteBody] = useState("");
+  const noteFileRef = useRef<HTMLInputElement | null>(null);
+  const [noteUploaded, setNoteUploaded] = useState<{ path: string; mime: string; filename: string } | null>(null);
+
+  async function loadNotes() {
+    if (!contactQuery) return;
+    const r = await api(`/api/public/extension/lead-notes?${contactQuery}`);
+    setNotesList((r?.ok ? (r.notes as LeadNote[]) : []) || []);
+  }
+  useEffect(() => {
+    if (tab === "notes") void loadNotes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
+  async function addNote() {
+    if (!newNoteBody.trim() && !noteUploaded) return;
     setBusy(true);
-    const r = await api("/api/public/extension/funnel-cards", {
-      method: "PATCH",
-      body: JSON.stringify({ id: card.id, notes: notes.trim() || null }),
+    const r = await api("/api/public/extension/lead-notes", {
+      method: "POST",
+      body: JSON.stringify({
+        wa_contact_id: card.wa_contact_id || null,
+        phone: card.phone || null,
+        body: newNoteBody.trim() || null,
+        media_path: noteUploaded?.path || null,
+        media_mime: noteUploaded?.mime || null,
+        media_filename: noteUploaded?.filename || null,
+      }),
     });
     setBusy(false);
     if (!r?.ok) {
@@ -1488,8 +1516,82 @@ function CardDrawer({
       return;
     }
     setErr(null);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1800);
+    setNewNoteBody("");
+    setNoteUploaded(null);
+    void loadNotes();
+  }
+
+  async function removeNote(id: string) {
+    await api(`/api/public/extension/lead-notes/${id}`, { method: "DELETE" });
+    void loadNotes();
+  }
+
+  async function onPickNoteFile(file: File) {
+    setBusy(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
+        reader.readAsDataURL(file);
+      });
+      const r = await api("/api/public/extension/quick-replies/upload", {
+        method: "POST",
+        body: JSON.stringify({ filename: file.name, mime: file.type, data_base64: dataUrl }),
+      });
+      if (r?.ok) setNoteUploaded({ path: r.path as string, mime: r.mime as string, filename: r.filename as string });
+      else setErr((r?.error as string) || "Não consegui enviar o arquivo.");
+    } catch (e) {
+      setErr(String((e as Error)?.message || e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Mensagens agendadas — MESMA fila usada no ícone de Mensagens Agendadas
+  // do WhatsApp (lead-schedule), pra ficar sincronizado nos dois lugares.
+  type ScheduledJob = { id: string; rendered_body: string; scheduled_for: string; status: string; last_error: string | null };
+  const [jobsList, setJobsList] = useState<ScheduledJob[] | null>(null);
+  const [msg, setMsg] = useState("");
+  const [when, setWhen] = useState("");
+
+  async function loadJobs() {
+    if (!card.phone) return;
+    const r = await api(`/api/public/extension/lead-schedule?phone=${encodeURIComponent(card.phone)}`);
+    setJobsList((r?.ok ? (r.jobs as ScheduledJob[]) : []) || []);
+  }
+  useEffect(() => {
+    if (tab === "schedule") void loadJobs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
+  async function schedule() {
+    if (!msg.trim() || !card.phone) return;
+    setBusy(true);
+    setErr(null);
+    const r = await api("/api/public/extension/lead-schedule", {
+      method: "POST",
+      body: JSON.stringify({
+        wa_contact_id: card.wa_contact_id || null,
+        phone: card.phone,
+        name: card.title,
+        message: msg.trim(),
+        scheduled_for: when ? new Date(when).toISOString() : undefined,
+      }),
+    });
+    setBusy(false);
+    if (!r?.ok) {
+      setErr((r?.error as string) || "Erro ao agendar");
+      return;
+    }
+    setMsg("");
+    setWhen("");
+    void loadJobs();
+  }
+
+  async function cancelJob(id: string) {
+    await api(`/api/public/extension/lead-schedule/${id}`, { method: "DELETE" });
+    void loadJobs();
   }
 
   // Perfil e Valor do cliente são um formulário só (mesma unificação na
@@ -1531,7 +1633,6 @@ function CardDrawer({
         method: "PATCH",
         body: JSON.stringify({ id: card.id, notes: deal.notes || null }),
       });
-      setNotes(deal.notes as string);
     }
     const [r1, r2] = await Promise.all([
       api("/api/public/extension/customer-profile", {
@@ -1551,27 +1652,6 @@ function CardDrawer({
     } else {
       setErr((!r1?.ok && (r1?.error as string)) || (!r2?.ok && (r2?.error as string)) || "Erro ao salvar");
     }
-  }
-
-  async function schedule() {
-    if (!msg.trim()) return;
-    setBusy(true);
-    setErr(null);
-    const r = await api("/api/public/extension/funnel-cards/schedule", {
-      method: "POST",
-      body: JSON.stringify({
-        card_id: card.id,
-        message: msg.trim(),
-        scheduled_for: when ? new Date(when).toISOString() : undefined,
-      }),
-    });
-    setBusy(false);
-    if (!r?.ok) {
-      setErr((r?.error as string) || "Erro ao agendar");
-      return;
-    }
-    setMsg("");
-    setFeedback(when ? "Mensagem agendada ✔" : "Mensagem enfileirada para envio ✔");
   }
 
   return (
@@ -1614,50 +1694,117 @@ function CardDrawer({
 
         {tab === "notes" && (
           <>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={4}
-              maxLength={4000}
-              placeholder="Histórico, combinados, próximo passo..."
-              className={inputCls}
-            />
-            <div className="flex items-center gap-3">
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 rounded-xl border border-dashed border-neutral-300 px-3 py-2 text-xs font-medium text-neutral-600 hover:border-brand">
+                <input
+                  ref={noteFileRef}
+                  type="file"
+                  accept="image/*,audio/*,video/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void onPickNoteFile(f);
+                  }}
+                />
+                <button type="button" onClick={() => noteFileRef.current?.click()} className="shrink-0 rounded-lg border border-neutral-300 px-2 py-1">
+                  Anexar
+                </button>
+                <span className="truncate">{noteUploaded ? noteUploaded.filename : "Imagem, áudio ou vídeo (opcional)"}</span>
+              </label>
+              <textarea
+                value={newNoteBody}
+                onChange={(e) => setNewNoteBody(e.target.value)}
+                rows={3}
+                maxLength={4000}
+                placeholder="Escreva uma nova anotação..."
+                className={inputCls}
+              />
               <button
-                onClick={saveNotes}
-                disabled={busy}
-                className="rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50"
+                onClick={addNote}
+                disabled={busy || (!newNoteBody.trim() && !noteUploaded)}
+                className="w-full rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong disabled:cursor-default disabled:opacity-40"
               >
-                Salvar anotação
+                {busy ? "Salvando..." : "Adicionar anotação"}
               </button>
-              {saved && <span className="text-xs font-medium text-emerald-600">Salvo ✔</span>}
+            </div>
+
+            <div className="mt-4 space-y-2">
+              {notesList === null && <p className="text-sm text-neutral-400">Carregando...</p>}
+              {notesList?.length === 0 && <p className="text-sm text-neutral-400">Nenhuma anotação ainda.</p>}
+              {notesList?.map((n) => (
+                <div key={n.id} className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-[11px] text-neutral-400">
+                      {new Date(n.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                    <button onClick={() => void removeNote(n.id)} className="shrink-0 rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-red-600">
+                      <IconTrashMini />
+                    </button>
+                  </div>
+                  {n.body && <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-800">{n.body}</p>}
+                  {n.media_url && n.media_mime?.startsWith("image/") && <img src={n.media_url} alt="" className="mt-2 max-h-40 rounded-lg object-cover" />}
+                  {n.media_url && n.media_mime?.startsWith("video/") && <video src={n.media_url} controls className="mt-2 max-h-40 rounded-lg" />}
+                  {n.media_url && n.media_mime?.startsWith("audio/") && <audio src={n.media_url} controls className="mt-2 h-8 w-full" />}
+                </div>
+              ))}
             </div>
           </>
         )}
 
         {tab === "schedule" && (
           <>
-            <textarea
-              value={msg}
-              onChange={(e) => setMsg(e.target.value)}
-              rows={3}
-              maxLength={4000}
-              placeholder="Oi {nome}, tudo bem?"
-              className={inputCls}
-            />
-            <input
-              type="datetime-local"
-              value={when}
-              onChange={(e) => setWhen(e.target.value)}
-              className={inputCls}
-            />
-            <button
-              onClick={schedule}
-              disabled={busy || !msg.trim()}
-              className="w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
-            >
-              {busy ? "Enviando..." : when ? "Agendar mensagem" : "Enviar mensagem"}
-            </button>
+            <div className="space-y-2">
+              <textarea
+                value={msg}
+                onChange={(e) => setMsg(e.target.value)}
+                rows={3}
+                maxLength={4000}
+                placeholder="Oi {nome}, tudo bem?"
+                className={inputCls}
+              />
+              <input
+                type="datetime-local"
+                value={when}
+                onChange={(e) => setWhen(e.target.value)}
+                className={inputCls}
+              />
+              <button
+                onClick={schedule}
+                disabled={busy || !msg.trim() || !card.phone}
+                className="w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:cursor-default disabled:opacity-40"
+              >
+                {busy ? "Agendando..." : "Agendar mensagem"}
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              {jobsList === null && <p className="text-sm text-neutral-400">Carregando...</p>}
+              {jobsList?.length === 0 && <p className="text-sm text-neutral-400">Nenhum agendamento ainda.</p>}
+              {jobsList?.map((j) => (
+                <div key={j.id} className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-[11px] text-neutral-400">
+                      {new Date(j.scheduled_for).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      <span
+                        className={
+                          "ml-2 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase " +
+                          (j.status === "sent" ? "bg-emerald-100 text-emerald-700" : j.status === "failed" ? "bg-red-100 text-red-600" : "bg-blue-100 text-blue-700")
+                        }
+                      >
+                        {j.status === "sent" ? "Enviada" : j.status === "failed" ? "Falhou" : "Agendada"}
+                      </span>
+                    </p>
+                    {j.status === "pending" && (
+                      <button onClick={() => void cancelJob(j.id)} className="shrink-0 rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-red-600">
+                        <IconTrashMini />
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-800">{j.rendered_body}</p>
+                  {j.status === "failed" && j.last_error && <p className="mt-1 text-xs text-red-500">{j.last_error}</p>}
+                </div>
+              ))}
+            </div>
           </>
         )}
 
@@ -1751,7 +1898,6 @@ function CardDrawer({
         )}
 
         {err && <p className="text-sm text-red-500">{err}</p>}
-        {feedback && <p className="text-sm text-emerald-600">{feedback}</p>}
       </div>
     </Overlay>
   );

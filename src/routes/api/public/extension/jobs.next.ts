@@ -25,16 +25,18 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
         }
 
         // Se a barbearia já tem instância WhatsApp conectada via servidor
-        // (UAZAPI/etc), o dispatcher server-side envia; a extensão só serve
-        // como ponte visual. Devolve `null` pra ela ficar quieta.
+        // (UAZAPI/etc), o dispatcher server-side envia a maioria dos jobs;
+        // a extensão só serve como ponte visual pra esses. MAS jobs
+        // marcados force_extension (agendamento pelo ícone da conversa)
+        // sempre vão pela extensão, mesmo com conexão oficial marcada como
+        // conectada — ela pode estar com token inválido/expirado sem o
+        // usuário perceber, e nesse caso o envio nunca sairia.
         const { data: srvInstance } = await supabaseAdmin
           .from("whatsapp_instances")
           .select("status")
           .eq("barbershop_id", auth.token.barbershop_id)
           .maybeSingle();
-        if (srvInstance && srvInstance.status === "connected") {
-          return jsonResponse(request, { ok: true, job: null, reason: "server_dispatch" });
-        }
+        const serverConnected = !!(srvInstance && srvInstance.status === "connected");
 
         const nowIso = new Date().toISOString();
         const staleClaimIso = new Date(Date.now() - 6 * 60 * 1000).toISOString();
@@ -84,6 +86,11 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
           .eq("barbershop_id", auth.token.barbershop_id)
           .eq("status", "pending")
           .lte("scheduled_for", nowIso);
+        // Com conexão oficial ativa, o servidor cuida do resto — a
+        // extensão só pega os marcados force_extension aqui.
+        if (serverConnected) {
+          pickQ = pickQ.eq("force_extension", true);
+        }
         if (blockedIds.length > 0) {
           pickQ = pickQ.not("campaign_id", "in", `(${blockedIds.join(",")})`);
         }

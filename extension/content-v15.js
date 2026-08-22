@@ -1453,6 +1453,35 @@
   // ---------------------------------------------------------------------
   // Anotações — múltiplas notas por lead, com texto e/ou mídia anexada.
   // ---------------------------------------------------------------------
+  // Pré-carrega no hover — quando o clique realmente acontece, os dados já
+  // estão prontos e o diálogo abre com o conteúdo final na hora, sem
+  // nenhum estado de "carregando" perceptível.
+  let notesPrefetch = null; // { key, notes }
+  let schedulePrefetch = null; // { key, jobs }
+
+  async function prefetchNotes() {
+    const chat = await activeChat();
+    const contactQuery = chat?.contact_db_id
+      ? `wa_contact_id=${encodeURIComponent(chat.contact_db_id)}`
+      : chat?.phone
+        ? `phone=${encodeURIComponent(chat.phone)}`
+        : null;
+    if (!contactQuery) return;
+    const r = await chrome.runtime
+      .sendMessage({ type: "api", path: `/api/public/extension/lead-notes?${contactQuery}` })
+      .catch(() => null);
+    notesPrefetch = { key: contactQuery, chat, notes: r?.ok ? r.notes || [] : [] };
+  }
+
+  async function prefetchSchedule() {
+    const chat = await activeChat();
+    if (!chat?.phone) return;
+    const r = await chrome.runtime
+      .sendMessage({ type: "api", path: `/api/public/extension/lead-schedule?phone=${encodeURIComponent(chat.phone)}` })
+      .catch(() => null);
+    schedulePrefetch = { key: chat.phone, chat, jobs: r?.ok ? r.jobs || [] : [] };
+  }
+
   async function openNotesDialog() {
     const { dialog, close } = openCenteredDialog();
     // Garante que o navegador já desenhou o diálogo antes de começar
@@ -1544,11 +1573,23 @@
     }
 
     async function loadList() {
-      dialog.innerHTML = `${head("Anotações")}<div class="crm-dialog-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
       if (!contactQuery) {
-        dialog.querySelector(".crm-dialog-body").innerHTML = `<p class="crm-fn-pop-empty">Não consegui identificar essa conversa.</p>`;
+        dialog.innerHTML = `${head("Anotações")}<div class="crm-dialog-body"><p class="crm-fn-pop-empty">Não consegui identificar essa conversa.</p></div>`;
         return;
       }
+      // Já pré-carregado no hover do ícone — mostra na hora, sem "Carregando".
+      if (notesPrefetch && notesPrefetch.key === contactQuery) {
+        renderList(notesPrefetch.notes);
+        // Atualiza por trás, silenciosamente, caso tenha mudado.
+        chrome.runtime
+          .sendMessage({ type: "api", path: `/api/public/extension/lead-notes?${contactQuery}` })
+          .then((r) => {
+            if (r?.ok && dialog.isConnected) renderList(r.notes || []);
+          })
+          .catch(() => null);
+        return;
+      }
+      dialog.innerHTML = `${head("Anotações")}<div class="crm-dialog-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
       const r = await chrome.runtime
         .sendMessage({ type: "api", path: `/api/public/extension/lead-notes?${contactQuery}` })
         .catch(() => null);
@@ -1728,11 +1769,22 @@
     }
 
     async function loadList() {
-      dialog.innerHTML = `${head("Mensagens agendadas")}<div class="crm-dialog-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
       if (!chat?.phone) {
-        dialog.querySelector(".crm-dialog-body").innerHTML = `<p class="crm-fn-pop-empty">Esse contato não tem telefone identificado.</p>`;
+        dialog.innerHTML = `${head("Mensagens agendadas")}<div class="crm-dialog-body"><p class="crm-fn-pop-empty">Esse contato não tem telefone identificado.</p></div>`;
         return;
       }
+      // Já pré-carregado no hover do ícone — mostra na hora, sem "Carregando".
+      if (schedulePrefetch && schedulePrefetch.key === chat.phone) {
+        renderList(schedulePrefetch.jobs);
+        chrome.runtime
+          .sendMessage({ type: "api", path: `/api/public/extension/lead-schedule?phone=${encodeURIComponent(chat.phone)}` })
+          .then((r) => {
+            if (r?.ok && dialog.isConnected) renderList(r.jobs || []);
+          })
+          .catch(() => null);
+        return;
+      }
+      dialog.innerHTML = `${head("Mensagens agendadas")}<div class="crm-dialog-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
       const r = await chrome.runtime
         .sendMessage({ type: "api", path: `/api/public/extension/lead-schedule?phone=${encodeURIComponent(chat.phone)}` })
         .catch(() => null);
@@ -1874,6 +1926,7 @@
     notesBtn.type = "button";
     notesBtn.setAttribute("data-label", "Anotações");
     notesBtn.innerHTML = NOTES_SVG;
+    notesBtn.addEventListener("mouseenter", prefetchNotes);
     notesBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -1886,6 +1939,7 @@
     scheduleBtn.type = "button";
     scheduleBtn.setAttribute("data-label", "Mensagens agendadas");
     scheduleBtn.innerHTML = SCHEDULE_SVG;
+    scheduleBtn.addEventListener("mouseenter", prefetchSchedule);
     scheduleBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();

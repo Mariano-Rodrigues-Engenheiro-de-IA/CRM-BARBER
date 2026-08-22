@@ -954,6 +954,7 @@ export type Database = {
           created_at: string
           customer_id: string
           expires_at: string | null
+          force_extension: boolean
           id: string
           last_error: string | null
           max_attempts: number
@@ -976,6 +977,7 @@ export type Database = {
           created_at?: string
           customer_id: string
           expires_at?: string | null
+          force_extension?: boolean
           id?: string
           last_error?: string | null
           max_attempts?: number
