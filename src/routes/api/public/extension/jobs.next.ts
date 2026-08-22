@@ -133,12 +133,27 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
           .eq("barbershop_id", auth.token.barbershop_id)
           .single();
 
+        // Mídia guarda o caminho no storage, não uma URL — e uma URL
+        // assinada que porventura já estivesse ali pode ter expirado (1h)
+        // se o agendamento foi criado bem antes do envio. Resolve uma
+        // nova, sempre, na hora de mandar pra extensão.
+        const rawActions = (claimed.message_actions as Array<Record<string, unknown>>) ?? [];
+        const actions = await Promise.all(
+          rawActions.map(async (a) => {
+            if (!a?.path || typeof a.path !== "string") return a;
+            const { data: signed } = await supabaseAdmin.storage
+              .from("quick-reply-media")
+              .createSignedUrl(a.path, 3600);
+            return { ...a, url: signed?.signedUrl ?? a.url ?? null };
+          }),
+        );
+
         return jsonResponse(request, {
           ok: true,
           job: {
             id: claimed.id,
             body: claimed.rendered_body,
-            actions: claimed.message_actions,
+            actions,
             attempts: claimed.attempts,
             customer: customer ?? null,
           },

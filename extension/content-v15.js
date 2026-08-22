@@ -1498,12 +1498,15 @@
     const chat = await activeChat();
     const contactQuery = contactIdentityQuery(chat?.contact_db_id, chat?.phone);
     let uploaded = null;
+    let currentNotes = [];
+    let editingNoteId = null;
 
     function head(title) {
       return `<div class="crm-dialog-head"><p class="crm-dialog-title">${title}</p><button class="crm-dialog-close" data-close title="Fechar">&times;</button></div>`;
     }
 
     function renderList(notes) {
+      currentNotes = notes;
       if (!notes.length) {
         dialog.innerHTML = `
           ${head("Anotações")}
@@ -1542,7 +1545,10 @@
                 <div class="crm-dialog-item">
                   <div class="crm-dialog-item-head">
                     <p class="crm-dialog-item-meta">${formatDateTime(n.created_at)}</p>
-                    <button class="crm-dialog-item-del" data-del="${escapeHtml(n.id)}" title="Excluir">${TRASH_SVG}</button>
+                    <div style="display:flex;gap:2px">
+                      <button class="crm-dialog-item-del" data-edit="${escapeHtml(n.id)}" title="Editar">${PENCIL_SVG}</button>
+                      <button class="crm-dialog-item-del" data-del="${escapeHtml(n.id)}" title="Excluir">${TRASH_SVG}</button>
+                    </div>
                   </div>
                   ${n.body ? `<p class="crm-dialog-item-body">${escapeHtml(n.body)}</p>` : ""}
                   ${media}
@@ -1554,19 +1560,20 @@
       `;
     }
 
-    function renderForm() {
-      uploaded = null;
+    function renderForm(note) {
+      editingNoteId = note?.id || null;
+      uploaded = note?.media_path ? { path: note.media_path, mime: note.media_mime, filename: note.media_filename } : null;
       dialog.innerHTML = `
-        ${head("Criar anotação")}
+        ${head(editingNoteId ? "Editar anotação" : "Criar anotação")}
         <div class="crm-dialog-body">
           <label class="crm-dialog-field">
             <span>Adicione uma mídia na anotação</span>
-            <div class="crm-dialog-dropzone" data-pick-file>Clique para escolher um arquivo (imagem, áudio ou vídeo)</div>
+            <div class="crm-dialog-dropzone${uploaded ? " has-file" : ""}" data-pick-file>${uploaded ? `Anexado: ${escapeHtml(uploaded.filename || "")}` : "Clique para escolher um arquivo (imagem, áudio ou vídeo)"}</div>
             <input type="file" accept="image/*,audio/*,video/*" data-file-input hidden />
           </label>
           <label class="crm-dialog-field">
             <span>Insira uma anotação</span>
-            <textarea class="crm-dialog-textarea" data-note-body placeholder="Escreva sua nota..."></textarea>
+            <textarea class="crm-dialog-textarea" data-note-body placeholder="Escreva sua nota...">${escapeHtml(note?.body || "")}</textarea>
           </label>
           <div class="crm-dialog-foot">
             <button class="crm-dialog-cta-ghost" data-back>Cancelar</button>
@@ -1602,9 +1609,16 @@
 
     dialog.addEventListener("click", async (e) => {
       if (e.target.closest("[data-close]")) return close();
-      if (e.target.closest("[data-new]")) return renderForm();
+      if (e.target.closest("[data-new]")) return renderForm(null);
       if (e.target.closest("[data-back]")) return loadList();
       if (e.target.closest("[data-pick-file]")) return dialog.querySelector("[data-file-input]")?.click();
+
+      const editBtn = e.target.closest("[data-edit]");
+      if (editBtn) {
+        const note = currentNotes.find((n) => n.id === editBtn.getAttribute("data-edit"));
+        if (note) return renderForm(note);
+        return;
+      }
 
       const del = e.target.closest("[data-del]");
       if (del) {
@@ -1625,25 +1639,41 @@
         if (!contactQuery) return;
         saveBtn.disabled = true;
         saveBtn.textContent = "Salvando...";
-        const r = await chrome.runtime
-          .sendMessage({
-            type: "api",
-            path: "/api/public/extension/lead-notes",
-            opts: {
-              method: "POST",
-              body: JSON.stringify({
-                wa_contact_id: chat.contact_db_id || null,
-                phone: chat.phone || null,
-                body: bodyText || null,
-                media_path: uploaded?.path || null,
-                media_mime: uploaded?.mime || null,
-                media_filename: uploaded?.filename || null,
-              }),
-            },
-          })
-          .catch(() => null);
+        const r = editingNoteId
+          ? await chrome.runtime
+              .sendMessage({
+                type: "api",
+                path: `/api/public/extension/lead-notes/${editingNoteId}`,
+                opts: {
+                  method: "PATCH",
+                  body: JSON.stringify({
+                    body: bodyText || null,
+                    media_path: uploaded?.path || null,
+                    media_mime: uploaded?.mime || null,
+                    media_filename: uploaded?.filename || null,
+                  }),
+                },
+              })
+              .catch(() => null)
+          : await chrome.runtime
+              .sendMessage({
+                type: "api",
+                path: "/api/public/extension/lead-notes",
+                opts: {
+                  method: "POST",
+                  body: JSON.stringify({
+                    wa_contact_id: chat.contact_db_id || null,
+                    phone: chat.phone || null,
+                    body: bodyText || null,
+                    media_path: uploaded?.path || null,
+                    media_mime: uploaded?.mime || null,
+                    media_filename: uploaded?.filename || null,
+                  }),
+                },
+              })
+              .catch(() => null);
         if (r?.ok) {
-          crmToast("Anotação salva");
+          crmToast(editingNoteId ? "Anotação atualizada" : "Anotação salva");
           await loadList();
         } else {
           crmToast(r?.error || "Não consegui salvar.", "err");
@@ -1708,7 +1738,22 @@
       return `<span class="crm-dialog-badge crm-dialog-badge-pending">Agendada</span>`;
     }
 
+    let currentJobs = [];
+    let editingJobId = null;
+    let formType = "text"; // text | image | audio | qr
+    let formUploaded = null; // { path, mime, filename }
+    let formQrId = null;
+
+    function mediaPreviewHtml(action) {
+      if (!action?.url) return "";
+      if (/^image\//.test(action.mime || "")) return `<img src="${escapeHtml(action.url)}" class="crm-dialog-item-media" alt="" />`;
+      if (/^video\//.test(action.mime || "")) return `<video src="${escapeHtml(action.url)}" class="crm-dialog-item-media" controls></video>`;
+      if (/^audio\//.test(action.mime || "")) return `<audio src="${escapeHtml(action.url)}" class="crm-qrp-preview-audio" controls></audio>`;
+      return "";
+    }
+
     function renderList(jobs) {
+      currentJobs = jobs;
       if (!jobs.length) {
         dialog.innerHTML = `
           ${head("Mensagens agendadas")}
@@ -1732,44 +1777,104 @@
           </div>
           <div class="crm-dialog-list">
             ${jobs
-              .map(
-                (j) => `
+              .map((j) => {
+                const mediaActions = (j.message_actions || []).filter((a) => a.type !== "text" && a.url);
+                return `
               <div class="crm-dialog-item">
                 <div class="crm-dialog-item-head">
                   <p class="crm-dialog-item-meta">${formatDateTime(j.scheduled_for)}${statusBadge(j)}</p>
-                  ${j.status === "pending" ? `<button class="crm-dialog-item-del" data-cancel="${escapeHtml(j.id)}" title="Cancelar">${TRASH_SVG}</button>` : ""}
+                  <div style="display:flex;gap:2px">
+                    ${j.status === "pending" ? `<button class="crm-dialog-item-del" data-edit="${escapeHtml(j.id)}" title="Editar">${PENCIL_SVG}</button>` : ""}
+                    ${j.status === "pending" ? `<button class="crm-dialog-item-del" data-cancel="${escapeHtml(j.id)}" title="Cancelar">${TRASH_SVG}</button>` : ""}
+                  </div>
                 </div>
                 <p class="crm-dialog-item-body">${escapeHtml(j.rendered_body)}</p>
+                ${mediaActions.map(mediaPreviewHtml).join("")}
                 ${j.status === "failed" && j.last_error ? `<p class="crm-dialog-item-meta" style="color:var(--z-danger)">${escapeHtml(j.last_error)}</p>` : ""}
-              </div>`,
-              )
+              </div>`;
+              })
               .join("")}
           </div>
         </div>
       `;
     }
 
-    function renderForm() {
+    function typeTabsHtml() {
+      const tabs = [
+        { key: "text", label: "Texto" },
+        { key: "image", label: "Imagem" },
+        { key: "audio", label: "Áudio" },
+        { key: "qr", label: "Resposta rápida" },
+      ];
+      return `<div class="crm-qrp-switcher" style="border-radius:10px;border:1px solid var(--z-line-soft);margin-bottom:14px">
+        ${tabs.map((t) => `<button type="button" class="crm-qrp-switch-btn${formType === t.key ? " is-active" : ""}" data-type-tab="${t.key}" style="font-size:11.5px;font-weight:700">${t.label}</button>`).join("")}
+      </div>`;
+    }
+
+    async function typeBodyHtml() {
+      if (formType === "text") {
+        return `<label class="crm-dialog-field"><span>Mensagem</span><textarea class="crm-dialog-textarea" data-msg placeholder="Digite a mensagem que será enviada...">${escapeHtml(formPrefillText || "")}</textarea></label>`;
+      }
+      if (formType === "image" || formType === "audio") {
+        const label = formType === "image" ? "imagem" : "áudio";
+        return `
+          <label class="crm-dialog-field">
+            <span>Arquivo (${label})</span>
+            <div class="crm-dialog-dropzone${formUploaded ? " has-file" : ""}" data-pick-file>${formUploaded ? `Anexado: ${escapeHtml(formUploaded.filename || "")}` : `Clique para escolher um arquivo de ${label}`}</div>
+            <input type="file" accept="${formType}/*" data-file-input hidden />
+          </label>
+          ${formType === "image" ? `<label class="crm-dialog-field"><span>Legenda (opcional)</span><input class="crm-dialog-input" data-caption /></label>` : ""}
+        `;
+      }
+      // qr
+      if (!quickReplies.length) await loadQuickReplies();
+      return `
+        <label class="crm-dialog-field">
+          <span>Resposta rápida</span>
+          <select class="crm-dialog-select" data-qr-pick>
+            <option value="">Escolha uma resposta rápida...</option>
+            ${quickReplies.map((q) => `<option value="${escapeHtml(q.id)}" ${formQrId === q.id ? "selected" : ""}>${escapeHtml(q.title)}</option>`).join("")}
+          </select>
+        </label>
+        ${!quickReplies.length ? `<p class="crm-fn-pop-empty">Nenhuma resposta rápida cadastrada ainda.</p>` : ""}
+      `;
+    }
+
+    let formPrefillText = "";
+
+    async function renderForm(job) {
+      editingJobId = job?.id || null;
+      formUploaded = null;
+      formQrId = null;
+      formPrefillText = job?.rendered_body || "";
+      formType = "text";
       const now = new Date();
       const pad = (n) => String(n).padStart(2, "0");
       const minDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      const jobDate = job ? new Date(job.scheduled_for) : null;
       dialog.innerHTML = `
-        ${head("Criar agendamento")}
+        ${head(editingJobId ? "Editar agendamento" : "Criar agendamento")}
         <div class="crm-dialog-body">
-          <label class="crm-dialog-field">
-            <span>Mensagem</span>
-            <textarea class="crm-dialog-textarea" data-msg placeholder="Digite a mensagem que será enviada..."></textarea>
-          </label>
+          ${typeTabsHtml()}
+          <div data-type-body>${await typeBodyHtml()}</div>
           <div class="crm-dialog-row2">
-            <label class="crm-dialog-field"><span>Data</span><input type="date" class="crm-dialog-input" data-date min="${minDate}" /></label>
-            <label class="crm-dialog-field"><span>Hora</span><input type="time" class="crm-dialog-input" data-time /></label>
+            <label class="crm-dialog-field"><span>Data</span><input type="date" class="crm-dialog-input" data-date min="${minDate}" value="${jobDate ? jobDate.toISOString().slice(0, 10) : ""}" /></label>
+            <label class="crm-dialog-field"><span>Hora</span><input type="time" class="crm-dialog-input" data-time value="${jobDate ? jobDate.toTimeString().slice(0, 5) : ""}" /></label>
           </div>
           <div class="crm-dialog-foot">
             <button class="crm-dialog-cta-ghost" data-back>Cancelar</button>
-            <button class="crm-dialog-cta" data-save>Criar</button>
+            <button class="crm-dialog-cta" data-save>${editingJobId ? "Salvar" : "Criar"}</button>
           </div>
         </div>
       `;
+    }
+
+    async function refreshTypeBody() {
+      const el = dialog.querySelector("[data-type-body]");
+      if (el) el.innerHTML = await typeBodyHtml();
+      dialog.querySelectorAll("[data-type-tab]").forEach((b) => {
+        b.classList.toggle("is-active", b.getAttribute("data-type-tab") === formType);
+      });
     }
 
     async function loadList() {
@@ -1797,8 +1902,23 @@
 
     dialog.addEventListener("click", async (e) => {
       if (e.target.closest("[data-close]")) return close();
-      if (e.target.closest("[data-new]")) return renderForm();
+      if (e.target.closest("[data-new]")) return renderForm(null);
       if (e.target.closest("[data-back]")) return loadList();
+      if (e.target.closest("[data-pick-file]")) return dialog.querySelector("[data-file-input]")?.click();
+
+      const typeTab = e.target.closest("[data-type-tab]");
+      if (typeTab) {
+        formType = typeTab.getAttribute("data-type-tab");
+        formUploaded = null;
+        return void refreshTypeBody();
+      }
+
+      const editBtn = e.target.closest("[data-edit]");
+      if (editBtn) {
+        const job = currentJobs.find((j) => j.id === editBtn.getAttribute("data-edit"));
+        if (job) return renderForm(job);
+        return;
+      }
 
       const cancel = e.target.closest("[data-cancel]");
       if (cancel) {
@@ -1811,57 +1931,118 @@
 
       if (e.target.closest("[data-save]")) {
         const saveBtn = dialog.querySelector("[data-save]");
-        const msg = dialog.querySelector("[data-msg]").value.trim();
         const date = dialog.querySelector("[data-date]").value;
         const time = dialog.querySelector("[data-time]").value;
-        if (!msg) {
-          crmToast("Escreva a mensagem.", "err");
-          return;
-        }
         if (!chat?.phone) {
           crmToast("Esse contato não tem telefone identificado.", "err");
           return;
         }
         let scheduledFor;
         if (date && time) {
-          const parsed = new Date(`${date}T${time}:00`);
-          if (Number.isNaN(parsed.getTime())) {
+          const parsedDate = new Date(`${date}T${time}:00`);
+          if (Number.isNaN(parsedDate.getTime())) {
             crmToast("Data ou hora inválida.", "err");
             return;
           }
-          scheduledFor = parsed.toISOString();
+          scheduledFor = parsedDate.toISOString();
         }
+
+        let body;
+        if (formType === "text") {
+          const msg = dialog.querySelector("[data-msg]")?.value.trim();
+          if (!msg) { crmToast("Escreva a mensagem.", "err"); return; }
+          body = { message: msg };
+        } else if (formType === "image" || formType === "audio") {
+          if (!formUploaded) { crmToast("Escolha um arquivo.", "err"); return; }
+          const caption = dialog.querySelector("[data-caption]")?.value.trim() || undefined;
+          body = { actions: [{ type: formType, path: formUploaded.path, mime: formUploaded.mime, filename: formUploaded.filename, caption }] };
+        } else {
+          const qrId = dialog.querySelector("[data-qr-pick]")?.value;
+          if (!qrId) { crmToast("Escolha uma resposta rápida.", "err"); return; }
+          const qr = quickReplies.find((q) => q.id === qrId);
+          if (!qr) { crmToast("Resposta rápida não encontrada.", "err"); return; }
+          body = { actions: qr.actions.filter((a) => ["text", "image", "audio", "video"].includes(a.type)) };
+        }
+
         saveBtn.disabled = true;
-        saveBtn.textContent = "Criando...";
-        const r = await chrome.runtime
-          .sendMessage({
-            type: "api",
-            path: "/api/public/extension/lead-schedule",
-            opts: {
-              method: "POST",
-              body: JSON.stringify({
-                wa_contact_id: chat.contact_db_id || null,
-                phone: chat.phone,
-                name: chat.name || null,
-                message: msg,
-                scheduled_for: scheduledFor,
-              }),
-            },
-          })
-          .catch(() => null);
+        saveBtn.textContent = editingJobId ? "Salvando..." : "Criando...";
+        const r = editingJobId
+          ? await chrome.runtime
+              .sendMessage({
+                type: "api",
+                path: `/api/public/extension/lead-schedule/${editingJobId}`,
+                opts: { method: "PATCH", body: JSON.stringify({ ...body, scheduled_for: scheduledFor }) },
+              })
+              .catch(() => null)
+          : await chrome.runtime
+              .sendMessage({
+                type: "api",
+                path: "/api/public/extension/lead-schedule",
+                opts: {
+                  method: "POST",
+                  body: JSON.stringify({
+                    wa_contact_id: chat.contact_db_id || null,
+                    phone: chat.phone,
+                    name: chat.name || null,
+                    scheduled_for: scheduledFor,
+                    ...body,
+                  }),
+                },
+              })
+              .catch(() => null);
         if (r?.ok) {
-          crmToast("Mensagem agendada");
+          crmToast(editingJobId ? "Agendamento atualizado" : "Mensagem agendada");
           await loadList();
         } else {
           crmToast(r?.error || "Não consegui agendar.", "err");
           saveBtn.disabled = false;
-          saveBtn.textContent = "Criar";
+          saveBtn.textContent = editingJobId ? "Salvar" : "Criar";
         }
+      }
+    });
+
+    dialog.addEventListener("change", async (e) => {
+      const fileInput = e.target.closest("[data-file-input]");
+      if (fileInput) {
+        const file = fileInput.files?.[0];
+        if (!file) return;
+        const zone = dialog.querySelector("[data-pick-file]");
+        zone.textContent = "Enviando...";
+        try {
+          const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ""));
+            reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
+            reader.readAsDataURL(file);
+          });
+          const r = await chrome.runtime
+            .sendMessage({
+              type: "api",
+              path: "/api/public/extension/quick-replies/upload",
+              opts: { method: "POST", body: JSON.stringify({ filename: file.name, mime: file.type, data_base64: dataUrl }) },
+            })
+            .catch(() => null);
+          if (r?.ok) {
+            formUploaded = { path: r.path, mime: r.mime, filename: r.filename };
+            zone.textContent = `Anexado: ${r.filename}`;
+            zone.classList.add("has-file");
+          } else {
+            crmToast(r?.error || "Não consegui enviar o arquivo.", "err");
+          }
+        } catch (err) {
+          crmToast(err?.message || "Erro ao ler arquivo", "err");
+        }
+        return;
+      }
+      if (e.target.closest("[data-qr-pick]")) {
+        formQrId = e.target.value || null;
       }
     });
 
     await loadList();
   }
+
+
 
 
 
@@ -2039,8 +2220,10 @@
     const pop = document.createElement("div");
     pop.className = "crm-fn-pop";
     const rect = anchor.getBoundingClientRect();
+    const popWidth = 240; // precisa bater com o width de .crm-fn-pop no CSS
+    const centered = rect.left + rect.width / 2 - popWidth / 2;
     pop.style.top = `${rect.bottom + 8}px`;
-    pop.style.left = `${Math.min(Math.max(8, rect.left), window.innerWidth - 268)}px`;
+    pop.style.left = `${Math.min(Math.max(8, centered), window.innerWidth - popWidth - 8)}px`;
 
     let chat = null;
     // Estado conhecido da etapa atual, guardado localmente. NÃO comparamos
@@ -2258,12 +2441,11 @@
     body.innerHTML = `
       <div class="crm-cp-avatar-row">
         ${photo ? `<img src="${escapeHtml(photo)}" class="crm-cp-avatar-photo" alt="" />` : `<div class="crm-cp-avatar">${escapeHtml(initial)}</div>`}
-        <div>
-          <p class="crm-cp-name">${escapeHtml(profile.name || chat.name || "Contato")}</p>
+        <div class="crm-cp-avatar-info">
+          <input class="crm-cp-name-input" data-f="name" value="${escapeHtml(profile.name || chat.name || "")}" placeholder="Nome do contato" />
           <p class="crm-cp-phone">${escapeHtml(chat.phone || "")}</p>
         </div>
       </div>
-      <label class="crm-cp-field"><span>Nome</span><input class="crm-qrp-input" data-f="name" value="${escapeHtml(profile.name || chat.name || "")}" /></label>
       <label class="crm-cp-field"><span>Email</span><input class="crm-qrp-input" data-f="email" value="${escapeHtml(profile.email || "")}" placeholder="email@exemplo.com" /></label>
       <label class="crm-cp-field"><span>Sexo</span>
         <select class="crm-qrp-select" data-f="gender">

@@ -1357,6 +1357,11 @@ const IconTrashMini = () => (
     <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
   </svg>
 );
+const IconPencilMini = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M17 3a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+  </svg>
+);
 
 /** Ícone de etiqueta (formato de bandeirinha inclinada), colorido com a cor
  * real da etiqueta do WhatsApp. Mostra o nome só no hover (title), sem
@@ -1505,11 +1510,12 @@ function CardDrawer({
 
   // Anotações — MESMA lead_notes usada no ícone de Anotações do WhatsApp
   // (várias notas, texto e/ou mídia), não mais um campo único.
-  type LeadNote = { id: string; body: string | null; media_url: string | null; media_mime: string | null; created_at: string };
+  type LeadNote = { id: string; body: string | null; media_url: string | null; media_mime: string | null; media_path?: string | null; media_filename?: string | null; created_at: string };
   const [notesList, setNotesList] = useState<LeadNote[] | null>(null);
   const [newNoteBody, setNewNoteBody] = useState("");
   const noteFileRef = useRef<HTMLInputElement | null>(null);
   const [noteUploaded, setNoteUploaded] = useState<{ path: string; mime: string; filename: string } | null>(null);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
 
   async function loadNotes() {
     if (!contactQuery) return;
@@ -1521,20 +1527,41 @@ function CardDrawer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
+  function startEditNote(n: LeadNote) {
+    setEditingNoteId(n.id);
+    setNewNoteBody(n.body || "");
+    setNoteUploaded(n.media_path ? { path: n.media_path, mime: n.media_mime || "", filename: n.media_filename || "" } : null);
+  }
+  function cancelEditNote() {
+    setEditingNoteId(null);
+    setNewNoteBody("");
+    setNoteUploaded(null);
+  }
+
   async function addNote() {
     if (!newNoteBody.trim() && !noteUploaded) return;
     setBusy(true);
-    const r = await api("/api/public/extension/lead-notes", {
-      method: "POST",
-      body: JSON.stringify({
-        wa_contact_id: card.wa_contact_id || null,
-        phone: card.phone || null,
-        body: newNoteBody.trim() || null,
-        media_path: noteUploaded?.path || null,
-        media_mime: noteUploaded?.mime || null,
-        media_filename: noteUploaded?.filename || null,
-      }),
-    });
+    const r = editingNoteId
+      ? await api(`/api/public/extension/lead-notes/${editingNoteId}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            body: newNoteBody.trim() || null,
+            media_path: noteUploaded?.path || null,
+            media_mime: noteUploaded?.mime || null,
+            media_filename: noteUploaded?.filename || null,
+          }),
+        })
+      : await api("/api/public/extension/lead-notes", {
+          method: "POST",
+          body: JSON.stringify({
+            wa_contact_id: card.wa_contact_id || null,
+            phone: card.phone || null,
+            body: newNoteBody.trim() || null,
+            media_path: noteUploaded?.path || null,
+            media_mime: noteUploaded?.mime || null,
+            media_filename: noteUploaded?.filename || null,
+          }),
+        });
     setBusy(false);
     if (!r?.ok) {
       setErr((r?.error as string) || "Erro ao salvar anotação");
@@ -1543,6 +1570,7 @@ function CardDrawer({
     setErr(null);
     setNewNoteBody("");
     setNoteUploaded(null);
+    setEditingNoteId(null);
     void loadNotes();
   }
 
@@ -1720,6 +1748,12 @@ function CardDrawer({
         {tab === "notes" && (
           <>
             <div className="space-y-2">
+              {editingNoteId && (
+                <p className="flex items-center justify-between text-xs font-semibold text-brand">
+                  Editando anotação
+                  <button onClick={cancelEditNote} className="font-medium text-neutral-500 hover:text-neutral-800">Cancelar edição</button>
+                </p>
+              )}
               <label className="flex items-center gap-2 rounded-xl border border-dashed border-neutral-300 px-3 py-2 text-xs font-medium text-neutral-600 hover:border-brand">
                 <input
                   ref={noteFileRef}
@@ -1749,7 +1783,7 @@ function CardDrawer({
                 disabled={busy || (!newNoteBody.trim() && !noteUploaded)}
                 className="w-full rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong disabled:cursor-default disabled:opacity-40"
               >
-                {busy ? "Salvando..." : "Adicionar anotação"}
+                {busy ? "Salvando..." : editingNoteId ? "Salvar edição" : "Adicionar anotação"}
               </button>
             </div>
 
@@ -1762,9 +1796,14 @@ function CardDrawer({
                     <p className="text-[11px] text-neutral-400">
                       {new Date(n.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
                     </p>
-                    <button onClick={() => void removeNote(n.id)} className="shrink-0 rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-red-600">
-                      <IconTrashMini />
-                    </button>
+                    <div className="flex shrink-0 gap-1">
+                      <button onClick={() => startEditNote(n)} className="rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-brand">
+                        <IconPencilMini />
+                      </button>
+                      <button onClick={() => void removeNote(n.id)} className="rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-red-600">
+                        <IconTrashMini />
+                      </button>
+                    </div>
                   </div>
                   {n.body && <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-800">{n.body}</p>}
                   {n.media_url && n.media_mime?.startsWith("image/") && <img src={n.media_url} alt="" className="mt-2 max-h-40 rounded-lg object-cover" />}
@@ -1847,15 +1886,17 @@ function CardDrawer({
                       {((profile.name as string) || card.title || "?").trim().charAt(0).toUpperCase()}
                     </div>
                   )}
-                  <div>
-                    <p className="text-sm font-semibold text-neutral-900">{(profile.name as string) || card.title}</p>
+                  <div className="min-w-0 flex-1">
+                    <input
+                      className="w-full border-0 border-b border-transparent bg-transparent py-0.5 text-sm font-extrabold text-neutral-900 outline-none transition-colors hover:border-neutral-200 focus:border-brand"
+                      value={(profile.name as string) ?? ""}
+                      placeholder="Nome do contato"
+                      onChange={(e) => { setProfile({ ...profile, name: e.target.value }); setCpDirty(true); }}
+                    />
                     <p className="text-xs text-neutral-500">{card.phone}</p>
                   </div>
                 </div>
 
-                <Field label="Nome">
-                  <input className={inputCls} value={(profile.name as string) ?? ""} onChange={(e) => { setProfile({ ...profile, name: e.target.value }); setCpDirty(true); }} />
-                </Field>
                 <Field label="Email">
                   <input className={inputCls} value={(profile.email as string) ?? ""} onChange={(e) => { setProfile({ ...profile, email: e.target.value }); setCpDirty(true); }} placeholder="email@exemplo.com" />
                 </Field>

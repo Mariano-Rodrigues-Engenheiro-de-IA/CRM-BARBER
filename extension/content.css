@@ -855,7 +855,14 @@ html body.crm-shell.crm-qr-open #app {
 .crm-cp-avatar-photo {
   flex-shrink: 0; width: 44px; height: 44px; border-radius: 999px; object-fit: cover; background: var(--z-surface-2);
 }
+.crm-cp-avatar-info { flex: 1; min-width: 0; }
 .crm-cp-name { margin: 0; font-size: 13.5px; font-weight: 700; color: var(--z-text); }
+.crm-cp-name-input {
+  width: 100%; border: 0; border-bottom: 1.5px solid transparent; background: transparent; padding: 2px 0;
+  font-family: var(--z-font); font-size: 14.5px; font-weight: 800; color: var(--z-text); transition: border-color 0.15s ease;
+}
+.crm-cp-name-input:hover { border-bottom-color: var(--z-line); }
+.crm-cp-name-input:focus { outline: none; border-bottom-color: var(--z-accent); }
 .crm-cp-phone { margin: 1px 0 0; font-size: 11.5px; color: var(--z-text-dim); }
 .crm-cp-field { display: block; margin-bottom: 10px; }
 .crm-cp-field span { display: flex; align-items: center; gap: 5px; margin-bottom: 4px; font-size: 11px; font-weight: 700; color: var(--z-text-dim); }
