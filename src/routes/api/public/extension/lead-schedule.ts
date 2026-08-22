@@ -42,6 +42,10 @@ export const Route = createFileRoute("/api/public/extension/lead-schedule")({
           .select("id, rendered_body, scheduled_for, status, sent_at, last_error")
           .eq("barbershop_id", shop)
           .eq("phone", phone)
+          // Só o que foi criado por aqui (agendamento pelo ícone da
+          // conversa) — disparos de campanha do CRM usam campaign_id e não
+          // devem aparecer misturados nessa lista.
+          .is("campaign_id", null)
           .in("status", ["pending", "sent", "failed"])
           .order("scheduled_for", { ascending: true })
           .limit(50);
