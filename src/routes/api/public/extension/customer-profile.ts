@@ -40,7 +40,11 @@ export const Route = createFileRoute("/api/public/extension/customer-profile")({
           return jsonResponse(request, { ok: true, profile: null });
         }
         let query = supabaseAdmin.from("customer_profiles").select(SELECT).eq("barbershop_id", shop);
-        query = waContactId ? query.eq("wa_contact_id", waContactId) : query.eq("phone", phone as string);
+        query = waContactId && phone
+          ? query.or(`wa_contact_id.eq.${waContactId},phone.eq.${phone}`)
+          : waContactId
+            ? query.eq("wa_contact_id", waContactId)
+            : query.eq("phone", phone as string);
         const { data, error } = await query.maybeSingle();
         if (error) {
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });

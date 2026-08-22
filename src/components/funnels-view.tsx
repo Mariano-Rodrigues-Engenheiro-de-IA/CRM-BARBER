@@ -1399,16 +1399,37 @@ function Overlay({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  // Mesmo padrão visual do diálogo nativo usado na extensão do WhatsApp
+  // (fundo claro, sem escurecer feito modal pesado; cantos arredondados;
+  // entrada suave) — antes era um modal escuro e quadrado, bem diferente
+  // do resto do sistema.
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => requestAnimationFrame(() => setShown(true)));
+    return () => cancelAnimationFrame(raf);
+  }, []);
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
-      <div className="mt-16 w-full max-w-lg rounded-xl border border-neutral-300 bg-white p-6 shadow-xl">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-neutral-900">{title}</h3>
-          <button onClick={onClose} className="rounded p-1 text-neutral-400 hover:text-neutral-900">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-5 transition-opacity duration-150"
+      style={{ background: "rgba(11,20,26,0.18)", opacity: shown ? 1 : 0 }}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="w-full max-w-md max-h-[calc(100vh-64px)] overflow-y-auto rounded-2xl bg-white shadow-2xl transition-all duration-150"
+        style={{ transform: shown ? "translateY(0) scale(1)" : "translateY(6px) scale(0.98)" }}
+      >
+        <div className="flex items-center gap-2.5 px-5 pb-1 pt-5">
+          <h3 className="flex-1 text-[19px] font-extrabold text-neutral-900">{title}</h3>
+          <button
+            onClick={onClose}
+            className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full text-neutral-400 transition-colors hover:bg-neutral-100"
+          >
             ✕
           </button>
         </div>
-        <div className="mt-4">{children}</div>
+        <div className="px-5 pb-5 pt-3">{children}</div>
       </div>
     </div>
   );
@@ -1448,13 +1469,17 @@ function CardDrawer({
   const [aiSummary, setAiSummary] = useState<{ text: string; updatedAt: string | null } | null>(null);
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
 
-  // Perfil do cliente / Valor do cliente / Resumo da IA — mesma identidade
-  // de contato acessível pela extensão do WhatsApp (ícones na conversa).
-  const contactQuery = card.wa_contact_id
-    ? `wa_contact_id=${encodeURIComponent(card.wa_contact_id)}`
-    : card.phone
-      ? `phone=${encodeURIComponent(card.phone)}`
-      : null;
+  // Perfil do cliente / Valor do cliente / Resumo da IA / Anotações /
+  // Mensagens agendadas — mesma identidade de contato acessível pela
+  // extensão do WhatsApp (ícones na conversa). Manda os dois campos
+  // quando disponíveis (não só um): um registro pode ter sido salvo com
+  // qualquer um dos dois — sem os dois na busca, não acha um pelo outro.
+  const contactQuery = (() => {
+    const parts: string[] = [];
+    if (card.wa_contact_id) parts.push(`wa_contact_id=${encodeURIComponent(card.wa_contact_id)}`);
+    if (card.phone) parts.push(`phone=${encodeURIComponent(card.phone)}`);
+    return parts.length ? parts.join("&") : null;
+  })();
 
   useEffect(() => {
     // O resumo da IA vive em customer_profiles agora (casa com QUALQUER

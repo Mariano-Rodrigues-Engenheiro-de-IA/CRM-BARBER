@@ -51,7 +51,11 @@ export const Route = createFileRoute("/api/public/extension/customer-deal")({
           return jsonResponse(request, { ok: true, deal: null, deals: data ?? [] });
         }
         let query = supabaseAdmin.from("customer_deals").select(SELECT).eq("barbershop_id", shop);
-        query = waContactId ? query.eq("wa_contact_id", waContactId) : query.eq("phone", phone as string);
+        query = waContactId && phone
+          ? query.or(`wa_contact_id.eq.${waContactId},phone.eq.${phone}`)
+          : waContactId
+            ? query.eq("wa_contact_id", waContactId)
+            : query.eq("phone", phone as string);
         const { data, error } = await query.maybeSingle();
         if (error) {
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });

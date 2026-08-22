@@ -43,7 +43,11 @@ export const Route = createFileRoute("/api/public/extension/lead-notes")({
           .select(SELECT)
           .eq("barbershop_id", shop)
           .order("created_at", { ascending: false });
-        query = waContactId ? query.eq("wa_contact_id", waContactId) : query.eq("phone", phone as string);
+        query = waContactId && phone
+          ? query.or(`wa_contact_id.eq.${waContactId},phone.eq.${phone}`)
+          : waContactId
+            ? query.eq("wa_contact_id", waContactId)
+            : query.eq("phone", phone as string);
         const { data, error } = await query;
         if (error) return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
 

@@ -116,6 +116,18 @@
   }
 
   /** Pede etiquetas/conversas ao bridge (MAIN world) via postMessage. */
+  /** Query de identificação do contato — manda os dois campos quando
+   * disponíveis (não só um), porque um registro pode ter sido salvo com
+   * qualquer um dos dois (ex: nota criada no WhatsApp antes do contato
+   * sincronizar só tinha telefone; card do CRM só tinha wa_contact_id) —
+   * sem os dois, a busca não encontrava um pelo outro. */
+  function contactIdentityQuery(waContactId, phone) {
+    const parts = [];
+    if (waContactId) parts.push(`wa_contact_id=${encodeURIComponent(waContactId)}`);
+    if (phone) parts.push(`phone=${encodeURIComponent(phone)}`);
+    return parts.length ? parts.join("&") : null;
+  }
+
   function askBridgeCollect() {
     return new Promise((resolve) => {
       const id = crypto.randomUUID();
@@ -1461,11 +1473,7 @@
 
   async function prefetchNotes() {
     const chat = await activeChat();
-    const contactQuery = chat?.contact_db_id
-      ? `wa_contact_id=${encodeURIComponent(chat.contact_db_id)}`
-      : chat?.phone
-        ? `phone=${encodeURIComponent(chat.phone)}`
-        : null;
+    const contactQuery = contactIdentityQuery(chat?.contact_db_id, chat?.phone);
     if (!contactQuery) return;
     const r = await chrome.runtime
       .sendMessage({ type: "api", path: `/api/public/extension/lead-notes?${contactQuery}` })
@@ -1488,11 +1496,7 @@
     // qualquer trabalho assíncrono — abre na hora, sem sensação de travar.
     await new Promise((r) => requestAnimationFrame(r));
     const chat = await activeChat();
-    const contactQuery = chat?.contact_db_id
-      ? `wa_contact_id=${encodeURIComponent(chat.contact_db_id)}`
-      : chat?.phone
-        ? `phone=${encodeURIComponent(chat.phone)}`
-        : null;
+    const contactQuery = contactIdentityQuery(chat?.contact_db_id, chat?.phone);
     let uploaded = null;
 
     function head(title) {
@@ -2218,11 +2222,7 @@
     };
 
     const chat = await activeChat();
-    const contactQuery = chat?.contact_db_id
-      ? `wa_contact_id=${encodeURIComponent(chat.contact_db_id)}`
-      : chat?.phone
-        ? `phone=${encodeURIComponent(chat.phone)}`
-        : null;
+    const contactQuery = contactIdentityQuery(chat?.contact_db_id, chat?.phone);
 
     if (activePanelKind !== kind || !panel.isConnected) return; // usuário trocou/fechou enquanto carregava
     if (!chat || !contactQuery) {
