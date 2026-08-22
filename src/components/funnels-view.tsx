@@ -45,7 +45,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
   const [err, setErr] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [detail, setDetail] = useState<FunnelCard | null>(null);
-  const [detailTab, setDetailTab] = useState<"notes" | "schedule" | "profile">("notes");
+  const [detailTab, setDetailTab] = useState<"notes" | "schedule" | "profile" | "deal">("notes");
   const [inboxQuery, setInboxQuery] = useState("");
   const [renamingStage, setRenamingStage] = useState<string | null>(null);
   const [stageSearch, setStageSearch] = useState<Record<string, string>>({});
@@ -1020,7 +1020,7 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                             <IconClock />
                           </CardAction>
                           <CardAction
-                            title="Perfil e valor do cliente"
+                            title="Perfil do cliente"
                             colorClass="text-violet-600 hover:bg-violet-50"
                             onClick={() => {
                               setDetailTab("profile");
@@ -1028,6 +1028,16 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                             }}
                           >
                             <IconProfile />
+                          </CardAction>
+                          <CardAction
+                            title="Valor do cliente"
+                            colorClass="text-emerald-700 hover:bg-emerald-50"
+                            onClick={() => {
+                              setDetailTab("deal");
+                              setDetail(card);
+                            }}
+                          >
+                            <IconDeal />
                           </CardAction>
                           {dealValueByKey.get(card.wa_contact_id || card.phone || "") ? (
                             <span className="ml-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
@@ -1423,7 +1433,7 @@ function CardDrawer({
 }: {
   api: ApiFn;
   card: FunnelCard;
-  initialTab: "notes" | "schedule" | "profile";
+  initialTab: "notes" | "schedule" | "profile" | "deal";
   onClose: () => void;
   onDealSaved?: () => void;
 }) {
@@ -1488,11 +1498,10 @@ function CardDrawer({
     setTimeout(() => setSaved(false), 1800);
   }
 
-  // Perfil e Valor do cliente viraram um formulário só (mesma unificação
-  // feita na extensão do WhatsApp) — um só carregamento, um só salvamento.
   const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
-  const [deal, setDeal] = useState<Record<string, unknown> | null>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
+  const [deal, setDeal] = useState<Record<string, unknown> | null>(null);
+  const [dealLoaded, setDealLoaded] = useState(false);
   const [dealValueText, setDealValueText] = useState("");
   const [cpBusy, setCpBusy] = useState(false);
   // Botão "Salvar" só liga quando algo muda de fato — sem mensagem de
@@ -1501,27 +1510,43 @@ function CardDrawer({
 
   useEffect(() => {
     if (tab === "profile" && !profileLoaded && contactQuery) {
-      Promise.all([
-        api(`/api/public/extension/customer-profile?${contactQuery}`),
-        api(`/api/public/extension/customer-deal?${contactQuery}`),
-      ]).then(([rp, rd]) => {
-        const p = ((rp?.ok ? rp.profile : null) as Record<string, unknown> | null) || {};
+      api(`/api/public/extension/customer-profile?${contactQuery}`).then((r) => {
+        const p = ((r?.ok ? r.profile : null) as Record<string, unknown> | null) || {};
         // Se ainda não tem nome salvo no perfil, usa o nome que o card já
         // tem (o mesmo resolvido lá na conversa do WhatsApp).
         if (!p.name && card.title) p.name = card.title;
-        const d = ((rd?.ok ? rd.deal : null) as Record<string, unknown> | null) || {};
-        if (!d.notes && card.notes) d.notes = card.notes;
         setProfile(p);
+        setProfileLoaded(true);
+        setCpDirty(false);
+      });
+    }
+    if (tab === "deal" && !dealLoaded && contactQuery) {
+      api(`/api/public/extension/customer-deal?${contactQuery}`).then((r) => {
+        const d = ((r?.ok ? r.deal : null) as Record<string, unknown> | null) || {};
+        if (!d.notes && card.notes) d.notes = card.notes;
         setDeal(d);
         setDealValueText(d.value_cents != null ? ((d.value_cents as number) / 100).toFixed(2).replace(".", ",") : "");
-        setProfileLoaded(true);
+        setDealLoaded(true);
+        setCpDirty(false);
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
   async function saveProfile() {
-    if (!profile || !deal) return;
+    if (!profile) return;
+    setCpBusy(true);
+    const r = await api("/api/public/extension/customer-profile", {
+      method: "PATCH",
+      body: JSON.stringify({ wa_contact_id: card.wa_contact_id || null, phone: card.phone || null, ...profile }),
+    });
+    setCpBusy(false);
+    if (r?.ok) setCpDirty(false);
+    else setErr((r?.error as string) || "Erro ao salvar");
+  }
+
+  async function saveDeal() {
+    if (!deal) return;
     setCpBusy(true);
     const num = parseFloat(dealValueText.replace(/\./g, "").replace(",", "."));
     const value_cents = dealValueText.trim() === "" ? null : Number.isFinite(num) ? Math.round(num * 100) : null;
@@ -1534,23 +1559,17 @@ function CardDrawer({
       });
       setNotes(deal.notes as string);
     }
-    const [r1, r2] = await Promise.all([
-      api("/api/public/extension/customer-profile", {
-        method: "PATCH",
-        body: JSON.stringify({ wa_contact_id: card.wa_contact_id || null, phone: card.phone || null, ...profile }),
-      }),
-      api("/api/public/extension/customer-deal", {
-        method: "PATCH",
-        body: JSON.stringify({ wa_contact_id: card.wa_contact_id || null, phone: card.phone || null, ...deal, value_cents }),
-      }),
-    ]);
+    const r = await api("/api/public/extension/customer-deal", {
+      method: "PATCH",
+      body: JSON.stringify({ wa_contact_id: card.wa_contact_id || null, phone: card.phone || null, ...deal, value_cents }),
+    });
     setDeal({ ...deal, value_cents });
     setCpBusy(false);
-    if (r1?.ok && r2?.ok) {
+    if (r?.ok) {
       setCpDirty(false);
       onDealSaved?.();
     } else {
-      setErr((!r1?.ok && (r1?.error as string)) || (!r2?.ok && (r2?.error as string)) || "Erro ao salvar");
+      setErr((r?.error as string) || "Erro ao salvar");
     }
   }
 
@@ -1576,14 +1595,14 @@ function CardDrawer({
   }
 
   return (
-    <Overlay title={tab === "profile" ? "Perfil do cliente" : card.title} onClose={onClose}>
+    <Overlay title={tab === "profile" ? "Perfil do cliente" : tab === "deal" ? "Valor do cliente" : card.title} onClose={onClose}>
       <div className="space-y-4">
-        {tab !== "profile" && aiSummaryLoading && (
+        {tab !== "profile" && tab !== "deal" && aiSummaryLoading && (
           <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-3 text-xs text-neutral-400">
             Carregando resumo da IA...
           </div>
         )}
-        {tab !== "profile" && aiSummary && (
+        {tab !== "profile" && tab !== "deal" && aiSummary && (
           <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
             <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-blue-700">
               <span>✨</span> Resumo da IA
@@ -1597,7 +1616,7 @@ function CardDrawer({
           </div>
         )}
 
-        {tab !== "profile" && (
+        {tab !== "profile" && tab !== "deal" && (
         <div className="flex items-center justify-between gap-2">
           <h4 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
             {tab === "notes" ? "Anotações" : "Mensagens agendadas"}
@@ -1666,7 +1685,7 @@ function CardDrawer({
           <div className="space-y-3">
             {!contactQuery && <p className="text-sm text-neutral-500">Sem telefone/contato vinculado a esse lead.</p>}
             {contactQuery && !profileLoaded && <p className="text-sm text-neutral-400">Carregando...</p>}
-            {contactQuery && profileLoaded && profile && deal && (
+            {contactQuery && profileLoaded && profile && (
               <>
                 <div className="mb-1 flex items-center gap-3">
                   {card.profile_picture_url ? (
@@ -1704,8 +1723,24 @@ function CardDrawer({
                   <input className={inputCls} value={(profile.city as string) ?? ""} onChange={(e) => { setProfile({ ...profile, city: e.target.value }); setCpDirty(true); }} />
                 </Field>
 
-                <div className="my-1 border-t border-neutral-100" />
+                <button
+                  onClick={saveProfile}
+                  disabled={cpBusy || !cpDirty}
+                  className="w-full rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong disabled:cursor-default disabled:opacity-40"
+                >
+                  {cpBusy ? "Salvando..." : "Salvar"}
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
+        {tab === "deal" && (
+          <div className="space-y-3">
+            {!contactQuery && <p className="text-sm text-neutral-500">Sem telefone/contato vinculado a esse lead.</p>}
+            {contactQuery && !dealLoaded && <p className="text-sm text-neutral-400">Carregando...</p>}
+            {contactQuery && dealLoaded && deal && (
+              <>
                 <Field label="Origem do lead">
                   <input className={inputCls} value={(deal.lead_source as string) ?? ""} onChange={(e) => { setDeal({ ...deal, lead_source: e.target.value }); setCpDirty(true); }} placeholder="Ex: Instagram, indicação..." />
                 </Field>
@@ -1740,7 +1775,7 @@ function CardDrawer({
                 </Field>
 
                 <button
-                  onClick={saveProfile}
+                  onClick={saveDeal}
                   disabled={cpBusy || !cpDirty}
                   className="w-full rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong disabled:cursor-default disabled:opacity-40"
                 >

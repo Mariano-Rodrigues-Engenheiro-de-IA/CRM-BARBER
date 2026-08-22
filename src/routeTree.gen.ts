@@ -9,100 +9,84 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as PoliticasRouteImport } from './routes/politicas'
-import { Route as PainelRouteImport } from './routes/painel'
-import { Route as LinkRouteImport } from './routes/link'
-import { Route as InstalarRouteImport } from './routes/instalar'
-import { Route as BaixarRouteImport } from './routes/baixar'
-import { Route as AssinarRouteImport } from './routes/assinar'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AssinarRouteImport } from './routes/assinar'
+import { Route as BaixarRouteImport } from './routes/baixar'
+import { Route as InstalarRouteImport } from './routes/instalar'
+import { Route as LinkRouteImport } from './routes/link'
+import { Route as PainelRouteImport } from './routes/painel'
+import { Route as PoliticasRouteImport } from './routes/politicas'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
-import { Route as AssinarRetornoRouteImport } from './routes/assinar.retorno'
-import { Route as AgenteIaRetornoRouteImport } from './routes/agente-ia.retorno'
-import { Route as AgendarSlugRouteImport } from './routes/agendar.$slug'
-import { Route as AdminWhatsappRouteImport } from './routes/admin.whatsapp'
-import { Route as AdminTokensRouteImport } from './routes/admin.tokens'
-import { Route as AdminLessonsRouteImport } from './routes/admin.lessons'
 import { Route as AdminClientsRouteImport } from './routes/admin.clients'
+import { Route as AdminLessonsRouteImport } from './routes/admin.lessons'
+import { Route as AdminTokensRouteImport } from './routes/admin.tokens'
+import { Route as AdminWhatsappRouteImport } from './routes/admin.whatsapp'
+import { Route as AgendarSlugRouteImport } from './routes/agendar.$slug'
+import { Route as AgenteIaRetornoRouteImport } from './routes/agente-ia.retorno'
+import { Route as AssinarRetornoRouteImport } from './routes/assinar.retorno'
 import { Route as ApiPublicSignupRouteImport } from './routes/api/public/signup'
-import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp.webhook'
-import { Route as ApiPublicWhatsappSignupCallbackRouteImport } from './routes/api/public/whatsapp.signup-callback'
-import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
-import { Route as ApiPublicHooksDispatchJobsRouteImport } from './routes/api/public/hooks/dispatch-jobs'
-import { Route as ApiPublicExtensionTrainingModulesRouteImport } from './routes/api/public/extension/training-modules'
-import { Route as ApiPublicExtensionTimeBlocksRouteImport } from './routes/api/public/extension/time-blocks'
-import { Route as ApiPublicExtensionShopRouteImport } from './routes/api/public/extension/shop'
-import { Route as ApiPublicExtensionServicesRouteImport } from './routes/api/public/extension/services'
-import { Route as ApiPublicExtensionQuickRepliesRouteImport } from './routes/api/public/extension/quick-replies'
-import { Route as ApiPublicExtensionProfessionalsRouteImport } from './routes/api/public/extension/professionals'
-import { Route as ApiPublicExtensionProductsRouteImport } from './routes/api/public/extension/products'
-import { Route as ApiPublicExtensionPairRouteImport } from './routes/api/public/extension/pair'
-import { Route as ApiPublicExtensionMetaRouteImport } from './routes/api/public/extension/meta'
-import { Route as ApiPublicExtensionLessonsRouteImport } from './routes/api/public/extension/lessons'
-import { Route as ApiPublicExtensionFunnelsRouteImport } from './routes/api/public/extension/funnels'
-import { Route as ApiPublicExtensionFunnelCardsRouteImport } from './routes/api/public/extension/funnel-cards'
-import { Route as ApiPublicExtensionCustomersRouteImport } from './routes/api/public/extension/customers'
-import { Route as ApiPublicExtensionCustomerProfileRouteImport } from './routes/api/public/extension/customer-profile'
-import { Route as ApiPublicExtensionCustomerDealRouteImport } from './routes/api/public/extension/customer-deal'
-import { Route as ApiPublicExtensionCampaignsRouteImport } from './routes/api/public/extension/campaigns'
-import { Route as ApiPublicExtensionBillingRouteImport } from './routes/api/public/extension/billing'
-import { Route as ApiPublicExtensionAppointmentsRouteImport } from './routes/api/public/extension/appointments'
-import { Route as ApiPublicExtensionAiDemoLeadsRouteImport } from './routes/api/public/extension/ai-demo-leads'
-import { Route as ApiPublicExtensionAgenteIaSettingsRouteImport } from './routes/api/public/extension/agente-ia-settings'
-import { Route as ApiPublicExtensionAgenteIaAccessLinkRouteImport } from './routes/api/public/extension/agente-ia-access-link'
-import { Route as ApiPublicExtensionAgendaSettingsRouteImport } from './routes/api/public/extension/agenda-settings'
-import { Route as ApiPublicBookingSlugRouteImport } from './routes/api/public/booking.$slug'
-import { Route as ApiPublicAiUpdateSummaryRouteImport } from './routes/api/public/ai/update-summary'
-import { Route as ApiPublicAiSetAccessRouteImport } from './routes/api/public/ai/set-access'
-import { Route as ApiPublicAiMoveLeadRouteImport } from './routes/api/public/ai/move-lead'
-import { Route as ApiPublicAiFunnelsRouteImport } from './routes/api/public/ai/funnels'
 import { Route as ApiPublicAdminIssueTokenRouteImport } from './routes/api/public/admin/issue-token'
-import { Route as ApiPublicExtensionWhatsappTemplatesRouteImport } from './routes/api/public/extension/whatsapp.templates'
-import { Route as ApiPublicExtensionWhatsappStatusRouteImport } from './routes/api/public/extension/whatsapp.status'
-import { Route as ApiPublicExtensionWhatsappSendTemplateRouteImport } from './routes/api/public/extension/whatsapp.send-template'
-import { Route as ApiPublicExtensionWhatsappProviderRouteImport } from './routes/api/public/extension/whatsapp.provider'
-import { Route as ApiPublicExtensionWhatsappDisconnectRouteImport } from './routes/api/public/extension/whatsapp.disconnect'
-import { Route as ApiPublicExtensionWhatsappConnectRouteImport } from './routes/api/public/extension/whatsapp.connect'
-import { Route as ApiPublicExtensionWaSyncRouteImport } from './routes/api/public/extension/wa.sync'
-import { Route as ApiPublicExtensionWaDataRouteImport } from './routes/api/public/extension/wa.data'
-import { Route as ApiPublicExtensionTimeBlocksIdRouteImport } from './routes/api/public/extension/time-blocks.$id'
-import { Route as ApiPublicExtensionServicesIdRouteImport } from './routes/api/public/extension/services.$id'
-import { Route as ApiPublicExtensionQuickRepliesUploadRouteImport } from './routes/api/public/extension/quick-replies.upload'
-import { Route as ApiPublicExtensionQuickRepliesIdRouteImport } from './routes/api/public/extension/quick-replies.$id'
-import { Route as ApiPublicExtensionProfessionalsIdRouteImport } from './routes/api/public/extension/professionals.$id'
-import { Route as ApiPublicExtensionProductsIdRouteImport } from './routes/api/public/extension/products.$id'
-import { Route as ApiPublicExtensionJobsNextRouteImport } from './routes/api/public/extension/jobs.next'
-import { Route as ApiPublicExtensionJobsIdRouteImport } from './routes/api/public/extension/jobs.$id'
-import { Route as ApiPublicExtensionFunnelsIdRouteImport } from './routes/api/public/extension/funnels.$id'
-import { Route as ApiPublicExtensionFunnelCardsScheduleRouteImport } from './routes/api/public/extension/funnel-cards.schedule'
-import { Route as ApiPublicExtensionCustomersImportRouteImport } from './routes/api/public/extension/customers.import'
-import { Route as ApiPublicExtensionCustomersIdRouteImport } from './routes/api/public/extension/customers.$id'
-import { Route as ApiPublicExtensionCampaignsIdRouteImport } from './routes/api/public/extension/campaigns.$id'
+import { Route as ApiPublicAiFunnelsRouteImport } from './routes/api/public/ai/funnels'
+import { Route as ApiPublicAiMoveLeadRouteImport } from './routes/api/public/ai/move-lead'
+import { Route as ApiPublicAiSetAccessRouteImport } from './routes/api/public/ai/set-access'
+import { Route as ApiPublicAiUpdateSummaryRouteImport } from './routes/api/public/ai/update-summary'
+import { Route as ApiPublicBookingSlugRouteImport } from './routes/api/public/booking.$slug'
+import { Route as ApiPublicExtensionAgendaSettingsRouteImport } from './routes/api/public/extension/agenda-settings'
+import { Route as ApiPublicExtensionAgenteIaAccessLinkRouteImport } from './routes/api/public/extension/agente-ia-access-link'
+import { Route as ApiPublicExtensionAgenteIaSettingsRouteImport } from './routes/api/public/extension/agente-ia-settings'
+import { Route as ApiPublicExtensionAiDemoLeadsRouteImport } from './routes/api/public/extension/ai-demo-leads'
+import { Route as ApiPublicExtensionAppointmentsRouteImport } from './routes/api/public/extension/appointments'
+import { Route as ApiPublicExtensionBillingRouteImport } from './routes/api/public/extension/billing'
+import { Route as ApiPublicExtensionCampaignsRouteImport } from './routes/api/public/extension/campaigns'
+import { Route as ApiPublicExtensionCustomerDealRouteImport } from './routes/api/public/extension/customer-deal'
+import { Route as ApiPublicExtensionCustomerProfileRouteImport } from './routes/api/public/extension/customer-profile'
+import { Route as ApiPublicExtensionCustomersRouteImport } from './routes/api/public/extension/customers'
+import { Route as ApiPublicExtensionFunnelCardsRouteImport } from './routes/api/public/extension/funnel-cards'
+import { Route as ApiPublicExtensionFunnelsRouteImport } from './routes/api/public/extension/funnels'
+import { Route as ApiPublicExtensionLeadNotesRouteImport } from './routes/api/public/extension/lead-notes'
+import { Route as ApiPublicExtensionLeadScheduleRouteImport } from './routes/api/public/extension/lead-schedule'
+import { Route as ApiPublicExtensionLessonsRouteImport } from './routes/api/public/extension/lessons'
+import { Route as ApiPublicExtensionMetaRouteImport } from './routes/api/public/extension/meta'
+import { Route as ApiPublicExtensionPairRouteImport } from './routes/api/public/extension/pair'
+import { Route as ApiPublicExtensionProductsRouteImport } from './routes/api/public/extension/products'
+import { Route as ApiPublicExtensionProfessionalsRouteImport } from './routes/api/public/extension/professionals'
+import { Route as ApiPublicExtensionQuickRepliesRouteImport } from './routes/api/public/extension/quick-replies'
+import { Route as ApiPublicExtensionServicesRouteImport } from './routes/api/public/extension/services'
+import { Route as ApiPublicExtensionShopRouteImport } from './routes/api/public/extension/shop'
+import { Route as ApiPublicExtensionTimeBlocksRouteImport } from './routes/api/public/extension/time-blocks'
+import { Route as ApiPublicExtensionTrainingModulesRouteImport } from './routes/api/public/extension/training-modules'
+import { Route as ApiPublicHooksDispatchJobsRouteImport } from './routes/api/public/hooks/dispatch-jobs'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as ApiPublicWhatsappSignupCallbackRouteImport } from './routes/api/public/whatsapp.signup-callback'
+import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp.webhook'
 import { Route as ApiPublicExtensionAppointmentsIdRouteImport } from './routes/api/public/extension/appointments.$id'
+import { Route as ApiPublicExtensionCampaignsIdRouteImport } from './routes/api/public/extension/campaigns.$id'
+import { Route as ApiPublicExtensionCustomersIdRouteImport } from './routes/api/public/extension/customers.$id'
+import { Route as ApiPublicExtensionCustomersImportRouteImport } from './routes/api/public/extension/customers.import'
+import { Route as ApiPublicExtensionFunnelCardsScheduleRouteImport } from './routes/api/public/extension/funnel-cards.schedule'
+import { Route as ApiPublicExtensionFunnelsIdRouteImport } from './routes/api/public/extension/funnels.$id'
+import { Route as ApiPublicExtensionJobsIdRouteImport } from './routes/api/public/extension/jobs.$id'
+import { Route as ApiPublicExtensionJobsNextRouteImport } from './routes/api/public/extension/jobs.next'
+import { Route as ApiPublicExtensionLeadNotesIdRouteImport } from './routes/api/public/extension/lead-notes.$id'
+import { Route as ApiPublicExtensionLeadScheduleIdRouteImport } from './routes/api/public/extension/lead-schedule.$id'
+import { Route as ApiPublicExtensionProductsIdRouteImport } from './routes/api/public/extension/products.$id'
+import { Route as ApiPublicExtensionProfessionalsIdRouteImport } from './routes/api/public/extension/professionals.$id'
+import { Route as ApiPublicExtensionQuickRepliesIdRouteImport } from './routes/api/public/extension/quick-replies.$id'
+import { Route as ApiPublicExtensionQuickRepliesUploadRouteImport } from './routes/api/public/extension/quick-replies.upload'
+import { Route as ApiPublicExtensionServicesIdRouteImport } from './routes/api/public/extension/services.$id'
+import { Route as ApiPublicExtensionTimeBlocksIdRouteImport } from './routes/api/public/extension/time-blocks.$id'
+import { Route as ApiPublicExtensionWaDataRouteImport } from './routes/api/public/extension/wa.data'
+import { Route as ApiPublicExtensionWaSyncRouteImport } from './routes/api/public/extension/wa.sync'
+import { Route as ApiPublicExtensionWhatsappConnectRouteImport } from './routes/api/public/extension/whatsapp.connect'
+import { Route as ApiPublicExtensionWhatsappDisconnectRouteImport } from './routes/api/public/extension/whatsapp.disconnect'
+import { Route as ApiPublicExtensionWhatsappProviderRouteImport } from './routes/api/public/extension/whatsapp.provider'
+import { Route as ApiPublicExtensionWhatsappSendTemplateRouteImport } from './routes/api/public/extension/whatsapp.send-template'
+import { Route as ApiPublicExtensionWhatsappStatusRouteImport } from './routes/api/public/extension/whatsapp.status'
+import { Route as ApiPublicExtensionWhatsappTemplatesRouteImport } from './routes/api/public/extension/whatsapp.templates'
 
-const PoliticasRoute = PoliticasRouteImport.update({
-  id: '/politicas',
-  path: '/politicas',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PainelRoute = PainelRouteImport.update({
-  id: '/painel',
-  path: '/painel',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LinkRoute = LinkRouteImport.update({
-  id: '/link',
-  path: '/link',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InstalarRoute = InstalarRouteImport.update({
-  id: '/instalar',
-  path: '/instalar',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BaixarRoute = BaixarRouteImport.update({
-  id: '/baixar',
-  path: '/baixar',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AssinarRoute = AssinarRouteImport.update({
@@ -110,9 +94,29 @@ const AssinarRoute = AssinarRouteImport.update({
   path: '/assinar',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const BaixarRoute = BaixarRouteImport.update({
+  id: '/baixar',
+  path: '/baixar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstalarRoute = InstalarRouteImport.update({
+  id: '/instalar',
+  path: '/instalar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LinkRoute = LinkRouteImport.update({
+  id: '/link',
+  path: '/link',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PainelRoute = PainelRouteImport.update({
+  id: '/painel',
+  path: '/painel',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PoliticasRoute = PoliticasRouteImport.update({
+  id: '/politicas',
+  path: '/politicas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -120,29 +124,9 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AssinarRetornoRoute = AssinarRetornoRouteImport.update({
-  id: '/retorno',
-  path: '/retorno',
-  getParentRoute: () => AssinarRoute,
-} as any)
-const AgenteIaRetornoRoute = AgenteIaRetornoRouteImport.update({
-  id: '/agente-ia/retorno',
-  path: '/agente-ia/retorno',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AgendarSlugRoute = AgendarSlugRouteImport.update({
-  id: '/agendar/$slug',
-  path: '/agendar/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminWhatsappRoute = AdminWhatsappRouteImport.update({
-  id: '/admin/whatsapp',
-  path: '/admin/whatsapp',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminTokensRoute = AdminTokensRouteImport.update({
-  id: '/admin/tokens',
-  path: '/admin/tokens',
+const AdminClientsRoute = AdminClientsRouteImport.update({
+  id: '/admin/clients',
+  path: '/admin/clients',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminLessonsRoute = AdminLessonsRouteImport.update({
@@ -150,193 +134,34 @@ const AdminLessonsRoute = AdminLessonsRouteImport.update({
   path: '/admin/lessons',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminClientsRoute = AdminClientsRouteImport.update({
-  id: '/admin/clients',
-  path: '/admin/clients',
+const AdminTokensRoute = AdminTokensRouteImport.update({
+  id: '/admin/tokens',
+  path: '/admin/tokens',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AdminWhatsappRoute = AdminWhatsappRouteImport.update({
+  id: '/admin/whatsapp',
+  path: '/admin/whatsapp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgendarSlugRoute = AgendarSlugRouteImport.update({
+  id: '/agendar/$slug',
+  path: '/agendar/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgenteIaRetornoRoute = AgenteIaRetornoRouteImport.update({
+  id: '/agente-ia/retorno',
+  path: '/agente-ia/retorno',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssinarRetornoRoute = AssinarRetornoRouteImport.update({
+  id: '/retorno',
+  path: '/retorno',
+  getParentRoute: () => AssinarRoute,
 } as any)
 const ApiPublicSignupRoute = ApiPublicSignupRouteImport.update({
   id: '/api/public/signup',
   path: '/api/public/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicWhatsappWebhookRoute =
-  ApiPublicWhatsappWebhookRouteImport.update({
-    id: '/api/public/whatsapp/webhook',
-    path: '/api/public/whatsapp/webhook',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicWhatsappSignupCallbackRoute =
-  ApiPublicWhatsappSignupCallbackRouteImport.update({
-    id: '/api/public/whatsapp/signup-callback',
-    path: '/api/public/whatsapp/signup-callback',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicPaymentsWebhookRoute =
-  ApiPublicPaymentsWebhookRouteImport.update({
-    id: '/api/public/payments/webhook',
-    path: '/api/public/payments/webhook',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicHooksDispatchJobsRoute =
-  ApiPublicHooksDispatchJobsRouteImport.update({
-    id: '/api/public/hooks/dispatch-jobs',
-    path: '/api/public/hooks/dispatch-jobs',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicExtensionTrainingModulesRoute =
-  ApiPublicExtensionTrainingModulesRouteImport.update({
-    id: '/api/public/extension/training-modules',
-    path: '/api/public/extension/training-modules',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicExtensionTimeBlocksRoute =
-  ApiPublicExtensionTimeBlocksRouteImport.update({
-    id: '/api/public/extension/time-blocks',
-    path: '/api/public/extension/time-blocks',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicExtensionShopRoute = ApiPublicExtensionShopRouteImport.update({
-  id: '/api/public/extension/shop',
-  path: '/api/public/extension/shop',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicExtensionServicesRoute =
-  ApiPublicExtensionServicesRouteImport.update({
-    id: '/api/public/extension/services',
-    path: '/api/public/extension/services',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicExtensionQuickRepliesRoute =
-  ApiPublicExtensionQuickRepliesRouteImport.update({
-    id: '/api/public/extension/quick-replies',
-    path: '/api/public/extension/quick-replies',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicExtensionProfessionalsRoute =
-  ApiPublicExtensionProfessionalsRouteImport.update({
-    id: '/api/public/extension/professionals',
-    path: '/api/public/extension/professionals',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicExtensionProductsRoute =
-  ApiPublicExtensionProductsRouteImport.update({
-    id: '/api/public/extension/products',
-    path: '/api/public/extension/products',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicExtensionPairRoute = ApiPublicExtensionPairRouteImport.update({
-  id: '/api/public/extension/pair',
-  path: '/api/public/extension/pair',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicExtensionMetaRoute = ApiPublicExtensionMetaRouteImport.update({
-  id: '/api/public/extension/meta',
-  path: '/api/public/extension/meta',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicExtensionLessonsRoute =
-  ApiPublicExtensionLessonsRouteImport.update({
-    id: '/api/public/extension/lessons',
-    path: '/api/public/extension/lessons',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicExtensionFunnelsRoute =
-  ApiPublicExtensionFunnelsRouteImport.update({
-    id: '/api/public/extension/funnels',
-    path: '/api/public/extension/funnels',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicExtensionFunnelCardsRoute =
-  ApiPublicExtensionFunnelCardsRouteImport.update({
-    id: '/api/public/extension/funnel-cards',
-    path: '/api/public/extension/funnel-cards',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicExtensionCustomersRoute =
-  ApiPublicExtensionCustomersRouteImport.update({
-    id: '/api/public/extension/customers',
-    path: '/api/public/extension/customers',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicExtensionCustomerProfileRoute =
-  ApiPublicExtensionCustomerProfileRouteImport.update({
-    id: '/api/public/extension/customer-profile',
-    path: '/api/public/extension/customer-profile',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicExtensionCustomerDealRoute =
-  ApiPublicExtensionCustomerDealRouteImport.update({
-    id: '/api/public/extension/customer-deal',
-    path: '/api/public/extension/customer-deal',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicExtensionCampaignsRoute =
-  ApiPublicExtensionCampaignsRouteImport.update({
-    id: '/api/public/extension/campaigns',
-    path: '/api/public/extension/campaigns',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicExtensionBillingRoute =
-  ApiPublicExtensionBillingRouteImport.update({
-    id: '/api/public/extension/billing',
-    path: '/api/public/extension/billing',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicExtensionAppointmentsRoute =
-  ApiPublicExtensionAppointmentsRouteImport.update({
-    id: '/api/public/extension/appointments',
-    path: '/api/public/extension/appointments',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicExtensionAiDemoLeadsRoute =
-  ApiPublicExtensionAiDemoLeadsRouteImport.update({
-    id: '/api/public/extension/ai-demo-leads',
-    path: '/api/public/extension/ai-demo-leads',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicExtensionAgenteIaSettingsRoute =
-  ApiPublicExtensionAgenteIaSettingsRouteImport.update({
-    id: '/api/public/extension/agente-ia-settings',
-    path: '/api/public/extension/agente-ia-settings',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicExtensionAgenteIaAccessLinkRoute =
-  ApiPublicExtensionAgenteIaAccessLinkRouteImport.update({
-    id: '/api/public/extension/agente-ia-access-link',
-    path: '/api/public/extension/agente-ia-access-link',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicExtensionAgendaSettingsRoute =
-  ApiPublicExtensionAgendaSettingsRouteImport.update({
-    id: '/api/public/extension/agenda-settings',
-    path: '/api/public/extension/agenda-settings',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicBookingSlugRoute = ApiPublicBookingSlugRouteImport.update({
-  id: '/api/public/booking/$slug',
-  path: '/api/public/booking/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicAiUpdateSummaryRoute =
-  ApiPublicAiUpdateSummaryRouteImport.update({
-    id: '/api/public/ai/update-summary',
-    path: '/api/public/ai/update-summary',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicAiSetAccessRoute = ApiPublicAiSetAccessRouteImport.update({
-  id: '/api/public/ai/set-access',
-  path: '/api/public/ai/set-access',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicAiMoveLeadRoute = ApiPublicAiMoveLeadRouteImport.update({
-  id: '/api/public/ai/move-lead',
-  path: '/api/public/ai/move-lead',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicAiFunnelsRoute = ApiPublicAiFunnelsRouteImport.update({
-  id: '/api/public/ai/funnels',
-  path: '/api/public/ai/funnels',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicAdminIssueTokenRoute =
@@ -345,40 +170,297 @@ const ApiPublicAdminIssueTokenRoute =
     path: '/api/public/admin/issue-token',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicExtensionWhatsappTemplatesRoute =
-  ApiPublicExtensionWhatsappTemplatesRouteImport.update({
-    id: '/api/public/extension/whatsapp/templates',
-    path: '/api/public/extension/whatsapp/templates',
+const ApiPublicAiFunnelsRoute = ApiPublicAiFunnelsRouteImport.update({
+  id: '/api/public/ai/funnels',
+  path: '/api/public/ai/funnels',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicAiMoveLeadRoute = ApiPublicAiMoveLeadRouteImport.update({
+  id: '/api/public/ai/move-lead',
+  path: '/api/public/ai/move-lead',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicAiSetAccessRoute = ApiPublicAiSetAccessRouteImport.update({
+  id: '/api/public/ai/set-access',
+  path: '/api/public/ai/set-access',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicAiUpdateSummaryRoute =
+  ApiPublicAiUpdateSummaryRouteImport.update({
+    id: '/api/public/ai/update-summary',
+    path: '/api/public/ai/update-summary',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicExtensionWhatsappStatusRoute =
-  ApiPublicExtensionWhatsappStatusRouteImport.update({
-    id: '/api/public/extension/whatsapp/status',
-    path: '/api/public/extension/whatsapp/status',
+const ApiPublicBookingSlugRoute = ApiPublicBookingSlugRouteImport.update({
+  id: '/api/public/booking/$slug',
+  path: '/api/public/booking/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicExtensionAgendaSettingsRoute =
+  ApiPublicExtensionAgendaSettingsRouteImport.update({
+    id: '/api/public/extension/agenda-settings',
+    path: '/api/public/extension/agenda-settings',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicExtensionWhatsappSendTemplateRoute =
-  ApiPublicExtensionWhatsappSendTemplateRouteImport.update({
-    id: '/api/public/extension/whatsapp/send-template',
-    path: '/api/public/extension/whatsapp/send-template',
+const ApiPublicExtensionAgenteIaAccessLinkRoute =
+  ApiPublicExtensionAgenteIaAccessLinkRouteImport.update({
+    id: '/api/public/extension/agente-ia-access-link',
+    path: '/api/public/extension/agente-ia-access-link',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicExtensionWhatsappProviderRoute =
-  ApiPublicExtensionWhatsappProviderRouteImport.update({
-    id: '/api/public/extension/whatsapp/provider',
-    path: '/api/public/extension/whatsapp/provider',
+const ApiPublicExtensionAgenteIaSettingsRoute =
+  ApiPublicExtensionAgenteIaSettingsRouteImport.update({
+    id: '/api/public/extension/agente-ia-settings',
+    path: '/api/public/extension/agente-ia-settings',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicExtensionWhatsappDisconnectRoute =
-  ApiPublicExtensionWhatsappDisconnectRouteImport.update({
-    id: '/api/public/extension/whatsapp/disconnect',
-    path: '/api/public/extension/whatsapp/disconnect',
+const ApiPublicExtensionAiDemoLeadsRoute =
+  ApiPublicExtensionAiDemoLeadsRouteImport.update({
+    id: '/api/public/extension/ai-demo-leads',
+    path: '/api/public/extension/ai-demo-leads',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicExtensionWhatsappConnectRoute =
-  ApiPublicExtensionWhatsappConnectRouteImport.update({
-    id: '/api/public/extension/whatsapp/connect',
-    path: '/api/public/extension/whatsapp/connect',
+const ApiPublicExtensionAppointmentsRoute =
+  ApiPublicExtensionAppointmentsRouteImport.update({
+    id: '/api/public/extension/appointments',
+    path: '/api/public/extension/appointments',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionBillingRoute =
+  ApiPublicExtensionBillingRouteImport.update({
+    id: '/api/public/extension/billing',
+    path: '/api/public/extension/billing',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionCampaignsRoute =
+  ApiPublicExtensionCampaignsRouteImport.update({
+    id: '/api/public/extension/campaigns',
+    path: '/api/public/extension/campaigns',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionCustomerDealRoute =
+  ApiPublicExtensionCustomerDealRouteImport.update({
+    id: '/api/public/extension/customer-deal',
+    path: '/api/public/extension/customer-deal',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionCustomerProfileRoute =
+  ApiPublicExtensionCustomerProfileRouteImport.update({
+    id: '/api/public/extension/customer-profile',
+    path: '/api/public/extension/customer-profile',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionCustomersRoute =
+  ApiPublicExtensionCustomersRouteImport.update({
+    id: '/api/public/extension/customers',
+    path: '/api/public/extension/customers',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionFunnelCardsRoute =
+  ApiPublicExtensionFunnelCardsRouteImport.update({
+    id: '/api/public/extension/funnel-cards',
+    path: '/api/public/extension/funnel-cards',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionFunnelsRoute =
+  ApiPublicExtensionFunnelsRouteImport.update({
+    id: '/api/public/extension/funnels',
+    path: '/api/public/extension/funnels',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionLeadNotesRoute =
+  ApiPublicExtensionLeadNotesRouteImport.update({
+    id: '/api/public/extension/lead-notes',
+    path: '/api/public/extension/lead-notes',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionLeadScheduleRoute =
+  ApiPublicExtensionLeadScheduleRouteImport.update({
+    id: '/api/public/extension/lead-schedule',
+    path: '/api/public/extension/lead-schedule',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionLessonsRoute =
+  ApiPublicExtensionLessonsRouteImport.update({
+    id: '/api/public/extension/lessons',
+    path: '/api/public/extension/lessons',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionMetaRoute = ApiPublicExtensionMetaRouteImport.update({
+  id: '/api/public/extension/meta',
+  path: '/api/public/extension/meta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicExtensionPairRoute = ApiPublicExtensionPairRouteImport.update({
+  id: '/api/public/extension/pair',
+  path: '/api/public/extension/pair',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicExtensionProductsRoute =
+  ApiPublicExtensionProductsRouteImport.update({
+    id: '/api/public/extension/products',
+    path: '/api/public/extension/products',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionProfessionalsRoute =
+  ApiPublicExtensionProfessionalsRouteImport.update({
+    id: '/api/public/extension/professionals',
+    path: '/api/public/extension/professionals',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionQuickRepliesRoute =
+  ApiPublicExtensionQuickRepliesRouteImport.update({
+    id: '/api/public/extension/quick-replies',
+    path: '/api/public/extension/quick-replies',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionServicesRoute =
+  ApiPublicExtensionServicesRouteImport.update({
+    id: '/api/public/extension/services',
+    path: '/api/public/extension/services',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionShopRoute = ApiPublicExtensionShopRouteImport.update({
+  id: '/api/public/extension/shop',
+  path: '/api/public/extension/shop',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicExtensionTimeBlocksRoute =
+  ApiPublicExtensionTimeBlocksRouteImport.update({
+    id: '/api/public/extension/time-blocks',
+    path: '/api/public/extension/time-blocks',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionTrainingModulesRoute =
+  ApiPublicExtensionTrainingModulesRouteImport.update({
+    id: '/api/public/extension/training-modules',
+    path: '/api/public/extension/training-modules',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksDispatchJobsRoute =
+  ApiPublicHooksDispatchJobsRouteImport.update({
+    id: '/api/public/hooks/dispatch-jobs',
+    path: '/api/public/hooks/dispatch-jobs',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicWhatsappSignupCallbackRoute =
+  ApiPublicWhatsappSignupCallbackRouteImport.update({
+    id: '/api/public/whatsapp/signup-callback',
+    path: '/api/public/whatsapp/signup-callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicWhatsappWebhookRoute =
+  ApiPublicWhatsappWebhookRouteImport.update({
+    id: '/api/public/whatsapp/webhook',
+    path: '/api/public/whatsapp/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionAppointmentsIdRoute =
+  ApiPublicExtensionAppointmentsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicExtensionAppointmentsRoute,
+  } as any)
+const ApiPublicExtensionCampaignsIdRoute =
+  ApiPublicExtensionCampaignsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicExtensionCampaignsRoute,
+  } as any)
+const ApiPublicExtensionCustomersIdRoute =
+  ApiPublicExtensionCustomersIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicExtensionCustomersRoute,
+  } as any)
+const ApiPublicExtensionCustomersImportRoute =
+  ApiPublicExtensionCustomersImportRouteImport.update({
+    id: '/import',
+    path: '/import',
+    getParentRoute: () => ApiPublicExtensionCustomersRoute,
+  } as any)
+const ApiPublicExtensionFunnelCardsScheduleRoute =
+  ApiPublicExtensionFunnelCardsScheduleRouteImport.update({
+    id: '/schedule',
+    path: '/schedule',
+    getParentRoute: () => ApiPublicExtensionFunnelCardsRoute,
+  } as any)
+const ApiPublicExtensionFunnelsIdRoute =
+  ApiPublicExtensionFunnelsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicExtensionFunnelsRoute,
+  } as any)
+const ApiPublicExtensionJobsIdRoute =
+  ApiPublicExtensionJobsIdRouteImport.update({
+    id: '/api/public/extension/jobs/$id',
+    path: '/api/public/extension/jobs/$id',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionJobsNextRoute =
+  ApiPublicExtensionJobsNextRouteImport.update({
+    id: '/api/public/extension/jobs/next',
+    path: '/api/public/extension/jobs/next',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionLeadNotesIdRoute =
+  ApiPublicExtensionLeadNotesIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicExtensionLeadNotesRoute,
+  } as any)
+const ApiPublicExtensionLeadScheduleIdRoute =
+  ApiPublicExtensionLeadScheduleIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicExtensionLeadScheduleRoute,
+  } as any)
+const ApiPublicExtensionProductsIdRoute =
+  ApiPublicExtensionProductsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicExtensionProductsRoute,
+  } as any)
+const ApiPublicExtensionProfessionalsIdRoute =
+  ApiPublicExtensionProfessionalsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicExtensionProfessionalsRoute,
+  } as any)
+const ApiPublicExtensionQuickRepliesIdRoute =
+  ApiPublicExtensionQuickRepliesIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicExtensionQuickRepliesRoute,
+  } as any)
+const ApiPublicExtensionQuickRepliesUploadRoute =
+  ApiPublicExtensionQuickRepliesUploadRouteImport.update({
+    id: '/upload',
+    path: '/upload',
+    getParentRoute: () => ApiPublicExtensionQuickRepliesRoute,
+  } as any)
+const ApiPublicExtensionServicesIdRoute =
+  ApiPublicExtensionServicesIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicExtensionServicesRoute,
+  } as any)
+const ApiPublicExtensionTimeBlocksIdRoute =
+  ApiPublicExtensionTimeBlocksIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicExtensionTimeBlocksRoute,
+  } as any)
+const ApiPublicExtensionWaDataRoute =
+  ApiPublicExtensionWaDataRouteImport.update({
+    id: '/api/public/extension/wa/data',
+    path: '/api/public/extension/wa/data',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicExtensionWaSyncRoute =
@@ -387,95 +469,41 @@ const ApiPublicExtensionWaSyncRoute =
     path: '/api/public/extension/wa/sync',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicExtensionWaDataRoute =
-  ApiPublicExtensionWaDataRouteImport.update({
-    id: '/api/public/extension/wa/data',
-    path: '/api/public/extension/wa/data',
+const ApiPublicExtensionWhatsappConnectRoute =
+  ApiPublicExtensionWhatsappConnectRouteImport.update({
+    id: '/api/public/extension/whatsapp/connect',
+    path: '/api/public/extension/whatsapp/connect',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicExtensionTimeBlocksIdRoute =
-  ApiPublicExtensionTimeBlocksIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => ApiPublicExtensionTimeBlocksRoute,
-  } as any)
-const ApiPublicExtensionServicesIdRoute =
-  ApiPublicExtensionServicesIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => ApiPublicExtensionServicesRoute,
-  } as any)
-const ApiPublicExtensionQuickRepliesUploadRoute =
-  ApiPublicExtensionQuickRepliesUploadRouteImport.update({
-    id: '/upload',
-    path: '/upload',
-    getParentRoute: () => ApiPublicExtensionQuickRepliesRoute,
-  } as any)
-const ApiPublicExtensionQuickRepliesIdRoute =
-  ApiPublicExtensionQuickRepliesIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => ApiPublicExtensionQuickRepliesRoute,
-  } as any)
-const ApiPublicExtensionProfessionalsIdRoute =
-  ApiPublicExtensionProfessionalsIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => ApiPublicExtensionProfessionalsRoute,
-  } as any)
-const ApiPublicExtensionProductsIdRoute =
-  ApiPublicExtensionProductsIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => ApiPublicExtensionProductsRoute,
-  } as any)
-const ApiPublicExtensionJobsNextRoute =
-  ApiPublicExtensionJobsNextRouteImport.update({
-    id: '/api/public/extension/jobs/next',
-    path: '/api/public/extension/jobs/next',
+const ApiPublicExtensionWhatsappDisconnectRoute =
+  ApiPublicExtensionWhatsappDisconnectRouteImport.update({
+    id: '/api/public/extension/whatsapp/disconnect',
+    path: '/api/public/extension/whatsapp/disconnect',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicExtensionJobsIdRoute =
-  ApiPublicExtensionJobsIdRouteImport.update({
-    id: '/api/public/extension/jobs/$id',
-    path: '/api/public/extension/jobs/$id',
+const ApiPublicExtensionWhatsappProviderRoute =
+  ApiPublicExtensionWhatsappProviderRouteImport.update({
+    id: '/api/public/extension/whatsapp/provider',
+    path: '/api/public/extension/whatsapp/provider',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicExtensionFunnelsIdRoute =
-  ApiPublicExtensionFunnelsIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => ApiPublicExtensionFunnelsRoute,
+const ApiPublicExtensionWhatsappSendTemplateRoute =
+  ApiPublicExtensionWhatsappSendTemplateRouteImport.update({
+    id: '/api/public/extension/whatsapp/send-template',
+    path: '/api/public/extension/whatsapp/send-template',
+    getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicExtensionFunnelCardsScheduleRoute =
-  ApiPublicExtensionFunnelCardsScheduleRouteImport.update({
-    id: '/schedule',
-    path: '/schedule',
-    getParentRoute: () => ApiPublicExtensionFunnelCardsRoute,
+const ApiPublicExtensionWhatsappStatusRoute =
+  ApiPublicExtensionWhatsappStatusRouteImport.update({
+    id: '/api/public/extension/whatsapp/status',
+    path: '/api/public/extension/whatsapp/status',
+    getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicExtensionCustomersImportRoute =
-  ApiPublicExtensionCustomersImportRouteImport.update({
-    id: '/import',
-    path: '/import',
-    getParentRoute: () => ApiPublicExtensionCustomersRoute,
-  } as any)
-const ApiPublicExtensionCustomersIdRoute =
-  ApiPublicExtensionCustomersIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => ApiPublicExtensionCustomersRoute,
-  } as any)
-const ApiPublicExtensionCampaignsIdRoute =
-  ApiPublicExtensionCampaignsIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => ApiPublicExtensionCampaignsRoute,
-  } as any)
-const ApiPublicExtensionAppointmentsIdRoute =
-  ApiPublicExtensionAppointmentsIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => ApiPublicExtensionAppointmentsRoute,
+const ApiPublicExtensionWhatsappTemplatesRoute =
+  ApiPublicExtensionWhatsappTemplatesRouteImport.update({
+    id: '/api/public/extension/whatsapp/templates',
+    path: '/api/public/extension/whatsapp/templates',
+    getParentRoute: () => rootRouteImport,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -513,6 +541,8 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRouteWithChildren
+  '/api/public/extension/lead-notes': typeof ApiPublicExtensionLeadNotesRouteWithChildren
+  '/api/public/extension/lead-schedule': typeof ApiPublicExtensionLeadScheduleRouteWithChildren
   '/api/public/extension/lessons': typeof ApiPublicExtensionLessonsRoute
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
@@ -535,6 +565,8 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/funnels/$id': typeof ApiPublicExtensionFunnelsIdRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
+  '/api/public/extension/lead-notes/$id': typeof ApiPublicExtensionLeadNotesIdRoute
+  '/api/public/extension/lead-schedule/$id': typeof ApiPublicExtensionLeadScheduleIdRoute
   '/api/public/extension/products/$id': typeof ApiPublicExtensionProductsIdRoute
   '/api/public/extension/professionals/$id': typeof ApiPublicExtensionProfessionalsIdRoute
   '/api/public/extension/quick-replies/$id': typeof ApiPublicExtensionQuickRepliesIdRoute
@@ -585,6 +617,8 @@ export interface FileRoutesByTo {
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRouteWithChildren
+  '/api/public/extension/lead-notes': typeof ApiPublicExtensionLeadNotesRouteWithChildren
+  '/api/public/extension/lead-schedule': typeof ApiPublicExtensionLeadScheduleRouteWithChildren
   '/api/public/extension/lessons': typeof ApiPublicExtensionLessonsRoute
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
@@ -607,6 +641,8 @@ export interface FileRoutesByTo {
   '/api/public/extension/funnels/$id': typeof ApiPublicExtensionFunnelsIdRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
+  '/api/public/extension/lead-notes/$id': typeof ApiPublicExtensionLeadNotesIdRoute
+  '/api/public/extension/lead-schedule/$id': typeof ApiPublicExtensionLeadScheduleIdRoute
   '/api/public/extension/products/$id': typeof ApiPublicExtensionProductsIdRoute
   '/api/public/extension/professionals/$id': typeof ApiPublicExtensionProfessionalsIdRoute
   '/api/public/extension/quick-replies/$id': typeof ApiPublicExtensionQuickRepliesIdRoute
@@ -658,6 +694,8 @@ export interface FileRoutesById {
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRouteWithChildren
+  '/api/public/extension/lead-notes': typeof ApiPublicExtensionLeadNotesRouteWithChildren
+  '/api/public/extension/lead-schedule': typeof ApiPublicExtensionLeadScheduleRouteWithChildren
   '/api/public/extension/lessons': typeof ApiPublicExtensionLessonsRoute
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
@@ -680,6 +718,8 @@ export interface FileRoutesById {
   '/api/public/extension/funnels/$id': typeof ApiPublicExtensionFunnelsIdRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
+  '/api/public/extension/lead-notes/$id': typeof ApiPublicExtensionLeadNotesIdRoute
+  '/api/public/extension/lead-schedule/$id': typeof ApiPublicExtensionLeadScheduleIdRoute
   '/api/public/extension/products/$id': typeof ApiPublicExtensionProductsIdRoute
   '/api/public/extension/professionals/$id': typeof ApiPublicExtensionProfessionalsIdRoute
   '/api/public/extension/quick-replies/$id': typeof ApiPublicExtensionQuickRepliesIdRoute
@@ -732,6 +772,8 @@ export interface FileRouteTypes {
     | '/api/public/extension/customers'
     | '/api/public/extension/funnel-cards'
     | '/api/public/extension/funnels'
+    | '/api/public/extension/lead-notes'
+    | '/api/public/extension/lead-schedule'
     | '/api/public/extension/lessons'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
@@ -754,6 +796,8 @@ export interface FileRouteTypes {
     | '/api/public/extension/funnels/$id'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
+    | '/api/public/extension/lead-notes/$id'
+    | '/api/public/extension/lead-schedule/$id'
     | '/api/public/extension/products/$id'
     | '/api/public/extension/professionals/$id'
     | '/api/public/extension/quick-replies/$id'
@@ -804,6 +848,8 @@ export interface FileRouteTypes {
     | '/api/public/extension/customers'
     | '/api/public/extension/funnel-cards'
     | '/api/public/extension/funnels'
+    | '/api/public/extension/lead-notes'
+    | '/api/public/extension/lead-schedule'
     | '/api/public/extension/lessons'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
@@ -826,6 +872,8 @@ export interface FileRouteTypes {
     | '/api/public/extension/funnels/$id'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
+    | '/api/public/extension/lead-notes/$id'
+    | '/api/public/extension/lead-schedule/$id'
     | '/api/public/extension/products/$id'
     | '/api/public/extension/professionals/$id'
     | '/api/public/extension/quick-replies/$id'
@@ -876,6 +924,8 @@ export interface FileRouteTypes {
     | '/api/public/extension/customers'
     | '/api/public/extension/funnel-cards'
     | '/api/public/extension/funnels'
+    | '/api/public/extension/lead-notes'
+    | '/api/public/extension/lead-schedule'
     | '/api/public/extension/lessons'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
@@ -898,6 +948,8 @@ export interface FileRouteTypes {
     | '/api/public/extension/funnels/$id'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
+    | '/api/public/extension/lead-notes/$id'
+    | '/api/public/extension/lead-schedule/$id'
     | '/api/public/extension/products/$id'
     | '/api/public/extension/professionals/$id'
     | '/api/public/extension/quick-replies/$id'
@@ -948,6 +1000,8 @@ export interface RootRouteChildren {
   ApiPublicExtensionCustomersRoute: typeof ApiPublicExtensionCustomersRouteWithChildren
   ApiPublicExtensionFunnelCardsRoute: typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   ApiPublicExtensionFunnelsRoute: typeof ApiPublicExtensionFunnelsRouteWithChildren
+  ApiPublicExtensionLeadNotesRoute: typeof ApiPublicExtensionLeadNotesRouteWithChildren
+  ApiPublicExtensionLeadScheduleRoute: typeof ApiPublicExtensionLeadScheduleRouteWithChildren
   ApiPublicExtensionLessonsRoute: typeof ApiPublicExtensionLessonsRoute
   ApiPublicExtensionMetaRoute: typeof ApiPublicExtensionMetaRoute
   ApiPublicExtensionPairRoute: typeof ApiPublicExtensionPairRoute
@@ -976,39 +1030,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/politicas': {
-      id: '/politicas'
-      path: '/politicas'
-      fullPath: '/politicas'
-      preLoaderRoute: typeof PoliticasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/painel': {
-      id: '/painel'
-      path: '/painel'
-      fullPath: '/painel'
-      preLoaderRoute: typeof PainelRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/link': {
-      id: '/link'
-      path: '/link'
-      fullPath: '/link'
-      preLoaderRoute: typeof LinkRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/instalar': {
-      id: '/instalar'
-      path: '/instalar'
-      fullPath: '/instalar'
-      preLoaderRoute: typeof InstalarRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/baixar': {
-      id: '/baixar'
-      path: '/baixar'
-      fullPath: '/baixar'
-      preLoaderRoute: typeof BaixarRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/assinar': {
@@ -1018,11 +1044,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AssinarRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/baixar': {
+      id: '/baixar'
+      path: '/baixar'
+      fullPath: '/baixar'
+      preLoaderRoute: typeof BaixarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/instalar': {
+      id: '/instalar'
+      path: '/instalar'
+      fullPath: '/instalar'
+      preLoaderRoute: typeof InstalarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/link': {
+      id: '/link'
+      path: '/link'
+      fullPath: '/link'
+      preLoaderRoute: typeof LinkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/painel': {
+      id: '/painel'
+      path: '/painel'
+      fullPath: '/painel'
+      preLoaderRoute: typeof PainelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/politicas': {
+      id: '/politicas'
+      path: '/politicas'
+      fullPath: '/politicas'
+      preLoaderRoute: typeof PoliticasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -1032,39 +1086,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/assinar/retorno': {
-      id: '/assinar/retorno'
-      path: '/retorno'
-      fullPath: '/assinar/retorno'
-      preLoaderRoute: typeof AssinarRetornoRouteImport
-      parentRoute: typeof AssinarRoute
-    }
-    '/agente-ia/retorno': {
-      id: '/agente-ia/retorno'
-      path: '/agente-ia/retorno'
-      fullPath: '/agente-ia/retorno'
-      preLoaderRoute: typeof AgenteIaRetornoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/agendar/$slug': {
-      id: '/agendar/$slug'
-      path: '/agendar/$slug'
-      fullPath: '/agendar/$slug'
-      preLoaderRoute: typeof AgendarSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/whatsapp': {
-      id: '/admin/whatsapp'
-      path: '/admin/whatsapp'
-      fullPath: '/admin/whatsapp'
-      preLoaderRoute: typeof AdminWhatsappRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/tokens': {
-      id: '/admin/tokens'
-      path: '/admin/tokens'
-      fullPath: '/admin/tokens'
-      preLoaderRoute: typeof AdminTokensRouteImport
+    '/admin/clients': {
+      id: '/admin/clients'
+      path: '/admin/clients'
+      fullPath: '/admin/clients'
+      preLoaderRoute: typeof AdminClientsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/lessons': {
@@ -1074,235 +1100,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLessonsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/clients': {
-      id: '/admin/clients'
-      path: '/admin/clients'
-      fullPath: '/admin/clients'
-      preLoaderRoute: typeof AdminClientsRouteImport
+    '/admin/tokens': {
+      id: '/admin/tokens'
+      path: '/admin/tokens'
+      fullPath: '/admin/tokens'
+      preLoaderRoute: typeof AdminTokensRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/admin/whatsapp': {
+      id: '/admin/whatsapp'
+      path: '/admin/whatsapp'
+      fullPath: '/admin/whatsapp'
+      preLoaderRoute: typeof AdminWhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agendar/$slug': {
+      id: '/agendar/$slug'
+      path: '/agendar/$slug'
+      fullPath: '/agendar/$slug'
+      preLoaderRoute: typeof AgendarSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agente-ia/retorno': {
+      id: '/agente-ia/retorno'
+      path: '/agente-ia/retorno'
+      fullPath: '/agente-ia/retorno'
+      preLoaderRoute: typeof AgenteIaRetornoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/assinar/retorno': {
+      id: '/assinar/retorno'
+      path: '/retorno'
+      fullPath: '/assinar/retorno'
+      preLoaderRoute: typeof AssinarRetornoRouteImport
+      parentRoute: typeof AssinarRoute
     }
     '/api/public/signup': {
       id: '/api/public/signup'
       path: '/api/public/signup'
       fullPath: '/api/public/signup'
       preLoaderRoute: typeof ApiPublicSignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/whatsapp/webhook': {
-      id: '/api/public/whatsapp/webhook'
-      path: '/api/public/whatsapp/webhook'
-      fullPath: '/api/public/whatsapp/webhook'
-      preLoaderRoute: typeof ApiPublicWhatsappWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/whatsapp/signup-callback': {
-      id: '/api/public/whatsapp/signup-callback'
-      path: '/api/public/whatsapp/signup-callback'
-      fullPath: '/api/public/whatsapp/signup-callback'
-      preLoaderRoute: typeof ApiPublicWhatsappSignupCallbackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/payments/webhook': {
-      id: '/api/public/payments/webhook'
-      path: '/api/public/payments/webhook'
-      fullPath: '/api/public/payments/webhook'
-      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/hooks/dispatch-jobs': {
-      id: '/api/public/hooks/dispatch-jobs'
-      path: '/api/public/hooks/dispatch-jobs'
-      fullPath: '/api/public/hooks/dispatch-jobs'
-      preLoaderRoute: typeof ApiPublicHooksDispatchJobsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/extension/training-modules': {
-      id: '/api/public/extension/training-modules'
-      path: '/api/public/extension/training-modules'
-      fullPath: '/api/public/extension/training-modules'
-      preLoaderRoute: typeof ApiPublicExtensionTrainingModulesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/extension/time-blocks': {
-      id: '/api/public/extension/time-blocks'
-      path: '/api/public/extension/time-blocks'
-      fullPath: '/api/public/extension/time-blocks'
-      preLoaderRoute: typeof ApiPublicExtensionTimeBlocksRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/extension/shop': {
-      id: '/api/public/extension/shop'
-      path: '/api/public/extension/shop'
-      fullPath: '/api/public/extension/shop'
-      preLoaderRoute: typeof ApiPublicExtensionShopRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/extension/services': {
-      id: '/api/public/extension/services'
-      path: '/api/public/extension/services'
-      fullPath: '/api/public/extension/services'
-      preLoaderRoute: typeof ApiPublicExtensionServicesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/extension/quick-replies': {
-      id: '/api/public/extension/quick-replies'
-      path: '/api/public/extension/quick-replies'
-      fullPath: '/api/public/extension/quick-replies'
-      preLoaderRoute: typeof ApiPublicExtensionQuickRepliesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/extension/professionals': {
-      id: '/api/public/extension/professionals'
-      path: '/api/public/extension/professionals'
-      fullPath: '/api/public/extension/professionals'
-      preLoaderRoute: typeof ApiPublicExtensionProfessionalsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/extension/products': {
-      id: '/api/public/extension/products'
-      path: '/api/public/extension/products'
-      fullPath: '/api/public/extension/products'
-      preLoaderRoute: typeof ApiPublicExtensionProductsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/extension/pair': {
-      id: '/api/public/extension/pair'
-      path: '/api/public/extension/pair'
-      fullPath: '/api/public/extension/pair'
-      preLoaderRoute: typeof ApiPublicExtensionPairRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/extension/meta': {
-      id: '/api/public/extension/meta'
-      path: '/api/public/extension/meta'
-      fullPath: '/api/public/extension/meta'
-      preLoaderRoute: typeof ApiPublicExtensionMetaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/extension/lessons': {
-      id: '/api/public/extension/lessons'
-      path: '/api/public/extension/lessons'
-      fullPath: '/api/public/extension/lessons'
-      preLoaderRoute: typeof ApiPublicExtensionLessonsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/extension/funnels': {
-      id: '/api/public/extension/funnels'
-      path: '/api/public/extension/funnels'
-      fullPath: '/api/public/extension/funnels'
-      preLoaderRoute: typeof ApiPublicExtensionFunnelsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/extension/funnel-cards': {
-      id: '/api/public/extension/funnel-cards'
-      path: '/api/public/extension/funnel-cards'
-      fullPath: '/api/public/extension/funnel-cards'
-      preLoaderRoute: typeof ApiPublicExtensionFunnelCardsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/extension/customers': {
-      id: '/api/public/extension/customers'
-      path: '/api/public/extension/customers'
-      fullPath: '/api/public/extension/customers'
-      preLoaderRoute: typeof ApiPublicExtensionCustomersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/extension/customer-profile': {
-      id: '/api/public/extension/customer-profile'
-      path: '/api/public/extension/customer-profile'
-      fullPath: '/api/public/extension/customer-profile'
-      preLoaderRoute: typeof ApiPublicExtensionCustomerProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/extension/customer-deal': {
-      id: '/api/public/extension/customer-deal'
-      path: '/api/public/extension/customer-deal'
-      fullPath: '/api/public/extension/customer-deal'
-      preLoaderRoute: typeof ApiPublicExtensionCustomerDealRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/extension/campaigns': {
-      id: '/api/public/extension/campaigns'
-      path: '/api/public/extension/campaigns'
-      fullPath: '/api/public/extension/campaigns'
-      preLoaderRoute: typeof ApiPublicExtensionCampaignsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/extension/billing': {
-      id: '/api/public/extension/billing'
-      path: '/api/public/extension/billing'
-      fullPath: '/api/public/extension/billing'
-      preLoaderRoute: typeof ApiPublicExtensionBillingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/extension/appointments': {
-      id: '/api/public/extension/appointments'
-      path: '/api/public/extension/appointments'
-      fullPath: '/api/public/extension/appointments'
-      preLoaderRoute: typeof ApiPublicExtensionAppointmentsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/extension/ai-demo-leads': {
-      id: '/api/public/extension/ai-demo-leads'
-      path: '/api/public/extension/ai-demo-leads'
-      fullPath: '/api/public/extension/ai-demo-leads'
-      preLoaderRoute: typeof ApiPublicExtensionAiDemoLeadsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/extension/agente-ia-settings': {
-      id: '/api/public/extension/agente-ia-settings'
-      path: '/api/public/extension/agente-ia-settings'
-      fullPath: '/api/public/extension/agente-ia-settings'
-      preLoaderRoute: typeof ApiPublicExtensionAgenteIaSettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/extension/agente-ia-access-link': {
-      id: '/api/public/extension/agente-ia-access-link'
-      path: '/api/public/extension/agente-ia-access-link'
-      fullPath: '/api/public/extension/agente-ia-access-link'
-      preLoaderRoute: typeof ApiPublicExtensionAgenteIaAccessLinkRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/extension/agenda-settings': {
-      id: '/api/public/extension/agenda-settings'
-      path: '/api/public/extension/agenda-settings'
-      fullPath: '/api/public/extension/agenda-settings'
-      preLoaderRoute: typeof ApiPublicExtensionAgendaSettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/booking/$slug': {
-      id: '/api/public/booking/$slug'
-      path: '/api/public/booking/$slug'
-      fullPath: '/api/public/booking/$slug'
-      preLoaderRoute: typeof ApiPublicBookingSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/ai/update-summary': {
-      id: '/api/public/ai/update-summary'
-      path: '/api/public/ai/update-summary'
-      fullPath: '/api/public/ai/update-summary'
-      preLoaderRoute: typeof ApiPublicAiUpdateSummaryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/ai/set-access': {
-      id: '/api/public/ai/set-access'
-      path: '/api/public/ai/set-access'
-      fullPath: '/api/public/ai/set-access'
-      preLoaderRoute: typeof ApiPublicAiSetAccessRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/ai/move-lead': {
-      id: '/api/public/ai/move-lead'
-      path: '/api/public/ai/move-lead'
-      fullPath: '/api/public/ai/move-lead'
-      preLoaderRoute: typeof ApiPublicAiMoveLeadRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/ai/funnels': {
-      id: '/api/public/ai/funnels'
-      path: '/api/public/ai/funnels'
-      fullPath: '/api/public/ai/funnels'
-      preLoaderRoute: typeof ApiPublicAiFunnelsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/admin/issue-token': {
@@ -1312,46 +1149,354 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicAdminIssueTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/extension/whatsapp/templates': {
-      id: '/api/public/extension/whatsapp/templates'
-      path: '/api/public/extension/whatsapp/templates'
-      fullPath: '/api/public/extension/whatsapp/templates'
-      preLoaderRoute: typeof ApiPublicExtensionWhatsappTemplatesRouteImport
+    '/api/public/ai/funnels': {
+      id: '/api/public/ai/funnels'
+      path: '/api/public/ai/funnels'
+      fullPath: '/api/public/ai/funnels'
+      preLoaderRoute: typeof ApiPublicAiFunnelsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/extension/whatsapp/status': {
-      id: '/api/public/extension/whatsapp/status'
-      path: '/api/public/extension/whatsapp/status'
-      fullPath: '/api/public/extension/whatsapp/status'
-      preLoaderRoute: typeof ApiPublicExtensionWhatsappStatusRouteImport
+    '/api/public/ai/move-lead': {
+      id: '/api/public/ai/move-lead'
+      path: '/api/public/ai/move-lead'
+      fullPath: '/api/public/ai/move-lead'
+      preLoaderRoute: typeof ApiPublicAiMoveLeadRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/extension/whatsapp/send-template': {
-      id: '/api/public/extension/whatsapp/send-template'
-      path: '/api/public/extension/whatsapp/send-template'
-      fullPath: '/api/public/extension/whatsapp/send-template'
-      preLoaderRoute: typeof ApiPublicExtensionWhatsappSendTemplateRouteImport
+    '/api/public/ai/set-access': {
+      id: '/api/public/ai/set-access'
+      path: '/api/public/ai/set-access'
+      fullPath: '/api/public/ai/set-access'
+      preLoaderRoute: typeof ApiPublicAiSetAccessRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/extension/whatsapp/provider': {
-      id: '/api/public/extension/whatsapp/provider'
-      path: '/api/public/extension/whatsapp/provider'
-      fullPath: '/api/public/extension/whatsapp/provider'
-      preLoaderRoute: typeof ApiPublicExtensionWhatsappProviderRouteImport
+    '/api/public/ai/update-summary': {
+      id: '/api/public/ai/update-summary'
+      path: '/api/public/ai/update-summary'
+      fullPath: '/api/public/ai/update-summary'
+      preLoaderRoute: typeof ApiPublicAiUpdateSummaryRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/extension/whatsapp/disconnect': {
-      id: '/api/public/extension/whatsapp/disconnect'
-      path: '/api/public/extension/whatsapp/disconnect'
-      fullPath: '/api/public/extension/whatsapp/disconnect'
-      preLoaderRoute: typeof ApiPublicExtensionWhatsappDisconnectRouteImport
+    '/api/public/booking/$slug': {
+      id: '/api/public/booking/$slug'
+      path: '/api/public/booking/$slug'
+      fullPath: '/api/public/booking/$slug'
+      preLoaderRoute: typeof ApiPublicBookingSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/extension/whatsapp/connect': {
-      id: '/api/public/extension/whatsapp/connect'
-      path: '/api/public/extension/whatsapp/connect'
-      fullPath: '/api/public/extension/whatsapp/connect'
-      preLoaderRoute: typeof ApiPublicExtensionWhatsappConnectRouteImport
+    '/api/public/extension/agenda-settings': {
+      id: '/api/public/extension/agenda-settings'
+      path: '/api/public/extension/agenda-settings'
+      fullPath: '/api/public/extension/agenda-settings'
+      preLoaderRoute: typeof ApiPublicExtensionAgendaSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/agente-ia-access-link': {
+      id: '/api/public/extension/agente-ia-access-link'
+      path: '/api/public/extension/agente-ia-access-link'
+      fullPath: '/api/public/extension/agente-ia-access-link'
+      preLoaderRoute: typeof ApiPublicExtensionAgenteIaAccessLinkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/agente-ia-settings': {
+      id: '/api/public/extension/agente-ia-settings'
+      path: '/api/public/extension/agente-ia-settings'
+      fullPath: '/api/public/extension/agente-ia-settings'
+      preLoaderRoute: typeof ApiPublicExtensionAgenteIaSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/ai-demo-leads': {
+      id: '/api/public/extension/ai-demo-leads'
+      path: '/api/public/extension/ai-demo-leads'
+      fullPath: '/api/public/extension/ai-demo-leads'
+      preLoaderRoute: typeof ApiPublicExtensionAiDemoLeadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/appointments': {
+      id: '/api/public/extension/appointments'
+      path: '/api/public/extension/appointments'
+      fullPath: '/api/public/extension/appointments'
+      preLoaderRoute: typeof ApiPublicExtensionAppointmentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/billing': {
+      id: '/api/public/extension/billing'
+      path: '/api/public/extension/billing'
+      fullPath: '/api/public/extension/billing'
+      preLoaderRoute: typeof ApiPublicExtensionBillingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/campaigns': {
+      id: '/api/public/extension/campaigns'
+      path: '/api/public/extension/campaigns'
+      fullPath: '/api/public/extension/campaigns'
+      preLoaderRoute: typeof ApiPublicExtensionCampaignsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/customer-deal': {
+      id: '/api/public/extension/customer-deal'
+      path: '/api/public/extension/customer-deal'
+      fullPath: '/api/public/extension/customer-deal'
+      preLoaderRoute: typeof ApiPublicExtensionCustomerDealRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/customer-profile': {
+      id: '/api/public/extension/customer-profile'
+      path: '/api/public/extension/customer-profile'
+      fullPath: '/api/public/extension/customer-profile'
+      preLoaderRoute: typeof ApiPublicExtensionCustomerProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/customers': {
+      id: '/api/public/extension/customers'
+      path: '/api/public/extension/customers'
+      fullPath: '/api/public/extension/customers'
+      preLoaderRoute: typeof ApiPublicExtensionCustomersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/funnel-cards': {
+      id: '/api/public/extension/funnel-cards'
+      path: '/api/public/extension/funnel-cards'
+      fullPath: '/api/public/extension/funnel-cards'
+      preLoaderRoute: typeof ApiPublicExtensionFunnelCardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/funnels': {
+      id: '/api/public/extension/funnels'
+      path: '/api/public/extension/funnels'
+      fullPath: '/api/public/extension/funnels'
+      preLoaderRoute: typeof ApiPublicExtensionFunnelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/lead-notes': {
+      id: '/api/public/extension/lead-notes'
+      path: '/api/public/extension/lead-notes'
+      fullPath: '/api/public/extension/lead-notes'
+      preLoaderRoute: typeof ApiPublicExtensionLeadNotesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/lead-schedule': {
+      id: '/api/public/extension/lead-schedule'
+      path: '/api/public/extension/lead-schedule'
+      fullPath: '/api/public/extension/lead-schedule'
+      preLoaderRoute: typeof ApiPublicExtensionLeadScheduleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/lessons': {
+      id: '/api/public/extension/lessons'
+      path: '/api/public/extension/lessons'
+      fullPath: '/api/public/extension/lessons'
+      preLoaderRoute: typeof ApiPublicExtensionLessonsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/meta': {
+      id: '/api/public/extension/meta'
+      path: '/api/public/extension/meta'
+      fullPath: '/api/public/extension/meta'
+      preLoaderRoute: typeof ApiPublicExtensionMetaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/pair': {
+      id: '/api/public/extension/pair'
+      path: '/api/public/extension/pair'
+      fullPath: '/api/public/extension/pair'
+      preLoaderRoute: typeof ApiPublicExtensionPairRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/products': {
+      id: '/api/public/extension/products'
+      path: '/api/public/extension/products'
+      fullPath: '/api/public/extension/products'
+      preLoaderRoute: typeof ApiPublicExtensionProductsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/professionals': {
+      id: '/api/public/extension/professionals'
+      path: '/api/public/extension/professionals'
+      fullPath: '/api/public/extension/professionals'
+      preLoaderRoute: typeof ApiPublicExtensionProfessionalsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/quick-replies': {
+      id: '/api/public/extension/quick-replies'
+      path: '/api/public/extension/quick-replies'
+      fullPath: '/api/public/extension/quick-replies'
+      preLoaderRoute: typeof ApiPublicExtensionQuickRepliesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/services': {
+      id: '/api/public/extension/services'
+      path: '/api/public/extension/services'
+      fullPath: '/api/public/extension/services'
+      preLoaderRoute: typeof ApiPublicExtensionServicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/shop': {
+      id: '/api/public/extension/shop'
+      path: '/api/public/extension/shop'
+      fullPath: '/api/public/extension/shop'
+      preLoaderRoute: typeof ApiPublicExtensionShopRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/time-blocks': {
+      id: '/api/public/extension/time-blocks'
+      path: '/api/public/extension/time-blocks'
+      fullPath: '/api/public/extension/time-blocks'
+      preLoaderRoute: typeof ApiPublicExtensionTimeBlocksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/training-modules': {
+      id: '/api/public/extension/training-modules'
+      path: '/api/public/extension/training-modules'
+      fullPath: '/api/public/extension/training-modules'
+      preLoaderRoute: typeof ApiPublicExtensionTrainingModulesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/dispatch-jobs': {
+      id: '/api/public/hooks/dispatch-jobs'
+      path: '/api/public/hooks/dispatch-jobs'
+      fullPath: '/api/public/hooks/dispatch-jobs'
+      preLoaderRoute: typeof ApiPublicHooksDispatchJobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/whatsapp/signup-callback': {
+      id: '/api/public/whatsapp/signup-callback'
+      path: '/api/public/whatsapp/signup-callback'
+      fullPath: '/api/public/whatsapp/signup-callback'
+      preLoaderRoute: typeof ApiPublicWhatsappSignupCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/whatsapp/webhook': {
+      id: '/api/public/whatsapp/webhook'
+      path: '/api/public/whatsapp/webhook'
+      fullPath: '/api/public/whatsapp/webhook'
+      preLoaderRoute: typeof ApiPublicWhatsappWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/appointments/$id': {
+      id: '/api/public/extension/appointments/$id'
+      path: '/$id'
+      fullPath: '/api/public/extension/appointments/$id'
+      preLoaderRoute: typeof ApiPublicExtensionAppointmentsIdRouteImport
+      parentRoute: typeof ApiPublicExtensionAppointmentsRoute
+    }
+    '/api/public/extension/campaigns/$id': {
+      id: '/api/public/extension/campaigns/$id'
+      path: '/$id'
+      fullPath: '/api/public/extension/campaigns/$id'
+      preLoaderRoute: typeof ApiPublicExtensionCampaignsIdRouteImport
+      parentRoute: typeof ApiPublicExtensionCampaignsRoute
+    }
+    '/api/public/extension/customers/$id': {
+      id: '/api/public/extension/customers/$id'
+      path: '/$id'
+      fullPath: '/api/public/extension/customers/$id'
+      preLoaderRoute: typeof ApiPublicExtensionCustomersIdRouteImport
+      parentRoute: typeof ApiPublicExtensionCustomersRoute
+    }
+    '/api/public/extension/customers/import': {
+      id: '/api/public/extension/customers/import'
+      path: '/import'
+      fullPath: '/api/public/extension/customers/import'
+      preLoaderRoute: typeof ApiPublicExtensionCustomersImportRouteImport
+      parentRoute: typeof ApiPublicExtensionCustomersRoute
+    }
+    '/api/public/extension/funnel-cards/schedule': {
+      id: '/api/public/extension/funnel-cards/schedule'
+      path: '/schedule'
+      fullPath: '/api/public/extension/funnel-cards/schedule'
+      preLoaderRoute: typeof ApiPublicExtensionFunnelCardsScheduleRouteImport
+      parentRoute: typeof ApiPublicExtensionFunnelCardsRoute
+    }
+    '/api/public/extension/funnels/$id': {
+      id: '/api/public/extension/funnels/$id'
+      path: '/$id'
+      fullPath: '/api/public/extension/funnels/$id'
+      preLoaderRoute: typeof ApiPublicExtensionFunnelsIdRouteImport
+      parentRoute: typeof ApiPublicExtensionFunnelsRoute
+    }
+    '/api/public/extension/jobs/$id': {
+      id: '/api/public/extension/jobs/$id'
+      path: '/api/public/extension/jobs/$id'
+      fullPath: '/api/public/extension/jobs/$id'
+      preLoaderRoute: typeof ApiPublicExtensionJobsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/jobs/next': {
+      id: '/api/public/extension/jobs/next'
+      path: '/api/public/extension/jobs/next'
+      fullPath: '/api/public/extension/jobs/next'
+      preLoaderRoute: typeof ApiPublicExtensionJobsNextRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/lead-notes/$id': {
+      id: '/api/public/extension/lead-notes/$id'
+      path: '/$id'
+      fullPath: '/api/public/extension/lead-notes/$id'
+      preLoaderRoute: typeof ApiPublicExtensionLeadNotesIdRouteImport
+      parentRoute: typeof ApiPublicExtensionLeadNotesRoute
+    }
+    '/api/public/extension/lead-schedule/$id': {
+      id: '/api/public/extension/lead-schedule/$id'
+      path: '/$id'
+      fullPath: '/api/public/extension/lead-schedule/$id'
+      preLoaderRoute: typeof ApiPublicExtensionLeadScheduleIdRouteImport
+      parentRoute: typeof ApiPublicExtensionLeadScheduleRoute
+    }
+    '/api/public/extension/products/$id': {
+      id: '/api/public/extension/products/$id'
+      path: '/$id'
+      fullPath: '/api/public/extension/products/$id'
+      preLoaderRoute: typeof ApiPublicExtensionProductsIdRouteImport
+      parentRoute: typeof ApiPublicExtensionProductsRoute
+    }
+    '/api/public/extension/professionals/$id': {
+      id: '/api/public/extension/professionals/$id'
+      path: '/$id'
+      fullPath: '/api/public/extension/professionals/$id'
+      preLoaderRoute: typeof ApiPublicExtensionProfessionalsIdRouteImport
+      parentRoute: typeof ApiPublicExtensionProfessionalsRoute
+    }
+    '/api/public/extension/quick-replies/$id': {
+      id: '/api/public/extension/quick-replies/$id'
+      path: '/$id'
+      fullPath: '/api/public/extension/quick-replies/$id'
+      preLoaderRoute: typeof ApiPublicExtensionQuickRepliesIdRouteImport
+      parentRoute: typeof ApiPublicExtensionQuickRepliesRoute
+    }
+    '/api/public/extension/quick-replies/upload': {
+      id: '/api/public/extension/quick-replies/upload'
+      path: '/upload'
+      fullPath: '/api/public/extension/quick-replies/upload'
+      preLoaderRoute: typeof ApiPublicExtensionQuickRepliesUploadRouteImport
+      parentRoute: typeof ApiPublicExtensionQuickRepliesRoute
+    }
+    '/api/public/extension/services/$id': {
+      id: '/api/public/extension/services/$id'
+      path: '/$id'
+      fullPath: '/api/public/extension/services/$id'
+      preLoaderRoute: typeof ApiPublicExtensionServicesIdRouteImport
+      parentRoute: typeof ApiPublicExtensionServicesRoute
+    }
+    '/api/public/extension/time-blocks/$id': {
+      id: '/api/public/extension/time-blocks/$id'
+      path: '/$id'
+      fullPath: '/api/public/extension/time-blocks/$id'
+      preLoaderRoute: typeof ApiPublicExtensionTimeBlocksIdRouteImport
+      parentRoute: typeof ApiPublicExtensionTimeBlocksRoute
+    }
+    '/api/public/extension/wa/data': {
+      id: '/api/public/extension/wa/data'
+      path: '/api/public/extension/wa/data'
+      fullPath: '/api/public/extension/wa/data'
+      preLoaderRoute: typeof ApiPublicExtensionWaDataRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/extension/wa/sync': {
@@ -1361,110 +1506,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensionWaSyncRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/extension/wa/data': {
-      id: '/api/public/extension/wa/data'
-      path: '/api/public/extension/wa/data'
-      fullPath: '/api/public/extension/wa/data'
-      preLoaderRoute: typeof ApiPublicExtensionWaDataRouteImport
+    '/api/public/extension/whatsapp/connect': {
+      id: '/api/public/extension/whatsapp/connect'
+      path: '/api/public/extension/whatsapp/connect'
+      fullPath: '/api/public/extension/whatsapp/connect'
+      preLoaderRoute: typeof ApiPublicExtensionWhatsappConnectRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/extension/time-blocks/$id': {
-      id: '/api/public/extension/time-blocks/$id'
-      path: '/$id'
-      fullPath: '/api/public/extension/time-blocks/$id'
-      preLoaderRoute: typeof ApiPublicExtensionTimeBlocksIdRouteImport
-      parentRoute: typeof ApiPublicExtensionTimeBlocksRoute
-    }
-    '/api/public/extension/services/$id': {
-      id: '/api/public/extension/services/$id'
-      path: '/$id'
-      fullPath: '/api/public/extension/services/$id'
-      preLoaderRoute: typeof ApiPublicExtensionServicesIdRouteImport
-      parentRoute: typeof ApiPublicExtensionServicesRoute
-    }
-    '/api/public/extension/quick-replies/upload': {
-      id: '/api/public/extension/quick-replies/upload'
-      path: '/upload'
-      fullPath: '/api/public/extension/quick-replies/upload'
-      preLoaderRoute: typeof ApiPublicExtensionQuickRepliesUploadRouteImport
-      parentRoute: typeof ApiPublicExtensionQuickRepliesRoute
-    }
-    '/api/public/extension/quick-replies/$id': {
-      id: '/api/public/extension/quick-replies/$id'
-      path: '/$id'
-      fullPath: '/api/public/extension/quick-replies/$id'
-      preLoaderRoute: typeof ApiPublicExtensionQuickRepliesIdRouteImport
-      parentRoute: typeof ApiPublicExtensionQuickRepliesRoute
-    }
-    '/api/public/extension/professionals/$id': {
-      id: '/api/public/extension/professionals/$id'
-      path: '/$id'
-      fullPath: '/api/public/extension/professionals/$id'
-      preLoaderRoute: typeof ApiPublicExtensionProfessionalsIdRouteImport
-      parentRoute: typeof ApiPublicExtensionProfessionalsRoute
-    }
-    '/api/public/extension/products/$id': {
-      id: '/api/public/extension/products/$id'
-      path: '/$id'
-      fullPath: '/api/public/extension/products/$id'
-      preLoaderRoute: typeof ApiPublicExtensionProductsIdRouteImport
-      parentRoute: typeof ApiPublicExtensionProductsRoute
-    }
-    '/api/public/extension/jobs/next': {
-      id: '/api/public/extension/jobs/next'
-      path: '/api/public/extension/jobs/next'
-      fullPath: '/api/public/extension/jobs/next'
-      preLoaderRoute: typeof ApiPublicExtensionJobsNextRouteImport
+    '/api/public/extension/whatsapp/disconnect': {
+      id: '/api/public/extension/whatsapp/disconnect'
+      path: '/api/public/extension/whatsapp/disconnect'
+      fullPath: '/api/public/extension/whatsapp/disconnect'
+      preLoaderRoute: typeof ApiPublicExtensionWhatsappDisconnectRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/extension/jobs/$id': {
-      id: '/api/public/extension/jobs/$id'
-      path: '/api/public/extension/jobs/$id'
-      fullPath: '/api/public/extension/jobs/$id'
-      preLoaderRoute: typeof ApiPublicExtensionJobsIdRouteImport
+    '/api/public/extension/whatsapp/provider': {
+      id: '/api/public/extension/whatsapp/provider'
+      path: '/api/public/extension/whatsapp/provider'
+      fullPath: '/api/public/extension/whatsapp/provider'
+      preLoaderRoute: typeof ApiPublicExtensionWhatsappProviderRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/extension/funnels/$id': {
-      id: '/api/public/extension/funnels/$id'
-      path: '/$id'
-      fullPath: '/api/public/extension/funnels/$id'
-      preLoaderRoute: typeof ApiPublicExtensionFunnelsIdRouteImport
-      parentRoute: typeof ApiPublicExtensionFunnelsRoute
+    '/api/public/extension/whatsapp/send-template': {
+      id: '/api/public/extension/whatsapp/send-template'
+      path: '/api/public/extension/whatsapp/send-template'
+      fullPath: '/api/public/extension/whatsapp/send-template'
+      preLoaderRoute: typeof ApiPublicExtensionWhatsappSendTemplateRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/api/public/extension/funnel-cards/schedule': {
-      id: '/api/public/extension/funnel-cards/schedule'
-      path: '/schedule'
-      fullPath: '/api/public/extension/funnel-cards/schedule'
-      preLoaderRoute: typeof ApiPublicExtensionFunnelCardsScheduleRouteImport
-      parentRoute: typeof ApiPublicExtensionFunnelCardsRoute
+    '/api/public/extension/whatsapp/status': {
+      id: '/api/public/extension/whatsapp/status'
+      path: '/api/public/extension/whatsapp/status'
+      fullPath: '/api/public/extension/whatsapp/status'
+      preLoaderRoute: typeof ApiPublicExtensionWhatsappStatusRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/api/public/extension/customers/import': {
-      id: '/api/public/extension/customers/import'
-      path: '/import'
-      fullPath: '/api/public/extension/customers/import'
-      preLoaderRoute: typeof ApiPublicExtensionCustomersImportRouteImport
-      parentRoute: typeof ApiPublicExtensionCustomersRoute
-    }
-    '/api/public/extension/customers/$id': {
-      id: '/api/public/extension/customers/$id'
-      path: '/$id'
-      fullPath: '/api/public/extension/customers/$id'
-      preLoaderRoute: typeof ApiPublicExtensionCustomersIdRouteImport
-      parentRoute: typeof ApiPublicExtensionCustomersRoute
-    }
-    '/api/public/extension/campaigns/$id': {
-      id: '/api/public/extension/campaigns/$id'
-      path: '/$id'
-      fullPath: '/api/public/extension/campaigns/$id'
-      preLoaderRoute: typeof ApiPublicExtensionCampaignsIdRouteImport
-      parentRoute: typeof ApiPublicExtensionCampaignsRoute
-    }
-    '/api/public/extension/appointments/$id': {
-      id: '/api/public/extension/appointments/$id'
-      path: '/$id'
-      fullPath: '/api/public/extension/appointments/$id'
-      preLoaderRoute: typeof ApiPublicExtensionAppointmentsIdRouteImport
-      parentRoute: typeof ApiPublicExtensionAppointmentsRoute
+    '/api/public/extension/whatsapp/templates': {
+      id: '/api/public/extension/whatsapp/templates'
+      path: '/api/public/extension/whatsapp/templates'
+      fullPath: '/api/public/extension/whatsapp/templates'
+      preLoaderRoute: typeof ApiPublicExtensionWhatsappTemplatesRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -1553,6 +1635,35 @@ const ApiPublicExtensionFunnelsRouteChildren: ApiPublicExtensionFunnelsRouteChil
 const ApiPublicExtensionFunnelsRouteWithChildren =
   ApiPublicExtensionFunnelsRoute._addFileChildren(
     ApiPublicExtensionFunnelsRouteChildren,
+  )
+
+interface ApiPublicExtensionLeadNotesRouteChildren {
+  ApiPublicExtensionLeadNotesIdRoute: typeof ApiPublicExtensionLeadNotesIdRoute
+}
+
+const ApiPublicExtensionLeadNotesRouteChildren: ApiPublicExtensionLeadNotesRouteChildren =
+  {
+    ApiPublicExtensionLeadNotesIdRoute: ApiPublicExtensionLeadNotesIdRoute,
+  }
+
+const ApiPublicExtensionLeadNotesRouteWithChildren =
+  ApiPublicExtensionLeadNotesRoute._addFileChildren(
+    ApiPublicExtensionLeadNotesRouteChildren,
+  )
+
+interface ApiPublicExtensionLeadScheduleRouteChildren {
+  ApiPublicExtensionLeadScheduleIdRoute: typeof ApiPublicExtensionLeadScheduleIdRoute
+}
+
+const ApiPublicExtensionLeadScheduleRouteChildren: ApiPublicExtensionLeadScheduleRouteChildren =
+  {
+    ApiPublicExtensionLeadScheduleIdRoute:
+      ApiPublicExtensionLeadScheduleIdRoute,
+  }
+
+const ApiPublicExtensionLeadScheduleRouteWithChildren =
+  ApiPublicExtensionLeadScheduleRoute._addFileChildren(
+    ApiPublicExtensionLeadScheduleRouteChildren,
   )
 
 interface ApiPublicExtensionProductsRouteChildren {
@@ -1671,6 +1782,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicExtensionFunnelCardsRoute:
     ApiPublicExtensionFunnelCardsRouteWithChildren,
   ApiPublicExtensionFunnelsRoute: ApiPublicExtensionFunnelsRouteWithChildren,
+  ApiPublicExtensionLeadNotesRoute:
+    ApiPublicExtensionLeadNotesRouteWithChildren,
+  ApiPublicExtensionLeadScheduleRoute:
+    ApiPublicExtensionLeadScheduleRouteWithChildren,
   ApiPublicExtensionLessonsRoute: ApiPublicExtensionLessonsRoute,
   ApiPublicExtensionMetaRoute: ApiPublicExtensionMetaRoute,
   ApiPublicExtensionPairRoute: ApiPublicExtensionPairRoute,

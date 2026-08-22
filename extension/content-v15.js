@@ -367,16 +367,17 @@
     const panel = ensureSharedPanel();
     if (isSwap) showPanelSpinner(panel);
     if (kind === "qr") await renderQuickReplyPanel(panel);
-    else if (kind === "profile" || kind === "deal") await renderProfilePanel(panel);
+    else if (kind === "profile") await renderCustomerPanel(panel, "profile");
+    else if (kind === "deal") await renderCustomerPanel(panel, "deal");
   }
 
-  /** Fileira de 2 ícones (raio / perfil) que fica no topo do painel
-   * compartilhado, pra trocar de seção sem fechar nada. Perfil e Valor do
-   * cliente viraram um formulário só. */
+  /** Fileira de 3 ícones (raio / perfil / valor) que fica no topo do
+   * painel compartilhado, pra trocar de seção sem fechar nada. */
   function panelSwitcherHtml(activeKind) {
     const items = [
       { kind: "qr", icon: BOLT_SVG, label: "Respostas rápidas" },
       { kind: "profile", icon: PROFILE_SVG, label: "Perfil do cliente" },
+      { kind: "deal", icon: DEAL_SVG, label: "Valor do cliente" },
     ];
     return `<div class="crm-qrp-switcher">
       ${items
@@ -1414,9 +1415,399 @@
 
   const CHAT_BTN_ID = "crm-chat-action";
   const RAIO_BTN_ID = "crm-chat-bolt";
+  const NOTES_BTN_ID = "crm-chat-notes";
+  const SCHEDULE_BTN_ID = "crm-chat-schedule";
   const BOLT_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>`;
   const PROFILE_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>`;
   const DEAL_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9v.01M18 15v.01"/></svg>`;
+  const NOTES_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 11h6M9 15h4"/></svg>`;
+  const SCHEDULE_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/><circle cx="16" cy="16" r="4"/><path d="M16 14.3V16l1.2 1"/></svg>`;
+
+  function formatDateTime(iso) {
+    if (!iso) return "";
+    try {
+      return new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
+    } catch {
+      return iso;
+    }
+  }
+
+  /** Diálogo centralizado — Anotações e Mensagens agendadas. Flutua no meio
+   * da tela sem escurecer/desfocar o resto (sensação nativa). Clicar fora
+   * fecha. */
+  function openCenteredDialog() {
+    document.querySelectorAll(".crm-dialog-overlay").forEach((el) => el.remove());
+    const overlay = document.createElement("div");
+    overlay.className = "crm-dialog-overlay";
+    const dialog = document.createElement("div");
+    dialog.className = "crm-dialog";
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => requestAnimationFrame(() => overlay.classList.add("is-in")));
+    const close = () => overlay.remove();
+    overlay.addEventListener("mousedown", (e) => {
+      if (e.target === overlay) close();
+    });
+    return { overlay, dialog, close };
+  }
+
+  // ---------------------------------------------------------------------
+  // Anotações — múltiplas notas por lead, com texto e/ou mídia anexada.
+  // ---------------------------------------------------------------------
+  async function openNotesDialog() {
+    const { dialog, close } = openCenteredDialog();
+    const chat = await activeChat();
+    const contactQuery = chat?.contact_db_id
+      ? `wa_contact_id=${encodeURIComponent(chat.contact_db_id)}`
+      : chat?.phone
+        ? `phone=${encodeURIComponent(chat.phone)}`
+        : null;
+    let uploaded = null;
+
+    function head(title) {
+      return `<div class="crm-dialog-head"><p class="crm-dialog-title">${title}</p><button class="crm-dialog-close" data-close title="Fechar">&times;</button></div>`;
+    }
+
+    function renderList(notes) {
+      if (!notes.length) {
+        dialog.innerHTML = `
+          ${head("Anotações")}
+          <div class="crm-dialog-body">
+            <div class="crm-dialog-empty">
+              <div class="crm-dialog-empty-icon">${NOTES_SVG}</div>
+              <p class="crm-dialog-empty-title">Nenhuma nota encontrada</p>
+              <p class="crm-dialog-empty-text">Parece que você ainda não adicionou nenhuma nota. Clique no botão abaixo para criar uma nova nota.</p>
+              <button class="crm-dialog-cta" data-new>Criar anotação</button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+      dialog.innerHTML = `
+        ${head("Anotações")}
+        <div class="crm-dialog-body">
+          <div class="crm-dialog-list-head">
+            <h4>${notes.length} nota${notes.length === 1 ? "" : "s"}</h4>
+            <button class="crm-dialog-cta" data-new>+ Nova</button>
+          </div>
+          <div class="crm-dialog-list">
+            ${notes
+              .map((n) => {
+                const mime = n.media_mime || "";
+                const media = !n.media_url
+                  ? ""
+                  : /^image\//.test(mime)
+                    ? `<img src="${escapeHtml(n.media_url)}" class="crm-dialog-item-media" alt="" />`
+                    : /^video\//.test(mime)
+                      ? `<video src="${escapeHtml(n.media_url)}" class="crm-dialog-item-media" controls></video>`
+                      : /^audio\//.test(mime)
+                        ? `<audio src="${escapeHtml(n.media_url)}" class="crm-qrp-preview-audio" controls></audio>`
+                        : "";
+                return `
+                <div class="crm-dialog-item">
+                  <div class="crm-dialog-item-head">
+                    <p class="crm-dialog-item-meta">${formatDateTime(n.created_at)}</p>
+                    <button class="crm-dialog-item-del" data-del="${escapeHtml(n.id)}" title="Excluir">${TRASH_SVG}</button>
+                  </div>
+                  ${n.body ? `<p class="crm-dialog-item-body">${escapeHtml(n.body)}</p>` : ""}
+                  ${media}
+                </div>`;
+              })
+              .join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderForm() {
+      uploaded = null;
+      dialog.innerHTML = `
+        ${head("Criar anotação")}
+        <div class="crm-dialog-body">
+          <label class="crm-dialog-field">
+            <span>Adicione uma mídia na anotação</span>
+            <div class="crm-dialog-dropzone" data-pick-file>Clique para escolher um arquivo (imagem, áudio ou vídeo)</div>
+            <input type="file" accept="image/*,audio/*,video/*" data-file-input hidden />
+          </label>
+          <label class="crm-dialog-field">
+            <span>Insira uma anotação</span>
+            <textarea class="crm-dialog-textarea" data-note-body placeholder="Escreva sua nota..."></textarea>
+          </label>
+          <div class="crm-dialog-foot">
+            <button class="crm-dialog-cta-ghost" data-back>Cancelar</button>
+            <button class="crm-dialog-cta" data-save>Salvar</button>
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadList() {
+      dialog.innerHTML = `${head("Anotações")}<div class="crm-dialog-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
+      if (!contactQuery) {
+        dialog.querySelector(".crm-dialog-body").innerHTML = `<p class="crm-fn-pop-empty">Não consegui identificar essa conversa.</p>`;
+        return;
+      }
+      const r = await chrome.runtime
+        .sendMessage({ type: "api", path: `/api/public/extension/lead-notes?${contactQuery}` })
+        .catch(() => null);
+      renderList(r?.ok ? r.notes || [] : []);
+    }
+
+    dialog.addEventListener("click", async (e) => {
+      if (e.target.closest("[data-close]")) return close();
+      if (e.target.closest("[data-new]")) return renderForm();
+      if (e.target.closest("[data-back]")) return loadList();
+      if (e.target.closest("[data-pick-file]")) return dialog.querySelector("[data-file-input]")?.click();
+
+      const del = e.target.closest("[data-del]");
+      if (del) {
+        const id = del.getAttribute("data-del");
+        const ok = await openConfirmPop(del, { text: "Excluir essa anotação?", confirmLabel: "Sim, excluir" });
+        if (!ok) return;
+        await chrome.runtime
+          .sendMessage({ type: "api", path: `/api/public/extension/lead-notes/${id}`, opts: { method: "DELETE" } })
+          .catch(() => null);
+        return loadList();
+      }
+
+      if (e.target.closest("[data-save]")) {
+        const saveBtn = dialog.querySelector("[data-save]");
+        const bodyText = dialog.querySelector("[data-note-body]").value.trim();
+        if (!bodyText && !uploaded) {
+          crmToast("Escreva algo ou anexe um arquivo.", "err");
+          return;
+        }
+        if (!contactQuery) return;
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Salvando...";
+        const r = await chrome.runtime
+          .sendMessage({
+            type: "api",
+            path: "/api/public/extension/lead-notes",
+            opts: {
+              method: "POST",
+              body: JSON.stringify({
+                wa_contact_id: chat.contact_db_id || null,
+                phone: chat.phone || null,
+                body: bodyText || null,
+                media_path: uploaded?.path || null,
+                media_mime: uploaded?.mime || null,
+                media_filename: uploaded?.filename || null,
+              }),
+            },
+          })
+          .catch(() => null);
+        if (r?.ok) {
+          crmToast("Anotação salva");
+          await loadList();
+        } else {
+          crmToast(r?.error || "Não consegui salvar.", "err");
+          saveBtn.disabled = false;
+          saveBtn.textContent = "Salvar";
+        }
+      }
+    });
+
+    dialog.addEventListener("change", async (e) => {
+      const fileInput = e.target.closest("[data-file-input]");
+      if (!fileInput) return;
+      const file = fileInput.files?.[0];
+      if (!file) return;
+      const zone = dialog.querySelector("[data-pick-file]");
+      zone.textContent = "Enviando...";
+      try {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ""));
+          reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
+          reader.readAsDataURL(file);
+        });
+        const r = await chrome.runtime
+          .sendMessage({
+            type: "api",
+            path: "/api/public/extension/quick-replies/upload",
+            opts: { method: "POST", body: JSON.stringify({ filename: file.name, mime: file.type, data_base64: dataUrl }) },
+          })
+          .catch(() => null);
+        if (r?.ok) {
+          uploaded = { path: r.path, mime: r.mime, filename: r.filename };
+          zone.textContent = `Anexado: ${r.filename}`;
+          zone.classList.add("has-file");
+        } else {
+          crmToast(r?.error || "Não consegui enviar o arquivo.", "err");
+          zone.textContent = "Clique para escolher um arquivo (imagem, áudio ou vídeo)";
+        }
+      } catch (err) {
+        crmToast(err?.message || "Erro ao ler arquivo", "err");
+      }
+    });
+
+    await loadList();
+  }
+
+  // ---------------------------------------------------------------------
+  // Mensagens agendadas — reaproveita a fila de envio (message_jobs) já
+  // usada pelo agendamento dentro do funil, só que direto pelo contato.
+  // ---------------------------------------------------------------------
+  async function openScheduleDialog() {
+    const { dialog, close } = openCenteredDialog();
+    const chat = await activeChat();
+
+    function head(title) {
+      return `<div class="crm-dialog-head"><p class="crm-dialog-title">${title}</p><button class="crm-dialog-close" data-close title="Fechar">&times;</button></div>`;
+    }
+    function statusBadge(job) {
+      if (job.status === "sent") return `<span class="crm-dialog-badge crm-dialog-badge-sent">Enviada</span>`;
+      if (job.status === "failed") return `<span class="crm-dialog-badge crm-dialog-badge-failed">Falhou</span>`;
+      return `<span class="crm-dialog-badge crm-dialog-badge-pending">Agendada</span>`;
+    }
+
+    function renderList(jobs) {
+      if (!jobs.length) {
+        dialog.innerHTML = `
+          ${head("Mensagens agendadas")}
+          <div class="crm-dialog-body">
+            <div class="crm-dialog-empty">
+              <div class="crm-dialog-empty-icon">${SCHEDULE_SVG}</div>
+              <p class="crm-dialog-empty-title">Nenhum agendamento encontrado</p>
+              <p class="crm-dialog-empty-text">Não há agendamentos programados no momento. Para adicionar um novo, clique no botão de criação.</p>
+              <button class="crm-dialog-cta" data-new>Adicionar</button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+      dialog.innerHTML = `
+        ${head("Mensagens agendadas")}
+        <div class="crm-dialog-body">
+          <div class="crm-dialog-list-head">
+            <h4>${jobs.length} agendamento${jobs.length === 1 ? "" : "s"}</h4>
+            <button class="crm-dialog-cta" data-new>+ Novo</button>
+          </div>
+          <div class="crm-dialog-list">
+            ${jobs
+              .map(
+                (j) => `
+              <div class="crm-dialog-item">
+                <div class="crm-dialog-item-head">
+                  <p class="crm-dialog-item-meta">${formatDateTime(j.scheduled_for)}${statusBadge(j)}</p>
+                  ${j.status === "pending" ? `<button class="crm-dialog-item-del" data-cancel="${escapeHtml(j.id)}" title="Cancelar">${TRASH_SVG}</button>` : ""}
+                </div>
+                <p class="crm-dialog-item-body">${escapeHtml(j.rendered_body)}</p>
+                ${j.status === "failed" && j.last_error ? `<p class="crm-dialog-item-meta" style="color:var(--z-danger)">${escapeHtml(j.last_error)}</p>` : ""}
+              </div>`,
+              )
+              .join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderForm() {
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      const minDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      dialog.innerHTML = `
+        ${head("Criar agendamento")}
+        <div class="crm-dialog-body">
+          <label class="crm-dialog-field">
+            <span>Mensagem</span>
+            <textarea class="crm-dialog-textarea" data-msg placeholder="Digite a mensagem que será enviada..."></textarea>
+          </label>
+          <div class="crm-dialog-row2">
+            <label class="crm-dialog-field"><span>Data</span><input type="date" class="crm-dialog-input" data-date min="${minDate}" /></label>
+            <label class="crm-dialog-field"><span>Hora</span><input type="time" class="crm-dialog-input" data-time /></label>
+          </div>
+          <div class="crm-dialog-foot">
+            <button class="crm-dialog-cta-ghost" data-back>Cancelar</button>
+            <button class="crm-dialog-cta" data-save>Criar</button>
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadList() {
+      dialog.innerHTML = `${head("Mensagens agendadas")}<div class="crm-dialog-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
+      if (!chat?.phone) {
+        dialog.querySelector(".crm-dialog-body").innerHTML = `<p class="crm-fn-pop-empty">Esse contato não tem telefone identificado.</p>`;
+        return;
+      }
+      const r = await chrome.runtime
+        .sendMessage({ type: "api", path: `/api/public/extension/lead-schedule?phone=${encodeURIComponent(chat.phone)}` })
+        .catch(() => null);
+      renderList(r?.ok ? r.jobs || [] : []);
+    }
+
+    dialog.addEventListener("click", async (e) => {
+      if (e.target.closest("[data-close]")) return close();
+      if (e.target.closest("[data-new]")) return renderForm();
+      if (e.target.closest("[data-back]")) return loadList();
+
+      const cancel = e.target.closest("[data-cancel]");
+      if (cancel) {
+        const id = cancel.getAttribute("data-cancel");
+        const ok = await openConfirmPop(cancel, { text: "Cancelar esse agendamento?", confirmLabel: "Sim, cancelar" });
+        if (!ok) return;
+        await chrome.runtime
+          .sendMessage({ type: "api", path: `/api/public/extension/lead-schedule/${id}`, opts: { method: "DELETE" } })
+          .catch(() => null);
+        return loadList();
+      }
+
+      if (e.target.closest("[data-save]")) {
+        const saveBtn = dialog.querySelector("[data-save]");
+        const msg = dialog.querySelector("[data-msg]").value.trim();
+        const date = dialog.querySelector("[data-date]").value;
+        const time = dialog.querySelector("[data-time]").value;
+        if (!msg) {
+          crmToast("Escreva a mensagem.", "err");
+          return;
+        }
+        if (!chat?.phone) {
+          crmToast("Esse contato não tem telefone identificado.", "err");
+          return;
+        }
+        let scheduledFor;
+        if (date && time) {
+          const parsed = new Date(`${date}T${time}:00`);
+          if (Number.isNaN(parsed.getTime())) {
+            crmToast("Data ou hora inválida.", "err");
+            return;
+          }
+          scheduledFor = parsed.toISOString();
+        }
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Criando...";
+        const r = await chrome.runtime
+          .sendMessage({
+            type: "api",
+            path: "/api/public/extension/lead-schedule",
+            opts: {
+              method: "POST",
+              body: JSON.stringify({
+                wa_contact_id: chat.contact_db_id || null,
+                phone: chat.phone,
+                name: chat.name || null,
+                message: msg,
+                scheduled_for: scheduledFor,
+              }),
+            },
+          })
+          .catch(() => null);
+        if (r?.ok) {
+          crmToast("Mensagem agendada");
+          await loadList();
+        } else {
+          crmToast(r?.error || "Não consegui agendar.", "err");
+          saveBtn.disabled = false;
+          saveBtn.textContent = "Criar";
+        }
+      }
+    });
+
+    await loadList();
+  }
+
 
 
   /**
@@ -1444,12 +1835,19 @@
     if (!header) return;
     const hasCrm = document.getElementById(CHAT_BTN_ID);
     const hasBolt = document.getElementById(RAIO_BTN_ID);
-    if (hasCrm && hasBolt && header.contains(hasCrm) && header.contains(hasBolt)) {
+    const hasNotes = document.getElementById(NOTES_BTN_ID);
+    const hasSchedule = document.getElementById(SCHEDULE_BTN_ID);
+    if (
+      hasCrm && hasBolt && hasNotes && hasSchedule &&
+      header.contains(hasCrm) && header.contains(hasBolt) && header.contains(hasNotes) && header.contains(hasSchedule)
+    ) {
       updateFunnelBadge();
       return;
     }
     hasCrm?.remove();
     hasBolt?.remove();
+    hasNotes?.remove();
+    hasSchedule?.remove();
 
     const btn = document.createElement("button");
     btn.id = CHAT_BTN_ID;
@@ -1468,6 +1866,31 @@
         return;
       }
       openFunnelPopover(btn);
+    });
+
+    // Notas e Mensagens agendadas — dois ícones novos, colados no funil.
+    const notesBtn = document.createElement("button");
+    notesBtn.id = NOTES_BTN_ID;
+    notesBtn.className = "crm-chat-btn crm-chat-btn-icon";
+    notesBtn.type = "button";
+    notesBtn.setAttribute("data-label", "Anotações");
+    notesBtn.innerHTML = NOTES_SVG;
+    notesBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      void openNotesDialog();
+    });
+
+    const scheduleBtn = document.createElement("button");
+    scheduleBtn.id = SCHEDULE_BTN_ID;
+    scheduleBtn.className = "crm-chat-btn crm-chat-btn-icon";
+    scheduleBtn.type = "button";
+    scheduleBtn.setAttribute("data-label", "Mensagens agendadas");
+    scheduleBtn.innerHTML = SCHEDULE_SVG;
+    scheduleBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      void openScheduleDialog();
     });
 
     // Só um segundo botão na conversa agora: o raio. Ele é a porta de
@@ -1490,10 +1913,14 @@
     const slot = headerActionsSlot(header);
     if (slot === header) {
       header.appendChild(btn);
+      header.appendChild(notesBtn);
+      header.appendChild(scheduleBtn);
       header.appendChild(boltBtn);
     } else {
       slot.insertAdjacentElement("beforebegin", btn);
-      btn.insertAdjacentElement("afterend", boltBtn);
+      btn.insertAdjacentElement("afterend", notesBtn);
+      notesBtn.insertAdjacentElement("afterend", scheduleBtn);
+      scheduleBtn.insertAdjacentElement("afterend", boltBtn);
     }
     updateFunnelBadge();
   }
@@ -1728,9 +2155,11 @@
   // docado do painel de respostas rápidas (não sobrepõe a conversa),
   // buscando e salvando pelos dois endpoints novos.
   // ---------------------------------------------------------------------
-  async function renderProfilePanel(panel) {
-    const kind = "profile";
-    panel.innerHTML = `<div class="crm-qrp-head"><div class="crm-qr-mark">${PROFILE_SVG}</div><p class="crm-qrp-title">Perfil do cliente</p><button class="crm-qrp-close" data-close title="Fechar">&times;</button></div>${panelSwitcherHtml(kind)}<div class="crm-qrp-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
+  async function renderCustomerPanel(panel, kind) {
+    const isProfile = kind === "profile";
+    const title = isProfile ? "Perfil do cliente" : "Valor do cliente";
+    const icon = isProfile ? PROFILE_SVG : DEAL_SVG;
+    panel.innerHTML = `<div class="crm-qrp-head"><div class="crm-qr-mark">${icon}</div><p class="crm-qrp-title">${title}</p><button class="crm-qrp-close" data-close title="Fechar">&times;</button></div>${panelSwitcherHtml(kind)}<div class="crm-qrp-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
     panelClickHandler = (e) => {
       if (e.target.closest("[data-close]")) return closeSharedPanel();
       const sw = e.target.closest("[data-switch]");
@@ -1750,66 +2179,71 @@
       return;
     }
 
-    // Perfil e Valor viram um formulário só — busca os dois em paralelo,
-    // junto com a foto real do WhatsApp (cache primeiro, ponte se faltar).
-    const cached = (waData.contacts || []).find((c) => chat.wa_id && c.wa_id === chat.wa_id);
-    const [profileRes, dealRes, photo] = await Promise.all([
-      chrome.runtime.sendMessage({ type: "api", path: `/api/public/extension/customer-profile?${contactQuery}` }).catch(() => null),
-      chrome.runtime.sendMessage({ type: "api", path: `/api/public/extension/customer-deal?${contactQuery}` }).catch(() => null),
-      cached?.profile_picture_url
-        ? Promise.resolve(cached.profile_picture_url)
-        : chat.wa_id
-          ? askBridge("profile_picture_v1", "profile_picture_done_v1", { waId: chat.wa_id }, 8000).then((r) => r?.url || null)
-          : Promise.resolve(null),
+    const path = isProfile ? "/api/public/extension/customer-profile" : "/api/public/extension/customer-deal";
+    const photoPromise = isProfile
+      ? (() => {
+          const cached = (waData.contacts || []).find((c) => chat.wa_id && c.wa_id === chat.wa_id);
+          return cached?.profile_picture_url
+            ? Promise.resolve(cached.profile_picture_url)
+            : chat.wa_id
+              ? askBridge("profile_picture_v1", "profile_picture_done_v1", { waId: chat.wa_id }, 8000).then((r) => r?.url || null)
+              : Promise.resolve(null);
+        })()
+      : Promise.resolve(null);
+    const [res, photo] = await Promise.all([
+      chrome.runtime.sendMessage({ type: "api", path: `${path}?${contactQuery}` }).catch(() => null),
+      photoPromise,
     ]);
     if (activePanelKind !== kind || !panel.isConnected) return;
-    const profile = (profileRes?.ok ? profileRes.profile : null) || {};
-    const deal = (dealRes?.ok ? dealRes.deal : null) || {};
+    const record = (res?.ok ? (isProfile ? res.profile : res.deal) : null) || {};
 
-    // "Observações" é a MESMA anotação já usada no card do funil (aba
-    // Anotações do CRM) — sincroniza os dois lados em vez de manter dois
-    // textos soltos e desencontrados.
+    // "Observações" do valor é a MESMA anotação já usada no card do funil
+    // (aba Anotações do CRM) — sincroniza os dois lados.
     const funnel = tabFunnel();
     const matchedCard =
       (funnel?.cards || []).find(
         (c) => (chat.wa_id && c.wa_id === chat.wa_id) || (chat.phone && c.phone === chat.phone),
       ) || null;
-    if (!deal.notes && matchedCard?.notes) deal.notes = matchedCard.notes;
+    if (!isProfile && !record.notes && matchedCard?.notes) record.notes = matchedCard.notes;
 
     const body = panel.querySelector(".crm-qrp-body");
-    const initial = (profile.name || chat.name || chat.phone || "?").trim().charAt(0).toUpperCase();
-    body.innerHTML = `
-      <div class="crm-cp-avatar-row">
-        ${photo ? `<img src="${escapeHtml(photo)}" class="crm-cp-avatar-photo" alt="" />` : `<div class="crm-cp-avatar">${escapeHtml(initial)}</div>`}
-        <div>
-          <p class="crm-cp-name">${escapeHtml(profile.name || chat.name || "Contato")}</p>
-          <p class="crm-cp-phone">${escapeHtml(chat.phone || "")}</p>
+    if (isProfile) {
+      const initial = (record.name || chat.name || chat.phone || "?").trim().charAt(0).toUpperCase();
+      body.innerHTML = `
+        <div class="crm-cp-avatar-row">
+          ${photo ? `<img src="${escapeHtml(photo)}" class="crm-cp-avatar-photo" alt="" />` : `<div class="crm-cp-avatar">${escapeHtml(initial)}</div>`}
+          <div>
+            <p class="crm-cp-name">${escapeHtml(record.name || chat.name || "Contato")}</p>
+            <p class="crm-cp-phone">${escapeHtml(chat.phone || "")}</p>
+          </div>
         </div>
-      </div>
-      <label class="crm-cp-field"><span>Nome</span><input class="crm-qrp-input" data-f="name" value="${escapeHtml(profile.name || chat.name || "")}" /></label>
-      <label class="crm-cp-field"><span>Email</span><input class="crm-qrp-input" data-f="email" value="${escapeHtml(profile.email || "")}" placeholder="email@exemplo.com" /></label>
-      <label class="crm-cp-field"><span>Sexo</span>
-        <select class="crm-qrp-select" data-f="gender">
-          <option value="">Selecione um sexo</option>
-          <option value="feminino" ${profile.gender === "feminino" ? "selected" : ""}>Feminino</option>
-          <option value="masculino" ${profile.gender === "masculino" ? "selected" : ""}>Masculino</option>
-          <option value="outro" ${profile.gender === "outro" ? "selected" : ""}>Outro</option>
-          <option value="prefiro_nao_dizer" ${profile.gender === "prefiro_nao_dizer" ? "selected" : ""}>Prefiro não dizer</option>
-        </select>
-      </label>
-      <label class="crm-cp-field"><span>Data de nascimento</span><input class="crm-qrp-input" type="date" data-f="birth_date" value="${escapeHtml(profile.birth_date || "")}" /></label>
-      <label class="crm-cp-field"><span>Cidade</span><input class="crm-qrp-input" data-f="city" value="${escapeHtml(profile.city || "")}" /></label>
-      <div class="crm-cp-divider"></div>
-      <label class="crm-cp-field"><span>Origem do lead</span><input class="crm-qrp-input" data-f="lead_source" value="${escapeHtml(deal.lead_source || "")}" placeholder="Ex: Instagram, indicação..." /></label>
-      <label class="crm-cp-field"><span>Estágio do contato</span><input class="crm-qrp-input" data-f="stage_label" value="${escapeHtml(deal.stage_label || "")}" placeholder="Ex: Qualificando" /></label>
-      <div class="crm-cp-row2">
-        <label class="crm-cp-field"><span>Data de entrada</span><input class="crm-qrp-input" type="date" data-f="entry_date" value="${escapeHtml(deal.entry_date || "")}" /></label>
-        <label class="crm-cp-field"><span>Data de saída</span><input class="crm-qrp-input" type="date" data-f="exit_date" value="${escapeHtml(deal.exit_date || "")}" /></label>
-      </div>
-      <label class="crm-cp-field"><span>${DEAL_SVG} Valor do negócio (R$)</span><input class="crm-qrp-input" data-f="value_reais" value="${deal.value_cents != null ? (deal.value_cents / 100).toFixed(2) : ""}" placeholder="0,00" /></label>
-      <label class="crm-cp-field"><span>Produto de interesse</span><input class="crm-qrp-input" data-f="products_of_interest" value="${escapeHtml(deal.products_of_interest || "")}" /></label>
-      <label class="crm-cp-field"><span>Observações</span><textarea class="crm-qrp-textarea" data-f="notes" placeholder="Adicione uma observação">${escapeHtml(deal.notes || "")}</textarea></label>
-    `;
+        <label class="crm-cp-field"><span>Nome</span><input class="crm-qrp-input" data-f="name" value="${escapeHtml(record.name || chat.name || "")}" /></label>
+        <label class="crm-cp-field"><span>Email</span><input class="crm-qrp-input" data-f="email" value="${escapeHtml(record.email || "")}" placeholder="email@exemplo.com" /></label>
+        <label class="crm-cp-field"><span>Sexo</span>
+          <select class="crm-qrp-select" data-f="gender">
+            <option value="">Selecione um sexo</option>
+            <option value="feminino" ${record.gender === "feminino" ? "selected" : ""}>Feminino</option>
+            <option value="masculino" ${record.gender === "masculino" ? "selected" : ""}>Masculino</option>
+            <option value="outro" ${record.gender === "outro" ? "selected" : ""}>Outro</option>
+            <option value="prefiro_nao_dizer" ${record.gender === "prefiro_nao_dizer" ? "selected" : ""}>Prefiro não dizer</option>
+          </select>
+        </label>
+        <label class="crm-cp-field"><span>Data de nascimento</span><input class="crm-qrp-input" type="date" data-f="birth_date" value="${escapeHtml(record.birth_date || "")}" /></label>
+        <label class="crm-cp-field"><span>Cidade</span><input class="crm-qrp-input" data-f="city" value="${escapeHtml(record.city || "")}" /></label>
+      `;
+    } else {
+      body.innerHTML = `
+        <label class="crm-cp-field"><span>Origem do lead</span><input class="crm-qrp-input" data-f="lead_source" value="${escapeHtml(record.lead_source || "")}" placeholder="Ex: Instagram, indicação..." /></label>
+        <label class="crm-cp-field"><span>Estágio do contato</span><input class="crm-qrp-input" data-f="stage_label" value="${escapeHtml(record.stage_label || "")}" placeholder="Ex: Qualificando" /></label>
+        <div class="crm-cp-row2">
+          <label class="crm-cp-field"><span>Data de entrada</span><input class="crm-qrp-input" type="date" data-f="entry_date" value="${escapeHtml(record.entry_date || "")}" /></label>
+          <label class="crm-cp-field"><span>Data de saída</span><input class="crm-qrp-input" type="date" data-f="exit_date" value="${escapeHtml(record.exit_date || "")}" /></label>
+        </div>
+        <label class="crm-cp-field"><span>${DEAL_SVG} Valor do negócio (R$)</span><input class="crm-qrp-input" data-f="value_reais" value="${record.value_cents != null ? (record.value_cents / 100).toFixed(2) : ""}" placeholder="0,00" /></label>
+        <label class="crm-cp-field"><span>Produto de interesse</span><input class="crm-qrp-input" data-f="products_of_interest" value="${escapeHtml(record.products_of_interest || "")}" /></label>
+        <label class="crm-cp-field"><span>Observações</span><textarea class="crm-qrp-textarea" data-f="notes" placeholder="Adicione uma observação">${escapeHtml(record.notes || "")}</textarea></label>
+      `;
+    }
 
     const foot = document.createElement("div");
     foot.className = "crm-qrp-foot";
@@ -1817,9 +2251,8 @@
     panel.appendChild(foot);
     const saveBtn = foot.querySelector("[data-save]");
 
-    // Só liga o botão quando algo de fato mudou — evita a "mensagem de
-    // salvo" no meio da tela: o próprio botão desabilitado já comunica
-    // isso.
+    // Só liga o botão quando algo de fato mudou — sem mensagem de "salvo"
+    // no meio da tela, o próprio botão desabilitado já confirma.
     const markDirty = () => { saveBtn.disabled = false; };
     panelInputHandler = markDirty;
     panelChangeHandler = markDirty;
@@ -1830,56 +2263,48 @@
       if (sw) return void openSharedPanel(sw.getAttribute("data-switch"));
       if (!e.target.closest("[data-save]") || saveBtn.disabled) return;
 
-      const profileFields = {};
-      const dealFields = {};
-      const dealKeys = ["lead_source", "stage_label", "entry_date", "exit_date", "products_of_interest", "notes"];
+      const fields = {};
       panel.querySelectorAll("[data-f]").forEach((el) => {
         const key = el.getAttribute("data-f");
         if (key === "value_reais") {
           const num = parseFloat(String(el.value).replace(",", "."));
-          dealFields.value_cents = Number.isFinite(num) ? Math.round(num * 100) : null;
-        } else if (dealKeys.includes(key)) {
-          dealFields[key] = el.value.trim() || null;
+          fields.value_cents = Number.isFinite(num) ? Math.round(num * 100) : null;
         } else {
-          profileFields[key] = el.value.trim() || null;
+          fields[key] = el.value.trim() || null;
         }
       });
 
       saveBtn.disabled = true;
       saveBtn.textContent = "Salvando...";
 
-      if (matchedCard && dealFields.notes !== (matchedCard.notes || null)) {
+      if (!isProfile && matchedCard && fields.notes !== (matchedCard.notes || null)) {
         await chrome.runtime
           .sendMessage({
             type: "api",
             path: "/api/public/extension/funnel-cards",
-            opts: { method: "PATCH", body: JSON.stringify({ id: matchedCard.id, notes: dealFields.notes }) },
+            opts: { method: "PATCH", body: JSON.stringify({ id: matchedCard.id, notes: fields.notes }) },
           })
           .catch(() => null);
-        matchedCard.notes = dealFields.notes;
+        matchedCard.notes = fields.notes;
       }
 
-      const [r1, r2] = await Promise.all([
-        chrome.runtime.sendMessage({
+      const r2 = await chrome.runtime
+        .sendMessage({
           type: "api",
-          path: "/api/public/extension/customer-profile",
-          opts: { method: "PATCH", body: JSON.stringify({ wa_contact_id: chat.contact_db_id || null, phone: chat.phone || null, ...profileFields }) },
-        }).catch(() => null),
-        chrome.runtime.sendMessage({
-          type: "api",
-          path: "/api/public/extension/customer-deal",
-          opts: { method: "PATCH", body: JSON.stringify({ wa_contact_id: chat.contact_db_id || null, phone: chat.phone || null, ...dealFields }) },
-        }).catch(() => null),
-      ]);
+          path,
+          opts: {
+            method: "PATCH",
+            body: JSON.stringify({ wa_contact_id: chat.contact_db_id || null, phone: chat.phone || null, ...fields }),
+          },
+        })
+        .catch(() => null);
 
       saveBtn.textContent = "Salvar";
-      // Sem toast de "salvo" no meio da tela — o botão ficar desabilitado
-      // já é a confirmação. Só avisa em caso de erro de verdade.
-      if (r1?.ok && r2?.ok) {
+      if (r2?.ok) {
         saveBtn.disabled = true;
       } else {
         saveBtn.disabled = false;
-        crmToast((r1 && !r1.ok && r1.error) || (r2 && !r2.ok && r2.error) || "Não consegui salvar.", "err");
+        crmToast(r2?.error || "Não consegui salvar.", "err");
       }
     };
   }

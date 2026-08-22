@@ -520,6 +520,113 @@ html body.crm-shell.crm-qr-open #app {
 .crm-confirm-pop-yes:hover { background: var(--z-accent-strong); }
 .crm-confirm-pop-yes.is-danger { background: var(--z-danger); }
 .crm-confirm-pop-yes.is-danger:hover { background: var(--z-danger); filter: brightness(0.9); }
+
+/* ---------------------------------------------------------------------
+   Diálogo centralizado — Anotações e Mensagens agendadas. Flutua no meio
+   da tela sem escurecer nem desfocar o resto (sensação nativa), com um
+   clique fora fechando. Bem diferente do modal pesado antigo.
+   --------------------------------------------------------------------- */
+.crm-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 20, 26, 0.18);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.crm-dialog-overlay.is-in { opacity: 1; }
+.crm-dialog {
+  width: 480px;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  background: var(--z-surface);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
+  font-family: var(--z-font);
+  transform: translateY(6px) scale(0.98);
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.crm-dialog-overlay.is-in .crm-dialog { transform: translateY(0) scale(1); }
+.crm-dialog-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 22px 4px;
+}
+.crm-dialog-title { flex: 1; margin: 0; font-size: 19px; font-weight: 800; color: var(--z-text); }
+.crm-dialog-tutorial {
+  flex-shrink: 0; display: flex; align-items: center; gap: 6px; border: 1px solid var(--z-line); border-radius: 999px;
+  padding: 6px 12px; font-size: 12.5px; font-weight: 600; color: var(--z-text); background: transparent; cursor: pointer;
+}
+.crm-dialog-close {
+  flex-shrink: 0; width: 30px; height: 30px; border-radius: 999px; border: 0; background: transparent;
+  color: var(--z-text-dim); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background-color 0.14s ease;
+}
+.crm-dialog-close:hover { background: var(--z-surface-2); }
+.crm-dialog-body { padding: 14px 22px 22px; }
+
+/* Estado vazio — ícone grande, título, texto de ajuda, CTA. */
+.crm-dialog-empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 28px 12px 10px; }
+.crm-dialog-empty-icon { color: var(--z-text-dim); opacity: 0.55; margin-bottom: 14px; }
+.crm-dialog-empty-icon svg { width: 44px; height: 44px; }
+.crm-dialog-empty-title { margin: 0 0 8px; font-size: 16px; font-weight: 800; color: var(--z-text); }
+.crm-dialog-empty-text { margin: 0 0 20px; font-size: 13px; line-height: 1.5; color: var(--z-text-dim); max-width: 340px; }
+
+.crm-dialog-cta {
+  border: 0; border-radius: 10px; background: var(--z-accent); color: #fff; font-size: 13.5px; font-weight: 700;
+  padding: 11px 22px; cursor: pointer; transition: background-color 0.15s ease;
+}
+.crm-dialog-cta:hover { background: var(--z-accent-strong); }
+.crm-dialog-cta-ghost {
+  border: 1px solid var(--z-line); border-radius: 10px; background: transparent; color: var(--z-text); font-size: 13.5px;
+  font-weight: 600; padding: 10px 22px; cursor: pointer; transition: background-color 0.15s ease;
+}
+.crm-dialog-cta-ghost:hover { background: var(--z-surface-2); }
+
+.crm-dialog-field { display: block; margin-bottom: 14px; }
+.crm-dialog-field span { display: block; margin-bottom: 6px; font-size: 12.5px; font-weight: 700; color: var(--z-text); }
+.crm-dialog-input, .crm-dialog-textarea, .crm-dialog-select {
+  width: 100%; box-sizing: border-box; border: 1px solid var(--z-line); border-radius: 10px; background: var(--z-bar);
+  color: var(--z-text); font-family: var(--z-font); font-size: 13.5px; padding: 10px 12px;
+}
+.crm-dialog-input:focus, .crm-dialog-textarea:focus, .crm-dialog-select:focus { outline: none; border-color: var(--z-accent); }
+.crm-dialog-textarea { min-height: 100px; resize: vertical; }
+.crm-dialog-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.crm-dialog-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+
+.crm-dialog-dropzone {
+  border: 1.5px dashed var(--z-line); border-radius: 12px; padding: 22px; text-align: center;
+  font-size: 12.5px; color: var(--z-text-dim); margin-bottom: 14px; cursor: pointer; transition: border-color 0.15s ease;
+}
+.crm-dialog-dropzone:hover { border-color: var(--z-accent); }
+.crm-dialog-dropzone.has-file { border-style: solid; border-color: var(--z-accent); color: var(--z-text); font-weight: 600; }
+
+/* Lista (notas / agendamentos) */
+.crm-dialog-list { display: flex; flex-direction: column; gap: 8px; }
+.crm-dialog-item { border: 1px solid var(--z-line-soft); border-radius: 12px; padding: 12px 14px; background: var(--z-bar); }
+.crm-dialog-item-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.crm-dialog-item-body { margin: 0; font-size: 13px; color: var(--z-text); line-height: 1.45; white-space: pre-wrap; }
+.crm-dialog-item-meta { margin: 6px 0 0; font-size: 11px; color: var(--z-text-dim); }
+.crm-dialog-item-media { margin-top: 8px; max-width: 100%; max-height: 160px; border-radius: 8px; display: block; }
+.crm-dialog-item-del {
+  flex-shrink: 0; width: 26px; height: 26px; border-radius: 7px; border: 0; background: transparent;
+  color: var(--z-text-dim); display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.crm-dialog-item-del:hover { background: var(--z-surface-2); color: var(--z-danger); }
+.crm-dialog-badge {
+  display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 10px; font-weight: 700;
+  text-transform: uppercase;
+}
+.crm-dialog-badge-pending { background: var(--z-accent-soft); color: var(--z-accent); }
+.crm-dialog-badge-sent { background: #d5f5e3; color: #1b7a43; }
+.crm-dialog-badge-failed { background: #fde2e1; color: var(--z-danger); }
+.crm-dialog-list-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.crm-dialog-list-head h4 { margin: 0; font-size: 13px; font-weight: 700; color: var(--z-text-dim); text-transform: uppercase; letter-spacing: 0.02em; }
 .crm-fn-pop-row {
   display: flex;
   align-items: center;
