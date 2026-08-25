@@ -439,63 +439,6 @@ export type Database = {
           },
         ]
       }
-      lead_notes: {
-        Row: {
-          barbershop_id: string
-          body: string | null
-          created_at: string
-          created_by: string | null
-          id: string
-          media_filename: string | null
-          media_mime: string | null
-          media_path: string | null
-          media_url: string | null
-          phone: string | null
-          wa_contact_id: string | null
-        }
-        Insert: {
-          barbershop_id: string
-          body?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          media_filename?: string | null
-          media_mime?: string | null
-          media_path?: string | null
-          media_url?: string | null
-          phone?: string | null
-          wa_contact_id?: string | null
-        }
-        Update: {
-          barbershop_id?: string
-          body?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          media_filename?: string | null
-          media_mime?: string | null
-          media_path?: string | null
-          media_url?: string | null
-          phone?: string | null
-          wa_contact_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lead_notes_barbershop_id_fkey"
-            columns: ["barbershop_id"]
-            isOneToOne: false
-            referencedRelation: "barbershops"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "lead_notes_wa_contact_id_fkey"
-            columns: ["wa_contact_id"]
-            isOneToOne: false
-            referencedRelation: "wa_contacts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       customer_profiles: {
         Row: {
           ai_summary: string | null
@@ -897,6 +840,63 @@ export type Database = {
           },
         ]
       }
+      lead_notes: {
+        Row: {
+          barbershop_id: string
+          body: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          media_filename: string | null
+          media_mime: string | null
+          media_path: string | null
+          media_url: string | null
+          phone: string | null
+          wa_contact_id: string | null
+        }
+        Insert: {
+          barbershop_id: string
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          media_filename?: string | null
+          media_mime?: string | null
+          media_path?: string | null
+          media_url?: string | null
+          phone?: string | null
+          wa_contact_id?: string | null
+        }
+        Update: {
+          barbershop_id?: string
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          media_filename?: string | null
+          media_mime?: string | null
+          media_path?: string | null
+          media_url?: string | null
+          phone?: string | null
+          wa_contact_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_notes_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_notes_wa_contact_id_fkey"
+            columns: ["wa_contact_id"]
+            isOneToOne: false
+            referencedRelation: "wa_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lessons: {
         Row: {
           active: boolean
@@ -1000,6 +1000,7 @@ export type Database = {
           created_at?: string
           customer_id?: string
           expires_at?: string | null
+          force_extension?: boolean
           id?: string
           last_error?: string | null
           max_attempts?: number
@@ -1081,33 +1082,75 @@ export type Database = {
           barbershop_id: string
           category: string | null
           created_at: string
+          formula_calculo: Json | null
           id: string
+          link_catalogo: string | null
+          mensagem_apresentacao: string | null
+          moeda: string
+          motivo_escalar: string | null
           name: string
+          observacoes_regras_especiais: string | null
+          palavras_chave_negativas: string[]
+          palavras_chave_positivas: string[]
+          pedido_minimo: string | null
           price: number | null
+          produto_alternativo_sugerido: string | null
+          sempre_escalar_humano: boolean
           sort_order: number
+          tabela_precos: Json | null
+          tipo_precificacao: Database["public"]["Enums"]["product_pricing_type"]
           updated_at: string
+          variaveis_obrigatorias: string[]
         }
         Insert: {
           active?: boolean
           barbershop_id: string
           category?: string | null
           created_at?: string
+          formula_calculo?: Json | null
           id?: string
+          link_catalogo?: string | null
+          mensagem_apresentacao?: string | null
+          moeda?: string
+          motivo_escalar?: string | null
           name: string
+          observacoes_regras_especiais?: string | null
+          palavras_chave_negativas?: string[]
+          palavras_chave_positivas?: string[]
+          pedido_minimo?: string | null
           price?: number | null
+          produto_alternativo_sugerido?: string | null
+          sempre_escalar_humano?: boolean
           sort_order?: number
+          tabela_precos?: Json | null
+          tipo_precificacao?: Database["public"]["Enums"]["product_pricing_type"]
           updated_at?: string
+          variaveis_obrigatorias?: string[]
         }
         Update: {
           active?: boolean
           barbershop_id?: string
           category?: string | null
           created_at?: string
+          formula_calculo?: Json | null
           id?: string
+          link_catalogo?: string | null
+          mensagem_apresentacao?: string | null
+          moeda?: string
+          motivo_escalar?: string | null
           name?: string
+          observacoes_regras_especiais?: string | null
+          palavras_chave_negativas?: string[]
+          palavras_chave_positivas?: string[]
+          pedido_minimo?: string | null
           price?: number | null
+          produto_alternativo_sugerido?: string | null
+          sempre_escalar_humano?: boolean
           sort_order?: number
+          tabela_precos?: Json | null
+          tipo_precificacao?: Database["public"]["Enums"]["product_pricing_type"]
           updated_at?: string
+          variaveis_obrigatorias?: string[]
         }
         Relationships: [
           {
@@ -1115,6 +1158,13 @@ export type Database = {
             columns: ["barbershop_id"]
             isOneToOne: false
             referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_produto_alternativo_sugerido_fkey"
+            columns: ["produto_alternativo_sugerido"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -1634,6 +1684,7 @@ export type Database = {
     }
     Enums: {
       app_role: "owner" | "staff"
+      product_pricing_type: "fixo" | "tabela_faixa" | "formula_area"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1762,6 +1813,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["owner", "staff"],
+      product_pricing_type: ["fixo", "tabela_faixa", "formula_area"],
     },
   },
 } as const
