@@ -59,6 +59,7 @@ import { Route as ApiPublicHooksDispatchJobsRouteImport } from './routes/api/pub
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicWhatsappSignupCallbackRouteImport } from './routes/api/public/whatsapp.signup-callback'
 import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp.webhook'
+import { Route as ApiPublicAiProductsSearchRouteImport } from './routes/api/public/ai/products.search'
 import { Route as ApiPublicExtensionAppointmentsIdRouteImport } from './routes/api/public/extension/appointments.$id'
 import { Route as ApiPublicExtensionCampaignsIdRouteImport } from './routes/api/public/extension/campaigns.$id'
 import { Route as ApiPublicExtensionCustomersIdRouteImport } from './routes/api/public/extension/customers.$id'
@@ -70,7 +71,6 @@ import { Route as ApiPublicExtensionJobsNextRouteImport } from './routes/api/pub
 import { Route as ApiPublicExtensionLeadNotesIdRouteImport } from './routes/api/public/extension/lead-notes.$id'
 import { Route as ApiPublicExtensionLeadScheduleIdRouteImport } from './routes/api/public/extension/lead-schedule.$id'
 import { Route as ApiPublicExtensionProductsIdRouteImport } from './routes/api/public/extension/products.$id'
-import { Route as ApiPublicExtensionProductsSearchRouteImport } from './routes/api/public/extension/products.search'
 import { Route as ApiPublicExtensionProfessionalsIdRouteImport } from './routes/api/public/extension/professionals.$id'
 import { Route as ApiPublicExtensionQuickRepliesIdRouteImport } from './routes/api/public/extension/quick-replies.$id'
 import { Route as ApiPublicExtensionQuickRepliesUploadRouteImport } from './routes/api/public/extension/quick-replies.upload'
@@ -84,7 +84,7 @@ import { Route as ApiPublicExtensionWhatsappProviderRouteImport } from './routes
 import { Route as ApiPublicExtensionWhatsappSendTemplateRouteImport } from './routes/api/public/extension/whatsapp.send-template'
 import { Route as ApiPublicExtensionWhatsappStatusRouteImport } from './routes/api/public/extension/whatsapp.status'
 import { Route as ApiPublicExtensionWhatsappTemplatesRouteImport } from './routes/api/public/extension/whatsapp.templates'
-import { Route as ApiPublicExtensionProductsIdCalcularRouteImport } from './routes/api/public/extension/products.$id.calcular'
+import { Route as ApiPublicAiProductsIdCalcularRouteImport } from './routes/api/public/ai/products.$id.calcular'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -363,6 +363,12 @@ const ApiPublicWhatsappWebhookRoute =
     path: '/api/public/whatsapp/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicAiProductsSearchRoute =
+  ApiPublicAiProductsSearchRouteImport.update({
+    id: '/api/public/ai/products/search',
+    path: '/api/public/ai/products/search',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicExtensionAppointmentsIdRoute =
   ApiPublicExtensionAppointmentsIdRouteImport.update({
     id: '/$id',
@@ -427,12 +433,6 @@ const ApiPublicExtensionProductsIdRoute =
   ApiPublicExtensionProductsIdRouteImport.update({
     id: '/$id',
     path: '/$id',
-    getParentRoute: () => ApiPublicExtensionProductsRoute,
-  } as any)
-const ApiPublicExtensionProductsSearchRoute =
-  ApiPublicExtensionProductsSearchRouteImport.update({
-    id: '/search',
-    path: '/search',
     getParentRoute: () => ApiPublicExtensionProductsRoute,
   } as any)
 const ApiPublicExtensionProfessionalsIdRoute =
@@ -513,11 +513,11 @@ const ApiPublicExtensionWhatsappTemplatesRoute =
     path: '/api/public/extension/whatsapp/templates',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicExtensionProductsIdCalcularRoute =
-  ApiPublicExtensionProductsIdCalcularRouteImport.update({
-    id: '/calcular',
-    path: '/calcular',
-    getParentRoute: () => ApiPublicExtensionProductsIdRoute,
+const ApiPublicAiProductsIdCalcularRoute =
+  ApiPublicAiProductsIdCalcularRouteImport.update({
+    id: '/api/public/ai/products/$id/calcular',
+    path: '/api/public/ai/products/$id/calcular',
+    getParentRoute: () => rootRouteImport,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -571,6 +571,7 @@ export interface FileRoutesByFullPath {
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
+  '/api/public/ai/products/search': typeof ApiPublicAiProductsSearchRoute
   '/api/public/extension/appointments/$id': typeof ApiPublicExtensionAppointmentsIdRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
@@ -581,8 +582,7 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
   '/api/public/extension/lead-notes/$id': typeof ApiPublicExtensionLeadNotesIdRoute
   '/api/public/extension/lead-schedule/$id': typeof ApiPublicExtensionLeadScheduleIdRoute
-  '/api/public/extension/products/$id': typeof ApiPublicExtensionProductsIdRouteWithChildren
-  '/api/public/extension/products/search': typeof ApiPublicExtensionProductsSearchRoute
+  '/api/public/extension/products/$id': typeof ApiPublicExtensionProductsIdRoute
   '/api/public/extension/professionals/$id': typeof ApiPublicExtensionProfessionalsIdRoute
   '/api/public/extension/quick-replies/$id': typeof ApiPublicExtensionQuickRepliesIdRoute
   '/api/public/extension/quick-replies/upload': typeof ApiPublicExtensionQuickRepliesUploadRoute
@@ -596,7 +596,7 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/whatsapp/send-template': typeof ApiPublicExtensionWhatsappSendTemplateRoute
   '/api/public/extension/whatsapp/status': typeof ApiPublicExtensionWhatsappStatusRoute
   '/api/public/extension/whatsapp/templates': typeof ApiPublicExtensionWhatsappTemplatesRoute
-  '/api/public/extension/products/$id/calcular': typeof ApiPublicExtensionProductsIdCalcularRoute
+  '/api/public/ai/products/$id/calcular': typeof ApiPublicAiProductsIdCalcularRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -649,6 +649,7 @@ export interface FileRoutesByTo {
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
+  '/api/public/ai/products/search': typeof ApiPublicAiProductsSearchRoute
   '/api/public/extension/appointments/$id': typeof ApiPublicExtensionAppointmentsIdRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
@@ -659,8 +660,7 @@ export interface FileRoutesByTo {
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
   '/api/public/extension/lead-notes/$id': typeof ApiPublicExtensionLeadNotesIdRoute
   '/api/public/extension/lead-schedule/$id': typeof ApiPublicExtensionLeadScheduleIdRoute
-  '/api/public/extension/products/$id': typeof ApiPublicExtensionProductsIdRouteWithChildren
-  '/api/public/extension/products/search': typeof ApiPublicExtensionProductsSearchRoute
+  '/api/public/extension/products/$id': typeof ApiPublicExtensionProductsIdRoute
   '/api/public/extension/professionals/$id': typeof ApiPublicExtensionProfessionalsIdRoute
   '/api/public/extension/quick-replies/$id': typeof ApiPublicExtensionQuickRepliesIdRoute
   '/api/public/extension/quick-replies/upload': typeof ApiPublicExtensionQuickRepliesUploadRoute
@@ -674,7 +674,7 @@ export interface FileRoutesByTo {
   '/api/public/extension/whatsapp/send-template': typeof ApiPublicExtensionWhatsappSendTemplateRoute
   '/api/public/extension/whatsapp/status': typeof ApiPublicExtensionWhatsappStatusRoute
   '/api/public/extension/whatsapp/templates': typeof ApiPublicExtensionWhatsappTemplatesRoute
-  '/api/public/extension/products/$id/calcular': typeof ApiPublicExtensionProductsIdCalcularRoute
+  '/api/public/ai/products/$id/calcular': typeof ApiPublicAiProductsIdCalcularRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -728,6 +728,7 @@ export interface FileRoutesById {
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
+  '/api/public/ai/products/search': typeof ApiPublicAiProductsSearchRoute
   '/api/public/extension/appointments/$id': typeof ApiPublicExtensionAppointmentsIdRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
@@ -738,8 +739,7 @@ export interface FileRoutesById {
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
   '/api/public/extension/lead-notes/$id': typeof ApiPublicExtensionLeadNotesIdRoute
   '/api/public/extension/lead-schedule/$id': typeof ApiPublicExtensionLeadScheduleIdRoute
-  '/api/public/extension/products/$id': typeof ApiPublicExtensionProductsIdRouteWithChildren
-  '/api/public/extension/products/search': typeof ApiPublicExtensionProductsSearchRoute
+  '/api/public/extension/products/$id': typeof ApiPublicExtensionProductsIdRoute
   '/api/public/extension/professionals/$id': typeof ApiPublicExtensionProfessionalsIdRoute
   '/api/public/extension/quick-replies/$id': typeof ApiPublicExtensionQuickRepliesIdRoute
   '/api/public/extension/quick-replies/upload': typeof ApiPublicExtensionQuickRepliesUploadRoute
@@ -753,7 +753,7 @@ export interface FileRoutesById {
   '/api/public/extension/whatsapp/send-template': typeof ApiPublicExtensionWhatsappSendTemplateRoute
   '/api/public/extension/whatsapp/status': typeof ApiPublicExtensionWhatsappStatusRoute
   '/api/public/extension/whatsapp/templates': typeof ApiPublicExtensionWhatsappTemplatesRoute
-  '/api/public/extension/products/$id/calcular': typeof ApiPublicExtensionProductsIdCalcularRoute
+  '/api/public/ai/products/$id/calcular': typeof ApiPublicAiProductsIdCalcularRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -808,6 +808,7 @@ export interface FileRouteTypes {
     | '/api/public/payments/webhook'
     | '/api/public/whatsapp/signup-callback'
     | '/api/public/whatsapp/webhook'
+    | '/api/public/ai/products/search'
     | '/api/public/extension/appointments/$id'
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
@@ -819,7 +820,6 @@ export interface FileRouteTypes {
     | '/api/public/extension/lead-notes/$id'
     | '/api/public/extension/lead-schedule/$id'
     | '/api/public/extension/products/$id'
-    | '/api/public/extension/products/search'
     | '/api/public/extension/professionals/$id'
     | '/api/public/extension/quick-replies/$id'
     | '/api/public/extension/quick-replies/upload'
@@ -833,7 +833,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/whatsapp/send-template'
     | '/api/public/extension/whatsapp/status'
     | '/api/public/extension/whatsapp/templates'
-    | '/api/public/extension/products/$id/calcular'
+    | '/api/public/ai/products/$id/calcular'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -886,6 +886,7 @@ export interface FileRouteTypes {
     | '/api/public/payments/webhook'
     | '/api/public/whatsapp/signup-callback'
     | '/api/public/whatsapp/webhook'
+    | '/api/public/ai/products/search'
     | '/api/public/extension/appointments/$id'
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
@@ -897,7 +898,6 @@ export interface FileRouteTypes {
     | '/api/public/extension/lead-notes/$id'
     | '/api/public/extension/lead-schedule/$id'
     | '/api/public/extension/products/$id'
-    | '/api/public/extension/products/search'
     | '/api/public/extension/professionals/$id'
     | '/api/public/extension/quick-replies/$id'
     | '/api/public/extension/quick-replies/upload'
@@ -911,7 +911,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/whatsapp/send-template'
     | '/api/public/extension/whatsapp/status'
     | '/api/public/extension/whatsapp/templates'
-    | '/api/public/extension/products/$id/calcular'
+    | '/api/public/ai/products/$id/calcular'
   id:
     | '__root__'
     | '/'
@@ -964,6 +964,7 @@ export interface FileRouteTypes {
     | '/api/public/payments/webhook'
     | '/api/public/whatsapp/signup-callback'
     | '/api/public/whatsapp/webhook'
+    | '/api/public/ai/products/search'
     | '/api/public/extension/appointments/$id'
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
@@ -975,7 +976,6 @@ export interface FileRouteTypes {
     | '/api/public/extension/lead-notes/$id'
     | '/api/public/extension/lead-schedule/$id'
     | '/api/public/extension/products/$id'
-    | '/api/public/extension/products/search'
     | '/api/public/extension/professionals/$id'
     | '/api/public/extension/quick-replies/$id'
     | '/api/public/extension/quick-replies/upload'
@@ -989,7 +989,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/whatsapp/send-template'
     | '/api/public/extension/whatsapp/status'
     | '/api/public/extension/whatsapp/templates'
-    | '/api/public/extension/products/$id/calcular'
+    | '/api/public/ai/products/$id/calcular'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1042,6 +1042,7 @@ export interface RootRouteChildren {
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiPublicWhatsappSignupCallbackRoute: typeof ApiPublicWhatsappSignupCallbackRoute
   ApiPublicWhatsappWebhookRoute: typeof ApiPublicWhatsappWebhookRoute
+  ApiPublicAiProductsSearchRoute: typeof ApiPublicAiProductsSearchRoute
   ApiPublicExtensionJobsIdRoute: typeof ApiPublicExtensionJobsIdRoute
   ApiPublicExtensionJobsNextRoute: typeof ApiPublicExtensionJobsNextRoute
   ApiPublicExtensionWaDataRoute: typeof ApiPublicExtensionWaDataRoute
@@ -1052,6 +1053,7 @@ export interface RootRouteChildren {
   ApiPublicExtensionWhatsappSendTemplateRoute: typeof ApiPublicExtensionWhatsappSendTemplateRoute
   ApiPublicExtensionWhatsappStatusRoute: typeof ApiPublicExtensionWhatsappStatusRoute
   ApiPublicExtensionWhatsappTemplatesRoute: typeof ApiPublicExtensionWhatsappTemplatesRoute
+  ApiPublicAiProductsIdCalcularRoute: typeof ApiPublicAiProductsIdCalcularRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1406,6 +1408,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWhatsappWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/ai/products/search': {
+      id: '/api/public/ai/products/search'
+      path: '/api/public/ai/products/search'
+      fullPath: '/api/public/ai/products/search'
+      preLoaderRoute: typeof ApiPublicAiProductsSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/extension/appointments/$id': {
       id: '/api/public/extension/appointments/$id'
       path: '/$id'
@@ -1481,13 +1490,6 @@ declare module '@tanstack/react-router' {
       path: '/$id'
       fullPath: '/api/public/extension/products/$id'
       preLoaderRoute: typeof ApiPublicExtensionProductsIdRouteImport
-      parentRoute: typeof ApiPublicExtensionProductsRoute
-    }
-    '/api/public/extension/products/search': {
-      id: '/api/public/extension/products/search'
-      path: '/search'
-      fullPath: '/api/public/extension/products/search'
-      preLoaderRoute: typeof ApiPublicExtensionProductsSearchRouteImport
       parentRoute: typeof ApiPublicExtensionProductsRoute
     }
     '/api/public/extension/professionals/$id': {
@@ -1581,12 +1583,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensionWhatsappTemplatesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/extension/products/$id/calcular': {
-      id: '/api/public/extension/products/$id/calcular'
-      path: '/calcular'
-      fullPath: '/api/public/extension/products/$id/calcular'
-      preLoaderRoute: typeof ApiPublicExtensionProductsIdCalcularRouteImport
-      parentRoute: typeof ApiPublicExtensionProductsIdRoute
+    '/api/public/ai/products/$id/calcular': {
+      id: '/api/public/ai/products/$id/calcular'
+      path: '/api/public/ai/products/$id/calcular'
+      fullPath: '/api/public/ai/products/$id/calcular'
+      preLoaderRoute: typeof ApiPublicAiProductsIdCalcularRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -1706,32 +1708,13 @@ const ApiPublicExtensionLeadScheduleRouteWithChildren =
     ApiPublicExtensionLeadScheduleRouteChildren,
   )
 
-interface ApiPublicExtensionProductsIdRouteChildren {
-  ApiPublicExtensionProductsIdCalcularRoute: typeof ApiPublicExtensionProductsIdCalcularRoute
-}
-
-const ApiPublicExtensionProductsIdRouteChildren: ApiPublicExtensionProductsIdRouteChildren =
-  {
-    ApiPublicExtensionProductsIdCalcularRoute:
-      ApiPublicExtensionProductsIdCalcularRoute,
-  }
-
-const ApiPublicExtensionProductsIdRouteWithChildren =
-  ApiPublicExtensionProductsIdRoute._addFileChildren(
-    ApiPublicExtensionProductsIdRouteChildren,
-  )
-
 interface ApiPublicExtensionProductsRouteChildren {
-  ApiPublicExtensionProductsIdRoute: typeof ApiPublicExtensionProductsIdRouteWithChildren
-  ApiPublicExtensionProductsSearchRoute: typeof ApiPublicExtensionProductsSearchRoute
+  ApiPublicExtensionProductsIdRoute: typeof ApiPublicExtensionProductsIdRoute
 }
 
 const ApiPublicExtensionProductsRouteChildren: ApiPublicExtensionProductsRouteChildren =
   {
-    ApiPublicExtensionProductsIdRoute:
-      ApiPublicExtensionProductsIdRouteWithChildren,
-    ApiPublicExtensionProductsSearchRoute:
-      ApiPublicExtensionProductsSearchRoute,
+    ApiPublicExtensionProductsIdRoute: ApiPublicExtensionProductsIdRoute,
   }
 
 const ApiPublicExtensionProductsRouteWithChildren =
@@ -1863,6 +1846,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiPublicWhatsappSignupCallbackRoute: ApiPublicWhatsappSignupCallbackRoute,
   ApiPublicWhatsappWebhookRoute: ApiPublicWhatsappWebhookRoute,
+  ApiPublicAiProductsSearchRoute: ApiPublicAiProductsSearchRoute,
   ApiPublicExtensionJobsIdRoute: ApiPublicExtensionJobsIdRoute,
   ApiPublicExtensionJobsNextRoute: ApiPublicExtensionJobsNextRoute,
   ApiPublicExtensionWaDataRoute: ApiPublicExtensionWaDataRoute,
@@ -1878,6 +1862,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicExtensionWhatsappStatusRoute: ApiPublicExtensionWhatsappStatusRoute,
   ApiPublicExtensionWhatsappTemplatesRoute:
     ApiPublicExtensionWhatsappTemplatesRoute,
+  ApiPublicAiProductsIdCalcularRoute: ApiPublicAiProductsIdCalcularRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

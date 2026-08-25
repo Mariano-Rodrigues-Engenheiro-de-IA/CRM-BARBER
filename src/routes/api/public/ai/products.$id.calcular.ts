@@ -78,7 +78,7 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-export const Route = createFileRoute("/api/public/extension/products/$id/calcular")({
+export const Route = createFileRoute("/api/public/ai/products/$id/calcular")({
   server: {
     handlers: {
       OPTIONS: async ({ request }) => preflight(request),

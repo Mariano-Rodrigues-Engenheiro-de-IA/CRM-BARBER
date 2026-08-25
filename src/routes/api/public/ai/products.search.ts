@@ -45,7 +45,7 @@ function countMatches(haystack: string, needles: string[]): string[] {
   return needles.filter((n) => n.trim() && haystack.includes(normalize(n)));
 }
 
-export const Route = createFileRoute("/api/public/extension/products/search")({
+export const Route = createFileRoute("/api/public/ai/products/search")({
   server: {
     handlers: {
       OPTIONS: async ({ request }) => preflight(request),
