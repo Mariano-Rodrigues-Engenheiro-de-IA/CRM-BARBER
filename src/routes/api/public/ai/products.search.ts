@@ -87,8 +87,16 @@ export const Route = createFileRoute("/api/public/ai/products/search")({
           if (positiveHits.length === 0) continue;
 
           const negativeHits = countMatches(searchText, p.palavras_chave_negativas ?? []);
-          const totalPositive = (p.palavras_chave_positivas ?? []).length || 1;
-          let score = Math.min(1, positiveHits.length / Math.min(totalPositive, 3));
+          // Bater UMA palavra-chave já é forte evidência — na prática, um
+          // cliente real dificilmente usa vários sinônimos do mesmo produto
+          // na mesma mensagem (ex: "banner" OU "faixa promocional", nunca os
+          // dois juntos). A fórmula antiga (hits / total_de_palavras)
+          // penalizava isso, fazendo quase toda busca real cair abaixo do
+          // limiar de confiança mesmo em casos óbvios. O que realmente
+          // importa pra decidir "confiança suficiente" é se existe
+          // AMBIGUIDADE entre produtos diferentes (checado depois, via
+          // AMBIGUITY_GAP), não quantas palavras da lista bateram.
+          let score = Math.min(1, 0.85 + (positiveHits.length - 1) * 0.05);
 
           if (negativeHits.length > 0) {
             // Palavra-chave negativa bateu — reduz drasticamente a
