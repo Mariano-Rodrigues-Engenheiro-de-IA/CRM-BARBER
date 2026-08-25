@@ -591,6 +591,24 @@ function ServiceFormDialog({
 }
 
 /** Cadastro de produtos — mesmo padrão de Serviços, sem duração/agenda. */
+/** Resumo curto do preço pra exibir na listagem — cobre os 3 tipos de
+ * precificação, já que a lista antes só olhava pro campo "price" (usado
+ * só no tipo fixo) e ficava em branco para tabela_faixa/formula_area,
+ * dando a falsa impressão de "produto sem preço cadastrado". */
+function priceSummary(p: Product): string | null {
+  if (p.sempre_escalar_humano) return "Sempre escala para a equipe";
+  if (p.tipo_precificacao === "formula_area" && p.formula_calculo?.valor_m2 != null) {
+    return `R$ ${p.formula_calculo.valor_m2.toFixed(2)} / m²`;
+  }
+  if (p.tipo_precificacao === "tabela_faixa" && p.tabela_precos?.faixas?.length) {
+    const valores = p.tabela_precos.faixas.flatMap((f) => Object.values(f.variacoes ?? {}));
+    if (valores.length > 0) return `Tabela por faixa · a partir de R$ ${Math.min(...valores).toFixed(2)}`;
+    return "Tabela por faixa";
+  }
+  if (p.price != null) return `R$ ${p.price.toFixed(2)}`;
+  return null;
+}
+
 export function ProductsTab({ api, onChanged }: { api: Api; onChanged?: () => void }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -647,7 +665,7 @@ export function ProductsTab({ api, onChanged }: { api: Api; onChanged?: () => vo
                   {p.name}
                   {p.category && <span className="ml-2 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-500">{p.category}</span>}
                 </p>
-                {p.price != null && <p className="truncate text-xs text-neutral-400">R$ {p.price.toFixed(2)}</p>}
+                {priceSummary(p) && <p className="truncate text-xs text-neutral-400">{priceSummary(p)}</p>}
               </div>
               <Button
                 variant="ghost"
