@@ -33,7 +33,7 @@ const createSchema = z.object({
 });
 
 const LIST_SELECT =
-  "id, name, category, price, active, sort_order, palavras_chave_positivas, palavras_chave_negativas, tipo_precificacao, sempre_escalar_humano, variaveis_obrigatorias";
+  "id, name, category, price, active, sort_order, palavras_chave_positivas, palavras_chave_negativas, tipo_precificacao, tabela_precos, formula_calculo, variaveis_obrigatorias, pedido_minimo, sempre_escalar_humano, motivo_escalar, link_catalogo, mensagem_apresentacao, observacoes_regras_especiais";
 
 export const Route = createFileRoute("/api/public/extension/products")({
   server: {
