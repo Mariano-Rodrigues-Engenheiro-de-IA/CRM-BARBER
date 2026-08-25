@@ -45,6 +45,7 @@ export type Product = {
   tabela_precos?: TabelaPrecos | null;
   formula_calculo?: FormulaCalculo | null;
   variaveis_obrigatorias?: string[];
+  roteiro_atendimento?: { campo: string; pergunta: string }[] | null;
   pedido_minimo?: string | null;
   sempre_escalar_humano?: boolean;
   motivo_escalar?: string | null;
@@ -770,6 +771,7 @@ function ProductFormDialog({
 
   // Coleta e escalonamento
   const [variaveisObrigatorias, setVariaveisObrigatorias] = useState<string[]>([]);
+  const [roteiro, setRoteiro] = useState<{ campo: string; pergunta: string }[]>([]);
   const [pedidoMinimo, setPedidoMinimo] = useState("");
   const [sempreEscalarHumano, setSempreEscalarHumano] = useState(false);
   const [motivoEscalar, setMotivoEscalar] = useState("");
@@ -807,6 +809,7 @@ function ProductFormDialog({
       : "");
 
     setVariaveisObrigatorias(editing?.variaveis_obrigatorias ?? []);
+    setRoteiro(editing?.roteiro_atendimento ?? []);
     setPedidoMinimo(editing?.pedido_minimo ?? "");
     setSempreEscalarHumano(editing?.sempre_escalar_humano ?? false);
     setMotivoEscalar(editing?.motivo_escalar ?? "");
@@ -834,6 +837,9 @@ function ProductFormDialog({
         palavras_chave_negativas: palavrasNegativas,
         tipo_precificacao: tipoPrecificacao,
         variaveis_obrigatorias: variaveisObrigatorias,
+        roteiro_atendimento: roteiro.filter((r) => r.campo.trim() && r.pergunta.trim()).length > 0
+          ? roteiro.filter((r) => r.campo.trim() && r.pergunta.trim())
+          : null,
         pedido_minimo: pedidoMinimo.trim() || null,
         sempre_escalar_humano: sempreEscalarHumano,
         motivo_escalar: sempreEscalarHumano ? motivoEscalar.trim() || null : null,
@@ -944,6 +950,43 @@ function ProductFormDialog({
             <div className="space-y-1.5">
               <Label>Dados que a IA precisa perguntar ao cliente antes de calcular</Label>
               <TagListEditor values={variaveisObrigatorias} onChange={setVariaveisObrigatorias} placeholder="Digite e aperte Enter (ex: tamanho, quantidade, tipo_impressao)" />
+            </div>
+
+            <div className="space-y-2 rounded-lg border border-neutral-200 p-3">
+              <div>
+                <Label>Roteiro de atendimento (opcional, mas recomendado)</Label>
+                <p className="text-xs text-neutral-500">
+                  Defina a ordem exata das perguntas e o texto exato que a IA deve usar para este produto. Se deixar vazio, a IA formula a pergunta sozinha a partir da lista acima.
+                </p>
+              </div>
+              {roteiro.map((passo, pi) => (
+                <div key={pi} className="flex items-start gap-2">
+                  <span className="mt-2 text-xs font-semibold text-neutral-400">{pi + 1}.</span>
+                  <div className="flex-1 space-y-1">
+                    <Input
+                      placeholder="Campo (ex: largura_m)"
+                      value={passo.campo}
+                      onChange={(e) => setRoteiro((prev) => prev.map((p, i) => (i === pi ? { ...p, campo: e.target.value } : p)))}
+                    />
+                    <Textarea
+                      rows={2}
+                      placeholder="Pergunta exata (ex: Qual a largura, em metros?)"
+                      value={passo.pergunta}
+                      onChange={(e) => setRoteiro((prev) => prev.map((p, i) => (i === pi ? { ...p, pergunta: e.target.value } : p)))}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setRoteiro((prev) => prev.filter((_, i) => i !== pi))}
+                    className="mt-2 text-neutral-400 hover:text-red-600"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <Button type="button" variant="outline" size="sm" onClick={() => setRoteiro((prev) => [...prev, { campo: "", pergunta: "" }])}>
+                + Adicionar passo do roteiro
+              </Button>
             </div>
           </TabsContent>
 

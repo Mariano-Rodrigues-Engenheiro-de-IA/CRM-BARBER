@@ -27,6 +27,10 @@ const patchSchema = z.object({
   tabela_precos: z.custom<Json>().optional().nullable(),
   formula_calculo: z.custom<Json>().optional().nullable(),
   variaveis_obrigatorias: z.array(z.string().trim().min(1)).optional(),
+  // Lista ordenada [{ campo, pergunta }] — o roteiro exato que a IA segue
+  // ao conduzir o atendimento deste produto, em vez de formular a
+  // pergunta por conta própria a partir de variaveis_obrigatorias.
+  roteiro_atendimento: z.array(z.object({ campo: z.string().trim().min(1), pergunta: z.string().trim().min(1) })).optional().nullable(),
   pedido_minimo: z.string().trim().max(200).optional().nullable(),
   sempre_escalar_humano: z.boolean().optional(),
   motivo_escalar: z.string().trim().max(500).optional().nullable(),
@@ -37,7 +41,7 @@ const patchSchema = z.object({
 });
 
 const FULL_SELECT =
-  "id, name, category, price, active, sort_order, palavras_chave_positivas, palavras_chave_negativas, produto_alternativo_sugerido, tipo_precificacao, tabela_precos, formula_calculo, variaveis_obrigatorias, pedido_minimo, sempre_escalar_humano, motivo_escalar, link_catalogo, mensagem_apresentacao, observacoes_regras_especiais, moeda";
+  "id, name, category, price, active, sort_order, palavras_chave_positivas, palavras_chave_negativas, produto_alternativo_sugerido, tipo_precificacao, tabela_precos, formula_calculo, variaveis_obrigatorias, roteiro_atendimento, pedido_minimo, sempre_escalar_humano, motivo_escalar, link_catalogo, mensagem_apresentacao, observacoes_regras_especiais, moeda";
 
 export const Route = createFileRoute("/api/public/extension/products/$id")({
   server: {
@@ -86,6 +90,7 @@ export const Route = createFileRoute("/api/public/extension/products/$id")({
             tabela_precos: data.tabela_precos,
             formula_calculo: data.formula_calculo,
             variaveis_obrigatorias: data.variaveis_obrigatorias ?? [],
+            roteiro_atendimento: data.roteiro_atendimento ?? null,
             pedido_minimo: data.pedido_minimo,
             sempre_escalar_humano: data.sempre_escalar_humano,
             motivo_escalar: data.motivo_escalar,

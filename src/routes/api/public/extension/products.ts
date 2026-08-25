@@ -24,6 +24,7 @@ const createSchema = z.object({
   tabela_precos: z.custom<Json>().optional().nullable(),
   formula_calculo: z.custom<Json>().optional().nullable(),
   variaveis_obrigatorias: z.array(z.string().trim().min(1)).optional(),
+  roteiro_atendimento: z.array(z.object({ campo: z.string().trim().min(1), pergunta: z.string().trim().min(1) })).optional().nullable(),
   pedido_minimo: z.string().trim().max(200).optional().nullable(),
   sempre_escalar_humano: z.boolean().optional(),
   motivo_escalar: z.string().trim().max(500).optional().nullable(),
@@ -34,7 +35,7 @@ const createSchema = z.object({
 });
 
 const LIST_SELECT =
-  "id, name, category, price, active, sort_order, palavras_chave_positivas, palavras_chave_negativas, tipo_precificacao, tabela_precos, formula_calculo, variaveis_obrigatorias, pedido_minimo, sempre_escalar_humano, motivo_escalar, link_catalogo, mensagem_apresentacao, observacoes_regras_especiais";
+  "id, name, category, price, active, sort_order, palavras_chave_positivas, palavras_chave_negativas, tipo_precificacao, tabela_precos, formula_calculo, variaveis_obrigatorias, roteiro_atendimento, pedido_minimo, sempre_escalar_humano, motivo_escalar, link_catalogo, mensagem_apresentacao, observacoes_regras_especiais";
 
 export const Route = createFileRoute("/api/public/extension/products")({
   server: {
