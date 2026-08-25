@@ -117,8 +117,23 @@ export const Route = createFileRoute("/api/public/ai/products/search")({
           }
         }
 
-        scored.sort((a, b) => b.score - a.score);
-        const top = scored.slice(0, 3);
+        // Deduplica por produto: um mesmo produto pode entrar na lista duas
+        // vezes por dois caminhos diferentes - batendo direto pelas próprias
+        // palavras-chave positivas E sendo injetado como alternativo de
+        // outro produto que bateu negativa (ex: "determinação judicial" é ao
+        // mesmo tempo palavra positiva da Placa e aciona a negativa do
+        // Banner, que também injeta a Placa como alternativo). Sem isso, o
+        // mesmo id_produto aparecia duas vezes no resultado, com scores
+        // diferentes, confundindo a decisão de ambiguidade da IA.
+        const bestById = new Map<string, (typeof scored)[number]>();
+        for (const s of scored) {
+          const existing = bestById.get(s.product.id);
+          if (!existing || s.score > existing.score) bestById.set(s.product.id, s);
+        }
+        const deduped = [...bestById.values()];
+
+        deduped.sort((a, b) => b.score - a.score);
+        const top = deduped.slice(0, 3);
 
         const confiancaSuficiente = top.length > 0 && top[0].score >= CONFIDENCE_THRESHOLD;
         const ambiguo = top.length >= 2 && Math.abs(top[0].score - top[1].score) < AMBIGUITY_GAP && top[0].score >= CONFIDENCE_THRESHOLD;
