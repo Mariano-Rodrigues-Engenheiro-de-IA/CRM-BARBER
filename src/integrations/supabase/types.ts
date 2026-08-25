@@ -1095,6 +1095,7 @@ export type Database = {
           pedido_minimo: string | null
           price: number | null
           produto_alternativo_sugerido: string | null
+          roteiro_atendimento: Json | null
           sempre_escalar_humano: boolean
           sort_order: number
           tabela_precos: Json | null
@@ -1120,6 +1121,7 @@ export type Database = {
           pedido_minimo?: string | null
           price?: number | null
           produto_alternativo_sugerido?: string | null
+          roteiro_atendimento?: Json | null
           sempre_escalar_humano?: boolean
           sort_order?: number
           tabela_precos?: Json | null
@@ -1145,6 +1147,7 @@ export type Database = {
           pedido_minimo?: string | null
           price?: number | null
           produto_alternativo_sugerido?: string | null
+          roteiro_atendimento?: Json | null
           sempre_escalar_humano?: boolean
           sort_order?: number
           tabela_precos?: Json | null
