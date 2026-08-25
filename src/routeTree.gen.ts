@@ -70,6 +70,7 @@ import { Route as ApiPublicExtensionJobsNextRouteImport } from './routes/api/pub
 import { Route as ApiPublicExtensionLeadNotesIdRouteImport } from './routes/api/public/extension/lead-notes.$id'
 import { Route as ApiPublicExtensionLeadScheduleIdRouteImport } from './routes/api/public/extension/lead-schedule.$id'
 import { Route as ApiPublicExtensionProductsIdRouteImport } from './routes/api/public/extension/products.$id'
+import { Route as ApiPublicExtensionProductsSearchRouteImport } from './routes/api/public/extension/products.search'
 import { Route as ApiPublicExtensionProfessionalsIdRouteImport } from './routes/api/public/extension/professionals.$id'
 import { Route as ApiPublicExtensionQuickRepliesIdRouteImport } from './routes/api/public/extension/quick-replies.$id'
 import { Route as ApiPublicExtensionQuickRepliesUploadRouteImport } from './routes/api/public/extension/quick-replies.upload'
@@ -83,6 +84,7 @@ import { Route as ApiPublicExtensionWhatsappProviderRouteImport } from './routes
 import { Route as ApiPublicExtensionWhatsappSendTemplateRouteImport } from './routes/api/public/extension/whatsapp.send-template'
 import { Route as ApiPublicExtensionWhatsappStatusRouteImport } from './routes/api/public/extension/whatsapp.status'
 import { Route as ApiPublicExtensionWhatsappTemplatesRouteImport } from './routes/api/public/extension/whatsapp.templates'
+import { Route as ApiPublicExtensionProductsIdCalcularRouteImport } from './routes/api/public/extension/products.$id.calcular'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -427,6 +429,12 @@ const ApiPublicExtensionProductsIdRoute =
     path: '/$id',
     getParentRoute: () => ApiPublicExtensionProductsRoute,
   } as any)
+const ApiPublicExtensionProductsSearchRoute =
+  ApiPublicExtensionProductsSearchRouteImport.update({
+    id: '/search',
+    path: '/search',
+    getParentRoute: () => ApiPublicExtensionProductsRoute,
+  } as any)
 const ApiPublicExtensionProfessionalsIdRoute =
   ApiPublicExtensionProfessionalsIdRouteImport.update({
     id: '/$id',
@@ -505,6 +513,12 @@ const ApiPublicExtensionWhatsappTemplatesRoute =
     path: '/api/public/extension/whatsapp/templates',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicExtensionProductsIdCalcularRoute =
+  ApiPublicExtensionProductsIdCalcularRouteImport.update({
+    id: '/calcular',
+    path: '/calcular',
+    getParentRoute: () => ApiPublicExtensionProductsIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -567,7 +581,8 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
   '/api/public/extension/lead-notes/$id': typeof ApiPublicExtensionLeadNotesIdRoute
   '/api/public/extension/lead-schedule/$id': typeof ApiPublicExtensionLeadScheduleIdRoute
-  '/api/public/extension/products/$id': typeof ApiPublicExtensionProductsIdRoute
+  '/api/public/extension/products/$id': typeof ApiPublicExtensionProductsIdRouteWithChildren
+  '/api/public/extension/products/search': typeof ApiPublicExtensionProductsSearchRoute
   '/api/public/extension/professionals/$id': typeof ApiPublicExtensionProfessionalsIdRoute
   '/api/public/extension/quick-replies/$id': typeof ApiPublicExtensionQuickRepliesIdRoute
   '/api/public/extension/quick-replies/upload': typeof ApiPublicExtensionQuickRepliesUploadRoute
@@ -581,6 +596,7 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/whatsapp/send-template': typeof ApiPublicExtensionWhatsappSendTemplateRoute
   '/api/public/extension/whatsapp/status': typeof ApiPublicExtensionWhatsappStatusRoute
   '/api/public/extension/whatsapp/templates': typeof ApiPublicExtensionWhatsappTemplatesRoute
+  '/api/public/extension/products/$id/calcular': typeof ApiPublicExtensionProductsIdCalcularRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -643,7 +659,8 @@ export interface FileRoutesByTo {
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
   '/api/public/extension/lead-notes/$id': typeof ApiPublicExtensionLeadNotesIdRoute
   '/api/public/extension/lead-schedule/$id': typeof ApiPublicExtensionLeadScheduleIdRoute
-  '/api/public/extension/products/$id': typeof ApiPublicExtensionProductsIdRoute
+  '/api/public/extension/products/$id': typeof ApiPublicExtensionProductsIdRouteWithChildren
+  '/api/public/extension/products/search': typeof ApiPublicExtensionProductsSearchRoute
   '/api/public/extension/professionals/$id': typeof ApiPublicExtensionProfessionalsIdRoute
   '/api/public/extension/quick-replies/$id': typeof ApiPublicExtensionQuickRepliesIdRoute
   '/api/public/extension/quick-replies/upload': typeof ApiPublicExtensionQuickRepliesUploadRoute
@@ -657,6 +674,7 @@ export interface FileRoutesByTo {
   '/api/public/extension/whatsapp/send-template': typeof ApiPublicExtensionWhatsappSendTemplateRoute
   '/api/public/extension/whatsapp/status': typeof ApiPublicExtensionWhatsappStatusRoute
   '/api/public/extension/whatsapp/templates': typeof ApiPublicExtensionWhatsappTemplatesRoute
+  '/api/public/extension/products/$id/calcular': typeof ApiPublicExtensionProductsIdCalcularRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -720,7 +738,8 @@ export interface FileRoutesById {
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
   '/api/public/extension/lead-notes/$id': typeof ApiPublicExtensionLeadNotesIdRoute
   '/api/public/extension/lead-schedule/$id': typeof ApiPublicExtensionLeadScheduleIdRoute
-  '/api/public/extension/products/$id': typeof ApiPublicExtensionProductsIdRoute
+  '/api/public/extension/products/$id': typeof ApiPublicExtensionProductsIdRouteWithChildren
+  '/api/public/extension/products/search': typeof ApiPublicExtensionProductsSearchRoute
   '/api/public/extension/professionals/$id': typeof ApiPublicExtensionProfessionalsIdRoute
   '/api/public/extension/quick-replies/$id': typeof ApiPublicExtensionQuickRepliesIdRoute
   '/api/public/extension/quick-replies/upload': typeof ApiPublicExtensionQuickRepliesUploadRoute
@@ -734,6 +753,7 @@ export interface FileRoutesById {
   '/api/public/extension/whatsapp/send-template': typeof ApiPublicExtensionWhatsappSendTemplateRoute
   '/api/public/extension/whatsapp/status': typeof ApiPublicExtensionWhatsappStatusRoute
   '/api/public/extension/whatsapp/templates': typeof ApiPublicExtensionWhatsappTemplatesRoute
+  '/api/public/extension/products/$id/calcular': typeof ApiPublicExtensionProductsIdCalcularRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -799,6 +819,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/lead-notes/$id'
     | '/api/public/extension/lead-schedule/$id'
     | '/api/public/extension/products/$id'
+    | '/api/public/extension/products/search'
     | '/api/public/extension/professionals/$id'
     | '/api/public/extension/quick-replies/$id'
     | '/api/public/extension/quick-replies/upload'
@@ -812,6 +833,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/whatsapp/send-template'
     | '/api/public/extension/whatsapp/status'
     | '/api/public/extension/whatsapp/templates'
+    | '/api/public/extension/products/$id/calcular'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -875,6 +897,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/lead-notes/$id'
     | '/api/public/extension/lead-schedule/$id'
     | '/api/public/extension/products/$id'
+    | '/api/public/extension/products/search'
     | '/api/public/extension/professionals/$id'
     | '/api/public/extension/quick-replies/$id'
     | '/api/public/extension/quick-replies/upload'
@@ -888,6 +911,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/whatsapp/send-template'
     | '/api/public/extension/whatsapp/status'
     | '/api/public/extension/whatsapp/templates'
+    | '/api/public/extension/products/$id/calcular'
   id:
     | '__root__'
     | '/'
@@ -951,6 +975,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/lead-notes/$id'
     | '/api/public/extension/lead-schedule/$id'
     | '/api/public/extension/products/$id'
+    | '/api/public/extension/products/search'
     | '/api/public/extension/professionals/$id'
     | '/api/public/extension/quick-replies/$id'
     | '/api/public/extension/quick-replies/upload'
@@ -964,6 +989,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/whatsapp/send-template'
     | '/api/public/extension/whatsapp/status'
     | '/api/public/extension/whatsapp/templates'
+    | '/api/public/extension/products/$id/calcular'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1457,6 +1483,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensionProductsIdRouteImport
       parentRoute: typeof ApiPublicExtensionProductsRoute
     }
+    '/api/public/extension/products/search': {
+      id: '/api/public/extension/products/search'
+      path: '/search'
+      fullPath: '/api/public/extension/products/search'
+      preLoaderRoute: typeof ApiPublicExtensionProductsSearchRouteImport
+      parentRoute: typeof ApiPublicExtensionProductsRoute
+    }
     '/api/public/extension/professionals/$id': {
       id: '/api/public/extension/professionals/$id'
       path: '/$id'
@@ -1547,6 +1580,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/public/extension/whatsapp/templates'
       preLoaderRoute: typeof ApiPublicExtensionWhatsappTemplatesRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/products/$id/calcular': {
+      id: '/api/public/extension/products/$id/calcular'
+      path: '/calcular'
+      fullPath: '/api/public/extension/products/$id/calcular'
+      preLoaderRoute: typeof ApiPublicExtensionProductsIdCalcularRouteImport
+      parentRoute: typeof ApiPublicExtensionProductsIdRoute
     }
   }
 }
@@ -1666,13 +1706,32 @@ const ApiPublicExtensionLeadScheduleRouteWithChildren =
     ApiPublicExtensionLeadScheduleRouteChildren,
   )
 
+interface ApiPublicExtensionProductsIdRouteChildren {
+  ApiPublicExtensionProductsIdCalcularRoute: typeof ApiPublicExtensionProductsIdCalcularRoute
+}
+
+const ApiPublicExtensionProductsIdRouteChildren: ApiPublicExtensionProductsIdRouteChildren =
+  {
+    ApiPublicExtensionProductsIdCalcularRoute:
+      ApiPublicExtensionProductsIdCalcularRoute,
+  }
+
+const ApiPublicExtensionProductsIdRouteWithChildren =
+  ApiPublicExtensionProductsIdRoute._addFileChildren(
+    ApiPublicExtensionProductsIdRouteChildren,
+  )
+
 interface ApiPublicExtensionProductsRouteChildren {
-  ApiPublicExtensionProductsIdRoute: typeof ApiPublicExtensionProductsIdRoute
+  ApiPublicExtensionProductsIdRoute: typeof ApiPublicExtensionProductsIdRouteWithChildren
+  ApiPublicExtensionProductsSearchRoute: typeof ApiPublicExtensionProductsSearchRoute
 }
 
 const ApiPublicExtensionProductsRouteChildren: ApiPublicExtensionProductsRouteChildren =
   {
-    ApiPublicExtensionProductsIdRoute: ApiPublicExtensionProductsIdRoute,
+    ApiPublicExtensionProductsIdRoute:
+      ApiPublicExtensionProductsIdRouteWithChildren,
+    ApiPublicExtensionProductsSearchRoute:
+      ApiPublicExtensionProductsSearchRoute,
   }
 
 const ApiPublicExtensionProductsRouteWithChildren =
