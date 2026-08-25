@@ -50,6 +50,16 @@ export const Route = createFileRoute("/api/public/extension/products/$id")({
         if (!auth.ok) {
           return jsonResponse(request, { ok: false, error: auth.error }, { status: auth.status });
         }
+        // Mesma validação de formato usada em calcular_produto — erro claro
+        // pra IA reconhecer e chamar buscar_produto de novo, em vez do erro
+        // cru de sintaxe SQL quando id_produto não é um UUID de verdade.
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(params.id)) {
+          return jsonResponse(request, {
+            ok: false,
+            error: `id_produto inválido: "${params.id}". Use exatamente o id_produto devolvido por buscar_produto. Chame buscar_produto novamente se necessário.`,
+          }, { status: 400 });
+        }
         // barbershop_id SEMPRE do token autenticado — mesma regra de
         // isolamento da Parte 4: nunca resolvido por parâmetro da URL.
         const { data, error } = await supabaseAdmin

@@ -94,6 +94,23 @@ export const Route = createFileRoute("/api/public/ai/products/$id/calcular")({
           return jsonResponse(request, { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" }, { status: 400 });
         }
 
+        // Valida o FORMATO do id_produto antes de consultar — sem isso, um
+        // id_produto inventado ou confundido com outro dado da conversa
+        // (caso real: a IA usou um número de telefone no lugar do id_produto)
+        // batia direto no banco e voltava um erro cru de sintaxe SQL
+        // ("invalid input syntax for type uuid"), que não dizia à IA o que
+        // realmente deu errado nem como se corrigir. Essa mensagem é
+        // explícita sobre a causa, para a IA reconhecer e chamar
+        // buscar_produto de novo em vez de repetir o mesmo erro.
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(params.id)) {
+          return jsonResponse(request, {
+            ok: false,
+            error:
+              `id_produto inválido: "${params.id}". Esse valor precisa ser exatamente o id_produto devolvido por buscar_produto ou detalhar_produto para o produto identificado nesta conversa — nunca invente, reutilize um telefone ou outro dado. Chame buscar_produto novamente para obter o id_produto correto.`,
+          }, { status: 400 });
+        }
+
         // barbershop_id SEMPRE do token — mesma regra de isolamento das
         // outras rotas de produto (Parte 4). Tentar calcular um produto de
         // outra empresa devolve "não encontrado", nunca executa o cálculo.
