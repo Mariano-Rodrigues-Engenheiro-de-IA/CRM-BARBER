@@ -12,6 +12,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { jsonResponse, preflight } from "@/lib/extension-cors";
 import { authenticateExtension } from "@/lib/extension-auth";
+import type { Json } from "@/integrations/supabase/types";
 
 const patchSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
@@ -23,8 +24,8 @@ const patchSchema = z.object({
   palavras_chave_negativas: z.array(z.string().trim().min(1)).optional(),
   produto_alternativo_sugerido: z.string().uuid().optional().nullable(),
   tipo_precificacao: z.enum(["fixo", "tabela_faixa", "formula_area"]).optional(),
-  tabela_precos: z.record(z.string(), z.unknown()).optional().nullable(),
-  formula_calculo: z.record(z.string(), z.unknown()).optional().nullable(),
+  tabela_precos: z.custom<Json>().optional().nullable(),
+  formula_calculo: z.custom<Json>().optional().nullable(),
   variaveis_obrigatorias: z.array(z.string().trim().min(1)).optional(),
   pedido_minimo: z.string().trim().max(200).optional().nullable(),
   sempre_escalar_humano: z.boolean().optional(),
