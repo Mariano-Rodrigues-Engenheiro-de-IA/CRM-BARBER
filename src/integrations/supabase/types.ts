@@ -439,63 +439,6 @@ export type Database = {
           },
         ]
       }
-      lead_notes: {
-        Row: {
-          barbershop_id: string
-          body: string | null
-          created_at: string
-          created_by: string | null
-          id: string
-          media_filename: string | null
-          media_mime: string | null
-          media_path: string | null
-          media_url: string | null
-          phone: string | null
-          wa_contact_id: string | null
-        }
-        Insert: {
-          barbershop_id: string
-          body?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          media_filename?: string | null
-          media_mime?: string | null
-          media_path?: string | null
-          media_url?: string | null
-          phone?: string | null
-          wa_contact_id?: string | null
-        }
-        Update: {
-          barbershop_id?: string
-          body?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          media_filename?: string | null
-          media_mime?: string | null
-          media_path?: string | null
-          media_url?: string | null
-          phone?: string | null
-          wa_contact_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lead_notes_barbershop_id_fkey"
-            columns: ["barbershop_id"]
-            isOneToOne: false
-            referencedRelation: "barbershops"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "lead_notes_wa_contact_id_fkey"
-            columns: ["wa_contact_id"]
-            isOneToOne: false
-            referencedRelation: "wa_contacts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       customer_profiles: {
         Row: {
           ai_summary: string | null
@@ -897,6 +840,63 @@ export type Database = {
           },
         ]
       }
+      lead_notes: {
+        Row: {
+          barbershop_id: string
+          body: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          media_filename: string | null
+          media_mime: string | null
+          media_path: string | null
+          media_url: string | null
+          phone: string | null
+          wa_contact_id: string | null
+        }
+        Insert: {
+          barbershop_id: string
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          media_filename?: string | null
+          media_mime?: string | null
+          media_path?: string | null
+          media_url?: string | null
+          phone?: string | null
+          wa_contact_id?: string | null
+        }
+        Update: {
+          barbershop_id?: string
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          media_filename?: string | null
+          media_mime?: string | null
+          media_path?: string | null
+          media_url?: string | null
+          phone?: string | null
+          wa_contact_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_notes_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_notes_wa_contact_id_fkey"
+            columns: ["wa_contact_id"]
+            isOneToOne: false
+            referencedRelation: "wa_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lessons: {
         Row: {
           active: boolean
@@ -1000,6 +1000,7 @@ export type Database = {
           created_at?: string
           customer_id?: string
           expires_at?: string | null
+          force_extension?: boolean
           id?: string
           last_error?: string | null
           max_attempts?: number
