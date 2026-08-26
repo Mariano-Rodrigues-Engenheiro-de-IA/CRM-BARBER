@@ -190,10 +190,11 @@ export const Route = createFileRoute("/api/public/ai/products/search")({
 
         const confiancaSuficiente = top.length > 0 && top[0].score >= CONFIDENCE_THRESHOLD;
         const ambiguo = top.length >= 2 && Math.abs(top[0].score - top[1].score) < AMBIGUITY_GAP && top[0].score >= CONFIDENCE_THRESHOLD;
+        const identificadoComSucesso = confiancaSuficiente && !ambiguo;
 
         return jsonResponse(request, {
           ok: true,
-          confianca_suficiente: confiancaSuficiente && !ambiguo,
+          confianca_suficiente: identificadoComSucesso,
           ambiguo,
           resultados: top.map((s) => ({
             id_produto: s.product.id,
@@ -205,6 +206,21 @@ export const Route = createFileRoute("/api/public/ai/products/search")({
             tipo_precificacao: s.product.tipo_precificacao,
             variaveis_obrigatorias: s.product.variaveis_obrigatorias ?? [],
           })),
+          // Aviso colado direto no resultado, não em algum lugar distante do
+          // prompt — bug real visto em produção: mesmo depois de identificar
+          // um produto SEM variação nenhuma (Squeezy) com confiança alta, a
+          // IA chamava buscar_produto de novo a cada resposta do cliente
+          // durante o roteiro (ex: cliente respondeu só "50"), mesmo com
+          // regra de prompt explícita dizendo pra não fazer isso. A hipótese
+          // é que um aviso no próprio resultado da ferramenta, no momento em
+          // que ela acabou de ser chamada, tem mais chance de ser seguido do
+          // que uma regra em outro lugar do texto do prompt.
+          ...(identificadoComSucesso
+            ? {
+                aviso_importante:
+                  "Produto identificado com confiança. NÃO chame buscar_produto de novo para este mesmo pedido, mesmo que o cliente responda perguntas do roteiro (quantidade, tamanho, etc.) depois disso — use o id_produto acima diretamente em detalhar_produto e calcular_produto.",
+              }
+            : {}),
         });
       },
     },
