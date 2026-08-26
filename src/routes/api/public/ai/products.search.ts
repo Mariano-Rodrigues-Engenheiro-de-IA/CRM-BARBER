@@ -42,7 +42,19 @@ function normalize(text: string): string {
 
 function countMatches(haystack: string, needles: string[]): string[] {
   if (!needles?.length) return [];
-  return needles.filter((n) => n.trim() && haystack.includes(normalize(n)));
+  // Bidirecional: conta como match tanto quando a palavra-chave aparece
+  // dentro do texto do cliente (caso normal, cliente escreve uma frase
+  // completa) quanto quando o texto do cliente aparece dentro da
+  // palavra-chave (caso de resposta curta, ex: cliente responde só
+  // "Vinil" a uma pergunta de desambiguação, e a palavra-chave cadastrada
+  // é "adesivo vinil" - "vinil" nunca poderia "conter" a frase maior,
+  // só o contrário). Sem isso, respostas de uma palavra só nunca batiam
+  // contra palavras-chave de duas ou mais palavras.
+  return needles.filter((n) => {
+    const needle = normalize(n);
+    if (!n.trim()) return false;
+    return haystack.includes(needle) || (haystack.length >= 3 && needle.includes(haystack));
+  });
 }
 
 // Palavras comuns demais no nome de um produto para servirem de
