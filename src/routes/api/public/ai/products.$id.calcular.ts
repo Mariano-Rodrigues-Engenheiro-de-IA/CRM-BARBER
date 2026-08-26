@@ -221,6 +221,22 @@ export const Route = createFileRoute("/api/public/ai/products/$id/calcular")({
           const minimoAplicado = formula.pedido_minimo_valor != null && valor < formula.pedido_minimo_valor;
           if (minimoAplicado) valor = formula.pedido_minimo_valor!;
 
+          // Quando o pedido mínimo é aplicado, o cliente está pagando o
+          // mínimo por uma área bem menor do que ele poderia ter pelo
+          // mesmo valor — informar quantas unidades cabem dentro do
+          // mínimo ajuda a IA a oferecer isso ao cliente, em vez de só
+          // devolver o valor mínimo sem explicação (ex: cliente pediu 200
+          // unidades de 2x2cm, pagaria R$18 de qualquer forma até ~600+
+          // unidades desse tamanho — vale ele saber disso).
+          let quantidadeMaxNoMinimo: number | null = null;
+          if (minimoAplicado && formula.pedido_minimo_valor != null) {
+            const areaPorUnidade = larguraCalc * alturaCalc;
+            if (areaPorUnidade > 0) {
+              const areaComprableComMinimo = formula.pedido_minimo_valor / formula.valor_m2;
+              quantidadeMaxNoMinimo = Math.floor(areaComprableComMinimo / areaPorUnidade);
+            }
+          }
+
           return jsonResponse(request, {
             ok: true,
             valor_total: round2(valor),
@@ -231,6 +247,7 @@ export const Route = createFileRoute("/api/public/ai/products/$id/calcular")({
               adicionais_aplicados: adicionaisAplicados,
               solda_aplicada: soldaAplicada,
               minimo_aplicado: minimoAplicado,
+              quantidade_max_no_minimo: quantidadeMaxNoMinimo,
             },
           });
         }
