@@ -113,6 +113,7 @@ export const Route = createFileRoute("/api/public/ai/products/search")({
 
         for (const p of rows) {
           let positiveHits = countMatches(searchText, p.palavras_chave_positivas ?? []);
+          let fromNameFallback = false;
           if (positiveHits.length === 0) {
             // Rede de segurança: nenhuma palavra-chave cadastrada bateu,
             // mas talvez uma palavra óbvia do próprio nome do produto
@@ -121,6 +122,7 @@ export const Route = createFileRoute("/api/public/ai/products/search")({
             const nameHits = countMatches(searchText, nameTokens(p.name));
             if (nameHits.length === 0) continue;
             positiveHits = nameHits;
+            fromNameFallback = true;
           }
 
           const negativeHits = countMatches(searchText, p.palavras_chave_negativas ?? []);
@@ -134,6 +136,20 @@ export const Route = createFileRoute("/api/public/ai/products/search")({
           // AMBIGUIDADE entre produtos diferentes (checado depois, via
           // AMBIGUITY_GAP), não quantas palavras da lista bateram.
           let score = Math.min(1, 0.85 + (positiveHits.length - 1) * 0.05);
+
+          if (fromNameFallback) {
+            // Peso reduzido para hits vindos só do nome do produto, não de
+            // palavra-chave curada. Bug real visto em produção: buscar
+            // "banner acabamento em madeira" acionava a rede de segurança
+            // em "Lona com Acabamento em Ilhós" (via a palavra genérica
+            // "acabamento") e em "Cavalete de Madeira" (via "madeira"),
+            // competindo de igual para igual com o Banner de madeira, que
+            // tinha batido por palavra-chave curada de verdade. A rede de
+            // segurança deve servir só de último recurso (como no caso do
+            // "Vinil", quando nenhuma palavra-chave de nenhum produto bate
+            // em nada) — nunca disputar ambiguidade com um match curado.
+            score = score * 0.6;
+          }
 
           if (negativeHits.length > 0) {
             // Palavra-chave negativa bateu — reduz drasticamente a
