@@ -57,6 +57,49 @@ function countMatches(haystack: string, needles: string[]): string[] {
   });
 }
 
+const APPROX_STEM_MIN_LEN = 5;
+
+/** Quebra um texto normalizado em palavras individuais (>=4 letras),
+ * para comparação por radical. */
+function words(text: string): string[] {
+  return text.split(/[^a-z0-9]+/).filter((w) => w.length >= 4);
+}
+
+/** Duas palavras "compartilham radical" se os primeiros
+ * APPROX_STEM_MIN_LEN caracteres forem idênticos e ambas tiverem pelo
+ * menos esse tamanho - captura variações de flexão em português
+ * (laminado/laminação/laminada, holográfico/holografia) sem precisar
+ * de biblioteca de linguística nem cadastrar manualmente cada forma. */
+function sharesStem(a: string, b: string): boolean {
+  if (a.length < APPROX_STEM_MIN_LEN || b.length < APPROX_STEM_MIN_LEN) return false;
+  return a.slice(0, APPROX_STEM_MIN_LEN) === b.slice(0, APPROX_STEM_MIN_LEN);
+}
+
+/** Match aproximado por radical: usado só quando NENHUMA palavra-chave
+ * bateu por correspondência exata (countMatches). Para cada
+ * palavra-chave, quebra em palavras e exige que TODAS as palavras
+ * significativas dela tenham alguma palavra de radical parecido no
+ * texto do cliente - assim "corte contorno laminado" bate em "corte
+ * contorno com laminação" mesmo com "com" no meio e "laminação" em vez
+ * de "laminado", sem impedir que frases realmente diferentes batam à
+ * toa (exige as 3 palavras, não só uma).
+ * Bug real que motivou isso: "adesivo com laminação" nunca batia em
+ * "adesivo laminado" porque exigia a frase inteira idêntica - o
+ * cliente real nunca fala do jeito exato cadastrado, tem flexão de
+ * palavra e conectivos no meio. Cadastrar manualmente cada variação
+ * (laminado/laminação/laminada) não escala - a fonte real do problema
+ * é exigir string idêntica em vez de reconhecer palavras aparentadas. */
+function countApproxMatches(searchText: string, needles: string[]): string[] {
+  if (!needles?.length) return [];
+  const searchWords = words(searchText);
+  if (!searchWords.length) return [];
+  return needles.filter((n) => {
+    const needleWords = words(normalize(n));
+    if (!needleWords.length) return false;
+    return needleWords.every((nw) => searchWords.some((sw) => sharesStem(nw, sw)));
+  });
+}
+
 // Palavras comuns demais no nome de um produto para servirem de
 // palavra-chave sozinhas (evita falso positivo tipo "de" ou "com").
 const STOPWORDS = new Set(["de", "da", "do", "das", "dos", "com", "para", "em", "e", "ou", "a", "o", "os", "as", "no", "na"]);
@@ -114,18 +157,38 @@ export const Route = createFileRoute("/api/public/ai/products/search")({
         for (const p of rows) {
           let positiveHits = countMatches(searchText, p.palavras_chave_positivas ?? []);
           let fromNameFallback = false;
+          let fromApproxMatch = false;
           if (positiveHits.length === 0) {
-            // Rede de segurança: nenhuma palavra-chave cadastrada bateu,
-            // mas talvez uma palavra óbvia do próprio nome do produto
-            // apareça no pedido do cliente (cadastro manual pode ter
-            // esquecido de incluir essa palavra na lista).
-            const nameHits = countMatches(searchText, nameTokens(p.name));
-            if (nameHits.length === 0) continue;
-            positiveHits = nameHits;
-            fromNameFallback = true;
+            // Antes de cair na rede de segurança do nome, tenta match
+            // por radical (aproximado) contra as próprias palavras-chave
+            // curadas - cobre flexões de palavra (laminado/laminação)
+            // sem exigir que o cadastro preveja cada variação manualmente.
+            const approxHits = countApproxMatches(searchText, p.palavras_chave_positivas ?? []);
+            if (approxHits.length > 0) {
+              positiveHits = approxHits;
+              fromApproxMatch = true;
+            } else {
+              // Última rede de segurança: nenhuma palavra-chave cadastrada
+              // bateu, nem por radical, mas talvez uma palavra óbvia do
+              // próprio nome do produto apareça no pedido do cliente
+              // (cadastro manual pode ter esquecido de incluir essa
+              // palavra na lista).
+              const nameHits = countMatches(searchText, nameTokens(p.name));
+              if (nameHits.length === 0) continue;
+              positiveHits = nameHits;
+              fromNameFallback = true;
+            }
           }
 
-          const negativeHits = countMatches(searchText, p.palavras_chave_negativas ?? []);
+          // Negativas também usam match por radical - senão a mesma
+          // lacuna de flexão de palavra (ex: "laminado" cadastrado como
+          // negativa, mas o cliente disse "laminação") deixaria a
+          // negativa de furar exatamente nos mesmos casos que acabamos
+          // de corrigir para as positivas.
+          const negativeHits = [
+            ...countMatches(searchText, p.palavras_chave_negativas ?? []),
+            ...countApproxMatches(searchText, p.palavras_chave_negativas ?? []),
+          ];
           // Bater UMA palavra-chave já é forte evidência — na prática, um
           // cliente real dificilmente usa vários sinônimos do mesmo produto
           // na mesma mensagem (ex: "banner" OU "faixa promocional", nunca os
@@ -136,6 +199,16 @@ export const Route = createFileRoute("/api/public/ai/products/search")({
           // AMBIGUIDADE entre produtos diferentes (checado depois, via
           // AMBIGUITY_GAP), não quantas palavras da lista bateram.
           let score = Math.min(1, 0.85 + (positiveHits.length - 1) * 0.05);
+
+          if (fromApproxMatch) {
+            // Peso levemente reduzido para match por radical - é uma
+            // palavra-chave curada de verdade, só não bateu por igualdade
+            // exata (flexão diferente), então merece mais confiança que
+            // a rede de segurança do nome, mas um pouco menos que match
+            // exato, para casos-limite não competirem de igual pra igual
+            // com curadoria 100% confirmada.
+            score = score * 0.85;
+          }
 
           if (fromNameFallback) {
             // Peso reduzido para hits vindos só do nome do produto, não de
