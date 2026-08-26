@@ -45,6 +45,23 @@ function countMatches(haystack: string, needles: string[]): string[] {
   return needles.filter((n) => n.trim() && haystack.includes(normalize(n)));
 }
 
+// Palavras comuns demais no nome de um produto para servirem de
+// palavra-chave sozinhas (evita falso positivo tipo "de" ou "com").
+const STOPWORDS = new Set(["de", "da", "do", "das", "dos", "com", "para", "em", "e", "ou", "a", "o", "os", "as", "no", "na"]);
+
+/** Extrai do nome do produto as palavras significativas (>=4 letras,
+ * fora da lista de stopwords) para servirem de rede de segurança: se
+ * nenhuma palavra_chave_positiva cadastrada bateu, mas uma palavra óbvia
+ * do próprio NOME do produto aparece no pedido do cliente (ex: "Vinil"
+ * dentro de "Adesivo Vinil Corte Contorno"), o produto ainda deve
+ * aparecer como candidato — o cadastro manual de palavras-chave pode
+ * esquecer alguma, mas o nome do produto está sempre lá. */
+function nameTokens(name: string): string[] {
+  return normalize(name)
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length >= 4 && !STOPWORDS.has(t));
+}
+
 export const Route = createFileRoute("/api/public/ai/products/search")({
   server: {
     handlers: {
@@ -83,8 +100,16 @@ export const Route = createFileRoute("/api/public/ai/products/search")({
         const scored: Scored[] = [];
 
         for (const p of rows) {
-          const positiveHits = countMatches(searchText, p.palavras_chave_positivas ?? []);
-          if (positiveHits.length === 0) continue;
+          let positiveHits = countMatches(searchText, p.palavras_chave_positivas ?? []);
+          if (positiveHits.length === 0) {
+            // Rede de segurança: nenhuma palavra-chave cadastrada bateu,
+            // mas talvez uma palavra óbvia do próprio nome do produto
+            // apareça no pedido do cliente (cadastro manual pode ter
+            // esquecido de incluir essa palavra na lista).
+            const nameHits = countMatches(searchText, nameTokens(p.name));
+            if (nameHits.length === 0) continue;
+            positiveHits = nameHits;
+          }
 
           const negativeHits = countMatches(searchText, p.palavras_chave_negativas ?? []);
           // Bater UMA palavra-chave já é forte evidência — na prática, um
