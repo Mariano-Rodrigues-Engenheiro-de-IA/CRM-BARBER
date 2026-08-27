@@ -33,6 +33,8 @@ type Config = {
   business_hours: Record<string, { closed: boolean; open?: string; close?: string }>;
   professionals: Professional[];
   services: Service[];
+  professional_services: { professional_id: string; service_id: string }[];
+  hide_professional_selection: boolean;
   busy: Busy[];
 };
 
@@ -47,7 +49,8 @@ function toTime(mins: number) {
   return `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
 }
 
-const STEPS = ["Serviço", "Profissional", "Data e horário", "Seus dados"];
+const STEPS_WITH_PRO = ["Serviço", "Profissional", "Data e horário", "Seus dados"];
+const STEPS_NO_PRO = ["Serviço", "Data e horário", "Seus dados"];
 
 function BookingPage() {
   const { slug } = Route.useParams();
@@ -82,6 +85,17 @@ function BookingPage() {
   }, [slug, date]);
 
   const service = config?.services.find((s) => s.id === serviceId) ?? null;
+  const hideProStep = !!config?.hide_professional_selection;
+  const STEPS = hideProStep ? STEPS_NO_PRO : STEPS_WITH_PRO;
+  const stepDateTime = hideProStep ? 1 : 2;
+  const stepFinal = hideProStep ? 2 : 3;
+
+  const linkedProfessionals = useMemo(() => {
+    if (!config || !serviceId) return config?.professionals ?? [];
+    const linkedIds = config.professional_services.filter((l) => l.service_id === serviceId).map((l) => l.professional_id);
+    if (!linkedIds.length) return config.professionals; // serviço sem vínculo configurado: mantém todo mundo elegível
+    return config.professionals.filter((p) => linkedIds.includes(p.id));
+  }, [config, serviceId]);
 
   const slots = useMemo(() => {
     if (!config) return [] as string[];
@@ -90,20 +104,28 @@ function BookingPage() {
     if (!hours || hours.closed || !hours.open || !hours.close) return [];
     const duration = service?.duration_minutes ?? config.slot_duration_minutes;
     const dayStart = new Date(`${date}T00:00:00`).getTime();
+    const candidateIds = linkedProfessionals.map((p) => p.id);
     const list: string[] = [];
     for (let m = toMin(hours.open); m + duration <= toMin(hours.close); m += config.slot_duration_minutes) {
       const start = dayStart + m * 60000;
       const end = start + duration * 60000;
       if (start < Date.now()) continue;
-      const busy = config.busy.some((b) => {
-        const sameColumn = b.professional_id === null || b.professional_id === professionalId;
-        if (!sameColumn) return false;
-        return new Date(b.start).getTime() < end && new Date(b.end).getTime() > start;
-      });
+      const overlaps = (b: Busy) => new Date(b.start).getTime() < end && new Date(b.end).getTime() > start;
+      let busy: boolean;
+      if (professionalId) {
+        // Profissional específico escolhido: só olha os bloqueios dele.
+        busy = config.busy.some((b) => (b.professional_id === null || b.professional_id === professionalId) && overlaps(b));
+      } else if (hideProStep && candidateIds.length) {
+        // Sem seleção de profissional: só fica indisponível se TODOS os
+        // vinculados ao serviço estiverem ocupados nesse horário.
+        busy = candidateIds.every((pid) => config.busy.some((b) => (b.professional_id === null || b.professional_id === pid) && overlaps(b)));
+      } else {
+        busy = config.busy.some((b) => b.professional_id === null && overlaps(b));
+      }
       if (!busy) list.push(toTime(m));
     }
     return list;
-  }, [config, date, professionalId, service]);
+  }, [config, date, professionalId, service, hideProStep, linkedProfessionals]);
 
   async function submit() {
     if (name.trim().length < 2 || phone.replace(/\D/g, "").length < 8) {
@@ -153,7 +175,7 @@ function BookingPage() {
   }
 
   const canGoNext =
-    (step === 0 && !!serviceId) || step === 1 || (step === 2 && !!time) || step === 3;
+    (step === 0 && !!serviceId) || (!hideProStep && step === 1) || (step === stepDateTime && !!time) || step === stepFinal;
 
   return (
     <main className="mx-auto w-full max-w-xl px-4 py-8">
@@ -204,7 +226,7 @@ function BookingPage() {
           </div>
         )}
 
-        {step === 1 && (
+        {step === 1 && !hideProStep && (
           <div className="space-y-2">
             <Label>Escolha o profissional</Label>
             <div className="grid gap-2">
@@ -221,7 +243,7 @@ function BookingPage() {
               >
                 Sem preferência
               </button>
-              {config.professionals.map((p) => (
+              {linkedProfessionals.map((p) => (
                 <button
                   key={p.id}
                   type="button"
@@ -249,7 +271,7 @@ function BookingPage() {
           </div>
         )}
 
-        {step === 2 && (
+        {step === stepDateTime && (
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label>Data</Label>
@@ -280,7 +302,7 @@ function BookingPage() {
           </div>
         )}
 
-        {step === 3 && (
+        {step === stepFinal && (
           <div className="space-y-3">
             <div className="rounded-xl bg-neutral-50 p-3 text-sm text-neutral-600">
               {service?.name} · {new Date(`${date}T${time ?? "00:00"}:00`).toLocaleString("pt-BR", { day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit" })}
@@ -306,7 +328,7 @@ function BookingPage() {
               Voltar
             </Button>
           )}
-          {step < 3 ? (
+          {step < stepFinal ? (
             <Button className="flex-1 bg-brand text-white hover:bg-brand-strong" disabled={!canGoNext} onClick={() => setStep((s) => s + 1)}>
               Continuar
             </Button>

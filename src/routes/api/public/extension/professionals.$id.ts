@@ -1,5 +1,6 @@
 // PATCH  /api/public/extension/professionals/:id -> edita
-// DELETE /api/public/extension/professionals/:id -> desativa (soft delete)
+// DELETE /api/public/extension/professionals/:id -> exclui de verdade (se
+// não tiver agendamentos no histórico) ou desativa (se tiver)
 
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
@@ -53,15 +54,47 @@ export const Route = createFileRoute("/api/public/extension/professionals/$id")(
         if (!auth.ok) {
           return jsonResponse(request, { ok: false, error: auth.error }, { status: auth.status });
         }
+        const shop = auth.token.barbershop_id;
+
+        // Só remove de verdade se não houver histórico de agendamentos —
+        // apagar um profissional com agendamentos (passados ou futuros)
+        // quebraria relatórios e comissões. Nesse caso, desativa (mesmo
+        // comportamento de sempre) em vez de excluir de fato.
+        const { count: apptCount } = await supabaseAdmin
+          .from("appointments")
+          .select("id", { count: "exact", head: true })
+          .eq("barbershop_id", shop)
+          .eq("professional_id", params.id);
+
+        if (apptCount && apptCount > 0) {
+          const { error } = await supabaseAdmin
+            .from("professionals")
+            .update({ active: false })
+            .eq("id", params.id)
+            .eq("barbershop_id", shop);
+          if (error) return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
+          return jsonResponse(request, {
+            ok: true,
+            deactivated: true,
+            message: "Esse profissional já tem agendamentos no histórico — foi desativado em vez de excluído, pra não perder esses registros.",
+          });
+        }
+
+        // Sem histórico: pode remover de verdade. Limpa primeiro os
+        // vínculos e bloqueios de agenda que apontam pra ele.
+        await Promise.all([
+          supabaseAdmin.from("professional_services").delete().eq("professional_id", params.id),
+          supabaseAdmin.from("time_blocks").delete().eq("professional_id", params.id).eq("barbershop_id", shop),
+        ]);
         const { error } = await supabaseAdmin
           .from("professionals")
-          .update({ active: false })
+          .delete()
           .eq("id", params.id)
-          .eq("barbershop_id", auth.token.barbershop_id);
+          .eq("barbershop_id", shop);
         if (error) {
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
         }
-        return jsonResponse(request, { ok: true });
+        return jsonResponse(request, { ok: true, deactivated: false });
       },
     },
   },

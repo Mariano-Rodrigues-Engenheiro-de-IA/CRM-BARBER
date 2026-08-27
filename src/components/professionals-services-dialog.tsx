@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { useConfirm } from "@/components/confirm-dialog";
 import { toast } from "sonner";
 
 type Api = (path: string, opts?: RequestInit) => Promise<any>;
@@ -110,6 +111,7 @@ export function ProfessionalsTab({ api, onChanged }: { api: Api; onChanged?: () 
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const { confirm, dialog: confirmDialog } = useConfirm();
 
   async function load() {
     const r = await api("/api/public/extension/professionals?include_inactive=1");
@@ -132,10 +134,29 @@ export function ProfessionalsTab({ api, onChanged }: { api: Api; onChanged?: () 
     }
   }
 
+  async function deleteProfessional(p: Professional) {
+    const ok = await confirm({
+      title: `Excluir ${p.name}?`,
+      description: "Se esse profissional já tiver agendamentos no histórico, ele será desativado em vez de excluído, pra não perder esses registros.",
+      confirmLabel: "Excluir",
+      destructive: true,
+    });
+    if (!ok) return;
+    const r = await api(`/api/public/extension/professionals/${p.id}`, { method: "DELETE" });
+    if (!r?.ok) {
+      toast.error(r?.error || "Erro ao excluir");
+      return;
+    }
+    toast.success(r.deactivated ? "Profissional desativado (tinha histórico de agendamentos)" : "Profissional excluído");
+    await load();
+    onChanged?.();
+  }
+
   const editing = professionals.find((p) => p.id === editingId) ?? null;
 
   return (
     <div className="space-y-3">
+      {confirmDialog}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-neutral-700">Profissionais cadastrados</h3>
         <Button
@@ -180,6 +201,19 @@ export function ProfessionalsTab({ api, onChanged }: { api: Api; onChanged?: () 
               </Button>
               <Button variant="ghost" size="sm" onClick={() => toggleActive(p)}>
                 {p.active ? "Desativar" : "Reativar"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-neutral-400 hover:bg-red-50 hover:text-red-600"
+                onClick={() => void deleteProfessional(p)}
+                title="Excluir"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 6h18" />
+                  <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                </svg>
               </Button>
             </div>
           ))}

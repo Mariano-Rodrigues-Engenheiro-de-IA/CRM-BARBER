@@ -40,11 +40,51 @@ async function loadShop(slug: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: settings } = await supabaseAdmin
     .from("agenda_settings")
-    .select("barbershop_id, slot_duration_minutes, business_hours, online_booking_enabled, public_slug")
+    .select(
+      "barbershop_id, slot_duration_minutes, business_hours, online_booking_enabled, public_slug, hide_professional_selection, distribution_mode",
+    )
     .eq("public_slug", slug)
     .maybeSingle();
   if (!settings || !settings.online_booking_enabled) return { supabaseAdmin, settings: null };
   return { supabaseAdmin, settings };
+}
+
+/** Profissionais vinculados a um serviço. Serviço sem nenhum vínculo
+ * configurado ainda cai no comportamento antigo (todo mundo elegível),
+ * pra não travar o agendamento de barbearias que não configuraram isso. */
+function linkedOrAll(serviceId: string, links: { professional_id: string; service_id: string }[], allIds: string[]) {
+  const linked = links.filter((l) => l.service_id === serviceId).map((l) => l.professional_id);
+  return linked.length ? linked : allIds;
+}
+
+/** Quantos horários livres esse profissional tem no dia (pro critério de
+ * "maior disponibilidade") — mesma lógica de enumeração de slots usada no
+ * cliente, só que rodando aqui no servidor pra cada candidato. */
+function countFreeSlots(
+  professionalId: string,
+  hours: { closed: boolean; open?: string; close?: string } | undefined,
+  slotDuration: number,
+  serviceDuration: number,
+  dayStartMs: number,
+  busy: { professional_id: string | null; start: string; end: string }[],
+) {
+  if (!hours || hours.closed || !hours.open || !hours.close) return 0;
+  const toMin = (t: string) => {
+    const [h, m] = t.split(":").map(Number);
+    return h * 60 + m;
+  };
+  let count = 0;
+  for (let m = toMin(hours.open); m + serviceDuration <= toMin(hours.close); m += slotDuration) {
+    const start = dayStartMs + m * 60000;
+    const end = start + serviceDuration * 60000;
+    if (start < Date.now()) continue;
+    const conflict = busy.some((b) => {
+      if (b.professional_id !== null && b.professional_id !== professionalId) return false;
+      return new Date(b.start).getTime() < end && new Date(b.end).getTime() > start;
+    });
+    if (!conflict) count += 1;
+  }
+  return count;
 }
 
 export const Route = createFileRoute("/api/public/booking/$slug")({
@@ -60,7 +100,7 @@ export const Route = createFileRoute("/api/public/booking/$slug")({
         const from = localToUtc(date, "00:00", tz);
         const to = new Date(localToUtc(date, "23:59", tz).getTime() + 59_000);
 
-        const [shop, professionals, services, appointments, blocks] = await Promise.all([
+        const [shop, professionals, services, appointments, blocks, links] = await Promise.all([
           supabaseAdmin.from("barbershops").select("name, logo_url").eq("id", settings.barbershop_id).maybeSingle(),
           supabaseAdmin
             .from("professionals")
@@ -87,6 +127,7 @@ export const Route = createFileRoute("/api/public/booking/$slug")({
             .eq("barbershop_id", settings.barbershop_id)
             .lte("starts_at", to.toISOString())
             .gte("ends_at", from.toISOString()),
+          supabaseAdmin.from("professional_services").select("professional_id, service_id"),
         ]);
 
         return json({
@@ -95,8 +136,10 @@ export const Route = createFileRoute("/api/public/booking/$slug")({
           shop_logo: shop.data?.logo_url ?? null,
           slot_duration_minutes: settings.slot_duration_minutes,
           business_hours: settings.business_hours,
+          hide_professional_selection: settings.hide_professional_selection ?? false,
           professionals: professionals.data ?? [],
           services: services.data ?? [],
+          professional_services: links.data ?? [],
           busy: [
             ...(appointments.data ?? []).map((a) => ({
               professional_id: a.professional_id,
@@ -132,19 +175,92 @@ export const Route = createFileRoute("/api/public/booking/$slug")({
         if (start.getTime() < Date.now()) return json({ ok: false, error: "Horário já passou" }, 400);
 
         // Conflito: já existe agendamento sobrepondo pro mesmo profissional.
-        const { data: sameDay } = await supabaseAdmin
-          .from("appointments")
-          .select("professional_id, scheduled_at, duration_minutes")
-          .eq("barbershop_id", settings.barbershop_id)
-          .neq("status", "canceled")
-          .gte("scheduled_at", localToUtc(input.date, "00:00", tz).toISOString())
-          .lte("scheduled_at", localToUtc(input.date, "23:59", tz).toISOString());
-        const conflict = (sameDay ?? []).some((a) => {
-          if ((a.professional_id ?? null) !== (input.professional_id ?? null)) return false;
-          const s = new Date(a.scheduled_at).getTime();
-          return s < end.getTime() && s + a.duration_minutes * 60000 > start.getTime();
-        });
-        if (conflict) return json({ ok: false, error: "Esse horário acabou de ser ocupado" }, 409);
+        const dayStartIso = localToUtc(input.date, "00:00", tz).toISOString();
+        const dayEndIso = localToUtc(input.date, "23:59", tz).toISOString();
+        const [{ data: sameDayAppts }, { data: sameDayBlocks }] = await Promise.all([
+          supabaseAdmin
+            .from("appointments")
+            .select("professional_id, scheduled_at, duration_minutes")
+            .eq("barbershop_id", settings.barbershop_id)
+            .neq("status", "canceled")
+            .gte("scheduled_at", dayStartIso)
+            .lte("scheduled_at", dayEndIso),
+          supabaseAdmin
+            .from("time_blocks")
+            .select("professional_id, starts_at, ends_at")
+            .eq("barbershop_id", settings.barbershop_id)
+            .lte("starts_at", dayEndIso)
+            .gte("ends_at", dayStartIso),
+        ]);
+        const dayBusy = [
+          ...(sameDayAppts ?? []).map((a) => ({
+            professional_id: a.professional_id,
+            start: a.scheduled_at,
+            end: new Date(new Date(a.scheduled_at).getTime() + a.duration_minutes * 60000).toISOString(),
+          })),
+          ...(sameDayBlocks ?? []).map((b) => ({ professional_id: b.professional_id, start: b.starts_at, end: b.ends_at })),
+        ];
+
+        let professionalId = input.professional_id ?? null;
+
+        if (!professionalId) {
+          // Nenhum profissional escolhido (seleção escondida, ou "sem
+          // preferência") — o sistema decide, seguindo o critério
+          // configurado nas Configurações do link de agendamento.
+          const [{ data: allPros }, { data: links }] = await Promise.all([
+            supabaseAdmin
+              .from("professionals")
+              .select("id, sort_order")
+              .eq("barbershop_id", settings.barbershop_id)
+              .eq("active", true),
+            supabaseAdmin.from("professional_services").select("professional_id, service_id"),
+          ]);
+          const allIds = (allPros ?? []).map((p) => p.id);
+          const candidateIds = linkedOrAll(service.id, links ?? [], allIds);
+
+          // Só quem está livre exatamente nesse horário entra na disputa.
+          const availableNow = candidateIds.filter((pid) => {
+            return !dayBusy.some((b) => {
+              if (b.professional_id !== null && b.professional_id !== pid) return false;
+              const s = new Date(b.start).getTime();
+              const e = new Date(b.end).getTime();
+              return s < end.getTime() && e > start.getTime();
+            });
+          });
+          if (!availableNow.length) {
+            return json({ ok: false, error: "Nenhum profissional disponível nesse horário" }, 409);
+          }
+
+          const mode = settings.distribution_mode ?? "random";
+          if (mode === "random" || availableNow.length === 1) {
+            professionalId = availableNow[Math.floor(Math.random() * availableNow.length)];
+          } else {
+            const dayStartMs = new Date(dayStartIso).getTime();
+            const hours = (settings.business_hours as Record<string, { closed: boolean; open?: string; close?: string }>)?.[
+              String(new Date(`${input.date}T00:00:00`).getDay())
+            ];
+            const counts = availableNow.map((pid) => ({
+              pid,
+              free: countFreeSlots(pid, hours, settings.slot_duration_minutes, service.duration_minutes, dayStartMs, dayBusy),
+            }));
+            const maxFree = Math.max(...counts.map((c) => c.free));
+            let tied = counts.filter((c) => c.free === maxFree).map((c) => c.pid);
+            if (mode === "priority" && tied.length > 1) {
+              const sortMap = new Map((allPros ?? []).map((p) => [p.id, p.sort_order]));
+              const minPriority = Math.min(...tied.map((pid) => sortMap.get(pid) ?? 0));
+              tied = tied.filter((pid) => (sortMap.get(pid) ?? 0) === minPriority);
+            }
+            professionalId = tied[Math.floor(Math.random() * tied.length)];
+          }
+        } else {
+          const conflict = dayBusy.some((b) => {
+            if ((b.professional_id ?? null) !== professionalId) return false;
+            const s = new Date(b.start).getTime();
+            const e = new Date(b.end).getTime();
+            return s < end.getTime() && e > start.getTime();
+          });
+          if (conflict) return json({ ok: false, error: "Esse horário acabou de ser ocupado" }, 409);
+        }
 
         const phone = input.phone.replace(/\D/g, "");
         const { data: existingCustomer } = await supabaseAdmin
@@ -166,7 +282,7 @@ export const Route = createFileRoute("/api/public/booking/$slug")({
         const { error } = await supabaseAdmin.from("appointments").insert({
           barbershop_id: settings.barbershop_id,
           customer_id: customerId,
-          professional_id: input.professional_id ?? null,
+          professional_id: professionalId,
           service_id: service.id,
           title: service.name,
           notes: input.notes ?? null,

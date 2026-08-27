@@ -15,6 +15,8 @@ export type AgendaSettings = {
   business_hours: Record<string, DayHours>;
   online_booking_enabled?: boolean;
   public_slug?: string | null;
+  hide_professional_selection?: boolean;
+  distribution_mode?: "random" | "availability" | "priority";
 };
 
 
@@ -193,6 +195,60 @@ function OnlineBookingSection({
         ) : (
           <p className="text-xs text-neutral-400">Salve as configurações para gerar o link público.</p>
         ))}
+
+      {settings.online_booking_enabled && (
+        <div className="space-y-3 border-t border-neutral-100 pt-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <Label>Não mostrar profissionais no link de agendamento</Label>
+              <p className="text-xs text-neutral-400">
+                O cliente escolhe só o serviço, data e horário — o sistema escolhe automaticamente qual profissional atende.
+              </p>
+            </div>
+            <Switch
+              checked={!!settings.hide_professional_selection}
+              onCheckedChange={(checked) => setSettings((prev) => (prev ? { ...prev, hide_professional_selection: checked } : prev))}
+            />
+          </div>
+
+          {settings.hide_professional_selection && (
+            <div className="space-y-1.5 rounded-lg border border-neutral-200 p-3">
+              <Label>Como escolher o profissional automaticamente</Label>
+              <div className="space-y-2 pt-1">
+                {(
+                  [
+                    { value: "random", title: "Aleatório", desc: "Sorteia entre os profissionais disponíveis pro serviço e horário." },
+                    { value: "availability", title: "Maior disponibilidade", desc: "Escolhe quem tem mais horários livres no dia. Empate: sorteio." },
+                    { value: "priority", title: "Prioridade + disponibilidade", desc: "Disponibilidade decide primeiro; empate usa a ordem de prioridade (a mesma ordem da lista de Profissionais)." },
+                  ] as const
+                ).map((opt) => (
+                  <label
+                    key={opt.value}
+                    className={
+                      "flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 transition " +
+                      (settings.distribution_mode === opt.value || (!settings.distribution_mode && opt.value === "random")
+                        ? "border-brand bg-brand/5"
+                        : "border-neutral-200 hover:border-brand/40")
+                    }
+                  >
+                    <input
+                      type="radio"
+                      name="distribution_mode"
+                      className="mt-0.5"
+                      checked={settings.distribution_mode === opt.value || (!settings.distribution_mode && opt.value === "random")}
+                      onChange={() => setSettings((prev) => (prev ? { ...prev, distribution_mode: opt.value } : prev))}
+                    />
+                    <span>
+                      <span className="block text-sm font-medium text-neutral-800">{opt.title}</span>
+                      <span className="block text-xs text-neutral-500">{opt.desc}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
