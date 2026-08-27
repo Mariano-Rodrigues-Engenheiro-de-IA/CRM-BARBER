@@ -297,8 +297,23 @@ export const Route = createFileRoute("/api/public/ai/products/search")({
         deduped.sort((a, b) => b.score - a.score);
         const top = deduped.slice(0, 3);
 
-        const confiancaSuficiente = top.length > 0 && top[0].score >= CONFIDENCE_THRESHOLD;
-        const ambiguo = top.length >= 2 && Math.abs(top[0].score - top[1].score) < AMBIGUITY_GAP && top[0].score >= CONFIDENCE_THRESHOLD;
+        // Compara como INTEIROS (centésimos), não decimais - arredondar
+        // os valores antes de subtrair NÃO resolve sozinho, porque a
+        // imprecisão de ponto flutuante vem da própria subtração em si
+        // (0.95 - 0.85 dá 0.09999999999999998, não 0.1 exato, mesmo com
+        // os dois valores de entrada já "redondos"). Convertendo pra
+        // inteiro antes de subtrair, a conta vira 95 - 85 = 10, exata,
+        // sem risco de erro de representação binária. Bug real
+        // observado em produção: candidato correto vencendo por 0.95 vs
+        // 0.85 (gap de exatos 10 pontos, que deveria ser suficiente pra
+        // NÃO ser ambíguo) ainda assim disparava ambíguo por causa
+        // desse erro de ponto flutuante.
+        const scoreTopInt = top.length > 0 ? Math.round(top[0].score * 100) : 0;
+        const scoreSegundoInt = top.length >= 2 ? Math.round(top[1].score * 100) : null;
+        const gapInt = Math.round(AMBIGUITY_GAP * 100);
+
+        const confiancaSuficiente = top.length > 0 && scoreTopInt >= Math.round(CONFIDENCE_THRESHOLD * 100);
+        const ambiguo = scoreSegundoInt !== null && Math.abs(scoreTopInt - scoreSegundoInt) < gapInt && confiancaSuficiente;
         const identificadoComSucesso = confiancaSuficiente && !ambiguo;
 
         return jsonResponse(request, {
