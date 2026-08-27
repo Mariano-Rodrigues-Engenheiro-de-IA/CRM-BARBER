@@ -107,7 +107,19 @@ function countApproxMatches(searchText: string, needles: string[]): string[] {
   if (!searchWords.length) return [];
   return needles.filter((n) => {
     const needleWords = words(normalize(n));
-    if (!needleWords.length) return false;
+    // Exige pelo menos 2 palavras significativas na frase-chave para
+    // ela ser elegível a match aproximado - uma palavra só, mesmo
+    // comprida, não é evidência forte o bastante sozinha. Bug real:
+    // "impressos" (palavra-chave isolada de Panfleto) batia via radical
+    // contra "impresso" dentro de um pedido de Adesivo, só porque
+    // "imprimir/impresso" é um verbo comum a quase todo produto gráfico,
+    // não um sinal de produto específico. Indo além do primeiro bug
+    // parecido ("personalizado"), em vez de bloquear palavra por palavra
+    // reativamente, esta regra resolve a classe inteira do problema:
+    // frases de 2+ palavras exigem que AMBAS batam (muito mais raro de
+    // acontecer à toa), frases de 1 palavra só nunca aproximam, só
+    // batem por igualdade exata.
+    if (needleWords.length < 2) return false;
     return needleWords.every((nw) => searchWords.some((sw) => sharesStem(nw, sw)));
   });
 }
