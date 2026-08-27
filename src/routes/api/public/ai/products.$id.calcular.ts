@@ -218,7 +218,15 @@ export const Route = createFileRoute("/api/public/ai/products/$id/calcular")({
             soldaAplicada = true;
           }
 
-          const minimoAplicado = formula.pedido_minimo_valor != null && valor < formula.pedido_minimo_valor;
+          // Compara em centavos (inteiros), não em reais decimais - mesma
+          // precaução aplicada em products.search.ts depois de um bug real
+          // de ponto flutuante lá (0.95 - 0.85 não dava 0.1 exato). Aqui o
+          // risco é mais raro (precisaria da área calculada bater
+          // EXATAMENTE no valor do pedido mínimo), mas a correção é barata
+          // o bastante para eliminar essa classe de risco por completo.
+          const minimoAplicado =
+            formula.pedido_minimo_valor != null &&
+            Math.round(valor * 100) < Math.round(formula.pedido_minimo_valor * 100);
           if (minimoAplicado) valor = formula.pedido_minimo_valor!;
 
           // Quando o pedido mínimo é aplicado, o cliente está pagando o
