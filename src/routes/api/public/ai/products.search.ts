@@ -59,10 +59,22 @@ function countMatches(haystack: string, needles: string[]): string[] {
 
 const APPROX_STEM_MIN_LEN = 5;
 
-/** Quebra um texto normalizado em palavras individuais (>=4 letras),
- * para comparação por radical. */
+// Palavras longas o bastante pra passar no filtro de tamanho, mas
+// genéricas demais para funcionar como sinal de produto sozinhas -
+// aparecem no nome ou nas palavras-chave de boa parte do catálogo
+// (ex: "Squeezy Personalizado", "Calendário com Ímã" tem "ima
+// personalizado" como palavra-chave). Bug real: a frase-chave "ima
+// personalizado" colapsava para só "personalizado" no match aproximado
+// (já que "ima" tem 3 letras, fica de fora pelo tamanho mínimo), e
+// "personalizado" sozinho bate em quase qualquer pedido de cliente,
+// gerando falso positivo generalizado. Filtrada tanto na rede de
+// segurança do nome quanto no match aproximado de palavra-chave.
+const GENERIC_WORDS = new Set(["personalizado", "personalizada", "personalizados", "personalizadas"]);
+
+/** Quebra um texto normalizado em palavras individuais (>=4 letras,
+ * fora as genéricas demais), para comparação por radical. */
 function words(text: string): string[] {
-  return text.split(/[^a-z0-9]+/).filter((w) => w.length >= 4);
+  return text.split(/[^a-z0-9]+/).filter((w) => w.length >= 4 && !GENERIC_WORDS.has(w));
 }
 
 /** Duas palavras "compartilham radical" se os primeiros
@@ -101,20 +113,29 @@ function countApproxMatches(searchText: string, needles: string[]): string[] {
 }
 
 // Palavras comuns demais no nome de um produto para servirem de
-// palavra-chave sozinhas (evita falso positivo tipo "de" ou "com").
-const STOPWORDS = new Set(["de", "da", "do", "das", "dos", "com", "para", "em", "e", "ou", "a", "o", "os", "as", "no", "na"]);
+// palavra-chave sozinhas (evita falso positivo tipo "de" ou "com"),
+// mais as GENERIC_WORDS definidas acima (genéricas demais mesmo sendo
+// longas, ex: "personalizado").
+const STOPWORDS = new Set([
+  "de", "da", "do", "das", "dos", "com", "para", "em", "e", "ou", "a", "o", "os", "as", "no", "na",
+  ...GENERIC_WORDS,
+]);
 
-/** Extrai do nome do produto as palavras significativas (>=4 letras,
+/** Extrai do nome do produto as palavras significativas (>=6 letras,
  * fora da lista de stopwords) para servirem de rede de segurança: se
  * nenhuma palavra_chave_positiva cadastrada bateu, mas uma palavra óbvia
- * do próprio NOME do produto aparece no pedido do cliente (ex: "Vinil"
- * dentro de "Adesivo Vinil Corte Contorno"), o produto ainda deve
- * aparecer como candidato — o cadastro manual de palavras-chave pode
- * esquecer alguma, mas o nome do produto está sempre lá. */
+ * do próprio NOME do produto aparece no pedido do cliente (ex: "Squeezy"
+ * dentro de "Squeezy Personalizado"), o produto ainda deve aparecer como
+ * candidato — o cadastro manual de palavras-chave pode esquecer alguma,
+ * mas o nome do produto está sempre lá. Limite subiu de >=4 para >=6
+ * letras depois de um bug real: palavras curtas e genéricas como "corte"
+ * (dentro de "Cartão de Visita Corte Especial") bateram à toa em pedidos
+ * de produtos completamente diferentes que só compartilhavam essa
+ * palavra comum, sem nenhuma relação real de produto. */
 function nameTokens(name: string): string[] {
   return normalize(name)
     .split(/[^a-z0-9]+/)
-    .filter((t) => t.length >= 4 && !STOPWORDS.has(t));
+    .filter((t) => t.length >= 6 && !STOPWORDS.has(t));
 }
 
 export const Route = createFileRoute("/api/public/ai/products/search")({
@@ -180,15 +201,18 @@ export const Route = createFileRoute("/api/public/ai/products/search")({
             }
           }
 
-          // Negativas também usam match por radical - senão a mesma
-          // lacuna de flexão de palavra (ex: "laminado" cadastrado como
-          // negativa, mas o cliente disse "laminação") deixaria a
-          // negativa de furar exatamente nos mesmos casos que acabamos
-          // de corrigir para as positivas.
-          const negativeHits = [
-            ...countMatches(searchText, p.palavras_chave_negativas ?? []),
-            ...countApproxMatches(searchText, p.palavras_chave_negativas ?? []),
-          ];
+          // Negativas usam SÓ match exato, não aproximado por radical.
+          // Bug real descoberto em produção: "sem corte" (negativa) e
+          // "corte contorno" (positiva de outro produto) compartilham a
+          // palavra "corte" — o match por radical tratava isso como a
+          // negativa batendo, mesmo os dois significando coisas OPOSTAS
+          // (presença vs ausência de corte). Isso derrubava a pontuação
+          // do produto certo drasticamente (0.90 → 0.135), abrindo espaço
+          // pra falsos positivos tomarem o top da lista. Negativas frasais
+          // curtas (2 palavras, uma delas genérica) são armadilha para
+          // aproximação — o risco de bater errado supera o benefício de
+          // pegar flexão de palavra nesse lado da lógica.
+          const negativeHits = countMatches(searchText, p.palavras_chave_negativas ?? []);
           // Bater UMA palavra-chave já é forte evidência — na prática, um
           // cliente real dificilmente usa vários sinônimos do mesmo produto
           // na mesma mensagem (ex: "banner" OU "faixa promocional", nunca os
