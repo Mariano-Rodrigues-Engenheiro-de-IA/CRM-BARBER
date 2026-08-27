@@ -41,7 +41,7 @@ async function loadShop(slug: string) {
   const { data: settings } = await supabaseAdmin
     .from("agenda_settings")
     .select(
-      "barbershop_id, slot_duration_minutes, business_hours, online_booking_enabled, public_slug, hide_professional_selection, distribution_mode",
+      "barbershop_id, slot_duration_minutes, business_hours, online_booking_enabled, public_slug, hide_professional_selection, distribution_mode, priority_order",
     )
     .eq("public_slug", slug)
     .maybeSingle();
@@ -246,9 +246,16 @@ export const Route = createFileRoute("/api/public/booking/$slug")({
             const maxFree = Math.max(...counts.map((c) => c.free));
             let tied = counts.filter((c) => c.free === maxFree).map((c) => c.pid);
             if (mode === "priority" && tied.length > 1) {
-              const sortMap = new Map((allPros ?? []).map((p) => [p.id, p.sort_order]));
-              const minPriority = Math.min(...tied.map((pid) => sortMap.get(pid) ?? 0));
-              tied = tied.filter((pid) => (sortMap.get(pid) ?? 0) === minPriority);
+              // Lista de prioridade própria (priority_order), independente
+              // da ordem geral do cadastro de profissionais. Quem não está
+              // na lista fica por último (prioridade "infinita").
+              const priorityOrder = (settings.priority_order as string[]) ?? [];
+              const rank = (pid: string) => {
+                const i = priorityOrder.indexOf(pid);
+                return i === -1 ? Number.MAX_SAFE_INTEGER : i;
+              };
+              const minRank = Math.min(...tied.map(rank));
+              tied = tied.filter((pid) => rank(pid) === minRank);
             }
             professionalId = tied[Math.floor(Math.random() * tied.length)];
           }

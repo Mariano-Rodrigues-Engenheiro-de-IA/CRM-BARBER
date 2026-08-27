@@ -25,7 +25,7 @@ async function ensureSlug(supabaseAdmin: any, settings: any) {
     .from("agenda_settings")
     .update({ public_slug: slug })
     .eq("barbershop_id", settings.barbershop_id)
-    .select("barbershop_id, slot_duration_minutes, business_hours, online_booking_enabled, public_slug, hide_professional_selection, distribution_mode")
+    .select("barbershop_id, slot_duration_minutes, business_hours, online_booking_enabled, public_slug, hide_professional_selection, distribution_mode, priority_order")
     .maybeSingle();
   return data ?? settings;
 }
@@ -36,6 +36,7 @@ const patchSchema = z.object({
   online_booking_enabled: z.boolean().optional(),
   hide_professional_selection: z.boolean().optional(),
   distribution_mode: z.enum(["random", "availability", "priority"]).optional(),
+  priority_order: z.array(z.string().uuid()).optional(),
 });
 
 export const Route = createFileRoute("/api/public/extension/agenda-settings")({
@@ -51,7 +52,7 @@ export const Route = createFileRoute("/api/public/extension/agenda-settings")({
         }
         const { data: existing } = await supabaseAdmin
           .from("agenda_settings")
-          .select("barbershop_id, slot_duration_minutes, business_hours, online_booking_enabled, public_slug, hide_professional_selection, distribution_mode")
+          .select("barbershop_id, slot_duration_minutes, business_hours, online_booking_enabled, public_slug, hide_professional_selection, distribution_mode, priority_order")
           .eq("barbershop_id", auth.token.barbershop_id)
           .maybeSingle();
         if (existing) {
@@ -61,7 +62,7 @@ export const Route = createFileRoute("/api/public/extension/agenda-settings")({
         const { data: created, error } = await supabaseAdmin
           .from("agenda_settings")
           .insert({ barbershop_id: auth.token.barbershop_id })
-          .select("barbershop_id, slot_duration_minutes, business_hours, online_booking_enabled, public_slug, hide_professional_selection, distribution_mode")
+          .select("barbershop_id, slot_duration_minutes, business_hours, online_booking_enabled, public_slug, hide_professional_selection, distribution_mode, priority_order")
           .single();
         if (error) {
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
@@ -82,7 +83,7 @@ export const Route = createFileRoute("/api/public/extension/agenda-settings")({
         const { data, error } = await supabaseAdmin
           .from("agenda_settings")
           .upsert({ barbershop_id: auth.token.barbershop_id, ...parsed.data }, { onConflict: "barbershop_id" })
-          .select("barbershop_id, slot_duration_minutes, business_hours, online_booking_enabled, public_slug, hide_professional_selection, distribution_mode")
+          .select("barbershop_id, slot_duration_minutes, business_hours, online_booking_enabled, public_slug, hide_professional_selection, distribution_mode, priority_order")
           .single();
         if (error) {
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });

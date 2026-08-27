@@ -17,6 +17,7 @@ export type AgendaSettings = {
   public_slug?: string | null;
   hide_professional_selection?: boolean;
   distribution_mode?: "random" | "availability" | "priority";
+  priority_order?: string[];
 };
 
 
@@ -138,7 +139,7 @@ export function GeneralSettingsTab({ api, onSaved }: { api: Api; onSaved?: (s: A
         })}
       </div>
 
-      <OnlineBookingSection settings={settings} setSettings={setSettings} />
+      <OnlineBookingSection settings={settings} setSettings={setSettings} api={api} />
 
       <Button onClick={handleSave} disabled={saving}>
         {saving ? "Salvando..." : "Salvar configurações"}
@@ -152,9 +153,11 @@ export function GeneralSettingsTab({ api, onSaved }: { api: Api; onSaved?: (s: A
 function OnlineBookingSection({
   settings,
   setSettings,
+  api,
 }: {
   settings: AgendaSettings;
   setSettings: (updater: (prev: AgendaSettings | null) => AgendaSettings | null) => void;
+  api: Api;
 }) {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const slug = settings.public_slug || "";
@@ -219,7 +222,7 @@ function OnlineBookingSection({
                   [
                     { value: "random", title: "Aleatório", desc: "Sorteia entre os profissionais disponíveis pro serviço e horário." },
                     { value: "availability", title: "Maior disponibilidade", desc: "Escolhe quem tem mais horários livres no dia. Empate: sorteio." },
-                    { value: "priority", title: "Prioridade + disponibilidade", desc: "Disponibilidade decide primeiro; empate usa a ordem de prioridade (a mesma ordem da lista de Profissionais)." },
+                    { value: "priority", title: "Prioridade + disponibilidade", desc: "Disponibilidade decide primeiro; empate usa a lista de prioridade configurada abaixo." },
                   ] as const
                 ).map((opt) => (
                   <label
@@ -245,10 +248,102 @@ function OnlineBookingSection({
                   </label>
                 ))}
               </div>
+
+              {settings.distribution_mode === "priority" && (
+                <PriorityOrderEditor
+                  api={api}
+                  priorityOrder={settings.priority_order ?? []}
+                  onChange={(next) => setSettings((prev) => (prev ? { ...prev, priority_order: next } : prev))}
+                />
+              )}
             </div>
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Lista de prioridade dos profissionais — só usada como critério de
+ * desempate no modo "Prioridade + disponibilidade". Ordem própria,
+ * separada da ordem geral do cadastro de profissionais: sobe/desce com
+ * as setas, não precisa arrastar. */
+function PriorityOrderEditor({
+  api,
+  priorityOrder,
+  onChange,
+}: {
+  api: Api;
+  priorityOrder: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [professionals, setProfessionals] = useState<{ id: string; name: string }[] | null>(null);
+
+  useEffect(() => {
+    api("/api/public/extension/professionals").then((r) => {
+      if (r?.ok) setProfessionals(r.professionals.map((p: any) => ({ id: p.id, name: p.name })));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (!professionals) return <p className="pt-2 text-xs text-neutral-400">Carregando profissionais...</p>;
+  if (professionals.length === 0) {
+    return <p className="pt-2 text-xs text-neutral-400">Cadastre profissionais primeiro pra montar a prioridade.</p>;
+  }
+
+  // Todo mundo entra na lista (quem não foi ordenado ainda vai pro fim),
+  // sem precisar de um passo extra pra "adicionar" cada profissional.
+  const ordered = [
+    ...priorityOrder.filter((id) => professionals.some((p) => p.id === id)),
+    ...professionals.filter((p) => !priorityOrder.includes(p.id)).map((p) => p.id),
+  ];
+
+  function move(id: string, dir: -1 | 1) {
+    const idx = ordered.indexOf(id);
+    const swapWith = idx + dir;
+    if (swapWith < 0 || swapWith >= ordered.length) return;
+    const next = [...ordered];
+    [next[idx], next[swapWith]] = [next[swapWith], next[idx]];
+    onChange(next);
+  }
+
+  return (
+    <div className="space-y-1.5 border-t border-neutral-100 pt-3">
+      <Label>Prioridade dos profissionais</Label>
+      <p className="text-xs text-neutral-400">
+        Usada só como critério de desempate, quando dois ou mais profissionais têm a mesma disponibilidade. Independe da
+        ordem do cadastro geral.
+      </p>
+      <div className="space-y-1.5 pt-1">
+        {ordered.map((id, i) => {
+          const pro = professionals.find((p) => p.id === id);
+          if (!pro) return null;
+          return (
+            <div key={id} className="flex items-center gap-2 rounded-lg border border-neutral-200 px-3 py-2">
+              <span className="w-5 shrink-0 text-center text-xs font-bold text-neutral-400">{i + 1}º</span>
+              <span className="flex-1 truncate text-sm text-neutral-800">{pro.name}</span>
+              <button
+                type="button"
+                disabled={i === 0}
+                onClick={() => move(id, -1)}
+                className="flex h-6 w-6 items-center justify-center rounded text-neutral-500 hover:bg-neutral-100 disabled:opacity-30"
+                title="Subir"
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                disabled={i === ordered.length - 1}
+                onClick={() => move(id, 1)}
+                className="flex h-6 w-6 items-center justify-center rounded text-neutral-500 hover:bg-neutral-100 disabled:opacity-30"
+                title="Descer"
+              >
+                ↓
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

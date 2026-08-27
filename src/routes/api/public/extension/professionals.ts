@@ -42,7 +42,24 @@ export const Route = createFileRoute("/api/public/extension/professionals")({
         if (error) {
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
         }
-        return jsonResponse(request, { ok: true, professionals: data ?? [] });
+        const professionals = data ?? [];
+        // Conta agendamentos de cada um, pra decidir na hora de excluir se
+        // mostra o aviso simples ou o aviso de impacto (sem bloquear).
+        const counts = await Promise.all(
+          professionals.map((p) =>
+            supabaseAdmin
+              .from("appointments")
+              .select("id", { count: "exact", head: true })
+              .eq("barbershop_id", auth.token.barbershop_id)
+              .eq("professional_id", p.id)
+              .then((r) => [p.id, r.count ?? 0] as const),
+          ),
+        );
+        const countMap = new Map(counts);
+        return jsonResponse(request, {
+          ok: true,
+          professionals: professionals.map((p) => ({ ...p, appointment_count: countMap.get(p.id) ?? 0 })),
+        });
       },
 
       POST: async ({ request }) => {

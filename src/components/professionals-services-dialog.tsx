@@ -23,6 +23,7 @@ export type Professional = {
   color: string;
   avatar_url: string | null;
   active: boolean;
+  appointment_count?: number;
 };
 export type Service = {
   id: string;
@@ -135,19 +136,28 @@ export function ProfessionalsTab({ api, onChanged }: { api: Api; onChanged?: () 
   }
 
   async function deleteProfessional(p: Professional) {
-    const ok = await confirm({
-      title: `Excluir ${p.name}?`,
-      description: "Se esse profissional já tiver agendamentos no histórico, ele será desativado em vez de excluído, pra não perder esses registros.",
-      confirmLabel: "Excluir",
-      destructive: true,
-    });
+    const hasHistory = (p.appointment_count ?? 0) > 0;
+    const ok = await confirm(
+      hasHistory
+        ? {
+            title: "Este profissional possui agendamentos vinculados.",
+            description: `Ao excluir ${p.name}, os ${p.appointment_count} agendamento${p.appointment_count === 1 ? "" : "s"} vinculados a ele também serão excluídos. Tem certeza de que deseja continuar?`,
+            confirmLabel: "Excluir profissional",
+            destructive: true,
+          }
+        : {
+            title: `Tem certeza que deseja excluir ${p.name}?`,
+            confirmLabel: "Excluir",
+            destructive: true,
+          },
+    );
     if (!ok) return;
     const r = await api(`/api/public/extension/professionals/${p.id}`, { method: "DELETE" });
     if (!r?.ok) {
       toast.error(r?.error || "Erro ao excluir");
       return;
     }
-    toast.success(r.deactivated ? "Profissional desativado (tinha histórico de agendamentos)" : "Profissional excluído");
+    toast.success("Profissional excluído");
     await load();
     onChanged?.();
   }

@@ -21,6 +21,7 @@ export type Database = {
           distribution_mode: string
           hide_professional_selection: boolean
           online_booking_enabled: boolean
+          priority_order: string[]
           public_slug: string | null
           slot_duration_minutes: number
           updated_at: string
@@ -31,6 +32,7 @@ export type Database = {
           distribution_mode?: string
           hide_professional_selection?: boolean
           online_booking_enabled?: boolean
+          priority_order?: string[]
           public_slug?: string | null
           slot_duration_minutes?: number
           updated_at?: string
@@ -41,6 +43,7 @@ export type Database = {
           distribution_mode?: string
           hide_professional_selection?: boolean
           online_booking_enabled?: boolean
+          priority_order?: string[]
           public_slug?: string | null
           slot_duration_minutes?: number
           updated_at?: string

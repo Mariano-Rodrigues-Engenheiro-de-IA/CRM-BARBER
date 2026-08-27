@@ -48,11 +48,17 @@ export const Route = createFileRoute("/api/public/extension/services/$id")({
         // professional_ids presente (mesmo vazio []) substitui os vínculos
         // por completo — omitido significa "não mexer nos vínculos".
         if (professional_ids !== undefined) {
-          await supabaseAdmin.from("professional_services").delete().eq("service_id", params.id);
+          const { error: delErr } = await supabaseAdmin.from("professional_services").delete().eq("service_id", params.id);
+          if (delErr) {
+            return jsonResponse(request, { ok: false, error: `Falhou ao atualizar vínculos: ${delErr.message}` }, { status: 500 });
+          }
           if (professional_ids.length > 0) {
-            await supabaseAdmin
+            const { error: insErr } = await supabaseAdmin
               .from("professional_services")
               .insert(professional_ids.map((pid) => ({ service_id: params.id, professional_id: pid })));
+            if (insErr) {
+              return jsonResponse(request, { ok: false, error: `Falhou ao vincular profissionais: ${insErr.message}` }, { status: 500 });
+            }
           }
         }
 

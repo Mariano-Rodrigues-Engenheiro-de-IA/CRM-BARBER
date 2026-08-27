@@ -77,9 +77,12 @@ export const Route = createFileRoute("/api/public/extension/services")({
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
         }
         if (professional_ids && professional_ids.length > 0) {
-          await supabaseAdmin
+          const { error: linkErr } = await supabaseAdmin
             .from("professional_services")
             .insert(professional_ids.map((pid) => ({ service_id: data.id, professional_id: pid })));
+          if (linkErr) {
+            return jsonResponse(request, { ok: false, error: `Serviço criado, mas falhou ao vincular profissionais: ${linkErr.message}` }, { status: 500 });
+          }
         }
         return jsonResponse(request, { ok: true, service: { ...data, professional_ids: professional_ids ?? [] } });
       },
