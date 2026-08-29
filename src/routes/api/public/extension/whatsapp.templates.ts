@@ -94,6 +94,33 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/templates")
         const headerFilename = typeof body?.header_filename === "string" ? body.header_filename : "arquivo";
         const headerMime = typeof body?.header_mime === "string" ? body.header_mime : "";
 
+        // Carrossel — array de cartões, cada um com sua própria mídia
+        // (data URL) e, opcionalmente, texto e botões.
+        const carouselCardsRaw = Array.isArray(body?.carousel_cards) ? (body.carousel_cards as unknown[]) : null;
+
+        if (carouselCardsRaw) {
+          if (category !== "MARKETING") {
+            return jsonResponse(request, { ok: false, error: "Carrossel só é suportado em modelos da categoria Marketing." }, { status: 400 });
+          }
+          if (carouselCardsRaw.length < 2 || carouselCardsRaw.length > 10) {
+            return jsonResponse(request, { ok: false, error: "Um carrossel precisa ter entre 2 e 10 cartões." }, { status: 400 });
+          }
+          const formats = new Set(carouselCardsRaw.map((c) => (c as Record<string, unknown>)?.header_format));
+          if (formats.size > 1) {
+            return jsonResponse(
+              request,
+              { ok: false, error: "Todos os cartões do carrossel precisam usar o mesmo tipo de mídia (todos Imagem, ou todos Vídeo)." },
+              { status: 400 },
+            );
+          }
+          for (const c of carouselCardsRaw) {
+            const card = c as Record<string, unknown>;
+            if (!card.header_format || !card.header_data_base64) {
+              return jsonResponse(request, { ok: false, error: "Todo cartão do carrossel precisa ter uma mídia de cabeçalho (imagem ou vídeo)." }, { status: 400 });
+            }
+          }
+        }
+
         if (!name || !category || !languageCode || !bodyText) {
           return jsonResponse(
             request,
@@ -180,6 +207,40 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/templates")
           header = { format: headerFormat as "IMAGE" | "VIDEO" | "DOCUMENT", handle: uploadResult.handle };
         }
 
+        let carousel: { cards: Array<{ header: { format: "IMAGE" | "VIDEO"; handle: string }; body_text?: string; buttons?: Array<{ type: "URL" | "QUICK_REPLY"; text: string; url?: string }> }> } | undefined;
+        if (carouselCardsRaw) {
+          if (!provider.uploadTemplateMedia) {
+            return jsonResponse(request, { ok: false, error: "Provider atual não suporta enviar mídia de modelo." }, { status: 500 });
+          }
+          const cards: NonNullable<typeof carousel>["cards"] = [];
+          for (const c of carouselCardsRaw) {
+            const card = c as Record<string, unknown>;
+            const cardUpload = await provider.uploadTemplateMedia({
+              data_base64: card.header_data_base64 as string,
+              mime: (card.header_mime as string) || "",
+              filename: (card.header_filename as string) || "cartao",
+            });
+            if (!cardUpload.ok) {
+              return jsonResponse(request, { ok: false, error: `Falha ao enviar a mídia de um cartão do carrossel: ${cardUpload.error}` }, { status: 502 });
+            }
+            const buttons = Array.isArray(card.buttons)
+              ? (card.buttons as Array<Record<string, unknown>>)
+                  .filter((b) => typeof b.text === "string" && b.text.trim())
+                  .map((b) => ({
+                    type: (b.type === "URL" ? "URL" : "QUICK_REPLY") as "URL" | "QUICK_REPLY",
+                    text: String(b.text).trim(),
+                    url: typeof b.url === "string" ? b.url.trim() : undefined,
+                  }))
+              : undefined;
+            cards.push({
+              header: { format: card.header_format as "IMAGE" | "VIDEO", handle: cardUpload.handle },
+              body_text: typeof card.body_text === "string" && card.body_text.trim() ? card.body_text.trim() : undefined,
+              buttons: buttons && buttons.length > 0 ? buttons : undefined,
+            });
+          }
+          carousel = { cards };
+        }
+
         const result = await provider.createTemplate({
           instance_token: instance.meta_access_token,
           waba_id: instance.waba_id,
@@ -189,6 +250,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/templates")
           body_text: bodyText,
           body_examples: bodyExamples,
           header,
+          carousel,
         });
         if (!result.ok) {
           return jsonResponse(request, { ok: false, error: result.error }, { status: 502 });

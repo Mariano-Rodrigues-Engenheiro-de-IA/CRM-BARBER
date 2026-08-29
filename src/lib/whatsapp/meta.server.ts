@@ -105,7 +105,7 @@ export const metaProvider: WhatsAppProvider = {
     return bsp.uploadTemplateMedia({ data_base64, mime, filename });
   },
 
-  async createTemplate({ instance_token, waba_id, name, category, language_code, body_text, body_examples, header }) {
+  async createTemplate({ instance_token, waba_id, name, category, language_code, body_text, body_examples, header, carousel }) {
     const bsp = getBspAdapter();
     if (!bsp.createTemplate) {
       return { ok: false, error: "Provider atual não suporta criar modelos." };
@@ -119,6 +119,7 @@ export const metaProvider: WhatsAppProvider = {
       body_text,
       body_examples,
       header,
+      carousel,
     });
   },
 

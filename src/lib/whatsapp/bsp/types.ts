@@ -101,6 +101,16 @@ export interface BspAdapter {
     body_examples?: Record<string, string>;
     // Cabeçalho de mídia opcional — "handle" vem de uploadTemplateMedia.
     header?: { format: "IMAGE" | "VIDEO" | "DOCUMENT"; handle: string } | null;
+    // Carrossel — só existe via API, a Meta nem oferece isso na interface
+    // visual dela. Todos os cartões precisam ter o mesmo formato de mídia
+    // e a mesma configuração de botões (regra da própria Meta).
+    carousel?: {
+      cards: Array<{
+        header: { format: "IMAGE" | "VIDEO"; handle: string };
+        body_text?: string;
+        buttons?: Array<{ type: "URL" | "QUICK_REPLY"; text: string; url?: string }>;
+      }>;
+    } | null;
   }): Promise<{ ok: true; id: string } | { ok: false; error: string }>;
 
   /**
