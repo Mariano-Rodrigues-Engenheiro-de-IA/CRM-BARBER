@@ -2,7 +2,7 @@
 // enquanto. Cria e lista templates direto pela API da Meta, sem precisar
 // entrar no Gerenciador do WhatsApp.
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCachedFetch } from "@/lib/api-cache";
 import { useConfirm } from "@/components/confirm-dialog";
 
@@ -101,6 +101,34 @@ export function TemplatesView({ api }: { api: ApiFn }) {
   // esse mesmo endpoint — só criar um novo).
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingName, setDeletingName] = useState<string | null>(null);
+
+  // Posição da prévia calculada por JS (position: fixed de verdade), não
+  // "sticky" — sticky por definição só trava DEPOIS de rolar até o ponto
+  // certo, sempre desloca um pouco antes. Fixed nasce já travado no lugar
+  // certo, sem nenhum movimento perceptível, igual a barra lateral.
+  const previewSlotRef = useRef<HTMLDivElement>(null);
+  const [previewBox, setPreviewBox] = useState<{ top: number; left: number; width: number } | null>(null);
+  useEffect(() => {
+    if (!showNew) {
+      setPreviewBox(null);
+      return;
+    }
+    function measure() {
+      if (previewSlotRef.current) {
+        const r = previewSlotRef.current.getBoundingClientRect();
+        setPreviewBox({ top: r.top, left: r.left, width: r.width });
+      }
+    }
+    measure();
+    // Um pequeno atraso extra garante a posição certa mesmo se o layout
+    // ainda estiver terminando de acomodar (ex: fontes carregando).
+    const t = setTimeout(measure, 50);
+    window.addEventListener("resize", measure);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("resize", measure);
+    };
+  }, [showNew]);
   const [saving, setSaving] = useState(false);
 
   const [name, setName] = useState("");
@@ -351,9 +379,9 @@ export function TemplatesView({ api }: { api: ApiFn }) {
       </div>
 
       {showNew && (
-        // Um scroll só, o da própria página (a barra fica no canto direito
-        // de verdade, não espremida entre formulário e prévia) — a prévia
-        // fica presa com "sticky" no espaço que sobra da coluna dela.
+        <>
+        {/* Um scroll só, o da própria página (a barra fica no canto direito
+           de verdade, não espremida entre formulário e prévia). */}
         <div className="grid items-start gap-5 md:grid-cols-[1fr_320px]">
           <div className="min-w-0 space-y-4">
           {err && (
@@ -709,7 +737,32 @@ export function TemplatesView({ api }: { api: ApiFn }) {
           </div>
         </div>
 
-        <div className="md:sticky md:top-4 md:h-fit md:self-start">
+        {/* Slot vazio — só reserva o espaço na grid, do tamanho exato da
+           coluna. A prévia de verdade é renderizada em position: fixed
+           logo abaixo, usando as coordenadas medidas a partir desse slot. */}
+        <div ref={previewSlotRef} className="hidden md:block" />
+        </div>
+
+        {previewBox && (
+          <div
+            className="hidden md:block"
+            style={{ position: "fixed", top: previewBox.top, left: previewBox.left, width: previewBox.width }}
+          >
+            <TemplatePreview
+              templateType={templateType}
+              mediaFile={mediaFile}
+              bodyText={bodyText}
+              bodyExamples={bodyExamples}
+              footerText={footerText}
+              buttons={buttons}
+              carouselCards={carouselCards}
+              carouselButtons={carouselButtons}
+            />
+          </div>
+        )}
+        {/* No mobile, sem position: fixed calculado — a prévia aparece
+           embaixo do formulário, no fluxo normal da página. */}
+        <div className="md:hidden">
           <TemplatePreview
             templateType={templateType}
             mediaFile={mediaFile}
@@ -721,7 +774,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
             carouselButtons={carouselButtons}
           />
         </div>
-        </div>
+        </>
       )}
 
       {!showNew && (

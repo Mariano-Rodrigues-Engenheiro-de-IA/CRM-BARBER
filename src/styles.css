@@ -161,12 +161,13 @@
   }
 
   /* Barra de rolagem discreta em todo o sistema — o padrão do sistema
-     operacional vem grossa e escura demais, chamando atenção à toa.
-     Firefox usa scrollbar-width/color; Chrome/Safari/Edge usam os
-     pseudo-elementos ::-webkit-scrollbar. */
+     operacional vem grossa demais, chamando atenção à toa — mas fina
+     não pode virar cinza claro demais a ponto de ficar praticamente
+     invisível. Firefox usa scrollbar-width/color; Chrome/Safari/Edge
+     usam os pseudo-elementos ::-webkit-scrollbar. */
   * {
     scrollbar-width: thin;
-    scrollbar-color: var(--color-border) transparent;
+    scrollbar-color: #b0b0b0 transparent;
   }
 
   *::-webkit-scrollbar {
@@ -179,14 +180,14 @@
   }
 
   *::-webkit-scrollbar-thumb {
-    background-color: var(--color-border);
+    background-color: #b0b0b0;
     border-radius: 9999px;
     border: 2px solid transparent;
     background-clip: content-box;
   }
 
   *::-webkit-scrollbar-thumb:hover {
-    background-color: #a3a3a3;
+    background-color: #8a8a8a;
     background-clip: content-box;
   }
 }

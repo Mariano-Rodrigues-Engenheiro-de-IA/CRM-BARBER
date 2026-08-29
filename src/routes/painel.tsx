@@ -462,8 +462,25 @@ function Painel() {
   const [assinHeaderEl, setAssinHeaderEl] = useState<HTMLDivElement | null>(null);
   const [equipeHeaderEl, setEquipeHeaderEl] = useState<HTMLDivElement | null>(null);
   const [shop, setShop] = useState<{ id: string; name: string } | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isMetaProvider, setIsMetaProvider] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(() => {
+    // Cache leve em sessionStorage — sem isso, a aba "Modelos" só aparece
+    // depois de duas chamadas de rede resolverem (essa e a de baixo),
+    // enquanto as outras abas já aparecem de cara. Isso fazia a aba
+    // "sumir e reaparecer" a cada F5. Aqui já usamos o último valor
+    // confirmado enquanto a checagem de verdade roda por baixo.
+    try {
+      return sessionStorage.getItem("crm_is_admin") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [isMetaProvider, setIsMetaProvider] = useState(() => {
+    try {
+      return sessionStorage.getItem("crm_is_meta_provider") === "1";
+    } catch {
+      return false;
+    }
+  });
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [brand, setBrand] = useState<Brand>({});
 
@@ -511,10 +528,26 @@ function Painel() {
         setShop(r.barbershop);
         setBrand(readBrand(r.barbershop.id));
       }
-      if (r?.ok) setIsAdmin(Boolean(r.is_admin));
+      if (r?.ok) {
+        const admin = Boolean(r.is_admin);
+        setIsAdmin(admin);
+        try {
+          sessionStorage.setItem("crm_is_admin", admin ? "1" : "0");
+        } catch {
+          /* sessionStorage indisponível (modo privado etc.) — sem cache, sem problema */
+        }
+      }
     });
     api(token, "/api/public/extension/whatsapp/status").then((r) => {
-      if (r?.ok && r.connection) setIsMetaProvider((r.connection as { provider?: string }).provider === "meta");
+      if (r?.ok && r.connection) {
+        const meta = (r.connection as { provider?: string }).provider === "meta";
+        setIsMetaProvider(meta);
+        try {
+          sessionStorage.setItem("crm_is_meta_provider", meta ? "1" : "0");
+        } catch {
+          /* idem */
+        }
+      }
     });
     api(token, "/api/public/extension/billing").then((r) => {
       if (r?.ok && r.billing) setBilling(r.billing as BillingStatus);
