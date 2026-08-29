@@ -39,31 +39,32 @@ function graphUrl(path: string): string {
   return `https://graph.facebook.com/${version}/${path}`;
 }
 
-/** Processa um evento account_update. O evento PARTNER_ADDED é o que a
- * Integração Zero (hosted embedded signup) manda quando alguém termina de
- * conectar uma conta pelo link pronto da Meta — diferente do fluxo
- * customizado (FB.login), esse evento só traz o waba_id, sem nenhum "state"
- * dizendo de qual barbearia é. Por enquanto (só o Mariano testando, ainda
- * não liberado pra clientes) associamos direto à conta admin — quando for
- * liberar pra clientes de verdade, isso precisa de uma forma de identificar
- * a barbearia certa (ex: um link por barbearia, ou confirmação manual). */
+/** Processa um evento account_update. O nome do evento que a Meta manda de
+ * verdade quando alguém termina a Integração Zero (hosted embedded signup)
+ * é PARTNER_APP_INSTALLED — não PARTNER_ADDED como a documentação mais
+ * antiga sugeria (confirmado direto pelo payload real recebido). Aceita os
+ * dois nomes por segurança, caso a Meta mude de novo ou varie por versão.
+ * Esse evento só traz o waba_id, sem nenhum "state" dizendo de qual
+ * barbearia é. Por enquanto (só o Mariano testando, ainda não liberado pra
+ * clientes) associamos direto à conta admin — quando for liberar pra
+ * clientes de verdade, isso precisa de uma forma de identificar a
+ * barbearia certa (ex: um link por barbearia, ou confirmação manual). */
 async function handleAccountUpdate(change: Json) {
   console.info("[whatsapp.webhook] account_update recebido:", JSON.stringify(change).slice(0, 2000));
 
   const value = change.value as Json | undefined;
   const event = typeof value?.event === "string" ? value.event : null;
-  const wabaId =
-    typeof (value?.waba_info as Json | undefined)?.waba_id === "string"
-      ? ((value!.waba_info as Json).waba_id as string)
-      : null;
+  const wabaInfo = value?.waba_info as Json | undefined;
+  const wabaId = typeof wabaInfo?.waba_id === "string" ? (wabaInfo.waba_id as string) : null;
+  const ownerBusinessId = typeof wabaInfo?.owner_business_id === "string" ? (wabaInfo.owner_business_id as string) : null;
 
-  if (event !== "PARTNER_ADDED" || !wabaId) return;
+  if ((event !== "PARTNER_APP_INSTALLED" && event !== "PARTNER_ADDED") || !wabaId) return;
 
   const adminBarbershopId = process.env.ADMIN_BARBERSHOP_ID;
   const systemToken = process.env.META_SYSTEM_USER_TOKEN;
   if (!adminBarbershopId || !systemToken) {
     console.warn(
-      "[whatsapp.webhook] PARTNER_ADDED recebido, mas ADMIN_BARBERSHOP_ID ou META_SYSTEM_USER_TOKEN não configurados — conexão não foi salva automaticamente.",
+      `[whatsapp.webhook] ${event} recebido, mas ADMIN_BARBERSHOP_ID ou META_SYSTEM_USER_TOKEN não configurados — conexão não foi salva automaticamente.`,
     );
     return;
   }
@@ -103,6 +104,8 @@ async function handleAccountUpdate(change: Json) {
       waba_id: wabaId,
       phone_number_id: phoneNumberId,
       meta_access_token: systemToken,
+      meta_business_id: ownerBusinessId,
+      last_error: null,
       last_synced_at: new Date().toISOString(),
     };
     const { data: existing } = await supabaseAdmin
@@ -116,7 +119,7 @@ async function handleAccountUpdate(change: Json) {
     if (error) throw new Error(error.message);
     console.info(`[whatsapp.webhook] Conexão via Integração Zero salva: waba=${wabaId} phone=${phone}`);
   } catch (e) {
-    console.error("[whatsapp.webhook] falha ao processar PARTNER_ADDED:", e instanceof Error ? e.message : e);
+    console.error(`[whatsapp.webhook] falha ao processar ${event}:`, e instanceof Error ? e.message : e);
   }
 }
 
