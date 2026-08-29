@@ -203,7 +203,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/templates")
             request,
             {
               ok: false,
-              error: `Variável "{{${invalidVar}}}" inválida — use só letras minúsculas, números e _ (ex: {{nome}}, {{data_agendamento}}).`,
+              error: `Variável "{{${invalidVar}}}" inválida. Use só letras minúsculas, números e _ (ex: {{nome}}, {{data_agendamento}}).`,
             },
             { status: 400 },
           );

@@ -178,7 +178,7 @@ function metaErrorMessage(json: Json, status: number): string {
   const parts = [errObj.error_user_title, errObj.error_user_msg, errObj.message].filter(
     (v): v is string => typeof v === "string" && v.length > 0,
   );
-  if (parts.length) return parts.join(" — ");
+  if (parts.length) return parts.join(". ");
   return `HTTP ${status}${errObj.code ? ` (código ${errObj.code}${errObj.error_subcode ? `/${errObj.error_subcode}` : ""})` : ""}`;
 }
 

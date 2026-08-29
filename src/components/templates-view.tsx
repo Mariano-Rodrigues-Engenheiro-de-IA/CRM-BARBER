@@ -213,7 +213,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
   function startEdit(t: Template) {
     const d = decomposeTemplate(t);
     if (d.hasCarousel) {
-      setErr("Carrossel não dá pra editar por aqui — cria um modelo novo e exclui o antigo, se quiser trocar.");
+      setErr("Carrossel não dá pra editar por aqui. Cria um modelo novo e exclui o antigo, se quiser trocar.");
       return;
     }
     resetForm();
@@ -335,13 +335,13 @@ export function TemplatesView({ api }: { api: ApiFn }) {
       )}
 
       {showNew && (
-        <div className="grid items-start gap-5 lg:grid-cols-[1fr_320px]">
+        <div className="grid items-start gap-5 md:grid-cols-[1fr_320px]">
         <div className="space-y-4 rounded-xl border border-neutral-300 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-neutral-900">{editingId ? "Editar modelo" : "Novo modelo"}</h2>
             {editingId && (
               <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
-                Editando — volta pra análise ao salvar
+                Editando (volta pra análise ao salvar)
               </span>
             )}
           </div>
@@ -354,7 +354,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
               onChange={(e) => setName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"))}
               placeholder="lembrete_agendamento"
             />
-            {editingId && <p className="mt-1 text-[11px] text-neutral-400">O nome não pode ser alterado — crie um modelo novo se precisar de outro nome.</p>}
+            {editingId && <p className="mt-1 text-[11px] text-neutral-400">O nome não pode ser alterado. Crie um modelo novo se precisar de outro nome.</p>}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -685,7 +685,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
           </button>
         </div>
 
-        <div className="lg:sticky lg:top-4 lg:self-start">
+        <div className="md:sticky md:top-4 md:self-start">
           <TemplatePreview
             templateType={templateType}
             mediaFile={mediaFile}
@@ -744,20 +744,22 @@ export function TemplatesView({ api }: { api: ApiFn }) {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => startEdit(t)}
-                            title="Editar"
-                            className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-brand"
-                          >
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M17 3a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                            </svg>
-                          </button>
+                          {["APPROVED", "REJECTED", "PAUSED"].includes(t.status) && !d.hasCarousel && (
+                            <button
+                              onClick={() => startEdit(t)}
+                              title="Editar"
+                              className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-brand"
+                            >
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M17 3a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                              </svg>
+                            </button>
+                          )}
                           <button
                             onClick={async () => {
                               const ok = await confirm({
                                 title: `Excluir "${t.name}"?`,
-                                description: "Isso remove o modelo (e todos os idiomas dele) de vez — não dá pra desfazer.",
+                                description: "Isso remove o modelo (e todos os idiomas dele) de vez. Não dá pra desfazer.",
                                 confirmLabel: "Excluir",
                                 destructive: true,
                               });
@@ -889,11 +891,11 @@ function TemplatePreview({
          do espaçamento, sem ficar desalinhado. */}
       <div className="rounded-xl bg-[#e5ddd5] p-5">
         <div className="relative mx-auto w-full max-w-[240px]">
-          {/* Pontinha do balão — mesmo efeito visual de balão de mensagem
-             do WhatsApp, sem copiar a cor (o modelo aparece em cinza
-             neutro tanto na Meta quanto aqui, só o formato do balão). */}
-          <div className="absolute -left-[7px] top-0 h-0 w-0 border-y-[7px] border-r-[8px] border-y-transparent border-r-white drop-shadow-sm" />
-          <div className="overflow-hidden rounded-lg bg-white shadow-md">
+          {/* Pontinha do balão — o canto onde ela encosta fica sem
+             arredondamento, senão a curva do card colide com a ponta reta
+             do triângulo e dá aquele efeito de "remendado". */}
+          <div className="absolute -left-[6px] top-0 h-0 w-0 border-y-[8px] border-r-[7px] border-y-transparent border-r-white" />
+          <div className="overflow-hidden rounded-lg rounded-tl-none bg-white shadow-md">
             {(templateType === "image" || templateType === "video" || templateType === "document") && (
               <MediaBox file={mediaFile} kind={templateType} />
             )}
