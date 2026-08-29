@@ -323,12 +323,11 @@ function IconChevron({ className = "" }: { className?: string }) {
  * de verdade (não mais caps-lock) + linha de apoio opcional. Piloto em
  * Agenda / Assinaturas / Ranking de vendas antes de estender pro resto. */
 function SectionHeader({
-  icon,
   title,
   subtitle,
   right,
 }: {
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   title: string;
   subtitle?: string;
   right?: React.ReactNode;
@@ -336,12 +335,14 @@ function SectionHeader({
   return (
     <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
       <div className="flex items-center gap-3 px-5 py-3">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
-          {icon}
-        </div>
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-[15px] font-medium leading-tight text-neutral-900">{title}</h1>
-          {subtitle && <p className="truncate text-xs text-neutral-500">{subtitle}</p>}
+        <div className="flex min-w-0 flex-1 items-baseline gap-1.5">
+          <h1 className="truncate text-[15px] font-semibold text-neutral-900">{title}</h1>
+          {subtitle && (
+            <>
+              <span className="shrink-0 text-neutral-300">›</span>
+              <span className="truncate text-[15px] text-neutral-500">{subtitle}</span>
+            </>
+          )}
         </div>
         {right && <div className="flex shrink-0 items-center gap-2">{right}</div>}
       </div>
@@ -868,8 +869,8 @@ function Painel() {
         {section === "assinantes" && (
           <>
             <SectionHeader
-              icon={<IconBadgeCheck />}
-              title={assinTab === "visao" ? "Visão geral" : "Assinantes"}
+              title="Assinantes"
+              subtitle={assinTab === "visao" ? "Visão geral" : undefined}
               right={<div ref={setAssinHeaderEl} className="flex shrink-0 items-center gap-2" />}
             />
 
