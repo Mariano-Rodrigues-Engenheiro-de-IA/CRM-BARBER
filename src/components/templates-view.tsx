@@ -315,20 +315,34 @@ export function TemplatesView({ api }: { api: ApiFn }) {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold text-neutral-900">Modelos de mensagem</h1>
+      {!showNew && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-semibold text-neutral-900">Modelos de mensagem</h1>
+          </div>
+          <button
+            onClick={() => setShowNew(true)}
+            className="rounded-lg bg-brand px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-white hover:bg-brand-strong"
+          >
+            Novo modelo
+          </button>
         </div>
+      )}
+
+      {showNew && (
         <button
           onClick={() => {
-            if (showNew) resetForm();
-            setShowNew((v) => !v);
+            resetForm();
+            setShowNew(false);
           }}
-          className="rounded-lg bg-brand px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-white hover:bg-brand-strong"
+          className="flex items-center gap-1.5 text-sm font-medium text-neutral-600 hover:text-neutral-900"
         >
-          {showNew ? "Cancelar" : "Novo modelo"}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          Voltar pra lista de modelos
         </button>
-      </div>
+      )}
 
       {err && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">{err}</div>
@@ -370,7 +384,6 @@ export function TemplatesView({ api }: { api: ApiFn }) {
               >
                 <option value="UTILITY">Utilidade (avisos, lembretes)</option>
                 <option value="MARKETING">Marketing (promoções)</option>
-                <option value="AUTHENTICATION">Autenticação (códigos)</option>
               </select>
             </div>
             <div>
@@ -700,6 +713,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
         </div>
       )}
 
+      {!showNew && (
       <div className="overflow-hidden rounded-xl border border-neutral-300 bg-white shadow-sm">
         {loading ? (
           <div className="p-6 text-center text-xs text-neutral-500">Carregando…</div>
@@ -785,6 +799,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
           </div>
         )}
       </div>
+      )}
       {confirmDialog}
     </div>
   );
@@ -891,11 +906,7 @@ function TemplatePreview({
          do espaçamento, sem ficar desalinhado. */}
       <div className="rounded-xl bg-[#e5ddd5] p-5">
         <div className="relative mx-auto w-full max-w-[240px]">
-          {/* Pontinha do balão — o canto onde ela encosta fica sem
-             arredondamento, senão a curva do card colide com a ponta reta
-             do triângulo e dá aquele efeito de "remendado". */}
-          <div className="absolute -left-[6px] top-0 h-0 w-0 border-y-[8px] border-r-[7px] border-y-transparent border-r-white" />
-          <div className="overflow-hidden rounded-lg rounded-tl-none bg-white shadow-md">
+          <div className="overflow-hidden rounded-lg bg-white shadow-md">
             {(templateType === "image" || templateType === "video" || templateType === "document") && (
               <MediaBox file={mediaFile} kind={templateType} />
             )}
