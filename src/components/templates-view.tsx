@@ -838,17 +838,15 @@ function TemplatePreview({
   function MediaBox({
     file,
     kind,
-    heightCls = "h-56",
   }: {
     file: { dataUrl: string; mime: string; filename: string } | null;
     kind: "image" | "video" | "document";
-    heightCls?: string;
   }) {
     if (kind === "image") {
       return file ? (
-        <img src={file.dataUrl} alt="" className={`${heightCls} w-full rounded-t-lg object-cover`} />
+        <img src={file.dataUrl} alt="" className="block w-full rounded-t-lg" />
       ) : (
-        <div className={`flex ${heightCls} w-full items-center justify-center rounded-t-lg bg-neutral-200 text-neutral-400`}>
+        <div className="flex h-48 w-full items-center justify-center rounded-t-lg bg-neutral-200 text-neutral-400">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <rect x="3" y="3" width="18" height="18" rx="2" />
             <circle cx="8.5" cy="8.5" r="1.5" />
@@ -859,9 +857,9 @@ function TemplatePreview({
     }
     if (kind === "video") {
       return file ? (
-        <video src={file.dataUrl} className={`${heightCls} w-full rounded-t-lg bg-black object-cover`} controls />
+        <video src={file.dataUrl} className="block w-full rounded-t-lg bg-black" controls />
       ) : (
-        <div className={`flex ${heightCls} w-full items-center justify-center rounded-t-lg bg-neutral-200 text-neutral-400`}>
+        <div className="flex h-48 w-full items-center justify-center rounded-t-lg bg-neutral-200 text-neutral-400">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <path d="m10 8 6 4-6 4V8Z" />
             <rect x="2" y="4" width="20" height="16" rx="2" />
@@ -882,28 +880,44 @@ function TemplatePreview({
 
   return (
     <div className="lg:sticky lg:top-4">
-      <p className="mb-2 text-center text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Prévia</p>
+      <p className="mb-2 text-sm font-semibold text-neutral-900">Prévia do modelo</p>
 
-      {/* Moldura de celular — largura fixa e proporcional, igual à própria
-         Meta faz na tela dela de criar modelo, pra dar a noção real de
-         como vai ficar no bolso do cliente. */}
-      <div className="mx-auto w-[280px] rounded-[2.25rem] border-[10px] border-neutral-900 bg-neutral-900 shadow-xl">
-        <div className="relative h-[560px] overflow-hidden rounded-[1.6rem] bg-[#e5ddd5]">
-          {/* Notch */}
-          <div className="absolute left-1/2 top-0 z-10 h-5 w-24 -translate-x-1/2 rounded-b-xl bg-neutral-900" />
-          <div className="h-full overflow-y-auto px-3 pb-4 pt-8">
-            <div className="overflow-hidden rounded-lg bg-white shadow-sm">
-              {(templateType === "image" || templateType === "video" || templateType === "document") && (
-                <MediaBox file={mediaFile} kind={templateType} />
-              )}
-              <div className="px-3 py-2">
-                <p className="whitespace-pre-wrap text-[13px] text-neutral-800">{renderBody(bodyText)}</p>
-                {footerText && <p className="mt-1.5 text-[11px] text-neutral-400">{footerText}</p>}
+      {/* Card simples, sem moldura de celular — a imagem aparece por
+         inteiro (não cortada), exatamente como vai chegar de verdade pro
+         cliente. Mesmo estilo usado na tela de criação de modelo da Meta. */}
+      <div className="mx-auto w-[300px] overflow-hidden rounded-xl bg-white shadow-md">
+        {(templateType === "image" || templateType === "video" || templateType === "document") && (
+          <MediaBox file={mediaFile} kind={templateType} />
+        )}
+        <div className="px-3 pb-2 pt-2.5">
+          <p className="whitespace-pre-wrap text-[13.5px] leading-snug text-neutral-800">{renderBody(bodyText)}</p>
+          {footerText && <p className="mt-1.5 text-[12px] text-neutral-400">{footerText}</p>}
+          <p className="mt-1 text-right text-[10.5px] text-neutral-400">
+            {new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+          </p>
+        </div>
+        {templateType !== "carousel" && buttons.length > 0 && (
+          <div className="border-t border-neutral-100">
+            {buttons.map((b, i) => (
+              <div key={i} className="flex items-center justify-center gap-1.5 border-t border-neutral-100 py-2 text-[13px] text-blue-600 first:border-t-0">
+                <ButtonIcon type={b.type} />
+                {b.text || "Botão"}
               </div>
-              {templateType !== "carousel" && buttons.length > 0 && (
+            ))}
+          </div>
+        )}
+      </div>
+
+      {templateType === "carousel" && (
+        <div className="mx-auto mt-2 flex w-[300px] gap-2 overflow-x-auto pb-1">
+          {carouselCards.map((card, i) => (
+            <div key={i} className="w-32 shrink-0 overflow-hidden rounded-lg bg-white shadow-sm">
+              <MediaBox file={card.file} kind="image" />
+              {card.bodyText && <p className="px-2 py-1.5 text-[11px] text-neutral-800">{card.bodyText}</p>}
+              {carouselButtons.length > 0 && (
                 <div className="border-t border-neutral-100">
-                  {buttons.map((b, i) => (
-                    <div key={i} className="flex items-center justify-center gap-1.5 border-t border-neutral-100 py-2 text-[13px] text-blue-600 first:border-t-0">
+                  {carouselButtons.map((b, bi) => (
+                    <div key={bi} className="flex items-center justify-center gap-1 border-t border-neutral-100 py-1.5 text-[11px] text-blue-600 first:border-t-0">
                       <ButtonIcon type={b.type} />
                       {b.text || "Botão"}
                     </div>
@@ -911,30 +925,9 @@ function TemplatePreview({
                 </div>
               )}
             </div>
-
-            {templateType === "carousel" && (
-              <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
-                {carouselCards.map((card, i) => (
-                  <div key={i} className="w-32 shrink-0 overflow-hidden rounded-lg bg-white shadow-sm">
-                    <MediaBox file={card.file} kind="image" heightCls="h-24" />
-                    {card.bodyText && <p className="px-2 py-1.5 text-[11px] text-neutral-800">{card.bodyText}</p>}
-                    {carouselButtons.length > 0 && (
-                      <div className="border-t border-neutral-100">
-                        {carouselButtons.map((b, bi) => (
-                          <div key={bi} className="flex items-center justify-center gap-1 border-t border-neutral-100 py-1.5 text-[11px] text-blue-600 first:border-t-0">
-                            <ButtonIcon type={b.type} />
-                            {b.text || "Botão"}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          ))}
         </div>
-      </div>
+      )}
     </div>
   );
 }
