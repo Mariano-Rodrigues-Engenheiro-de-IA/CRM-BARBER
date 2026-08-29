@@ -13,6 +13,7 @@ import { AdminAgenteIaPanel } from "@/components/admin/agente-ia-panel";
 import { AdminLeadsPanel } from "@/components/admin/leads-panel";
 import { AdminTokensPanel } from "@/components/admin/tokens-panel";
 import { AdminWhatsAppPanel } from "@/components/admin/whatsapp-panel";
+import { AdminWebhookLogsPanel } from "@/components/admin/webhook-logs-panel";
 import { adminListLeads, adminUpdateLeadStatus } from "@/lib/admin-leads.functions";
 
 export const Route = createFileRoute("/admin/")({
@@ -26,7 +27,7 @@ export const Route = createFileRoute("/admin/")({
   component: AdminHome,
 });
 
-type Tab = "clientes" | "modulos" | "aulas" | "agente-ia" | "interessados" | "tokens" | "whatsapp";
+type Tab = "clientes" | "modulos" | "aulas" | "agente-ia" | "interessados" | "tokens" | "whatsapp" | "webhooks";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "clientes", label: "Clientes" },
@@ -36,6 +37,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "agente-ia", label: "Vídeo Agente de IA" },
   { key: "tokens", label: "Tokens de integração" },
   { key: "whatsapp", label: "WhatsApp / Meta" },
+  { key: "webhooks", label: "Logs de webhook" },
 ];
 
 function AdminHome() {
@@ -79,6 +81,7 @@ function AdminHome() {
           {tab === "agente-ia" && <AdminAgenteIaPanel />}
           {tab === "tokens" && <AdminTokensPanel />}
           {tab === "whatsapp" && <AdminWhatsAppPanel />}
+          {tab === "webhooks" && <AdminWebhookLogsPanel />}
         </div>
       </main>
     </div>

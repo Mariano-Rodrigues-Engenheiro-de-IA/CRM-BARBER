@@ -849,6 +849,42 @@ export type Database = {
           },
         ]
       }
+      webhook_logs: {
+        Row: {
+          body: Json | null
+          created_at: string
+          headers: Json | null
+          id: string
+          kind: string
+          method: string
+          note: string | null
+          source: string
+          status_code: number
+        }
+        Insert: {
+          body?: Json | null
+          created_at?: string
+          headers?: Json | null
+          id?: string
+          kind: string
+          method: string
+          note?: string | null
+          source?: string
+          status_code: number
+        }
+        Update: {
+          body?: Json | null
+          created_at?: string
+          headers?: Json | null
+          id?: string
+          kind?: string
+          method?: string
+          note?: string | null
+          source?: string
+          status_code?: number
+        }
+        Relationships: []
+      }
       lead_notes: {
         Row: {
           barbershop_id: string

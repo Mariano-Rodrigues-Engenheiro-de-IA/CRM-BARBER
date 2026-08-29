@@ -127,6 +127,24 @@ async function handleMessagesChange(change: Json) {
   // por ora só confirma recebimento pra Meta considerar a assinatura ativa.
 }
 
+async function logWebhookCall(kind: string, statusCode: number, headers: Record<string, string>, body: unknown, note?: string) {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("webhook_logs").insert({
+      source: "meta_whatsapp",
+      method: kind === "verify" ? "GET" : "POST",
+      kind,
+      status_code: statusCode,
+      headers,
+      body: body as never,
+      note: note ?? null,
+    });
+  } catch (e) {
+    // Nunca deixa o log derrubar o webhook de verdade.
+    console.error("[whatsapp.webhook] falha ao gravar log:", e);
+  }
+}
+
 export const Route = createFileRoute("/api/public/whatsapp/webhook")({
   server: {
     handlers: {
@@ -140,11 +158,20 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
         const expectedToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
         if (!expectedToken) {
           console.error("[whatsapp.webhook] WHATSAPP_WEBHOOK_VERIFY_TOKEN não configurado.");
+          await logWebhookCall("verify", 500, { mode: mode ?? "", token: token ?? "" }, null, "WHATSAPP_WEBHOOK_VERIFY_TOKEN não configurado no servidor");
           return new Response("Webhook não configurado", { status: 500 });
         }
         if (mode === "subscribe" && token === expectedToken && challenge) {
+          await logWebhookCall("verify", 200, { mode, token: "(confere)" }, null, "Verificação OK");
           return new Response(challenge, { status: 200 });
         }
+        await logWebhookCall(
+          "verify",
+          403,
+          { mode: mode ?? "", token: token ?? "" },
+          null,
+          token && token !== expectedToken ? "Token de verificação não bate com WHATSAPP_WEBHOOK_VERIFY_TOKEN" : "Requisição de verificação incompleta/inesperada",
+        );
         return new Response("Forbidden", { status: 403 });
       },
 
@@ -154,6 +181,7 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
         const signature = request.headers.get("x-hub-signature-256");
         if (!verifySignature(rawBody, signature)) {
           console.warn("[whatsapp.webhook] Assinatura inválida — evento rejeitado.");
+          await logWebhookCall("rejected", 401, { signature: signature ?? "(ausente)" }, safeParse(rawBody), "Assinatura X-Hub-Signature-256 inválida");
           return new Response("Invalid signature", { status: 401 });
         }
 
@@ -161,15 +189,19 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
         try {
           payload = JSON.parse(rawBody) as Json;
         } catch {
+          await logWebhookCall("rejected", 400, {}, rawBody.slice(0, 2000), "JSON inválido no corpo da requisição");
           return new Response("Invalid JSON", { status: 400 });
         }
 
+        let note: string | undefined;
         try {
           const entries = Array.isArray(payload.entry) ? (payload.entry as Json[]) : [];
+          const fields: string[] = [];
           for (const entry of entries) {
             const changes = Array.isArray(entry.changes) ? (entry.changes as Json[]) : [];
             for (const change of changes) {
               const field = change.field;
+              fields.push(typeof field === "string" ? field : String(field));
               if (field === "account_update") {
                 await handleAccountUpdate(change);
               } else if (field === "messages") {
@@ -179,12 +211,16 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
               }
             }
           }
+          note = fields.length ? `Campos: ${fields.join(", ")}` : "Sem entry/changes no payload";
         } catch (e) {
           // A Meta reenvia (com backoff) se não receber 200 — logamos o erro
           // mas confirmamos recebimento mesmo assim, pra não entrar num loop
           // de reenvio por causa de um evento que não sabemos processar.
           console.error("[whatsapp.webhook] erro ao processar payload:", e);
+          note = `Erro ao processar: ${e instanceof Error ? e.message : String(e)}`;
         }
+
+        await logWebhookCall("event", 200, {}, payload as unknown, note);
 
         // A Meta exige HTTP 200 rápido — processamento pesado deveria ser
         // assíncrono/enfileirado, mas por ora o processamento acima é leve
@@ -194,3 +230,11 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
     },
   },
 });
+
+function safeParse(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw.slice(0, 2000);
+  }
+}
