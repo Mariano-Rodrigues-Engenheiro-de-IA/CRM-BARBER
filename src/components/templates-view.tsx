@@ -313,7 +313,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
             header_filename: mediaFile.filename,
           }
         : {}),
-      ...(templateType !== "carousel" && footerText.trim() ? { footer_text: footerText.trim() } : {}),
+      ...(footerText.trim() ? { footer_text: footerText.trim() } : {}),
       ...(templateType !== "carousel" && buttons.length > 0 ? { buttons } : {}),
       ...(templateType === "carousel"
         ? {
@@ -624,19 +624,19 @@ export function TemplatesView({ api }: { api: ApiFn }) {
             </>
           )}
 
+          <div>
+            <label className="mb-1 block text-xs font-medium text-neutral-700">Rodapé (opcional)</label>
+            <input
+              className={inputCls}
+              value={footerText}
+              onChange={(e) => setFooterText(e.target.value.slice(0, 60))}
+              placeholder="Não responda esta mensagem"
+              maxLength={60}
+            />
+          </div>
+
           {templateType !== "carousel" && (
             <>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-neutral-700">Rodapé (opcional)</label>
-                <input
-                  className={inputCls}
-                  value={footerText}
-                  onChange={(e) => setFooterText(e.target.value.slice(0, 60))}
-                  placeholder="Não responda esta mensagem"
-                  maxLength={60}
-                />
-              </div>
-
               <div>
                 <label className="mb-1 block text-xs font-medium text-neutral-700">Botões (opcional, até 3)</label>
                 <div className="space-y-2">

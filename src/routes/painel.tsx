@@ -367,11 +367,13 @@ function IconCalendar() {
 /** Plug — seção de Conexão (não repetir o ícone de Assinaturas). */
 /** Link/corrente — plugue trocado por um símbolo mais "conexão/integração". */
 function IconPlug() {
+  // Ícone de celular — o de "plugue" antigo não dava a entender que é a
+  // conexão com o WhatsApp. Não uso o logo oficial do WhatsApp aqui (é
+  // uma marca registrada da Meta), só um celular genérico mesmo.
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9.5 14.5 14.5 9.5" />
-      <path d="M11 5.2 12 4.2a3.6 3.6 0 1 1 5.1 5.1l-1 1" />
-      <path d="M13 18.8 12 19.8a3.6 3.6 0 1 1-5.1-5.1l1-1" />
+      <rect x="6.5" y="2.5" width="11" height="19" rx="2.2" />
+      <path d="M10.5 18.2h3" />
     </svg>
   );
 }
