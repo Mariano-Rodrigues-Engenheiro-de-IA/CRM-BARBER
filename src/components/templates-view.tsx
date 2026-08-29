@@ -340,12 +340,12 @@ export function TemplatesView({ api }: { api: ApiFn }) {
               resetForm();
               setShowNew(false);
             }}
-            className="flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold text-neutral-700 shadow-sm hover:bg-neutral-50"
+            className="flex items-center gap-1 rounded-lg border border-neutral-300 px-2.5 py-1 text-sm text-neutral-700 hover:bg-neutral-50"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="m15 18-6-6 6-6" />
             </svg>
-            Voltar pra lista de modelos
+            Voltar
           </button>
 
           {err && (
@@ -701,7 +701,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
         </div>
         </div>
 
-        <div className="md:sticky md:top-4 md:self-start">
+        <div className="md:sticky md:top-4 md:h-fit md:self-start">
           <TemplatePreview
             templateType={templateType}
             mediaFile={mediaFile}
