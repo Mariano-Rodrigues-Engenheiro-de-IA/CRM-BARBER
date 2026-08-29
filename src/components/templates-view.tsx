@@ -335,7 +335,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
       )}
 
       {showNew && (
-        <div className="grid gap-5 lg:grid-cols-[1fr_300px]">
+        <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
         <div className="space-y-4 rounded-xl border border-neutral-300 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-neutral-900">{editingId ? "Editar modelo" : "Novo modelo"}</h2>
@@ -846,7 +846,7 @@ function TemplatePreview({
       return file ? (
         <img src={file.dataUrl} alt="" className="block w-full rounded-t-lg" />
       ) : (
-        <div className="flex h-48 w-full items-center justify-center rounded-t-lg bg-neutral-200 text-neutral-400">
+        <div className="flex h-40 w-full items-center justify-center rounded-t-lg bg-neutral-200 text-neutral-400">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <rect x="3" y="3" width="18" height="18" rx="2" />
             <circle cx="8.5" cy="8.5" r="1.5" />
@@ -859,7 +859,7 @@ function TemplatePreview({
       return file ? (
         <video src={file.dataUrl} className="block w-full rounded-t-lg bg-black" controls />
       ) : (
-        <div className="flex h-48 w-full items-center justify-center rounded-t-lg bg-neutral-200 text-neutral-400">
+        <div className="flex h-40 w-full items-center justify-center rounded-t-lg bg-neutral-200 text-neutral-400">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <path d="m10 8 6 4-6 4V8Z" />
             <rect x="2" y="4" width="20" height="16" rx="2" />
@@ -879,28 +879,30 @@ function TemplatePreview({
   }
 
   return (
-    <div className="lg:sticky lg:top-4">
+    <div>
       <p className="mb-2 text-sm font-semibold text-neutral-900">Prévia do modelo</p>
 
       {/* Fundo do WhatsApp por trás do card — sem moldura de celular (isso
          ficou artificial), só o "papel de parede" do chat mesmo, igual a
-         própria Meta mostra na tela de criação de modelo dela. */}
-      <div className="rounded-xl bg-[#e5ddd5] p-4">
-        <div className="mx-auto w-[280px] overflow-hidden rounded-lg bg-white shadow-md">
+         própria Meta mostra na tela de criação de modelo dela. Card usa
+         w-full (em vez de largura fixa) pra sempre caber certinho dentro
+         do espaçamento, sem ficar desalinhado. */}
+      <div className="rounded-xl bg-[#e5ddd5] p-5">
+        <div className="mx-auto w-full max-w-[240px] overflow-hidden rounded-lg bg-white shadow-md">
           {(templateType === "image" || templateType === "video" || templateType === "document") && (
             <MediaBox file={mediaFile} kind={templateType} />
           )}
-          <div className="px-3 pb-2 pt-2.5">
-            <p className="whitespace-pre-wrap text-[13.5px] leading-snug text-neutral-800">{renderBody(bodyText)}</p>
-            {footerText && <p className="mt-1.5 text-[12px] text-neutral-400">{footerText}</p>}
-            <p className="mt-1 text-right text-[10.5px] text-neutral-400">
+          <div className="px-2.5 pb-1.5 pt-2">
+            <p className="whitespace-pre-wrap text-[12px] leading-snug text-neutral-800">{renderBody(bodyText)}</p>
+            {footerText && <p className="mt-1 text-[10.5px] text-neutral-400">{footerText}</p>}
+            <p className="mt-1 text-right text-[9.5px] text-neutral-400">
               {new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
             </p>
           </div>
           {templateType !== "carousel" && buttons.length > 0 && (
             <div className="border-t border-neutral-100">
               {buttons.map((b, i) => (
-                <div key={i} className="flex items-center justify-center gap-1.5 border-t border-neutral-100 py-2 text-[13px] text-blue-600 first:border-t-0">
+                <div key={i} className="flex items-center justify-center gap-1.5 border-t border-neutral-100 py-1.5 text-[12px] text-blue-600 first:border-t-0">
                   <ButtonIcon type={b.type} />
                   {b.text || "Botão"}
                 </div>
@@ -910,15 +912,15 @@ function TemplatePreview({
         </div>
 
         {templateType === "carousel" && (
-          <div className="mx-auto mt-2 flex w-[280px] gap-2 overflow-x-auto pb-1">
+          <div className="mx-auto mt-2 flex w-full max-w-[240px] gap-2 overflow-x-auto pb-1">
             {carouselCards.map((card, i) => (
-              <div key={i} className="w-32 shrink-0 overflow-hidden rounded-lg bg-white shadow-sm">
+              <div key={i} className="w-28 shrink-0 overflow-hidden rounded-lg bg-white shadow-sm">
                 <MediaBox file={card.file} kind="image" />
-                {card.bodyText && <p className="px-2 py-1.5 text-[11px] text-neutral-800">{card.bodyText}</p>}
+                {card.bodyText && <p className="px-2 py-1.5 text-[10px] text-neutral-800">{card.bodyText}</p>}
                 {carouselButtons.length > 0 && (
                   <div className="border-t border-neutral-100">
                     {carouselButtons.map((b, bi) => (
-                      <div key={bi} className="flex items-center justify-center gap-1 border-t border-neutral-100 py-1.5 text-[11px] text-blue-600 first:border-t-0">
+                      <div key={bi} className="flex items-center justify-center gap-1 border-t border-neutral-100 py-1.5 text-[10px] text-blue-600 first:border-t-0">
                         <ButtonIcon type={b.type} />
                         {b.text || "Botão"}
                       </div>
