@@ -56,6 +56,22 @@ export function TemplatesView({ api }: { api: ApiFn }) {
   const [languageCode, setLanguageCode] = useState("pt_BR");
   const [bodyText, setBodyText] = useState("");
   const [bodyExamples, setBodyExamples] = useState<Record<string, string>>({});
+  const [footerText, setFooterText] = useState("");
+
+  // Botões do modelo (Texto/Imagem/Vídeo/Documento) — até 3, qualquer
+  // mistura de tipos. O carrossel tem os botões dele próprio, separados.
+  type TemplateButton =
+    | { type: "QUICK_REPLY"; text: string }
+    | { type: "URL"; text: string; url: string }
+    | { type: "PHONE_NUMBER"; text: string; phone_number: string };
+  const [buttons, setButtons] = useState<TemplateButton[]>([]);
+  function addButton() {
+    if (buttons.length >= 3) return;
+    setButtons((prev) => [...prev, { type: "QUICK_REPLY", text: "" }]);
+  }
+  function updateButton(i: number, patch: Partial<TemplateButton>) {
+    setButtons((prev) => prev.map((b, bi) => (bi === i ? ({ ...b, ...patch } as TemplateButton) : b)));
+  }
 
   // Tipo do modelo — escolha única e exclusiva. Cada tipo mostra só os
   // campos dele; nada se mistura ou se reaproveita entre tipos.
@@ -130,6 +146,8 @@ export function TemplatesView({ api }: { api: ApiFn }) {
     setCategory("UTILITY");
     setBodyText("");
     setBodyExamples({});
+    setFooterText("");
+    setButtons([]);
     setTemplateType("text");
     setMediaFile(null);
     setCarouselCards([
@@ -163,6 +181,10 @@ export function TemplatesView({ api }: { api: ApiFn }) {
         return;
       }
     }
+    if (templateType !== "carousel" && buttons.some((b) => !b.text.trim() || (b.type === "URL" && !b.url.trim()) || (b.type === "PHONE_NUMBER" && !b.phone_number.trim()))) {
+      setErr("Preencha todos os campos de cada botão.");
+      return;
+    }
     setSaving(true);
     setErr(null);
     const headerFormatByType: Record<string, string> = { image: "IMAGE", video: "VIDEO", document: "DOCUMENT" };
@@ -182,6 +204,8 @@ export function TemplatesView({ api }: { api: ApiFn }) {
               header_filename: mediaFile.filename,
             }
           : {}),
+        ...(templateType !== "carousel" && footerText.trim() ? { footer_text: footerText.trim() } : {}),
+        ...(templateType !== "carousel" && buttons.length > 0 ? { buttons } : {}),
         ...(templateType === "carousel"
           ? {
               carousel_cards: carouselCards.map((c) => ({
@@ -225,6 +249,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
       )}
 
       {showNew && (
+        <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <div className="space-y-4 rounded-xl border border-neutral-300 bg-white p-5 shadow-sm">
           <div>
             <label className="mb-1 block text-xs font-medium text-neutral-700">Nome</label>
@@ -450,6 +475,83 @@ export function TemplatesView({ api }: { api: ApiFn }) {
             </>
           )}
 
+          {templateType !== "carousel" && (
+            <>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-neutral-700">Rodapé (opcional)</label>
+                <input
+                  className={inputCls}
+                  value={footerText}
+                  onChange={(e) => setFooterText(e.target.value.slice(0, 60))}
+                  placeholder="Não responda esta mensagem"
+                  maxLength={60}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-neutral-700">Botões (opcional, até 3)</label>
+                <div className="space-y-2">
+                  {buttons.map((b, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <select
+                        className="w-36 shrink-0 rounded-lg border border-neutral-300 bg-white px-2 py-2 text-xs"
+                        value={b.type}
+                        onChange={(e) => {
+                          const t = e.target.value as TemplateButton["type"];
+                          if (t === "URL") updateButton(i, { type: "URL", url: "" } as Partial<TemplateButton>);
+                          else if (t === "PHONE_NUMBER") updateButton(i, { type: "PHONE_NUMBER", phone_number: "" } as Partial<TemplateButton>);
+                          else updateButton(i, { type: "QUICK_REPLY" } as Partial<TemplateButton>);
+                        }}
+                      >
+                        <option value="QUICK_REPLY">Resposta rápida</option>
+                        <option value="URL">Link (URL)</option>
+                        <option value="PHONE_NUMBER">Ligar</option>
+                      </select>
+                      <input
+                        className={inputCls}
+                        placeholder="Texto do botão"
+                        value={b.text}
+                        onChange={(e) => updateButton(i, { text: e.target.value })}
+                      />
+                      {b.type === "URL" && (
+                        <input
+                          className={inputCls}
+                          placeholder="https://..."
+                          value={b.url}
+                          onChange={(e) => updateButton(i, { url: e.target.value } as Partial<TemplateButton>)}
+                        />
+                      )}
+                      {b.type === "PHONE_NUMBER" && (
+                        <input
+                          className={inputCls}
+                          placeholder="+55 11 99999-9999"
+                          value={b.phone_number}
+                          onChange={(e) => updateButton(i, { phone_number: e.target.value } as Partial<TemplateButton>)}
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setButtons((prev) => prev.filter((_, bi) => bi !== i))}
+                        className="shrink-0 rounded-lg border border-neutral-300 px-2 py-2 text-xs text-neutral-500 hover:bg-neutral-50"
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  ))}
+                  {buttons.length < 3 && (
+                    <button
+                      type="button"
+                      onClick={addButton}
+                      className="rounded-lg border border-dashed border-neutral-300 px-3 py-1.5 text-xs text-neutral-600 hover:border-brand"
+                    >
+                      + Adicionar botão
+                    </button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
           {varNames.length > 0 && (
             <div className="space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
               <p className="text-xs font-medium text-neutral-700">Valor de exemplo</p>
@@ -483,7 +585,22 @@ export function TemplatesView({ api }: { api: ApiFn }) {
           >
             {saving ? "Enviando pra análise…" : "Enviar pra aprovação"}
           </button>
-        </div>      )}
+        </div>
+
+        <div className="lg:sticky lg:top-4 lg:self-start">
+          <TemplatePreview
+            templateType={templateType}
+            mediaFile={mediaFile}
+            bodyText={bodyText}
+            bodyExamples={bodyExamples}
+            footerText={footerText}
+            buttons={buttons}
+            carouselCards={carouselCards}
+            carouselButtons={carouselButtons}
+          />
+        </div>
+        </div>
+      )}
 
       <div className="rounded-xl border border-neutral-300 bg-white shadow-sm">
         {loading ? (
@@ -511,6 +628,138 @@ export function TemplatesView({ api }: { api: ApiFn }) {
           </ul>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Prévia ao vivo do modelo, no estilo balão do WhatsApp — mesma dinâmica
+ * de "ir vendo o resultado final conforme monta" que a própria Meta usa
+ * na criação de modelos dela. */
+function TemplatePreview({
+  templateType,
+  mediaFile,
+  bodyText,
+  bodyExamples,
+  footerText,
+  buttons,
+  carouselCards,
+  carouselButtons,
+}: {
+  templateType: "text" | "image" | "video" | "document" | "carousel";
+  mediaFile: { dataUrl: string; mime: string; filename: string } | null;
+  bodyText: string;
+  bodyExamples: Record<string, string>;
+  footerText: string;
+  buttons: Array<{ type: string; text: string; url?: string; phone_number?: string }>;
+  carouselCards: Array<{ file: { dataUrl: string; mime: string; filename: string } | null; bodyText: string }>;
+  carouselButtons: Array<{ type: string; text: string; url?: string }>;
+}) {
+  function renderBody(text: string) {
+    const filled = text.replace(/\{\{([a-z0-9_]+)\}\}/g, (_, v) => bodyExamples[v]?.trim() || `[${v}]`);
+    return filled || "Sua mensagem aparece aqui…";
+  }
+
+  function ButtonIcon({ type }: { type: string }) {
+    if (type === "URL")
+      return (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M10 14 21 3M15 3h6v6M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+        </svg>
+      );
+    if (type === "PHONE_NUMBER")
+      return (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 3a2 2 0 0 1-.4 2.1L8.1 10a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.4c1 .3 2 .5 3 .7a2 2 0 0 1 1.6 2Z" />
+        </svg>
+      );
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M3 10h18M3 14h18M7 10v10M17 10v10M5 10V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4" />
+      </svg>
+    );
+  }
+
+  function MediaBox({ file, kind }: { file: { dataUrl: string; mime: string; filename: string } | null; kind: "image" | "video" | "document" }) {
+    if (kind === "image") {
+      return file ? (
+        <img src={file.dataUrl} alt="" className="h-36 w-full rounded-t-lg object-cover" />
+      ) : (
+        <div className="flex h-36 w-full items-center justify-center rounded-t-lg bg-neutral-200 text-neutral-400">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <path d="m21 15-5-5L5 21" />
+          </svg>
+        </div>
+      );
+    }
+    if (kind === "video") {
+      return file ? (
+        <video src={file.dataUrl} className="h-36 w-full rounded-t-lg bg-black object-cover" controls />
+      ) : (
+        <div className="flex h-36 w-full items-center justify-center rounded-t-lg bg-neutral-200 text-neutral-400">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="m10 8 6 4-6 4V8Z" />
+            <rect x="2" y="4" width="20" height="16" rx="2" />
+          </svg>
+        </div>
+      );
+    }
+    return (
+      <div className="flex items-center gap-2 rounded-t-lg bg-neutral-100 px-3 py-3 text-neutral-500">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="shrink-0">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+          <path d="M14 2v6h6" />
+        </svg>
+        <span className="truncate text-xs">{file ? file.filename : "documento.pdf"}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-neutral-300 bg-[#e5ddd5] p-4">
+      <p className="mb-3 text-center text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Prévia</p>
+
+      <div className="overflow-hidden rounded-lg bg-white shadow-sm">
+        {(templateType === "image" || templateType === "video" || templateType === "document") && (
+          <MediaBox file={mediaFile} kind={templateType} />
+        )}
+        <div className="px-3 py-2">
+          <p className="whitespace-pre-wrap text-[13px] text-neutral-800">{renderBody(bodyText)}</p>
+          {footerText && <p className="mt-1.5 text-[11px] text-neutral-400">{footerText}</p>}
+        </div>
+        {templateType !== "carousel" && buttons.length > 0 && (
+          <div className="border-t border-neutral-100">
+            {buttons.map((b, i) => (
+              <div key={i} className="flex items-center justify-center gap-1.5 border-t border-neutral-100 py-2 text-[13px] text-blue-600 first:border-t-0">
+                <ButtonIcon type={b.type} />
+                {b.text || "Botão"}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {templateType === "carousel" && (
+        <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+          {carouselCards.map((card, i) => (
+            <div key={i} className="w-40 shrink-0 overflow-hidden rounded-lg bg-white shadow-sm">
+              <MediaBox file={card.file} kind="image" />
+              {card.bodyText && <p className="px-2 py-1.5 text-[11px] text-neutral-800">{card.bodyText}</p>}
+              {carouselButtons.length > 0 && (
+                <div className="border-t border-neutral-100">
+                  {carouselButtons.map((b, bi) => (
+                    <div key={bi} className="flex items-center justify-center gap-1 border-t border-neutral-100 py-1.5 text-[11px] text-blue-600 first:border-t-0">
+                      <ButtonIcon type={b.type} />
+                      {b.text || "Botão"}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

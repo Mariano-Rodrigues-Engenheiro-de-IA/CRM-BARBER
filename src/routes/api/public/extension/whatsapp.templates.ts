@@ -94,6 +94,32 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/templates")
         const headerFilename = typeof body?.header_filename === "string" ? body.header_filename : "arquivo";
         const headerMime = typeof body?.header_mime === "string" ? body.header_mime : "";
 
+        const footerText = typeof body?.footer_text === "string" ? body.footer_text.trim() : "";
+
+        // Botões do modelo (não confundir com os botões de cada cartão do
+        // carrossel, que vêm dentro de carousel_cards).
+        const buttonsRaw = Array.isArray(body?.buttons) ? (body.buttons as Array<Record<string, unknown>>) : [];
+        if (buttonsRaw.length > 3) {
+          return jsonResponse(request, { ok: false, error: "No máximo 3 botões por modelo." }, { status: 400 });
+        }
+        for (const b of buttonsRaw) {
+          if (!b.text || typeof b.text !== "string" || !b.text.trim()) {
+            return jsonResponse(request, { ok: false, error: "Todo botão precisa de um texto." }, { status: 400 });
+          }
+          if (b.type === "URL" && (!b.url || typeof b.url !== "string" || !b.url.trim())) {
+            return jsonResponse(request, { ok: false, error: "Todo botão de link precisa de uma URL." }, { status: 400 });
+          }
+          if (b.type === "PHONE_NUMBER" && (!b.phone_number || typeof b.phone_number !== "string" || !b.phone_number.trim())) {
+            return jsonResponse(request, { ok: false, error: "Todo botão de telefone precisa de um número." }, { status: 400 });
+          }
+        }
+        const buttons = buttonsRaw.map((b) => {
+          if (b.type === "URL") return { type: "URL" as const, text: (b.text as string).trim(), url: (b.url as string).trim() };
+          if (b.type === "PHONE_NUMBER")
+            return { type: "PHONE_NUMBER" as const, text: (b.text as string).trim(), phone_number: (b.phone_number as string).trim() };
+          return { type: "QUICK_REPLY" as const, text: (b.text as string).trim() };
+        });
+
         // Carrossel — array de cartões, cada um com sua própria mídia
         // (data URL) e, opcionalmente, texto e botões.
         const carouselCardsRaw = Array.isArray(body?.carousel_cards) ? (body.carousel_cards as unknown[]) : null;
@@ -260,6 +286,8 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/templates")
           body_text: bodyText,
           body_examples: bodyExamples,
           header,
+          footer_text: footerText || null,
+          buttons: buttons.length > 0 ? buttons : null,
           carousel,
         });
         if (!result.ok) {

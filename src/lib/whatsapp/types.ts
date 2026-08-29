@@ -143,6 +143,12 @@ export interface WhatsAppProvider {
     body_text: string;
     body_examples?: Record<string, string>;
     header?: { format: "IMAGE" | "VIDEO" | "DOCUMENT"; handle: string } | null;
+    footer_text?: string | null;
+    buttons?: Array<
+      | { type: "QUICK_REPLY"; text: string }
+      | { type: "URL"; text: string; url: string }
+      | { type: "PHONE_NUMBER"; text: string; phone_number: string }
+    > | null;
     carousel?: {
       cards: Array<{
         header: { format: "IMAGE" | "VIDEO"; handle: string };

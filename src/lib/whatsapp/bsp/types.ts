@@ -101,6 +101,15 @@ export interface BspAdapter {
     body_examples?: Record<string, string>;
     // Cabeçalho de mídia opcional — "handle" vem de uploadTemplateMedia.
     header?: { format: "IMAGE" | "VIDEO" | "DOCUMENT"; handle: string } | null;
+    // Texto de rodapé (cinza, pequeno) — sem variáveis, até 60 caracteres.
+    footer_text?: string | null;
+    // Botões do modelo (não confundir com os botões de cada cartão do
+    // carrossel) — até 3, mistura de tipos permitida.
+    buttons?: Array<
+      | { type: "QUICK_REPLY"; text: string }
+      | { type: "URL"; text: string; url: string }
+      | { type: "PHONE_NUMBER"; text: string; phone_number: string }
+    > | null;
     // Carrossel — só existe via API, a Meta nem oferece isso na interface
     // visual dela. Todos os cartões precisam ter o mesmo formato de mídia
     // e a mesma configuração de botões (regra da própria Meta).

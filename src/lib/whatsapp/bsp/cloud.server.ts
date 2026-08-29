@@ -414,7 +414,7 @@ export const cloudAdapter: BspAdapter = {
     }
   },
 
-  async createTemplate({ access_token, waba_id, name, category, language_code, body_text, body_examples, header, carousel }) {
+  async createTemplate({ access_token, waba_id, name, category, language_code, body_text, body_examples, header, footer_text, buttons, carousel }) {
     try {
       // Variáveis nomeadas ({{nome}}, {{data}}...) — bem mais claro que
       // {{1}}, {{2}} pra quem cria e edita os modelos depois.
@@ -437,6 +437,21 @@ export const cloudAdapter: BspAdapter = {
         };
       }
       components.push(bodyComponent);
+
+      if (footer_text?.trim()) {
+        components.push({ type: "footer", text: footer_text.trim() });
+      }
+
+      if (buttons && buttons.length > 0) {
+        components.push({
+          type: "buttons",
+          buttons: buttons.map((b) => {
+            if (b.type === "URL") return { type: "url", text: b.text, url: b.url };
+            if (b.type === "PHONE_NUMBER") return { type: "phone_number", text: b.text, phone_number: b.phone_number };
+            return { type: "quick_reply", text: b.text };
+          }),
+        });
+      }
 
       if (carousel && carousel.cards.length > 0) {
         components.push({

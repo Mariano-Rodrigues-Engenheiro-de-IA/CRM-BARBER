@@ -483,7 +483,7 @@ export function DispatchCenter({
                 .filter((t) => t.status === "APPROVED")
                 .map((t) => (
                   <option key={t.name} value={t.name}>
-                    {t.name} ({t.language})
+                    {t.name}
                   </option>
                 ))}
             </select>
