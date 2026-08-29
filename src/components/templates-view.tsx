@@ -351,12 +351,11 @@ export function TemplatesView({ api }: { api: ApiFn }) {
       </div>
 
       {showNew && (
-        // Mesma técnica da barra lateral: em vez de "sticky" (que só gruda
-        // depois de rolar até certo ponto), a linha toda tem altura fixa
-        // (relativa à tela), e só a coluna do formulário rola por dentro
-        // dela mesma — a prévia nunca se move, exatamente como o menu.
-        <div className="flex flex-col gap-5 md:h-[calc(100vh-150px)] md:flex-row">
-          <div className="min-w-0 flex-1 space-y-4 overflow-y-auto md:pr-1">
+        // Um scroll só, o da própria página (a barra fica no canto direito
+        // de verdade, não espremida entre formulário e prévia) — a prévia
+        // fica presa com "sticky" no espaço que sobra da coluna dela.
+        <div className="grid items-start gap-5 md:grid-cols-[1fr_320px]">
+          <div className="min-w-0 space-y-4">
           {err && (
             <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">{err}</div>
           )}
@@ -710,7 +709,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
           </div>
         </div>
 
-        <div className="shrink-0 md:w-[320px]">
+        <div className="md:sticky md:top-4 md:h-fit md:self-start">
           <TemplatePreview
             templateType={templateType}
             mediaFile={mediaFile}
