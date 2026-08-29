@@ -315,39 +315,48 @@ export function TemplatesView({ api }: { api: ApiFn }) {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      {!showNew && (
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold text-neutral-900">Modelos de mensagem</h1>
-          </div>
+      {/* Breadcrumb, no estilo dos grandes CRMs — sem ícone, sem repetir o
+         nome da aba à toa. "Modelos" funciona como o próprio botão de
+         voltar quando dentro do formulário. */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-lg font-semibold">
+          {showNew ? (
+            <button
+              onClick={() => {
+                resetForm();
+                setShowNew(false);
+              }}
+              className="text-neutral-400 hover:text-neutral-700"
+            >
+              Modelos
+            </button>
+          ) : (
+            <span className="text-neutral-900">Modelos</span>
+          )}
+          {showNew && (
+            <>
+              <span className="text-neutral-300">›</span>
+              <span className="text-neutral-900">{editingId ? "Editar modelo" : "Criar modelo"}</span>
+            </>
+          )}
+        </div>
+        {!showNew && (
           <button
             onClick={() => setShowNew(true)}
             className="rounded-lg bg-brand px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-white hover:bg-brand-strong"
           >
             Novo modelo
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {showNew && (
-        // Grid começa logo aqui, sem nada acima — assim as duas colunas
-        // partem exatamente da mesma altura, e a prévia já nasce "no topo"
-        // em vez de começar mais abaixo e dar um salto ao rolar.
-        <div className="grid items-start gap-5 md:grid-cols-[1fr_320px]">
-        <div className="space-y-4">
-          <button
-            onClick={() => {
-              resetForm();
-              setShowNew(false);
-            }}
-            className="flex items-center gap-1 rounded-lg border border-neutral-300 px-2.5 py-1 text-sm text-neutral-700 hover:bg-neutral-50"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m15 18-6-6 6-6" />
-            </svg>
-            Voltar
-          </button>
-
+        // Mesma técnica da barra lateral: em vez de "sticky" (que só gruda
+        // depois de rolar até certo ponto), a linha toda tem altura fixa
+        // (relativa à tela), e só a coluna do formulário rola por dentro
+        // dela mesma — a prévia nunca se move, exatamente como o menu.
+        <div className="flex flex-col gap-5 md:h-[calc(100vh-150px)] md:flex-row">
+          <div className="min-w-0 flex-1 space-y-4 overflow-y-auto md:pr-1">
           {err && (
             <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">{err}</div>
           )}
@@ -698,10 +707,10 @@ export function TemplatesView({ api }: { api: ApiFn }) {
           >
             {saving ? (editingId ? "Salvando…" : "Enviando pra análise…") : editingId ? "Salvar edição" : "Enviar pra aprovação"}
           </button>
-        </div>
+          </div>
         </div>
 
-        <div className="md:sticky md:top-4 md:h-fit md:self-start">
+        <div className="shrink-0 md:w-[320px]">
           <TemplatePreview
             templateType={templateType}
             mediaFile={mediaFile}
