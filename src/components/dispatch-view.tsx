@@ -138,7 +138,15 @@ export function DispatchCenter({
           })),
         );
       }
-      if (st?.ok && st.connection) setIsMetaProvider((st.connection as { provider?: string }).provider === "meta");
+      if (st?.ok && st.connection) {
+        const meta = (st.connection as { provider?: string }).provider === "meta";
+        setIsMetaProvider(meta);
+        // Disparo em massa pela API oficial só funciona com modelo
+        // aprovado (a maioria dos contatos estará fora da janela de 24h) —
+        // não oficial (QR) só funciona com mensagem livre. Não é uma
+        // escolha do usuário, é uma limitação de cada modo.
+        setDispatchType(meta ? "template" : "message");
+      }
       setTemplatesLoaded(true);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -445,40 +453,17 @@ export function DispatchCenter({
 
       <div>
         <Label>Tipo de disparo</Label>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setDispatchType("message")}
-            className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${
-              dispatchType === "message"
-                ? "border-brand bg-brand/10 text-brand"
-                : "border-neutral-300 bg-white text-neutral-600"
-            }`}
-          >
-            Mensagem personalizada
-          </button>
-          {isMetaProvider && (
-            <button
-              type="button"
-              onClick={() => setDispatchType("template")}
-              className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${
-                dispatchType === "template"
-                  ? "border-brand bg-brand/10 text-brand"
-                  : "border-neutral-300 bg-white text-neutral-600"
-              }`}
-            >
-              Modelo aprovado
-            </button>
-          )}
-        </div>
-        <p className="mt-1 text-xs text-neutral-500">
-          {dispatchType === "template" && isMetaProvider
-            ? "Obrigatório para contatos que não te mandaram mensagem nas últimas 24h. A API oficial só permite modelo pré-aprovado nesse caso."
-            : "Para contatos que já conversaram com você recentemente (últimas 24h)."}
-        </p>
+        {isMetaProvider ? (
+          <p className="mt-1 text-xs text-neutral-500">
+            Conectado pela API oficial: todo disparo em massa usa um modelo aprovado pela Meta. Pra contatos fora
+            da janela de 24h (o caso mais comum num disparo), a API oficial só permite esse formato.
+          </p>
+        ) : (
+          <p className="mt-1 text-xs text-neutral-500">Mensagem personalizada, pra contatos que já conversaram com você recentemente (últimas 24h).</p>
+        )}
       </div>
 
-      {dispatchType === "template" && isMetaProvider ? (
+      {isMetaProvider ? (
         <div>
           <Label>Modelo</Label>
           {!templatesLoaded ? (
