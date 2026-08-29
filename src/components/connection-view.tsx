@@ -162,17 +162,23 @@ export function ConnectionView({ api }: { api: Api }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Polling automático contínuo: 2.5s enquanto conectando, 10s nos demais estados.
-  // Reagenda a si mesmo depois de cada refresh — sem isso o polling parava
-  // no primeiro tick quando o status não mudava.
+  // Polling automático contínuo: 5s enquanto conectando, 10s nos demais
+  // estados. Reagenda a si mesmo depois de cada refresh — sem isso o
+  // polling parava no primeiro tick quando o status não mudava.
+  //
+  // IMPORTANTE: nunca força sincronização aqui (força só uma vez, logo
+  // após o usuário completar o login) — senão todo tick do polling bate
+  // direto na Graph API da Meta, ignorando o limite mínimo do backend.
+  // Foi exatamente isso que já disparou rate limit da própria Meta
+  // (#80008, "too many calls to this WhatsApp Business account").
   useEffect(() => {
     clearPoll();
     if (busy) return;
     let cancelled = false;
     const schedule = () => {
-      const interval = statusRef.current === "connecting" ? 2500 : 10000;
+      const interval = statusRef.current === "connecting" ? 5000 : 10000;
       pollRef.current = setTimeout(async () => {
-        await refresh(true);
+        await refresh(false);
         if (!cancelled) schedule();
       }, interval);
     };

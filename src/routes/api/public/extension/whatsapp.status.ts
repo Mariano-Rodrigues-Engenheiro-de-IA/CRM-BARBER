@@ -58,7 +58,13 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/status")({
         const metaNeedsManualCredentials = providerName === "meta" && (!inst.phone_number_id || !inst.meta_access_token);
 
         // Força sync quando o cliente pede (`?sync=1`) ou quando o cache local não é `connected`.
-        const staleMs = inst.status === "connected" ? 15000 : 0;
+        // Sem um mínimo aqui, toda vez que o status não é "connected" a
+        // gente bate na Graph API a cada poll do cliente (a cada 2.5s
+        // enquanto "connecting") — isso já disparou rate limit da própria
+        // Meta (#80008, "too many calls to this WhatsApp Business
+        // account"). Um intervalo mínimo de verdade, mesmo fora do
+        // "connected", evita martelar a conta.
+        const staleMs = inst.status === "connected" ? 15000 : 8000;
         const lastSync = inst.last_synced_at ? new Date(inst.last_synced_at).getTime() : 0;
         const ageMs = Date.now() - lastSync;
         // Instância COMPARTILHADA com a IA: um "disconnected" aqui é uma
