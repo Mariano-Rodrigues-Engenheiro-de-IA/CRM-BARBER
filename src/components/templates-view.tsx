@@ -882,52 +882,54 @@ function TemplatePreview({
     <div className="lg:sticky lg:top-4">
       <p className="mb-2 text-sm font-semibold text-neutral-900">Prévia do modelo</p>
 
-      {/* Card simples, sem moldura de celular — a imagem aparece por
-         inteiro (não cortada), exatamente como vai chegar de verdade pro
-         cliente. Mesmo estilo usado na tela de criação de modelo da Meta. */}
-      <div className="mx-auto w-[300px] overflow-hidden rounded-xl bg-white shadow-md">
-        {(templateType === "image" || templateType === "video" || templateType === "document") && (
-          <MediaBox file={mediaFile} kind={templateType} />
-        )}
-        <div className="px-3 pb-2 pt-2.5">
-          <p className="whitespace-pre-wrap text-[13.5px] leading-snug text-neutral-800">{renderBody(bodyText)}</p>
-          {footerText && <p className="mt-1.5 text-[12px] text-neutral-400">{footerText}</p>}
-          <p className="mt-1 text-right text-[10.5px] text-neutral-400">
-            {new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-          </p>
+      {/* Fundo do WhatsApp por trás do card — sem moldura de celular (isso
+         ficou artificial), só o "papel de parede" do chat mesmo, igual a
+         própria Meta mostra na tela de criação de modelo dela. */}
+      <div className="rounded-xl bg-[#e5ddd5] p-4">
+        <div className="mx-auto w-[280px] overflow-hidden rounded-lg bg-white shadow-md">
+          {(templateType === "image" || templateType === "video" || templateType === "document") && (
+            <MediaBox file={mediaFile} kind={templateType} />
+          )}
+          <div className="px-3 pb-2 pt-2.5">
+            <p className="whitespace-pre-wrap text-[13.5px] leading-snug text-neutral-800">{renderBody(bodyText)}</p>
+            {footerText && <p className="mt-1.5 text-[12px] text-neutral-400">{footerText}</p>}
+            <p className="mt-1 text-right text-[10.5px] text-neutral-400">
+              {new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+            </p>
+          </div>
+          {templateType !== "carousel" && buttons.length > 0 && (
+            <div className="border-t border-neutral-100">
+              {buttons.map((b, i) => (
+                <div key={i} className="flex items-center justify-center gap-1.5 border-t border-neutral-100 py-2 text-[13px] text-blue-600 first:border-t-0">
+                  <ButtonIcon type={b.type} />
+                  {b.text || "Botão"}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        {templateType !== "carousel" && buttons.length > 0 && (
-          <div className="border-t border-neutral-100">
-            {buttons.map((b, i) => (
-              <div key={i} className="flex items-center justify-center gap-1.5 border-t border-neutral-100 py-2 text-[13px] text-blue-600 first:border-t-0">
-                <ButtonIcon type={b.type} />
-                {b.text || "Botão"}
+
+        {templateType === "carousel" && (
+          <div className="mx-auto mt-2 flex w-[280px] gap-2 overflow-x-auto pb-1">
+            {carouselCards.map((card, i) => (
+              <div key={i} className="w-32 shrink-0 overflow-hidden rounded-lg bg-white shadow-sm">
+                <MediaBox file={card.file} kind="image" />
+                {card.bodyText && <p className="px-2 py-1.5 text-[11px] text-neutral-800">{card.bodyText}</p>}
+                {carouselButtons.length > 0 && (
+                  <div className="border-t border-neutral-100">
+                    {carouselButtons.map((b, bi) => (
+                      <div key={bi} className="flex items-center justify-center gap-1 border-t border-neutral-100 py-1.5 text-[11px] text-blue-600 first:border-t-0">
+                        <ButtonIcon type={b.type} />
+                        {b.text || "Botão"}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         )}
       </div>
-
-      {templateType === "carousel" && (
-        <div className="mx-auto mt-2 flex w-[300px] gap-2 overflow-x-auto pb-1">
-          {carouselCards.map((card, i) => (
-            <div key={i} className="w-32 shrink-0 overflow-hidden rounded-lg bg-white shadow-sm">
-              <MediaBox file={card.file} kind="image" />
-              {card.bodyText && <p className="px-2 py-1.5 text-[11px] text-neutral-800">{card.bodyText}</p>}
-              {carouselButtons.length > 0 && (
-                <div className="border-t border-neutral-100">
-                  {carouselButtons.map((b, bi) => (
-                    <div key={bi} className="flex items-center justify-center gap-1 border-t border-neutral-100 py-1.5 text-[11px] text-blue-600 first:border-t-0">
-                      <ButtonIcon type={b.type} />
-                      {b.text || "Botão"}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
