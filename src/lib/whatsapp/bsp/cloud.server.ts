@@ -414,13 +414,25 @@ export const cloudAdapter: BspAdapter = {
     }
   },
 
-  async createTemplate({ access_token, waba_id, name, category, language_code, body_text, header }) {
+  async createTemplate({ access_token, waba_id, name, category, language_code, body_text, body_examples, header }) {
     try {
+      // Variáveis nomeadas ({{nome}}, {{data}}...) — bem mais claro que
+      // {{1}}, {{2}} pra quem cria e edita os modelos depois.
+      const varNames = Array.from(new Set(Array.from(body_text.matchAll(/\{\{([a-z0-9_]+)\}\}/g)).map((m) => m[1])));
+      const hasVars = varNames.length > 0;
+
       const components: Json[] = [];
       if (header) {
         components.push({ type: "HEADER", format: header.format, example: { header_handle: [header.handle] } });
       }
-      components.push({ type: "BODY", text: body_text });
+      const bodyComponent: Json = { type: "BODY", text: body_text };
+      if (hasVars) {
+        bodyComponent.example = {
+          body_text_named_params: varNames.map((n) => ({ param_name: n, example: body_examples?.[n]?.trim() || n })),
+        };
+      }
+      components.push(bodyComponent);
+
       const res = await fetch(graphUrl(`${waba_id}/message_templates`), {
         method: "POST",
         headers: {
@@ -431,6 +443,7 @@ export const cloudAdapter: BspAdapter = {
           name,
           category,
           language: language_code,
+          parameter_format: hasVars ? "named" : undefined,
           components,
         }),
       });

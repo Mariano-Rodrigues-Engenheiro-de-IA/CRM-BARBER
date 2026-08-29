@@ -49,8 +49,13 @@ export function TemplatesView({ api }: { api: ApiFn }) {
   const [category, setCategory] = useState<"MARKETING" | "UTILITY" | "AUTHENTICATION">("UTILITY");
   const [languageCode, setLanguageCode] = useState("pt_BR");
   const [bodyText, setBodyText] = useState("");
+  const [bodyExamples, setBodyExamples] = useState<Record<string, string>>({});
   const [headerFormat, setHeaderFormat] = useState<"" | "IMAGE" | "VIDEO" | "DOCUMENT">("");
   const [headerFile, setHeaderFile] = useState<{ dataUrl: string; mime: string; filename: string } | null>(null);
+
+  // Detecta {{nome}}, {{data}}... conforme a pessoa digita — cada uma
+  // precisa de um valor de exemplo (a Meta exige isso pra aprovar).
+  const varNames = Array.from(new Set(Array.from(bodyText.matchAll(/\{\{([a-z0-9_]+)\}\}/g)).map((m) => m[1])));
 
   async function onPickHeaderFile(file: File) {
     const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -68,6 +73,10 @@ export function TemplatesView({ api }: { api: ApiFn }) {
       setErr("Escolha um arquivo para o cabeçalho, ou volte o tipo de cabeçalho pra \"Nenhum\".");
       return;
     }
+    if (varNames.some((v) => !bodyExamples[v]?.trim())) {
+      setErr("Preencha um valor de exemplo para cada variável — a Meta exige isso pra analisar o modelo.");
+      return;
+    }
     setSaving(true);
     setErr(null);
     const res = await api("/api/public/extension/whatsapp/templates", {
@@ -77,6 +86,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
         category,
         language_code: languageCode,
         body_text: bodyText.trim(),
+        ...(varNames.length ? { body_examples: bodyExamples } : {}),
         ...(headerFormat && headerFile
           ? {
               header_format: headerFormat,
@@ -94,6 +104,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
     }
     setName("");
     setBodyText("");
+    setBodyExamples({});
     setHeaderFormat("");
     setHeaderFile(null);
     setShowNew(false);
@@ -189,19 +200,46 @@ export function TemplatesView({ api }: { api: ApiFn }) {
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-neutral-700">
-              Texto do modelo (use {"{{1}}"}, {"{{2}}"}... pra variáveis)
+              Texto do modelo (use {"{{nome}}"}, {"{{data}}"}... pra variáveis — minúsculas, sem espaço/acento)
             </label>
             <textarea
               className={inputCls}
               rows={4}
               value={bodyText}
               onChange={(e) => setBodyText(e.target.value)}
-              placeholder="Olá {{1}}, seu horário está confirmado para {{2}}."
+              placeholder="Olá {{nome}}, seu horário está confirmado para {{data}} às {{hora}}."
             />
           </div>
+          {varNames.length > 0 && (
+            <div className="space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+              <p className="text-xs font-medium text-neutral-700">
+                Valor de exemplo pra cada variável (a Meta exige isso pra analisar o modelo — não é o que será
+                enviado de verdade, só um exemplo)
+              </p>
+              {varNames.map((v) => (
+                <div key={v} className="flex items-center gap-2">
+                  <span className="w-32 shrink-0 truncate rounded bg-neutral-200 px-2 py-1 text-center text-[11px] font-mono text-neutral-700">
+                    {`{{${v}}}`}
+                  </span>
+                  <input
+                    className={inputCls}
+                    value={bodyExamples[v] ?? ""}
+                    onChange={(e) => setBodyExamples((prev) => ({ ...prev, [v]: e.target.value }))}
+                    placeholder={v === "nome" ? "Maria" : v.includes("data") ? "15/03" : v.includes("hora") ? "14:30" : "exemplo"}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
           <button
             onClick={() => void createTemplate()}
-            disabled={saving || !name.trim() || !bodyText.trim() || (!!headerFormat && !headerFile)}
+            disabled={
+              saving ||
+              !name.trim() ||
+              !bodyText.trim() ||
+              (!!headerFormat && !headerFile) ||
+              varNames.some((v) => !bodyExamples[v]?.trim())
+            }
             className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
             {saving ? "Enviando pra análise…" : "Enviar pra aprovação"}

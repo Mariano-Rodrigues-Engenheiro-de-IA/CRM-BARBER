@@ -141,6 +141,7 @@ export interface WhatsAppProvider {
     category: "MARKETING" | "UTILITY" | "AUTHENTICATION";
     language_code: string;
     body_text: string;
+    body_examples?: Record<string, string>;
     header?: { format: "IMAGE" | "VIDEO" | "DOCUMENT"; handle: string } | null;
   }): Promise<{ ok: true; id: string } | { ok: false; error: string }>;
 

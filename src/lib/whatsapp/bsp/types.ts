@@ -96,6 +96,9 @@ export interface BspAdapter {
     category: "MARKETING" | "UTILITY" | "AUTHENTICATION";
     language_code: string;
     body_text: string;
+    // Variáveis nomeadas ({{nome}}, {{data}}...) — a Meta exige um valor
+    // de exemplo pra cada uma, senão a criação do modelo falha.
+    body_examples?: Record<string, string>;
     // Cabeçalho de mídia opcional — "handle" vem de uploadTemplateMedia.
     header?: { format: "IMAGE" | "VIDEO" | "DOCUMENT"; handle: string } | null;
   }): Promise<{ ok: true; id: string } | { ok: false; error: string }>;

@@ -80,6 +80,12 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/templates")
         const category = typeof body?.category === "string" ? body.category.trim() : "";
         const languageCode = typeof body?.language_code === "string" ? body.language_code.trim() : "";
         const bodyText = typeof body?.body_text === "string" ? body.body_text.trim() : "";
+        const bodyExamples =
+          body?.body_examples && typeof body.body_examples === "object" && !Array.isArray(body.body_examples)
+            ? (Object.fromEntries(
+                Object.entries(body.body_examples as Record<string, unknown>).map(([k, v]) => [k, String(v ?? "")]),
+              ) as Record<string, string>)
+            : undefined;
         // Cabeçalho de mídia opcional — o cliente já manda o arquivo como
         // data URL (base64) pronto, igual ao padrão já usado em outros
         // uploads do sistema (respostas rápidas, anotações etc.).
@@ -112,6 +118,30 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/templates")
           return jsonResponse(
             request,
             { ok: false, error: "Nome do modelo só pode ter letras minúsculas, números e _ (sem espaços/acentos)." },
+            { status: 400 },
+          );
+        }
+        // Mesma regra da Meta pra variáveis nomeadas ({{nome}}, {{data}}):
+        // minúsculas e _ só, sem espaço/acento — senão a criação falha lá
+        // na hora, sem essa validação prévia mais clara.
+        let invalidVar: string | null = null;
+        {
+          const re = /\{\{([^}]+)\}\}/g;
+          let m: RegExpExecArray | null;
+          while ((m = re.exec(bodyText))) {
+            if (!/^[a-z0-9_]+$/.test(m[1])) {
+              invalidVar = m[1];
+              break;
+            }
+          }
+        }
+        if (invalidVar) {
+          return jsonResponse(
+            request,
+            {
+              ok: false,
+              error: `Variável "{{${invalidVar}}}" inválida — use só letras minúsculas, números e _ (ex: {{nome}}, {{data_agendamento}}).`,
+            },
             { status: 400 },
           );
         }
@@ -157,6 +187,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/templates")
           category: category as "MARKETING" | "UTILITY" | "AUTHENTICATION",
           language_code: languageCode,
           body_text: bodyText,
+          body_examples: bodyExamples,
           header,
         });
         if (!result.ok) {
