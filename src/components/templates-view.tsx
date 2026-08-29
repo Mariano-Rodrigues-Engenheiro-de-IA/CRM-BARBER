@@ -4,8 +4,16 @@
 
 import { useState } from "react";
 import { useCachedFetch } from "@/lib/api-cache";
+import { useConfirm } from "@/components/confirm-dialog";
 
 type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
+
+type TemplateComponent = {
+  type: string;
+  format?: string;
+  text?: string;
+  buttons?: Array<{ type: string; text: string; url?: string; phone_number?: string }>;
+};
 
 type Template = {
   id: string;
@@ -14,7 +22,45 @@ type Template = {
   category: string;
   language: string;
   rejected_reason?: string | null;
+  last_updated_time?: string | null;
+  components?: TemplateComponent[];
 };
+
+const LANGUAGE_LABEL: Record<string, string> = {
+  pt_BR: "Português (Brasil)",
+  en_US: "Inglês (EUA)",
+};
+
+/** Decodifica os componentes crus da Meta de volta pros campos do
+ * formulário, pra edição — reconstrói tudo, exceto a mídia em si (o
+ * cabeçalho fica mantido a menos que a pessoa escolha um arquivo novo). */
+function decomposeTemplate(t: Template) {
+  const comps = t.components ?? [];
+  const header = comps.find((c) => c.type?.toUpperCase() === "HEADER");
+  const body = comps.find((c) => c.type?.toUpperCase() === "BODY");
+  const footer = comps.find((c) => c.type?.toUpperCase() === "FOOTER");
+  const buttonsComp = comps.find((c) => c.type?.toUpperCase() === "BUTTONS");
+  const hasCarousel = comps.some((c) => c.type?.toUpperCase() === "CAROUSEL");
+
+  const headerFormat = header?.format?.toUpperCase();
+  const templateType: "text" | "image" | "video" | "document" =
+    headerFormat === "IMAGE" ? "image" : headerFormat === "VIDEO" ? "video" : headerFormat === "DOCUMENT" ? "document" : "text";
+
+  const buttons = (buttonsComp?.buttons ?? []).map((b) => {
+    const type = b.type?.toUpperCase();
+    if (type === "URL") return { type: "URL" as const, text: b.text, url: b.url ?? "" };
+    if (type === "PHONE_NUMBER") return { type: "PHONE_NUMBER" as const, text: b.text, phone_number: b.phone_number ?? "" };
+    return { type: "QUICK_REPLY" as const, text: b.text };
+  });
+
+  return {
+    hasCarousel,
+    templateType,
+    bodyText: body?.text ?? "",
+    footerText: footer?.text ?? "",
+    buttons,
+  };
+}
 
 const inputCls =
   "w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-brand";
@@ -42,6 +88,7 @@ const CATEGORY_LABEL: Record<string, string> = {
 };
 
 export function TemplatesView({ api }: { api: ApiFn }) {
+  const { confirm, dialog: confirmDialog } = useConfirm();
   const { data: templates, loading, refetch } = useCachedFetch<Template[]>("templates", async () => {
     const res = await api("/api/public/extension/whatsapp/templates");
     if (!res.ok) throw new Error((res.error as string) || "Falha ao carregar modelos.");
@@ -49,6 +96,11 @@ export function TemplatesView({ api }: { api: ApiFn }) {
   });
   const [err, setErr] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
+  // null = criando um modelo novo; string = editando o modelo com esse id
+  // (o nome não pode mudar, e a Meta não permite editar carrossel por
+  // esse mesmo endpoint — só criar um novo).
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingName, setDeletingName] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const [name, setName] = useState("");
@@ -155,11 +207,42 @@ export function TemplatesView({ api }: { api: ApiFn }) {
       { file: null, bodyText: "" },
     ]);
     setCarouselButtons([]);
+    setEditingId(null);
+  }
+
+  function startEdit(t: Template) {
+    const d = decomposeTemplate(t);
+    if (d.hasCarousel) {
+      setErr("Carrossel não dá pra editar por aqui — cria um modelo novo e exclui o antigo, se quiser trocar.");
+      return;
+    }
+    resetForm();
+    setEditingId(t.id);
+    setName(t.name);
+    setCategory((t.category?.toUpperCase() as typeof category) || "UTILITY");
+    setLanguageCode(t.language);
+    setTemplateType(d.templateType);
+    setBodyText(d.bodyText);
+    setFooterText(d.footerText);
+    setButtons(d.buttons);
+    setShowNew(true);
+    setErr(null);
+  }
+
+  async function removeTemplate(name: string) {
+    setDeletingName(name);
+    const r = await api(`/api/public/extension/whatsapp/templates?name=${encodeURIComponent(name)}`, { method: "DELETE" });
+    setDeletingName(null);
+    if (!r.ok) {
+      setErr((r.error as string) || "Falha ao excluir modelo.");
+      return;
+    }
+    void refetch();
   }
 
   async function createTemplate() {
     if (!name.trim() || !bodyText.trim()) return;
-    if ((templateType === "image" || templateType === "video" || templateType === "document") && !mediaFile) {
+    if ((templateType === "image" || templateType === "video" || templateType === "document") && !mediaFile && !editingId) {
       setErr("Escolha um arquivo.");
       return;
     }
@@ -188,41 +271,41 @@ export function TemplatesView({ api }: { api: ApiFn }) {
     setSaving(true);
     setErr(null);
     const headerFormatByType: Record<string, string> = { image: "IMAGE", video: "VIDEO", document: "DOCUMENT" };
-    const res = await api("/api/public/extension/whatsapp/templates", {
-      method: "POST",
-      body: JSON.stringify({
-        name: name.trim(),
-        category,
-        language_code: languageCode,
-        body_text: bodyText.trim(),
-        ...(varNames.length ? { body_examples: bodyExamples } : {}),
-        ...(mediaFile && headerFormatByType[templateType]
-          ? {
-              header_format: headerFormatByType[templateType],
-              header_data_base64: mediaFile.dataUrl,
-              header_mime: mediaFile.mime,
-              header_filename: mediaFile.filename,
-            }
-          : {}),
-        ...(templateType !== "carousel" && footerText.trim() ? { footer_text: footerText.trim() } : {}),
-        ...(templateType !== "carousel" && buttons.length > 0 ? { buttons } : {}),
-        ...(templateType === "carousel"
-          ? {
-              carousel_cards: carouselCards.map((c) => ({
-                header_format: carouselFormat,
-                header_data_base64: c.file?.dataUrl,
-                header_mime: c.file?.mime,
-                header_filename: c.file?.filename,
-                body_text: c.bodyText.trim() || undefined,
-                buttons: carouselButtons.length > 0 ? carouselButtons : undefined,
-              })),
-            }
-          : {}),
-      }),
-    });
+    const payload = {
+      name: name.trim(),
+      category,
+      language_code: languageCode,
+      body_text: bodyText.trim(),
+      ...(varNames.length ? { body_examples: bodyExamples } : {}),
+      ...(mediaFile && headerFormatByType[templateType]
+        ? {
+            header_format: headerFormatByType[templateType],
+            header_data_base64: mediaFile.dataUrl,
+            header_mime: mediaFile.mime,
+            header_filename: mediaFile.filename,
+          }
+        : {}),
+      ...(templateType !== "carousel" && footerText.trim() ? { footer_text: footerText.trim() } : {}),
+      ...(templateType !== "carousel" && buttons.length > 0 ? { buttons } : {}),
+      ...(templateType === "carousel"
+        ? {
+            carousel_cards: carouselCards.map((c) => ({
+              header_format: carouselFormat,
+              header_data_base64: c.file?.dataUrl,
+              header_mime: c.file?.mime,
+              header_filename: c.file?.filename,
+              body_text: c.bodyText.trim() || undefined,
+              buttons: carouselButtons.length > 0 ? carouselButtons : undefined,
+            })),
+          }
+        : {}),
+    };
+    const res = editingId
+      ? await api(`/api/public/extension/whatsapp/templates/${editingId}`, { method: "PATCH", body: JSON.stringify(payload) })
+      : await api("/api/public/extension/whatsapp/templates", { method: "POST", body: JSON.stringify(payload) });
     setSaving(false);
     if (!res.ok) {
-      setErr((res.error as string) || "Falha ao criar modelo.");
+      setErr((res.error as string) || `Falha ao ${editingId ? "editar" : "criar"} modelo.`);
       return;
     }
     resetForm();
@@ -237,7 +320,10 @@ export function TemplatesView({ api }: { api: ApiFn }) {
           <h1 className="text-lg font-semibold text-neutral-900">Modelos de mensagem</h1>
         </div>
         <button
-          onClick={() => setShowNew((v) => !v)}
+          onClick={() => {
+            if (showNew) resetForm();
+            setShowNew((v) => !v);
+          }}
           className="rounded-lg bg-brand px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-white hover:bg-brand-strong"
         >
           {showNew ? "Cancelar" : "Novo modelo"}
@@ -249,16 +335,26 @@ export function TemplatesView({ api }: { api: ApiFn }) {
       )}
 
       {showNew && (
-        <div className="grid gap-5 lg:grid-cols-[1fr_1fr]">
+        <div className="grid gap-5 lg:grid-cols-[1fr_300px]">
         <div className="space-y-4 rounded-xl border border-neutral-300 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-neutral-900">{editingId ? "Editar modelo" : "Novo modelo"}</h2>
+            {editingId && (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                Editando — volta pra análise ao salvar
+              </span>
+            )}
+          </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-neutral-700">Nome</label>
             <input
-              className={inputCls}
+              className={inputCls + (editingId ? " cursor-not-allowed bg-neutral-100 text-neutral-500" : "")}
               value={name}
+              disabled={!!editingId}
               onChange={(e) => setName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"))}
               placeholder="lembrete_agendamento"
             />
+            {editingId && <p className="mt-1 text-[11px] text-neutral-400">O nome não pode ser alterado — crie um modelo novo se precisar de outro nome.</p>}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -340,7 +436,9 @@ export function TemplatesView({ api }: { api: ApiFn }) {
                     }}
                   />
                   <span className="shrink-0 rounded-lg border border-neutral-300 px-2 py-1">Escolher arquivo</span>
-                  <span className="truncate">{mediaFile ? mediaFile.filename : "Nenhum arquivo escolhido"}</span>
+                  <span className="truncate">
+                    {mediaFile ? mediaFile.filename : editingId ? "Cabeçalho atual mantido" : "Nenhum arquivo escolhido"}
+                  </span>
                 </label>
               </div>
               <div>
@@ -577,13 +675,13 @@ export function TemplatesView({ api }: { api: ApiFn }) {
               saving ||
               !name.trim() ||
               !bodyText.trim() ||
-              ((templateType === "image" || templateType === "video" || templateType === "document") && !mediaFile) ||
+              ((templateType === "image" || templateType === "video" || templateType === "document") && !mediaFile && !editingId) ||
               varNames.some((v) => !bodyExamples[v]?.trim()) ||
               (templateType === "carousel" && carouselCards.some((c) => !c.file))
             }
             className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {saving ? "Enviando pra análise…" : "Enviar pra aprovação"}
+            {saving ? (editingId ? "Salvando…" : "Enviando pra análise…") : editingId ? "Salvar edição" : "Enviar pra aprovação"}
           </button>
         </div>
 
@@ -602,32 +700,90 @@ export function TemplatesView({ api }: { api: ApiFn }) {
         </div>
       )}
 
-      <div className="rounded-xl border border-neutral-300 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-neutral-300 bg-white shadow-sm">
         {loading ? (
           <div className="p-6 text-center text-xs text-neutral-500">Carregando…</div>
         ) : !templates || templates.length === 0 ? (
           <div className="p-6 text-center text-xs text-neutral-500">Nenhum modelo criado ainda.</div>
         ) : (
-          <ul className="divide-y divide-neutral-100">
-            {templates.map((t) => (
-              <li key={t.id} className="flex items-center justify-between gap-3 px-5 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-neutral-900">{t.name}</p>
-                  <p className="text-[11px] text-neutral-500">
-                    {CATEGORY_LABEL[t.category] ?? t.category}
-                    {t.status === "REJECTED" && t.rejected_reason ? ` · ${t.rejected_reason}` : ""}
-                  </p>
-                </div>
-                <span
-                  className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLE[t.status] ?? "bg-neutral-200 text-neutral-700"}`}
-                >
-                  {STATUS_LABEL[t.status] ?? t.status}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-neutral-200 bg-neutral-50 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
+                  <th className="px-4 py-2.5">Nome do modelo</th>
+                  <th className="px-4 py-2.5">Categoria</th>
+                  <th className="px-4 py-2.5">Idioma</th>
+                  <th className="px-4 py-2.5">Status</th>
+                  <th className="px-4 py-2.5">Última edição</th>
+                  <th className="px-4 py-2.5 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100">
+                {templates.map((t) => {
+                  const d = decomposeTemplate(t);
+                  return (
+                    <tr key={t.id} className="align-top">
+                      <td className="max-w-[220px] px-4 py-3">
+                        <p className="truncate font-medium text-neutral-900">{t.name}</p>
+                        {d.bodyText && <p className="truncate text-xs text-neutral-400">{d.bodyText}</p>}
+                        {t.status === "REJECTED" && t.rejected_reason && (
+                          <p className="truncate text-xs text-red-600">{t.rejected_reason}</p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-neutral-700">{CATEGORY_LABEL[t.category?.toUpperCase()] ?? t.category}</td>
+                      <td className="px-4 py-3 text-neutral-700">{LANGUAGE_LABEL[t.language] ?? t.language}</td>
+                      <td className="px-4 py-3">
+                        <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLE[t.status] ?? "bg-neutral-200 text-neutral-700"}`}>
+                          {STATUS_LABEL[t.status] ?? t.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-neutral-500">
+                        {t.last_updated_time
+                          ? new Date(t.last_updated_time).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })
+                          : "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => startEdit(t)}
+                            title="Editar"
+                            className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-brand"
+                          >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M17 3a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={async () => {
+                              const ok = await confirm({
+                                title: `Excluir "${t.name}"?`,
+                                description: "Isso remove o modelo (e todos os idiomas dele) de vez — não dá pra desfazer.",
+                                confirmLabel: "Excluir",
+                                destructive: true,
+                              });
+                              if (ok) void removeTemplate(t.name);
+                            }}
+                            disabled={deletingName === t.name}
+                            title="Excluir"
+                            className="rounded-lg p-1.5 text-neutral-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+                          >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M3 6h18" />
+                              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
+      {confirmDialog}
     </div>
   );
 }
@@ -725,39 +881,29 @@ function TemplatePreview({
   }
 
   return (
-    <div className="rounded-xl border border-neutral-300 bg-[#e5ddd5] p-4">
-      <p className="mb-3 text-center text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Prévia</p>
+    <div className="lg:sticky lg:top-4">
+      <p className="mb-2 text-center text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Prévia</p>
 
-      <div className="overflow-hidden rounded-lg bg-white shadow-sm">
-        {(templateType === "image" || templateType === "video" || templateType === "document") && (
-          <MediaBox file={mediaFile} kind={templateType} />
-        )}
-        <div className="px-3 py-2">
-          <p className="whitespace-pre-wrap text-[13px] text-neutral-800">{renderBody(bodyText)}</p>
-          {footerText && <p className="mt-1.5 text-[11px] text-neutral-400">{footerText}</p>}
-        </div>
-        {templateType !== "carousel" && buttons.length > 0 && (
-          <div className="border-t border-neutral-100">
-            {buttons.map((b, i) => (
-              <div key={i} className="flex items-center justify-center gap-1.5 border-t border-neutral-100 py-2 text-[13px] text-blue-600 first:border-t-0">
-                <ButtonIcon type={b.type} />
-                {b.text || "Botão"}
+      {/* Moldura de celular — largura fixa e proporcional, igual à própria
+         Meta faz na tela dela de criar modelo, pra dar a noção real de
+         como vai ficar no bolso do cliente. */}
+      <div className="mx-auto w-[280px] rounded-[2.25rem] border-[10px] border-neutral-900 bg-neutral-900 shadow-xl">
+        <div className="relative h-[560px] overflow-hidden rounded-[1.6rem] bg-[#e5ddd5]">
+          {/* Notch */}
+          <div className="absolute left-1/2 top-0 z-10 h-5 w-24 -translate-x-1/2 rounded-b-xl bg-neutral-900" />
+          <div className="h-full overflow-y-auto px-3 pb-4 pt-8">
+            <div className="overflow-hidden rounded-lg bg-white shadow-sm">
+              {(templateType === "image" || templateType === "video" || templateType === "document") && (
+                <MediaBox file={mediaFile} kind={templateType} />
+              )}
+              <div className="px-3 py-2">
+                <p className="whitespace-pre-wrap text-[13px] text-neutral-800">{renderBody(bodyText)}</p>
+                {footerText && <p className="mt-1.5 text-[11px] text-neutral-400">{footerText}</p>}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {templateType === "carousel" && (
-        <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
-          {carouselCards.map((card, i) => (
-            <div key={i} className="w-40 shrink-0 overflow-hidden rounded-lg bg-white shadow-sm">
-              <MediaBox file={card.file} kind="image" heightCls="h-28" />
-              {card.bodyText && <p className="px-2 py-1.5 text-[11px] text-neutral-800">{card.bodyText}</p>}
-              {carouselButtons.length > 0 && (
+              {templateType !== "carousel" && buttons.length > 0 && (
                 <div className="border-t border-neutral-100">
-                  {carouselButtons.map((b, bi) => (
-                    <div key={bi} className="flex items-center justify-center gap-1 border-t border-neutral-100 py-1.5 text-[11px] text-blue-600 first:border-t-0">
+                  {buttons.map((b, i) => (
+                    <div key={i} className="flex items-center justify-center gap-1.5 border-t border-neutral-100 py-2 text-[13px] text-blue-600 first:border-t-0">
                       <ButtonIcon type={b.type} />
                       {b.text || "Botão"}
                     </div>
@@ -765,9 +911,30 @@ function TemplatePreview({
                 </div>
               )}
             </div>
-          ))}
+
+            {templateType === "carousel" && (
+              <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+                {carouselCards.map((card, i) => (
+                  <div key={i} className="w-32 shrink-0 overflow-hidden rounded-lg bg-white shadow-sm">
+                    <MediaBox file={card.file} kind="image" heightCls="h-24" />
+                    {card.bodyText && <p className="px-2 py-1.5 text-[11px] text-neutral-800">{card.bodyText}</p>}
+                    {carouselButtons.length > 0 && (
+                      <div className="border-t border-neutral-100">
+                        {carouselButtons.map((b, bi) => (
+                          <div key={bi} className="flex items-center justify-center gap-1 border-t border-neutral-100 py-1.5 text-[11px] text-blue-600 first:border-t-0">
+                            <ButtonIcon type={b.type} />
+                            {b.text || "Botão"}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

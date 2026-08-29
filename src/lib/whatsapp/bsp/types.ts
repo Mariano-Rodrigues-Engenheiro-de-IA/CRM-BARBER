@@ -17,6 +17,10 @@ export type TemplateSummary = {
   language: string;
   /** Motivo da rejeição, quando status === "REJECTED". */
   rejected_reason?: string | null;
+  last_updated_time?: string | null;
+  /** Componentes crus da Meta — usado só pra decompor e preencher o
+   * formulário de edição, não é exibido direto em lugar nenhum. */
+  components?: unknown[];
 };
 
 export interface BspAdapter {
@@ -121,6 +125,34 @@ export interface BspAdapter {
       }>;
     } | null;
   }): Promise<{ ok: true; id: string } | { ok: false; error: string }>;
+
+  /** Edita um modelo já existente — reenvia pra análise da Meta (volta pra
+   * "em análise" mesmo que já estivesse aprovado). Aceita os mesmos
+   * campos de createTemplate, exceto o nome (a Meta não permite renomear;
+   * pra mudar o nome, precisa criar um modelo novo e excluir o antigo). */
+  editTemplate?(input: {
+    access_token: string;
+    template_id: string;
+    category: "MARKETING" | "UTILITY" | "AUTHENTICATION";
+    body_text: string;
+    body_examples?: Record<string, string>;
+    header?: { format: "IMAGE" | "VIDEO" | "DOCUMENT"; handle: string } | null;
+    footer_text?: string | null;
+    buttons?: Array<
+      | { type: "QUICK_REPLY"; text: string }
+      | { type: "URL"; text: string; url: string }
+      | { type: "PHONE_NUMBER"; text: string; phone_number: string }
+    > | null;
+  }): Promise<{ ok: true } | { ok: false; error: string }>;
+
+  /** Exclui um modelo pelo nome — remove todos os idiomas dele de uma vez
+   * (é assim que a API da Meta funciona: exclusão é por nome, não por id
+   * de um idioma específico). */
+  deleteTemplate?(input: {
+    access_token: string;
+    waba_id: string;
+    name: string;
+  }): Promise<{ ok: true } | { ok: false; error: string }>;
 
   /**
    * Registra o número na Cloud API (obrigatório antes do 1º envio — erro

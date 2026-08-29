@@ -94,6 +94,94 @@ function businessFromScopes(debug: Json): string | null {
   return null;
 }
 
+/** Monta o array de "components" no formato que a Meta espera pra criar
+ * OU editar um modelo — extraído aqui pra não duplicar entre as duas
+ * operações (regras idênticas: minúsculas, ordem header→body→footer→
+ * buttons→carousel, variáveis nomeadas com exemplo obrigatório). */
+function buildTemplateComponents(input: {
+  body_text: string;
+  body_examples?: Record<string, string>;
+  header?: { format: "IMAGE" | "VIDEO" | "DOCUMENT"; handle: string } | null;
+  footer_text?: string | null;
+  buttons?: Array<
+    | { type: "QUICK_REPLY"; text: string }
+    | { type: "URL"; text: string; url: string }
+    | { type: "PHONE_NUMBER"; text: string; phone_number: string }
+  > | null;
+  carousel?: {
+    cards: Array<{
+      header: { format: "IMAGE" | "VIDEO"; handle: string };
+      body_text?: string;
+      buttons?: Array<{ type: "URL" | "QUICK_REPLY"; text: string; url?: string }>;
+    }>;
+  } | null;
+}): { components: Json[]; hasVars: boolean } {
+  const { body_text, body_examples, header, footer_text, buttons, carousel } = input;
+  const varNames = Array.from(new Set(Array.from(body_text.matchAll(/\{\{([a-z0-9_]+)\}\}/g)).map((m) => m[1])));
+  const hasVars = varNames.length > 0;
+
+  const components: Json[] = [];
+  if (header) {
+    components.push({ type: "header", format: header.format.toLowerCase(), example: { header_handle: [header.handle] } });
+  }
+  const bodyComponent: Json = { type: "body", text: body_text };
+  if (hasVars) {
+    bodyComponent.example = {
+      body_text_named_params: varNames.map((n) => ({ param_name: n, example: body_examples?.[n]?.trim() || n })),
+    };
+  }
+  components.push(bodyComponent);
+
+  if (footer_text?.trim()) {
+    components.push({ type: "footer", text: footer_text.trim() });
+  }
+
+  if (buttons && buttons.length > 0) {
+    components.push({
+      type: "buttons",
+      buttons: buttons.map((b) => {
+        if (b.type === "URL") return { type: "url", text: b.text, url: b.url };
+        if (b.type === "PHONE_NUMBER") return { type: "phone_number", text: b.text, phone_number: b.phone_number };
+        return { type: "quick_reply", text: b.text };
+      }),
+    });
+  }
+
+  if (carousel && carousel.cards.length > 0) {
+    components.push({
+      type: "carousel",
+      cards: carousel.cards.map((card) => {
+        const cardComponents: Json[] = [
+          { type: "header", format: card.header.format.toLowerCase(), example: { header_handle: [card.header.handle] } },
+        ];
+        if (card.body_text) cardComponents.push({ type: "body", text: card.body_text });
+        if (card.buttons && card.buttons.length > 0) {
+          cardComponents.push({
+            type: "buttons",
+            buttons: card.buttons.map((b) =>
+              b.type === "URL" ? { type: "url", text: b.text, url: b.url } : { type: "quick_reply", text: b.text },
+            ),
+          });
+        }
+        return { components: cardComponents };
+      }),
+    });
+  }
+
+  return { components, hasVars };
+}
+
+/** Lê a mensagem de erro mais específica que a Meta devolver, com o
+ * máximo de contexto disponível (título, mensagem pro usuário, código). */
+function metaErrorMessage(json: Json, status: number): string {
+  const errObj = (json.error as Json | undefined) ?? {};
+  const parts = [errObj.error_user_title, errObj.error_user_msg, errObj.message].filter(
+    (v): v is string => typeof v === "string" && v.length > 0,
+  );
+  if (parts.length) return parts.join(" — ");
+  return `HTTP ${status}${errObj.code ? ` (código ${errObj.code}${errObj.error_subcode ? `/${errObj.error_subcode}` : ""})` : ""}`;
+}
+
 export const cloudAdapter: BspAdapter = {
   name: "cloud",
 
@@ -346,7 +434,7 @@ export const cloudAdapter: BspAdapter = {
   async listTemplates({ access_token, waba_id }) {
     try {
       const url = new URL(graphUrl(`${waba_id}/message_templates`));
-      url.searchParams.set("fields", "id,name,status,category,language,rejected_reason");
+      url.searchParams.set("fields", "id,name,status,category,language,rejected_reason,last_updated_time,components");
       url.searchParams.set("limit", "100");
       const res = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${access_token}` },
@@ -364,6 +452,8 @@ export const cloudAdapter: BspAdapter = {
         category: str(t.category) ?? "",
         language: str(t.language) ?? "",
         rejected_reason: str(t.rejected_reason),
+        last_updated_time: str(t.last_updated_time),
+        components: Array.isArray(t.components) ? (t.components as unknown[]) : [],
       }));
       return { ok: true, templates };
     } catch (err) {
@@ -416,63 +506,7 @@ export const cloudAdapter: BspAdapter = {
 
   async createTemplate({ access_token, waba_id, name, category, language_code, body_text, body_examples, header, footer_text, buttons, carousel }) {
     try {
-      // Variáveis nomeadas ({{nome}}, {{data}}...) — bem mais claro que
-      // {{1}}, {{2}} pra quem cria e edita os modelos depois.
-      const varNames = Array.from(new Set(Array.from(body_text.matchAll(/\{\{([a-z0-9_]+)\}\}/g)).map((m) => m[1])));
-      const hasVars = varNames.length > 0;
-
-      // A documentação oficial da Meta usa minúsculas em todos os "type"
-      // do payload de criação (body, header, carousel, buttons, url,
-      // quick_reply) — maiúsculas passavam despercebido em modelos
-      // simples, mas a validação do carrossel é mais rígida e rejeitava
-      // com "Invalid parameter".
-      const components: Json[] = [];
-      if (header) {
-        components.push({ type: "header", format: header.format.toLowerCase(), example: { header_handle: [header.handle] } });
-      }
-      const bodyComponent: Json = { type: "body", text: body_text };
-      if (hasVars) {
-        bodyComponent.example = {
-          body_text_named_params: varNames.map((n) => ({ param_name: n, example: body_examples?.[n]?.trim() || n })),
-        };
-      }
-      components.push(bodyComponent);
-
-      if (footer_text?.trim()) {
-        components.push({ type: "footer", text: footer_text.trim() });
-      }
-
-      if (buttons && buttons.length > 0) {
-        components.push({
-          type: "buttons",
-          buttons: buttons.map((b) => {
-            if (b.type === "URL") return { type: "url", text: b.text, url: b.url };
-            if (b.type === "PHONE_NUMBER") return { type: "phone_number", text: b.text, phone_number: b.phone_number };
-            return { type: "quick_reply", text: b.text };
-          }),
-        });
-      }
-
-      if (carousel && carousel.cards.length > 0) {
-        components.push({
-          type: "carousel",
-          cards: carousel.cards.map((card) => {
-            const cardComponents: Json[] = [
-              { type: "header", format: card.header.format.toLowerCase(), example: { header_handle: [card.header.handle] } },
-            ];
-            if (card.body_text) cardComponents.push({ type: "body", text: card.body_text });
-            if (card.buttons && card.buttons.length > 0) {
-              cardComponents.push({
-                type: "buttons",
-                buttons: card.buttons.map((b) =>
-                  b.type === "URL" ? { type: "url", text: b.text, url: b.url } : { type: "quick_reply", text: b.text },
-                ),
-              });
-            }
-            return { components: cardComponents };
-          }),
-        });
-      }
+      const { components, hasVars } = buildTemplateComponents({ body_text, body_examples, header, footer_text, buttons, carousel });
 
       const res = await fetch(graphUrl(`${waba_id}/message_templates`), {
         method: "POST",
@@ -490,21 +524,62 @@ export const cloudAdapter: BspAdapter = {
       });
       const json = (await res.json().catch(() => ({}))) as Json;
       if (!res.ok) {
-        const errObj = (json.error as Json | undefined) ?? {};
-        const parts = [errObj.error_user_title, errObj.error_user_msg, errObj.message]
-          .filter((v): v is string => typeof v === "string" && v.length > 0);
         // Log completo (payload enviado + resposta da Meta) pro servidor —
         // "Invalid parameter" sozinho não diz QUAL parâmetro; com isso dá
         // pra investigar de verdade da próxima vez que acontecer.
         console.error("[createTemplate] Meta rejeitou:", JSON.stringify({ sent: components, response: json }).slice(0, 4000));
-        return {
-          ok: false,
-          error: parts.length ? parts.join(" — ") : `HTTP ${res.status}${errObj.code ? ` (código ${errObj.code}${errObj.error_subcode ? `/${errObj.error_subcode}` : ""})` : ""}`,
-        };
+        return { ok: false, error: metaErrorMessage(json, res.status) };
       }
       const id = str(json.id);
       if (!id) return { ok: false, error: "Meta não devolveu o ID do modelo criado." };
       return { ok: true, id };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  },
+
+  async editTemplate({ access_token, template_id, category, body_text, body_examples, header, footer_text, buttons }) {
+    try {
+      // A Meta não permite editar carrossel por esse endpoint — só
+      // Texto/Imagem/Vídeo/Documento. Pra mudar um carrossel, é criar de
+      // novo (e excluir o antigo, se quiser).
+      const { components, hasVars } = buildTemplateComponents({ body_text, body_examples, header, footer_text, buttons });
+      const res = await fetch(graphUrl(template_id), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${access_token}`,
+        },
+        body: JSON.stringify({
+          category: category.toLowerCase(),
+          parameter_format: hasVars ? "named" : undefined,
+          components,
+        }),
+      });
+      const json = (await res.json().catch(() => ({}))) as Json;
+      if (!res.ok) {
+        console.error("[editTemplate] Meta rejeitou:", JSON.stringify({ sent: components, response: json }).slice(0, 4000));
+        return { ok: false, error: metaErrorMessage(json, res.status) };
+      }
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  },
+
+  async deleteTemplate({ access_token, waba_id, name }) {
+    try {
+      const url = new URL(graphUrl(`${waba_id}/message_templates`));
+      url.searchParams.set("name", name);
+      const res = await fetch(url.toString(), {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${access_token}` },
+      });
+      const json = (await res.json().catch(() => ({}))) as Json;
+      if (!res.ok) {
+        return { ok: false, error: metaErrorMessage(json, res.status) };
+      }
+      return { ok: true };
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }

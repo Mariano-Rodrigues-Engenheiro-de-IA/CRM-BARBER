@@ -125,6 +125,31 @@ export const metaProvider: WhatsAppProvider = {
     });
   },
 
+  async editTemplate({ instance_token, template_id, category, body_text, body_examples, header, footer_text, buttons }) {
+    const bsp = getBspAdapter();
+    if (!bsp.editTemplate) {
+      return { ok: false, error: "Provider atual não suporta editar modelos." };
+    }
+    return bsp.editTemplate({
+      access_token: instance_token,
+      template_id,
+      category,
+      body_text,
+      body_examples,
+      header,
+      footer_text,
+      buttons,
+    });
+  },
+
+  async deleteTemplate({ instance_token, waba_id, name }) {
+    const bsp = getBspAdapter();
+    if (!bsp.deleteTemplate) {
+      return { ok: false, error: "Provider atual não suporta excluir modelos." };
+    }
+    return bsp.deleteTemplate({ access_token: instance_token, waba_id, name });
+  },
+
   async disconnect(): Promise<void> {
     // Na API oficial não existe "desconectar sessão": o número segue na WABA.
     // Paramos de disparar zerando o status local (feito pela rota) e o

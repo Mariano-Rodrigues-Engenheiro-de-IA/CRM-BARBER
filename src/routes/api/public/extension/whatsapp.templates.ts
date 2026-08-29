@@ -295,6 +295,36 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/templates")
         }
         return jsonResponse(request, { ok: true, id: result.id });
       },
+
+      // DELETE /api/public/extension/whatsapp/templates?name=X — a Meta
+      // exclui por nome (remove todos os idiomas desse modelo de uma vez),
+      // não por id de um idioma específico.
+      DELETE: async ({ request }) => {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const auth = await authenticateExtension(request, supabaseAdmin);
+        if (!auth.ok) {
+          return jsonResponse(request, { ok: false, error: auth.error }, { status: auth.status });
+        }
+        if (!isAdminBarbershop(auth.token.barbershop_id)) {
+          return jsonResponse(request, { ok: false, error: "Recurso ainda não disponível." }, { status: 403 });
+        }
+        const url = new URL(request.url);
+        const name = url.searchParams.get("name");
+        if (!name) return jsonResponse(request, { ok: false, error: "Falta o parâmetro name." }, { status: 400 });
+
+        const instance = await loadInstance(supabaseAdmin, auth.token.barbershop_id);
+        if (!instance || instance.provider !== "meta" || !instance.waba_id || !instance.meta_access_token) {
+          return jsonResponse(request, { ok: false, error: "Conecte o WhatsApp pela API oficial antes de gerenciar modelos." }, { status: 400 });
+        }
+        const { getWhatsAppProviderByName } = await import("@/lib/whatsapp/provider.server");
+        const provider = getWhatsAppProviderByName("meta");
+        if (!provider.deleteTemplate) {
+          return jsonResponse(request, { ok: false, error: "Provider atual não suporta excluir modelos." }, { status: 500 });
+        }
+        const result = await provider.deleteTemplate({ instance_token: instance.meta_access_token, waba_id: instance.waba_id, name });
+        if (!result.ok) return jsonResponse(request, { ok: false, error: result.error }, { status: 502 });
+        return jsonResponse(request, { ok: true });
+      },
     },
   },
 });

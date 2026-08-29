@@ -158,6 +158,24 @@ export interface WhatsAppProvider {
     } | null;
   }): Promise<{ ok: true; id: string } | { ok: false; error: string }>;
 
+  editTemplate?(input: {
+    instance_token: string;
+    template_id: string;
+    category: "MARKETING" | "UTILITY" | "AUTHENTICATION";
+    body_text: string;
+    body_examples?: Record<string, string>;
+    header?: { format: "IMAGE" | "VIDEO" | "DOCUMENT"; handle: string } | null;
+    footer_text?: string | null;
+    buttons?: Array<
+      | { type: "QUICK_REPLY"; text: string }
+      | { type: "URL"; text: string; url: string }
+      | { type: "PHONE_NUMBER"; text: string; phone_number: string }
+    > | null;
+  }): Promise<{ ok: true } | { ok: false; error: string }>;
+
+  deleteTemplate?(input: { instance_token: string; waba_id: string; name: string }): Promise<
+    { ok: true } | { ok: false; error: string }
+  >;
 
   /** Desconecta/hiberna a instância (preserva credenciais). */
   disconnect(input: {
