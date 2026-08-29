@@ -421,11 +421,16 @@ export const cloudAdapter: BspAdapter = {
       const varNames = Array.from(new Set(Array.from(body_text.matchAll(/\{\{([a-z0-9_]+)\}\}/g)).map((m) => m[1])));
       const hasVars = varNames.length > 0;
 
+      // A documentação oficial da Meta usa minúsculas em todos os "type"
+      // do payload de criação (body, header, carousel, buttons, url,
+      // quick_reply) — maiúsculas passavam despercebido em modelos
+      // simples, mas a validação do carrossel é mais rígida e rejeitava
+      // com "Invalid parameter".
       const components: Json[] = [];
       if (header) {
-        components.push({ type: "HEADER", format: header.format, example: { header_handle: [header.handle] } });
+        components.push({ type: "header", format: header.format.toLowerCase(), example: { header_handle: [header.handle] } });
       }
-      const bodyComponent: Json = { type: "BODY", text: body_text };
+      const bodyComponent: Json = { type: "body", text: body_text };
       if (hasVars) {
         bodyComponent.example = {
           body_text_named_params: varNames.map((n) => ({ param_name: n, example: body_examples?.[n]?.trim() || n })),
@@ -435,17 +440,17 @@ export const cloudAdapter: BspAdapter = {
 
       if (carousel && carousel.cards.length > 0) {
         components.push({
-          type: "CAROUSEL",
+          type: "carousel",
           cards: carousel.cards.map((card) => {
             const cardComponents: Json[] = [
-              { type: "HEADER", format: card.header.format, example: { header_handle: [card.header.handle] } },
+              { type: "header", format: card.header.format.toLowerCase(), example: { header_handle: [card.header.handle] } },
             ];
-            if (card.body_text) cardComponents.push({ type: "BODY", text: card.body_text });
+            if (card.body_text) cardComponents.push({ type: "body", text: card.body_text });
             if (card.buttons && card.buttons.length > 0) {
               cardComponents.push({
-                type: "BUTTONS",
+                type: "buttons",
                 buttons: card.buttons.map((b) =>
-                  b.type === "URL" ? { type: "URL", text: b.text, url: b.url } : { type: "QUICK_REPLY", text: b.text },
+                  b.type === "URL" ? { type: "url", text: b.text, url: b.url } : { type: "quick_reply", text: b.text },
                 ),
               });
             }
@@ -462,7 +467,7 @@ export const cloudAdapter: BspAdapter = {
         },
         body: JSON.stringify({
           name,
-          category,
+          category: category.toLowerCase(),
           language: language_code,
           parameter_format: hasVars ? "named" : undefined,
           components,

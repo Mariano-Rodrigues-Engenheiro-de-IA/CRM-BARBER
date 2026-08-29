@@ -119,6 +119,16 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/templates")
               return jsonResponse(request, { ok: false, error: "Todo cartão do carrossel precisa ter uma mídia de cabeçalho (imagem ou vídeo)." }, { status: 400 });
             }
           }
+          // Regra da Meta: se um cartão tem texto, todos precisam ter (pra
+          // manter a mesma altura visual entre os cartões).
+          const withText = carouselCardsRaw.filter((c) => typeof (c as Record<string, unknown>).body_text === "string" && (c as Record<string, unknown>).body_text);
+          if (withText.length > 0 && withText.length < carouselCardsRaw.length) {
+            return jsonResponse(
+              request,
+              { ok: false, error: "Se um cartão do carrossel tem texto, todos os outros também precisam ter (ou nenhum ter)." },
+              { status: 400 },
+            );
+          }
         }
 
         if (!name || !category || !languageCode || !bodyText) {
