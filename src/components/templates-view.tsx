@@ -35,6 +35,12 @@ const STATUS_LABEL: Record<string, string> = {
   DISABLED: "Desativado",
 };
 
+const CATEGORY_LABEL: Record<string, string> = {
+  MARKETING: "Marketing",
+  UTILITY: "Utilidade",
+  AUTHENTICATION: "Autenticação",
+};
+
 export function TemplatesView({ api }: { api: ApiFn }) {
   const { data: templates, loading, refetch } = useCachedFetch<Template[]>("templates", async () => {
     const res = await api("/api/public/extension/whatsapp/templates");
@@ -186,9 +192,6 @@ export function TemplatesView({ api }: { api: ApiFn }) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold text-neutral-900">Modelos de mensagem</h1>
-          <p className="mt-1 text-xs text-neutral-500">
-            Templates aprovados pela Meta, gerenciados direto por aqui, sem precisar entrar no site deles.
-          </p>
         </div>
         <button
           onClick={() => setShowNew((v) => !v)}
@@ -205,9 +208,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
       {showNew && (
         <div className="space-y-3 rounded-xl border border-neutral-300 bg-white p-5 shadow-sm">
           <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-700">
-              Nome (só letras minúsculas, números e _, sem espaço/acento)
-            </label>
+            <label className="mb-1 block text-xs font-medium text-neutral-700">Nome</label>
             <input
               className={inputCls}
               value={name}
@@ -262,15 +263,10 @@ export function TemplatesView({ api }: { api: ApiFn }) {
                 <span className="truncate">{headerFile ? headerFile.filename : "Nenhum arquivo escolhido"}</span>
               </label>
             )}
-            <p className="mt-1 text-[11px] text-neutral-400">
-              Aqui você só escolhe o tipo de mídia do cabeçalho. A Meta pede um arquivo de exemplo pra aprovar o modelo,
-              mas na hora de enviar de verdade pra cada cliente, você pode usar qualquer imagem, vídeo ou documento
-              daquele tipo.
-            </p>
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-neutral-700">
-              Texto do modelo (use {"{{nome}}"}, {"{{data}}"}... pra variáveis; minúsculas, sem espaço/acento)
+              {useCarousel ? "Texto (aparece acima do carrossel)" : "Texto do modelo"}
             </label>
             <textarea
               className={inputCls}
@@ -282,10 +278,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
           </div>
           {varNames.length > 0 && (
             <div className="space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
-              <p className="text-xs font-medium text-neutral-700">
-                Valor de exemplo pra cada variável (a Meta exige isso pra analisar o modelo; não é o que será
-                enviado de verdade, só um exemplo)
-              </p>
+              <p className="text-xs font-medium text-neutral-700">Valor de exemplo</p>
               {varNames.map((v) => (
                 <div key={v} className="flex items-center gap-2">
                   <span className="w-32 shrink-0 truncate rounded bg-neutral-200 px-2 py-1 text-center text-[11px] font-mono text-neutral-700">
@@ -306,8 +299,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
             <div className="space-y-3 rounded-lg border border-neutral-200 p-3">
               <label className="flex items-center gap-2 text-xs font-medium text-neutral-700">
                 <input type="checkbox" checked={useCarousel} onChange={(e) => setUseCarousel(e.target.checked)} />
-                Adicionar carrossel (cartões que o cliente arrasta pro lado; só disponível aqui, a Meta nem oferece
-                isso na tela dela)
+                Adicionar carrossel
               </label>
 
               {useCarousel && (
@@ -318,12 +310,11 @@ export function TemplatesView({ api }: { api: ApiFn }) {
                       <option value="IMAGE">Imagem</option>
                       <option value="VIDEO">Vídeo</option>
                     </select>
-                    <p className="mt-1 text-[11px] text-neutral-400">Todos os cartões precisam ter o mesmo tipo (regra da Meta).</p>
                   </div>
 
                   <div>
                     <label className="mb-1 block text-xs font-medium text-neutral-700">
-                      Botões dos cartões (opcional, até 2, iguais em todos os cartões)
+                      Botões dos cartões (opcional)
                     </label>
                     <div className="space-y-2">
                       {carouselButtons.map((b, i) => (
@@ -375,7 +366,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
 
                   <div className="space-y-3">
                     <label className="block text-xs font-medium text-neutral-700">
-                      Cartões ({carouselCards.length} de 10, mínimo 2)
+                      Cartões
                     </label>
                     {carouselCards.map((card, i) => (
                       <div key={i} className="space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
@@ -437,9 +428,6 @@ export function TemplatesView({ api }: { api: ApiFn }) {
           >
             {saving ? "Enviando pra análise…" : "Enviar pra aprovação"}
           </button>
-          <p className="text-[11px] text-neutral-500">
-            A Meta analisa o modelo antes de liberar. Geralmente leva minutos, podendo levar até ~24h.
-          </p>
         </div>
       )}
 
@@ -455,7 +443,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-neutral-900">{t.name}</p>
                   <p className="text-[11px] text-neutral-500">
-                    {t.category} · {t.language}
+                    {CATEGORY_LABEL[t.category] ?? t.category}
                     {t.status === "REJECTED" && t.rejected_reason ? ` · ${t.rejected_reason}` : ""}
                   </p>
                 </div>
