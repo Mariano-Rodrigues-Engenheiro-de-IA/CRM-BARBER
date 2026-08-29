@@ -205,7 +205,17 @@ export const cloudAdapter: BspAdapter = {
       { headers: { Authorization: `Bearer ${access_token}` } },
     );
     if (res.status === 401 || res.status === 403) return { status: "disconnected" };
-    if (!res.ok) return { status: "connecting" };
+    if (!res.ok) {
+      // Antes isso caía direto em "connecting" sem guardar o motivo —
+      // dava a impressão de conexão travada pra sempre sem nenhuma pista
+      // de por quê (ex: phone_number_id errado, permissão faltando).
+      const errJson = (await res.json().catch(() => ({}))) as Json;
+      const errMsg = (errJson.error as Json | undefined)?.message;
+      return {
+        status: "connecting",
+        error: typeof errMsg === "string" ? errMsg : `Meta Graph respondeu HTTP ${res.status} ao consultar o número.`,
+      };
+    }
     const json = (await res.json().catch(() => ({}))) as Json;
     const phone = str(json.display_phone_number);
     return {

@@ -93,12 +93,14 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/status")({
             status = s.status;
             phone = s.phone ?? phone;
             qrcode = s.qrcode ?? (s.status === "connected" ? null : qrcode);
+            inst.last_error = status === "connected" ? null : (s.error ?? null);
             await supabaseAdmin
               .from("whatsapp_instances")
               .update({
                 status,
                 phone,
                 last_qr: status === "connected" ? null : qrcode,
+                last_error: inst.last_error,
                 last_synced_at: new Date().toISOString(),
               })
               .eq("id", inst.id);

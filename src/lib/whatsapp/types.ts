@@ -46,6 +46,7 @@ export type StatusResult = {
   status: InstanceStatus;
   qrcode?: string | null;
   phone?: string | null;
+  error?: string | null;
 };
 
 /** Resultado da troca do `code` do Embedded Signup por credenciais. */

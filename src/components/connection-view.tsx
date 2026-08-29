@@ -458,8 +458,10 @@ export function ConnectionView({ api }: { api: Api }) {
           {!(status === "connected" && !showSwitcher) && <StatusPill status={status} />}
         </div>
 
-        {err && (
-          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">{err}</div>
+        {(err || (status === "connecting" && conn?.last_error)) && (
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+            {err || conn?.last_error}
+          </div>
         )}
 
         {/* CONECTADO: resumo único, sem as duas opções lado a lado */}
