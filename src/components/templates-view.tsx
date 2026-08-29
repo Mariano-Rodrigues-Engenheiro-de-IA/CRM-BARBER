@@ -330,27 +330,29 @@ export function TemplatesView({ api }: { api: ApiFn }) {
       )}
 
       {showNew && (
-        <button
-          onClick={() => {
-            resetForm();
-            setShowNew(false);
-          }}
-          className="flex items-center gap-1.5 text-sm font-medium text-neutral-600 hover:text-neutral-900"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m15 18-6-6 6-6" />
-          </svg>
-          Voltar pra lista de modelos
-        </button>
-      )}
-
-      {err && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">{err}</div>
-      )}
-
-      {showNew && (
+        // Grid começa logo aqui, sem nada acima — assim as duas colunas
+        // partem exatamente da mesma altura, e a prévia já nasce "no topo"
+        // em vez de começar mais abaixo e dar um salto ao rolar.
         <div className="grid items-start gap-5 md:grid-cols-[1fr_320px]">
-        <div className="space-y-4 rounded-xl border border-neutral-300 bg-white p-5 shadow-sm">
+        <div className="space-y-4">
+          <button
+            onClick={() => {
+              resetForm();
+              setShowNew(false);
+            }}
+            className="flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm font-semibold text-neutral-700 shadow-sm hover:bg-neutral-50"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m15 18-6-6 6-6" />
+            </svg>
+            Voltar pra lista de modelos
+          </button>
+
+          {err && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">{err}</div>
+          )}
+
+          <div className="space-y-4 rounded-xl border border-neutral-300 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-neutral-900">{editingId ? "Editar modelo" : "Novo modelo"}</h2>
             {editingId && (
@@ -696,6 +698,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
           >
             {saving ? (editingId ? "Salvando…" : "Enviando pra análise…") : editingId ? "Salvar edição" : "Enviar pra aprovação"}
           </button>
+        </div>
         </div>
 
         <div className="md:sticky md:top-4 md:self-start">

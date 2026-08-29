@@ -609,9 +609,13 @@ function Painel() {
       : "text-sidebar-foreground/70 hover:bg-brand/25 hover:text-white");
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
-      {/* Sidebar fixa */}
-      <aside className={"hidden md:flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-200 " + (sidebarCollapsed ? "w-[68px]" : "w-64")}>
+    <div className="flex h-screen overflow-hidden bg-background text-foreground">
+      {/* Sidebar fixa — h-full + overflow-y-auto próprio, pra nunca rolar
+         junto com o conteúdo principal (antes era só min-h-screen, sem
+         nenhum contêiner de rolagem independente, então a página inteira
+         rolava e a barra lateral "subia" junto, dando sensação de site
+         quebrado). */}
+      <aside className={"hidden md:flex h-full shrink-0 flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-200 " + (sidebarCollapsed ? "w-[68px]" : "w-64")}>
         <div className={"flex pt-5 pb-4 " + (sidebarCollapsed ? "flex-col items-center gap-2 px-2" : "items-center justify-between pl-6 pr-3")}>
           <div className={"relative flex h-9 shrink-0 items-center transition-[width] duration-200 " + (sidebarCollapsed ? "w-9 justify-center" : "w-36 justify-start")}>
             {/* Ambas as imagens ficam sempre montadas (já pré-carregadas) e alternam
@@ -775,7 +779,7 @@ function Painel() {
 
 
       {/* Content */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 h-full overflow-y-auto">
         {section === "agenda" && token && (
           <>
             <SectionHeader icon={<IconCalendar />} title="Agenda" />
