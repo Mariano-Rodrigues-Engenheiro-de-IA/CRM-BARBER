@@ -99,6 +99,7 @@ export function DispatchCenter({
   const [dispatchType, setDispatchType] = useState<DispatchType>("message");
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
   const [templatesLoaded, setTemplatesLoaded] = useState(false);
+  const [isMetaProvider, setIsMetaProvider] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [paceMin, setPaceMin] = useState(20);
   const [paceMax, setPaceMax] = useState(60);
@@ -108,11 +109,12 @@ export function DispatchCenter({
 
   useEffect(() => {
     void (async () => {
-      const [f, q, w, t] = await Promise.all([
+      const [f, q, w, t, st] = await Promise.all([
         api("/api/public/extension/funnels"),
         api("/api/public/extension/quick-replies"),
         api("/api/public/extension/wa/data"),
         api("/api/public/extension/whatsapp/templates"),
+        api("/api/public/extension/whatsapp/status"),
       ]);
       if (f?.ok) {
         const list = (f.funnels as Funnel[]) || [];
@@ -136,6 +138,7 @@ export function DispatchCenter({
           })),
         );
       }
+      if (st?.ok && st.connection) setIsMetaProvider((st.connection as { provider?: string }).provider === "meta");
       setTemplatesLoaded(true);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -454,26 +457,28 @@ export function DispatchCenter({
           >
             Mensagem personalizada
           </button>
-          <button
-            type="button"
-            onClick={() => setDispatchType("template")}
-            className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${
-              dispatchType === "template"
-                ? "border-brand bg-brand/10 text-brand"
-                : "border-neutral-300 bg-white text-neutral-600"
-            }`}
-          >
-            Modelo aprovado
-          </button>
+          {isMetaProvider && (
+            <button
+              type="button"
+              onClick={() => setDispatchType("template")}
+              className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${
+                dispatchType === "template"
+                  ? "border-brand bg-brand/10 text-brand"
+                  : "border-neutral-300 bg-white text-neutral-600"
+              }`}
+            >
+              Modelo aprovado
+            </button>
+          )}
         </div>
         <p className="mt-1 text-xs text-neutral-500">
-          {dispatchType === "template"
+          {dispatchType === "template" && isMetaProvider
             ? "Obrigatório para contatos que não te mandaram mensagem nas últimas 24h. A API oficial só permite modelo pré-aprovado nesse caso."
             : "Para contatos que já conversaram com você recentemente (últimas 24h)."}
         </p>
       </div>
 
-      {dispatchType === "template" ? (
+      {dispatchType === "template" && isMetaProvider ? (
         <div>
           <Label>Modelo</Label>
           {!templatesLoaded ? (

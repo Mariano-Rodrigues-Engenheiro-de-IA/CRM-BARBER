@@ -56,25 +56,49 @@ export function TemplatesView({ api }: { api: ApiFn }) {
   const [languageCode, setLanguageCode] = useState("pt_BR");
   const [bodyText, setBodyText] = useState("");
   const [bodyExamples, setBodyExamples] = useState<Record<string, string>>({});
-  const [headerFormat, setHeaderFormat] = useState<"" | "IMAGE" | "VIDEO" | "DOCUMENT">("");
-  const [headerFile, setHeaderFile] = useState<{ dataUrl: string; mime: string; filename: string } | null>(null);
 
+  // Tipo do modelo — escolha única e exclusiva. Cada tipo mostra só os
+  // campos dele; nada se mistura ou se reaproveita entre tipos.
+  type TemplateType = "text" | "image" | "video" | "document" | "carousel";
+  const [templateType, setTemplateType] = useState<TemplateType>("text");
+  const TYPE_OPTIONS: { key: TemplateType; label: string }[] = [
+    { key: "text", label: "Texto" },
+    { key: "image", label: "Imagem" },
+    { key: "video", label: "Vídeo" },
+    { key: "document", label: "Documento" },
+    { key: "carousel", label: "Carrossel" },
+  ];
+
+  // Imagem / Vídeo / Documento — um arquivo só, mesmo campo pros três.
+  const [mediaFile, setMediaFile] = useState<{ dataUrl: string; mime: string; filename: string } | null>(null);
+  async function onPickMediaFile(file: File) {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
+      reader.readAsDataURL(file);
+    });
+    setMediaFile({ dataUrl, mime: file.type, filename: file.name });
+  }
+  const mediaAccept =
+    templateType === "image" ? "image/jpeg,image/png" : templateType === "video" ? "video/mp4,video/3gpp" : "application/pdf";
+
+  // Carrossel — só existe dentro do próprio tipo "Carrossel", não é mais
+  // um complemento opcional de outro tipo.
   type CarouselButton = { type: "URL" | "QUICK_REPLY"; text: string; url?: string };
   type CarouselCard = {
     file: { dataUrl: string; mime: string; filename: string } | null;
     bodyText: string;
-    buttons: CarouselButton[];
   };
-  const [useCarousel, setUseCarousel] = useState(false);
   const [carouselFormat, setCarouselFormat] = useState<"IMAGE" | "VIDEO">("IMAGE");
   const [carouselCards, setCarouselCards] = useState<CarouselCard[]>([
-    { file: null, bodyText: "", buttons: [] },
-    { file: null, bodyText: "", buttons: [] },
+    { file: null, bodyText: "" },
+    { file: null, bodyText: "" },
   ]);
 
   function addCarouselCard() {
     if (carouselCards.length >= 10) return;
-    setCarouselCards((prev) => [...prev, { file: null, bodyText: "", buttons: [] }]);
+    setCarouselCards((prev) => [...prev, { file: null, bodyText: "" }]);
   }
   function removeCarouselCard(idx: number) {
     if (carouselCards.length <= 2) return;
@@ -101,27 +125,31 @@ export function TemplatesView({ api }: { api: ApiFn }) {
   // precisa de um valor de exemplo (a Meta exige isso pra aprovar).
   const varNames = Array.from(new Set(Array.from(bodyText.matchAll(/\{\{([a-z0-9_]+)\}\}/g)).map((m) => m[1])));
 
-  async function onPickHeaderFile(file: File) {
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ""));
-      reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
-      reader.readAsDataURL(file);
-    });
-    setHeaderFile({ dataUrl, mime: file.type, filename: file.name });
+  function resetForm() {
+    setName("");
+    setCategory("UTILITY");
+    setBodyText("");
+    setBodyExamples({});
+    setTemplateType("text");
+    setMediaFile(null);
+    setCarouselCards([
+      { file: null, bodyText: "" },
+      { file: null, bodyText: "" },
+    ]);
+    setCarouselButtons([]);
   }
 
   async function createTemplate() {
     if (!name.trim() || !bodyText.trim()) return;
-    if (headerFormat && !headerFile) {
-      setErr("Escolha um arquivo para o cabeçalho, ou volte o tipo de cabeçalho pra \"Nenhum\".");
+    if ((templateType === "image" || templateType === "video" || templateType === "document") && !mediaFile) {
+      setErr("Escolha um arquivo.");
       return;
     }
     if (varNames.some((v) => !bodyExamples[v]?.trim())) {
       setErr("Preencha um valor de exemplo para cada variável. A Meta exige isso pra analisar o modelo.");
       return;
     }
-    if (useCarousel) {
+    if (templateType === "carousel") {
       if (category !== "MARKETING") {
         setErr("Carrossel só é suportado em modelos da categoria Marketing.");
         return;
@@ -137,6 +165,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
     }
     setSaving(true);
     setErr(null);
+    const headerFormatByType: Record<string, string> = { image: "IMAGE", video: "VIDEO", document: "DOCUMENT" };
     const res = await api("/api/public/extension/whatsapp/templates", {
       method: "POST",
       body: JSON.stringify({
@@ -145,15 +174,15 @@ export function TemplatesView({ api }: { api: ApiFn }) {
         language_code: languageCode,
         body_text: bodyText.trim(),
         ...(varNames.length ? { body_examples: bodyExamples } : {}),
-        ...(headerFormat && headerFile
+        ...(mediaFile && headerFormatByType[templateType]
           ? {
-              header_format: headerFormat,
-              header_data_base64: headerFile.dataUrl,
-              header_mime: headerFile.mime,
-              header_filename: headerFile.filename,
+              header_format: headerFormatByType[templateType],
+              header_data_base64: mediaFile.dataUrl,
+              header_mime: mediaFile.mime,
+              header_filename: mediaFile.filename,
             }
           : {}),
-        ...(useCarousel
+        ...(templateType === "carousel"
           ? {
               carousel_cards: carouselCards.map((c) => ({
                 header_format: carouselFormat,
@@ -172,17 +201,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
       setErr((res.error as string) || "Falha ao criar modelo.");
       return;
     }
-    setName("");
-    setBodyText("");
-    setBodyExamples({});
-    setHeaderFormat("");
-    setHeaderFile(null);
-    setUseCarousel(false);
-    setCarouselCards([
-      { file: null, bodyText: "", buttons: [] },
-      { file: null, bodyText: "", buttons: [] },
-    ]);
-    setCarouselButtons([]);
+    resetForm();
     setShowNew(false);
     void refetch();
   }
@@ -206,7 +225,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
       )}
 
       {showNew && (
-        <div className="space-y-3 rounded-xl border border-neutral-300 bg-white p-5 shadow-sm">
+        <div className="space-y-4 rounded-xl border border-neutral-300 bg-white p-5 shadow-sm">
           <div>
             <label className="mb-1 block text-xs font-medium text-neutral-700">Nome</label>
             <input
@@ -219,7 +238,15 @@ export function TemplatesView({ api }: { api: ApiFn }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1 block text-xs font-medium text-neutral-700">Categoria</label>
-              <select className={inputCls} value={category} onChange={(e) => setCategory(e.target.value as typeof category)}>
+              <select
+                className={inputCls}
+                value={category}
+                onChange={(e) => {
+                  const next = e.target.value as typeof category;
+                  setCategory(next);
+                  if (next !== "MARKETING" && templateType === "carousel") setTemplateType("text");
+                }}
+              >
                 <option value="UTILITY">Utilidade (avisos, lembretes)</option>
                 <option value="MARKETING">Marketing (promoções)</option>
                 <option value="AUTHENTICATION">Autenticação (códigos)</option>
@@ -233,49 +260,196 @@ export function TemplatesView({ api }: { api: ApiFn }) {
               </select>
             </div>
           </div>
+
           <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-700">Cabeçalho (opcional)</label>
-            <select
-              className={inputCls}
-              value={headerFormat}
-              onChange={(e) => {
-                setHeaderFormat(e.target.value as typeof headerFormat);
-                setHeaderFile(null);
-              }}
-            >
-              <option value="">Nenhum (só texto)</option>
-              <option value="IMAGE">Imagem</option>
-              <option value="VIDEO">Vídeo</option>
-              <option value="DOCUMENT">Documento (PDF)</option>
-            </select>
-            {headerFormat && (
-              <label className="mt-2 flex items-center gap-2 rounded-xl border border-dashed border-neutral-300 px-3 py-2 text-xs font-medium text-neutral-600 hover:border-brand">
-                <input
-                  type="file"
-                  accept={headerFormat === "IMAGE" ? "image/jpeg,image/png" : headerFormat === "VIDEO" ? "video/mp4,video/3gpp" : "application/pdf"}
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) void onPickHeaderFile(f);
-                  }}
+            <label className="mb-1.5 block text-xs font-medium text-neutral-700">Tipo de modelo</label>
+            <div className="grid grid-cols-5 gap-1.5">
+              {TYPE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setTemplateType(opt.key)}
+                  disabled={opt.key === "carousel" && category !== "MARKETING"}
+                  className={
+                    "rounded-lg border px-2 py-2 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-40 " +
+                    (templateType === opt.key
+                      ? "border-brand bg-brand/10 text-brand"
+                      : "border-neutral-300 bg-white text-neutral-600 hover:border-brand/50")
+                  }
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* TEXTO — só o corpo da mensagem, sem nenhuma mídia. */}
+          {templateType === "text" && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-neutral-700">Texto</label>
+              <textarea
+                className={inputCls}
+                rows={4}
+                value={bodyText}
+                onChange={(e) => setBodyText(e.target.value)}
+                placeholder="Olá {{nome}}, seu horário está confirmado para {{data}} às {{hora}}."
+              />
+            </div>
+          )}
+
+          {/* IMAGEM / VÍDEO / DOCUMENTO — um arquivo + o corpo da mensagem. */}
+          {(templateType === "image" || templateType === "video" || templateType === "document") && (
+            <>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-neutral-700">
+                  Arquivo ({templateType === "image" ? "imagem" : templateType === "video" ? "vídeo" : "PDF"})
+                </label>
+                <label className="flex items-center gap-2 rounded-xl border border-dashed border-neutral-300 px-3 py-2 text-xs font-medium text-neutral-600 hover:border-brand">
+                  <input
+                    type="file"
+                    accept={mediaAccept}
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void onPickMediaFile(f);
+                    }}
+                  />
+                  <span className="shrink-0 rounded-lg border border-neutral-300 px-2 py-1">Escolher arquivo</span>
+                  <span className="truncate">{mediaFile ? mediaFile.filename : "Nenhum arquivo escolhido"}</span>
+                </label>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-neutral-700">Texto</label>
+                <textarea
+                  className={inputCls}
+                  rows={4}
+                  value={bodyText}
+                  onChange={(e) => setBodyText(e.target.value)}
+                  placeholder="Olá {{nome}}, seu horário está confirmado para {{data}} às {{hora}}."
                 />
-                <span className="shrink-0 rounded-lg border border-neutral-300 px-2 py-1">Escolher arquivo</span>
-                <span className="truncate">{headerFile ? headerFile.filename : "Nenhum arquivo escolhido"}</span>
-              </label>
-            )}
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-700">
-              {useCarousel ? "Texto (aparece acima do carrossel)" : "Texto do modelo"}
-            </label>
-            <textarea
-              className={inputCls}
-              rows={4}
-              value={bodyText}
-              onChange={(e) => setBodyText(e.target.value)}
-              placeholder="Olá {{nome}}, seu horário está confirmado para {{data}} às {{hora}}."
-            />
-          </div>
+              </div>
+            </>
+          )}
+
+          {/* CARROSSEL — texto de introdução + cartões, cada um com sua
+             própria mídia e texto. Nada se mistura com os outros tipos. */}
+          {templateType === "carousel" && (
+            <>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-neutral-700">Texto (aparece acima do carrossel)</label>
+                <textarea
+                  className={inputCls}
+                  rows={3}
+                  value={bodyText}
+                  onChange={(e) => setBodyText(e.target.value)}
+                  placeholder="Oferta especial só até {{data}}!"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-neutral-700">Tipo de mídia dos cartões</label>
+                <select className={inputCls} value={carouselFormat} onChange={(e) => setCarouselFormat(e.target.value as "IMAGE" | "VIDEO")}>
+                  <option value="IMAGE">Imagem</option>
+                  <option value="VIDEO">Vídeo</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-neutral-700">Botões dos cartões (opcional)</label>
+                <div className="space-y-2">
+                  {carouselButtons.map((b, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <select
+                        className="w-32 shrink-0 rounded-lg border border-neutral-300 bg-white px-2 py-2 text-xs"
+                        value={b.type}
+                        onChange={(e) =>
+                          setCarouselButtons((prev) => prev.map((x, xi) => (xi === i ? { ...x, type: e.target.value as "URL" | "QUICK_REPLY" } : x)))
+                        }
+                      >
+                        <option value="QUICK_REPLY">Resposta rápida</option>
+                        <option value="URL">Link (URL)</option>
+                      </select>
+                      <input
+                        className={inputCls}
+                        placeholder="Texto do botão"
+                        value={b.text}
+                        onChange={(e) => setCarouselButtons((prev) => prev.map((x, xi) => (xi === i ? { ...x, text: e.target.value } : x)))}
+                      />
+                      {b.type === "URL" && (
+                        <input
+                          className={inputCls}
+                          placeholder="https://..."
+                          value={b.url ?? ""}
+                          onChange={(e) => setCarouselButtons((prev) => prev.map((x, xi) => (xi === i ? { ...x, url: e.target.value } : x)))}
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setCarouselButtons((prev) => prev.filter((_, xi) => xi !== i))}
+                        className="shrink-0 rounded-lg border border-neutral-300 px-2 py-2 text-xs text-neutral-500 hover:bg-neutral-50"
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  ))}
+                  {carouselButtons.length < 2 && (
+                    <button
+                      type="button"
+                      onClick={addCarouselButton}
+                      className="rounded-lg border border-dashed border-neutral-300 px-3 py-1.5 text-xs text-neutral-600 hover:border-brand"
+                    >
+                      + Adicionar botão
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="block text-xs font-medium text-neutral-700">Cartões</label>
+                {carouselCards.map((card, i) => (
+                  <div key={i} className="space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-neutral-700">Cartão {i + 1}</p>
+                      {carouselCards.length > 2 && (
+                        <button type="button" onClick={() => removeCarouselCard(i)} className="text-[11px] text-red-600 hover:underline">
+                          Remover cartão
+                        </button>
+                      )}
+                    </div>
+                    <label className="flex items-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-white px-3 py-2 text-xs font-medium text-neutral-600 hover:border-brand">
+                      <input
+                        type="file"
+                        accept={carouselFormat === "IMAGE" ? "image/jpeg,image/png" : "video/mp4,video/3gpp"}
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) void onPickCarouselFile(i, f);
+                        }}
+                      />
+                      <span className="shrink-0 rounded-lg border border-neutral-300 px-2 py-1">Escolher arquivo</span>
+                      <span className="truncate">{card.file ? card.file.filename : "Nenhum arquivo escolhido"}</span>
+                    </label>
+                    <input
+                      className={inputCls}
+                      placeholder="Texto do cartão (opcional)"
+                      value={card.bodyText}
+                      onChange={(e) => setCarouselCards((prev) => prev.map((c2, ci) => (ci === i ? { ...c2, bodyText: e.target.value } : c2)))}
+                    />
+                  </div>
+                ))}
+                {carouselCards.length < 10 && (
+                  <button
+                    type="button"
+                    onClick={addCarouselCard}
+                    className="rounded-lg border border-dashed border-neutral-300 px-3 py-1.5 text-xs text-neutral-600 hover:border-brand"
+                  >
+                    + Adicionar cartão
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+
           {varNames.length > 0 && (
             <div className="space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
               <p className="text-xs font-medium text-neutral-700">Valor de exemplo</p>
@@ -295,141 +469,21 @@ export function TemplatesView({ api }: { api: ApiFn }) {
             </div>
           )}
 
-          {category === "MARKETING" && (
-            <div className="space-y-3 rounded-lg border border-neutral-200 p-3">
-              <label className="flex items-center gap-2 text-xs font-medium text-neutral-700">
-                <input type="checkbox" checked={useCarousel} onChange={(e) => setUseCarousel(e.target.checked)} />
-                Adicionar carrossel
-              </label>
-
-              {useCarousel && (
-                <div className="space-y-3">
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-neutral-700">Tipo de mídia dos cartões</label>
-                    <select className={inputCls} value={carouselFormat} onChange={(e) => setCarouselFormat(e.target.value as "IMAGE" | "VIDEO")}>
-                      <option value="IMAGE">Imagem</option>
-                      <option value="VIDEO">Vídeo</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-neutral-700">
-                      Botões dos cartões (opcional)
-                    </label>
-                    <div className="space-y-2">
-                      {carouselButtons.map((b, i) => (
-                        <div key={i} className="flex items-center gap-2">
-                          <select
-                            className="w-32 shrink-0 rounded-lg border border-neutral-300 bg-white px-2 py-2 text-xs"
-                            value={b.type}
-                            onChange={(e) =>
-                              setCarouselButtons((prev) => prev.map((x, xi) => (xi === i ? { ...x, type: e.target.value as "URL" | "QUICK_REPLY" } : x)))
-                            }
-                          >
-                            <option value="QUICK_REPLY">Resposta rápida</option>
-                            <option value="URL">Link (URL)</option>
-                          </select>
-                          <input
-                            className={inputCls}
-                            placeholder="Texto do botão"
-                            value={b.text}
-                            onChange={(e) => setCarouselButtons((prev) => prev.map((x, xi) => (xi === i ? { ...x, text: e.target.value } : x)))}
-                          />
-                          {b.type === "URL" && (
-                            <input
-                              className={inputCls}
-                              placeholder="https://..."
-                              value={b.url ?? ""}
-                              onChange={(e) => setCarouselButtons((prev) => prev.map((x, xi) => (xi === i ? { ...x, url: e.target.value } : x)))}
-                            />
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => setCarouselButtons((prev) => prev.filter((_, xi) => xi !== i))}
-                            className="shrink-0 rounded-lg border border-neutral-300 px-2 py-2 text-xs text-neutral-500 hover:bg-neutral-50"
-                          >
-                            Remover
-                          </button>
-                        </div>
-                      ))}
-                      {carouselButtons.length < 2 && (
-                        <button
-                          type="button"
-                          onClick={addCarouselButton}
-                          className="rounded-lg border border-dashed border-neutral-300 px-3 py-1.5 text-xs text-neutral-600 hover:border-brand"
-                        >
-                          + Adicionar botão
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="block text-xs font-medium text-neutral-700">
-                      Cartões
-                    </label>
-                    {carouselCards.map((card, i) => (
-                      <div key={i} className="space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-semibold text-neutral-700">Cartão {i + 1}</p>
-                          {carouselCards.length > 2 && (
-                            <button type="button" onClick={() => removeCarouselCard(i)} className="text-[11px] text-red-600 hover:underline">
-                              Remover cartão
-                            </button>
-                          )}
-                        </div>
-                        <label className="flex items-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-white px-3 py-2 text-xs font-medium text-neutral-600 hover:border-brand">
-                          <input
-                            type="file"
-                            accept={carouselFormat === "IMAGE" ? "image/jpeg,image/png" : "video/mp4,video/3gpp"}
-                            className="hidden"
-                            onChange={(e) => {
-                              const f = e.target.files?.[0];
-                              if (f) void onPickCarouselFile(i, f);
-                            }}
-                          />
-                          <span className="shrink-0 rounded-lg border border-neutral-300 px-2 py-1">Escolher arquivo</span>
-                          <span className="truncate">{card.file ? card.file.filename : "Nenhum arquivo escolhido"}</span>
-                        </label>
-                        <input
-                          className={inputCls}
-                          placeholder="Texto do cartão (opcional)"
-                          value={card.bodyText}
-                          onChange={(e) => setCarouselCards((prev) => prev.map((c2, ci) => (ci === i ? { ...c2, bodyText: e.target.value } : c2)))}
-                        />
-                      </div>
-                    ))}
-                    {carouselCards.length < 10 && (
-                      <button
-                        type="button"
-                        onClick={addCarouselCard}
-                        className="rounded-lg border border-dashed border-neutral-300 px-3 py-1.5 text-xs text-neutral-600 hover:border-brand"
-                      >
-                        + Adicionar cartão
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
           <button
             onClick={() => void createTemplate()}
             disabled={
               saving ||
               !name.trim() ||
               !bodyText.trim() ||
-              (!!headerFormat && !headerFile) ||
+              ((templateType === "image" || templateType === "video" || templateType === "document") && !mediaFile) ||
               varNames.some((v) => !bodyExamples[v]?.trim()) ||
-              (useCarousel && carouselCards.some((c) => !c.file))
+              (templateType === "carousel" && carouselCards.some((c) => !c.file))
             }
             className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
             {saving ? "Enviando pra análise…" : "Enviar pra aprovação"}
           </button>
-        </div>
-      )}
+        </div>      )}
 
       <div className="rounded-xl border border-neutral-300 bg-white shadow-sm">
         {loading ? (

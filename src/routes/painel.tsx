@@ -462,6 +462,7 @@ function Painel() {
   const [equipeHeaderEl, setEquipeHeaderEl] = useState<HTMLDivElement | null>(null);
   const [shop, setShop] = useState<{ id: string; name: string } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isMetaProvider, setIsMetaProvider] = useState(false);
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [brand, setBrand] = useState<Brand>({});
 
@@ -510,6 +511,9 @@ function Painel() {
         setBrand(readBrand(r.barbershop.id));
       }
       if (r?.ok) setIsAdmin(Boolean(r.is_admin));
+    });
+    api(token, "/api/public/extension/whatsapp/status").then((r) => {
+      if (r?.ok && r.connection) setIsMetaProvider((r.connection as { provider?: string }).provider === "meta");
     });
     api(token, "/api/public/extension/billing").then((r) => {
       if (r?.ok && r.billing) setBilling(r.billing as BillingStatus);
@@ -578,7 +582,7 @@ function Painel() {
       ],
     },
     { key: "equipe", label: "Ranking de vendas", icon: <IconRankingBars /> },
-    ...(isAdmin ? [{ key: "templates" as Section, label: "Modelos", icon: <IconNote /> }] : []),
+    ...(isAdmin && isMetaProvider ? [{ key: "templates" as Section, label: "Modelos", icon: <IconNote /> }] : []),
 
     { key: "conexao", label: "Conexão", icon: <IconPlug /> },
     { key: "agente-ia", label: "Agente de IA", icon: <IconRobot /> },
@@ -999,7 +1003,7 @@ function Painel() {
           </>
         )}
 
-        {section === "templates" && token && isAdmin && (
+        {section === "templates" && token && isAdmin && isMetaProvider && (
           <>
             <SectionHeader icon={<IconNote />} title="Modelos de mensagem" />
             <main className="max-w-3xl px-4 py-4">
