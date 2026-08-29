@@ -31,6 +31,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/disconnect"
             .update({
               status: "disconnected",
               last_qr: null,
+              last_error: null,
               last_synced_at: new Date().toISOString(),
             })
             .eq("id", inst.id);
