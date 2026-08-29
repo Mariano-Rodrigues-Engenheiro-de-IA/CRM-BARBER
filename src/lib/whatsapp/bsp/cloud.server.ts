@@ -371,8 +371,56 @@ export const cloudAdapter: BspAdapter = {
     }
   },
 
-  async createTemplate({ access_token, waba_id, name, category, language_code, body_text }) {
+  /** Upload de mídia pro cabeçalho de um modelo — a Meta exige uma sessão
+   * de upload resumível (dois passos) antes de conseguir referenciar a
+   * mídia num modelo. O handle devolvido aqui expira em ~24h, então o
+   * modelo precisa ser criado logo em seguida.
+   * https://developers.facebook.com/docs/graph-api/guides/upload */
+  async uploadTemplateMedia({ data_base64, mime, filename }) {
     try {
+      const appId = requireEnv("META_APP_ID");
+      const appSecret = requireEnv("META_APP_SECRET");
+      const bytes = Buffer.from(data_base64.split(",").pop() ?? data_base64, "base64");
+
+      const sessionUrl = new URL(graphUrl(`${appId}/uploads`));
+      sessionUrl.searchParams.set("file_name", filename);
+      sessionUrl.searchParams.set("file_length", String(bytes.length));
+      sessionUrl.searchParams.set("file_type", mime);
+      sessionUrl.searchParams.set("access_token", `${appId}|${appSecret}`);
+      const sessionRes = await fetch(sessionUrl.toString(), { method: "POST" });
+      const sessionJson = (await sessionRes.json().catch(() => ({}))) as Json;
+      if (!sessionRes.ok) {
+        const error = (sessionJson.error as Json | undefined)?.message;
+        return { ok: false, error: typeof error === "string" ? error : `Falha ao abrir sessão de upload (HTTP ${sessionRes.status}).` };
+      }
+      const sessionId = str(sessionJson.id);
+      if (!sessionId) return { ok: false, error: "Meta não devolveu a sessão de upload." };
+
+      const uploadRes = await fetch(graphUrl(sessionId), {
+        method: "POST",
+        headers: { Authorization: `OAuth ${appId}|${appSecret}`, "Content-Type": "application/octet-stream" },
+        body: bytes,
+      });
+      const uploadJson = (await uploadRes.json().catch(() => ({}))) as Json;
+      if (!uploadRes.ok) {
+        const error = (uploadJson.error as Json | undefined)?.message;
+        return { ok: false, error: typeof error === "string" ? error : `Falha ao enviar o arquivo (HTTP ${uploadRes.status}).` };
+      }
+      const handle = str(uploadJson.h);
+      if (!handle) return { ok: false, error: "Meta não devolveu o handle da mídia enviada." };
+      return { ok: true, handle };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  },
+
+  async createTemplate({ access_token, waba_id, name, category, language_code, body_text, header }) {
+    try {
+      const components: Json[] = [];
+      if (header) {
+        components.push({ type: "HEADER", format: header.format, example: { header_handle: [header.handle] } });
+      }
+      components.push({ type: "BODY", text: body_text });
       const res = await fetch(graphUrl(`${waba_id}/message_templates`), {
         method: "POST",
         headers: {
@@ -383,7 +431,7 @@ export const cloudAdapter: BspAdapter = {
           name,
           category,
           language: language_code,
-          components: [{ type: "BODY", text: body_text }],
+          components,
         }),
       });
       const json = (await res.json().catch(() => ({}))) as Json;

@@ -77,6 +77,16 @@ export interface BspAdapter {
     | { ok: false; error: string }
   >;
 
+  /** Upload de mídia pro cabeçalho de um modelo — a Meta exige isso em
+   * duas etapas (sessão de upload + envio dos bytes) antes de criar o
+   * modelo em si; o modelo referencia o "handle" devolvido aqui, nunca o
+   * arquivo direto. https://developers.facebook.com/docs/graph-api/guides/upload */
+  uploadTemplateMedia?(input: {
+    data_base64: string;
+    mime: string;
+    filename: string;
+  }): Promise<{ ok: true; handle: string } | { ok: false; error: string }>;
+
   /** Cria um novo modelo de mensagem — entra em análise da Meta (minutos
    * a ~24h) antes de poder ser usado em sendTemplate. */
   createTemplate?(input: {
@@ -86,6 +96,8 @@ export interface BspAdapter {
     category: "MARKETING" | "UTILITY" | "AUTHENTICATION";
     language_code: string;
     body_text: string;
+    // Cabeçalho de mídia opcional — "handle" vem de uploadTemplateMedia.
+    header?: { format: "IMAGE" | "VIDEO" | "DOCUMENT"; handle: string } | null;
   }): Promise<{ ok: true; id: string } | { ok: false; error: string }>;
 
   /**

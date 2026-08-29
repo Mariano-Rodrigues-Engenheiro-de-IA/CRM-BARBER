@@ -80,6 +80,13 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/templates")
         const category = typeof body?.category === "string" ? body.category.trim() : "";
         const languageCode = typeof body?.language_code === "string" ? body.language_code.trim() : "";
         const bodyText = typeof body?.body_text === "string" ? body.body_text.trim() : "";
+        // Cabeçalho de mídia opcional — o cliente já manda o arquivo como
+        // data URL (base64) pronto, igual ao padrão já usado em outros
+        // uploads do sistema (respostas rápidas, anotações etc.).
+        const headerFormat = typeof body?.header_format === "string" ? body.header_format : null;
+        const headerDataUrl = typeof body?.header_data_base64 === "string" ? body.header_data_base64 : null;
+        const headerFilename = typeof body?.header_filename === "string" ? body.header_filename : "arquivo";
+        const headerMime = typeof body?.header_mime === "string" ? body.header_mime : "";
 
         if (!name || !category || !languageCode || !bodyText) {
           return jsonResponse(
@@ -94,6 +101,9 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/templates")
             { ok: false, error: "category deve ser MARKETING, UTILITY ou AUTHENTICATION" },
             { status: 400 },
           );
+        }
+        if (headerFormat && !["IMAGE", "VIDEO", "DOCUMENT"].includes(headerFormat)) {
+          return jsonResponse(request, { ok: false, error: "header_format deve ser IMAGE, VIDEO ou DOCUMENT" }, { status: 400 });
         }
         // Nome de template só aceita minúsculas, números e underscore —
         // regra da própria Meta. Falha silenciosa vira erro confuso lá na
@@ -124,6 +134,22 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/templates")
           return jsonResponse(request, { ok: false, error: "Provider atual não suporta criar modelos." }, { status: 500 });
         }
 
+        let header: { format: "IMAGE" | "VIDEO" | "DOCUMENT"; handle: string } | undefined;
+        if (headerFormat && headerDataUrl) {
+          if (!provider.uploadTemplateMedia) {
+            return jsonResponse(request, { ok: false, error: "Provider atual não suporta enviar mídia de modelo." }, { status: 500 });
+          }
+          const uploadResult = await provider.uploadTemplateMedia({
+            data_base64: headerDataUrl,
+            mime: headerMime,
+            filename: headerFilename,
+          });
+          if (!uploadResult.ok) {
+            return jsonResponse(request, { ok: false, error: `Falha ao enviar a mídia do cabeçalho: ${uploadResult.error}` }, { status: 502 });
+          }
+          header = { format: headerFormat as "IMAGE" | "VIDEO" | "DOCUMENT", handle: uploadResult.handle };
+        }
+
         const result = await provider.createTemplate({
           instance_token: instance.meta_access_token,
           waba_id: instance.waba_id,
@@ -131,6 +157,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/templates")
           category: category as "MARKETING" | "UTILITY" | "AUTHENTICATION",
           language_code: languageCode,
           body_text: bodyText,
+          header,
         });
         if (!result.ok) {
           return jsonResponse(request, { ok: false, error: result.error }, { status: 502 });

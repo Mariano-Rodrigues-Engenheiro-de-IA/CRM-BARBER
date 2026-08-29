@@ -97,7 +97,15 @@ export const metaProvider: WhatsAppProvider = {
     return bsp.listTemplates({ access_token: instance_token, waba_id });
   },
 
-  async createTemplate({ instance_token, waba_id, name, category, language_code, body_text }) {
+  async uploadTemplateMedia({ data_base64, mime, filename }) {
+    const bsp = getBspAdapter();
+    if (!bsp.uploadTemplateMedia) {
+      return { ok: false, error: "Provider atual não suporta enviar mídia de modelo." };
+    }
+    return bsp.uploadTemplateMedia({ data_base64, mime, filename });
+  },
+
+  async createTemplate({ instance_token, waba_id, name, category, language_code, body_text, header }) {
     const bsp = getBspAdapter();
     if (!bsp.createTemplate) {
       return { ok: false, error: "Provider atual não suporta criar modelos." };
@@ -109,6 +117,7 @@ export const metaProvider: WhatsAppProvider = {
       category,
       language_code,
       body_text,
+      header,
     });
   },
 

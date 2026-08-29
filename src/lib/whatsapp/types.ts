@@ -126,6 +126,13 @@ export interface WhatsAppProvider {
     | { ok: false; error: string }
   >;
 
+  /** Upload de mídia pro cabeçalho de um modelo — só na API oficial. */
+  uploadTemplateMedia?(input: {
+    data_base64: string;
+    mime: string;
+    filename: string;
+  }): Promise<{ ok: true; handle: string } | { ok: false; error: string }>;
+
   /** Só na API oficial — cria um novo modelo de mensagem (entra em análise). */
   createTemplate?(input: {
     instance_token: string;
@@ -134,6 +141,7 @@ export interface WhatsAppProvider {
     category: "MARKETING" | "UTILITY" | "AUTHENTICATION";
     language_code: string;
     body_text: string;
+    header?: { format: "IMAGE" | "VIDEO" | "DOCUMENT"; handle: string } | null;
   }): Promise<{ ok: true; id: string } | { ok: false; error: string }>;
 
 

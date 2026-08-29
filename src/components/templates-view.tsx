@@ -49,14 +49,43 @@ export function TemplatesView({ api }: { api: ApiFn }) {
   const [category, setCategory] = useState<"MARKETING" | "UTILITY" | "AUTHENTICATION">("UTILITY");
   const [languageCode, setLanguageCode] = useState("pt_BR");
   const [bodyText, setBodyText] = useState("");
+  const [headerFormat, setHeaderFormat] = useState<"" | "IMAGE" | "VIDEO" | "DOCUMENT">("");
+  const [headerFile, setHeaderFile] = useState<{ dataUrl: string; mime: string; filename: string } | null>(null);
+
+  async function onPickHeaderFile(file: File) {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
+      reader.readAsDataURL(file);
+    });
+    setHeaderFile({ dataUrl, mime: file.type, filename: file.name });
+  }
 
   async function createTemplate() {
     if (!name.trim() || !bodyText.trim()) return;
+    if (headerFormat && !headerFile) {
+      setErr("Escolha um arquivo para o cabeçalho, ou volte o tipo de cabeçalho pra \"Nenhum\".");
+      return;
+    }
     setSaving(true);
     setErr(null);
     const res = await api("/api/public/extension/whatsapp/templates", {
       method: "POST",
-      body: JSON.stringify({ name: name.trim(), category, language_code: languageCode, body_text: bodyText.trim() }),
+      body: JSON.stringify({
+        name: name.trim(),
+        category,
+        language_code: languageCode,
+        body_text: bodyText.trim(),
+        ...(headerFormat && headerFile
+          ? {
+              header_format: headerFormat,
+              header_data_base64: headerFile.dataUrl,
+              header_mime: headerFile.mime,
+              header_filename: headerFile.filename,
+            }
+          : {}),
+      }),
     });
     setSaving(false);
     if (!res.ok) {
@@ -65,6 +94,8 @@ export function TemplatesView({ api }: { api: ApiFn }) {
     }
     setName("");
     setBodyText("");
+    setHeaderFormat("");
+    setHeaderFile(null);
     setShowNew(false);
     void refetch();
   }
@@ -121,6 +152,42 @@ export function TemplatesView({ api }: { api: ApiFn }) {
             </div>
           </div>
           <div>
+            <label className="mb-1 block text-xs font-medium text-neutral-700">Cabeçalho (opcional)</label>
+            <select
+              className={inputCls}
+              value={headerFormat}
+              onChange={(e) => {
+                setHeaderFormat(e.target.value as typeof headerFormat);
+                setHeaderFile(null);
+              }}
+            >
+              <option value="">Nenhum — só texto</option>
+              <option value="IMAGE">Imagem</option>
+              <option value="VIDEO">Vídeo</option>
+              <option value="DOCUMENT">Documento (PDF)</option>
+            </select>
+            {headerFormat && (
+              <label className="mt-2 flex items-center gap-2 rounded-xl border border-dashed border-neutral-300 px-3 py-2 text-xs font-medium text-neutral-600 hover:border-brand">
+                <input
+                  type="file"
+                  accept={headerFormat === "IMAGE" ? "image/jpeg,image/png" : headerFormat === "VIDEO" ? "video/mp4,video/3gpp" : "application/pdf"}
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void onPickHeaderFile(f);
+                  }}
+                />
+                <span className="shrink-0 rounded-lg border border-neutral-300 px-2 py-1">Escolher arquivo</span>
+                <span className="truncate">{headerFile ? headerFile.filename : "Nenhum arquivo escolhido"}</span>
+              </label>
+            )}
+            <p className="mt-1 text-[11px] text-neutral-400">
+              Aqui você só escolhe o TIPO de mídia do cabeçalho — a Meta pede um arquivo de exemplo pra aprovar o
+              modelo, mas na hora de enviar de verdade pra cada cliente, você poderá usar qualquer imagem/vídeo/documento
+              daquele tipo.
+            </p>
+          </div>
+          <div>
             <label className="mb-1 block text-xs font-medium text-neutral-700">
               Texto do modelo (use {"{{1}}"}, {"{{2}}"}... pra variáveis)
             </label>
@@ -134,7 +201,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
           </div>
           <button
             onClick={() => void createTemplate()}
-            disabled={saving || !name.trim() || !bodyText.trim()}
+            disabled={saving || !name.trim() || !bodyText.trim() || (!!headerFormat && !headerFile)}
             className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
             {saving ? "Enviando pra análise…" : "Enviar pra aprovação"}
