@@ -205,7 +205,7 @@ function OnlineBookingSection({
             <div>
               <Label>Não mostrar profissionais no link de agendamento</Label>
               <p className="text-xs text-neutral-400">
-                O cliente escolhe só o serviço, data e horário — o sistema escolhe automaticamente qual profissional atende.
+                O cliente escolhe só o serviço, data e horário. O sistema escolhe automaticamente qual profissional atende.
               </p>
             </div>
             <Switch

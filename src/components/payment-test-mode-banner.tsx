@@ -11,7 +11,7 @@ export function PaymentTestModeBanner() {
   if (clientToken.startsWith("pk_test_")) {
     return (
       <div className="w-full border-b border-amber-500/40 bg-amber-500/10 px-4 py-2 text-center text-sm text-amber-600">
-        Ambiente de teste — nenhum pagamento real é cobrado nesta pré-visualização.
+        Ambiente de teste. Nenhum pagamento real é cobrado nesta pré-visualização.
       </div>
     );
   }

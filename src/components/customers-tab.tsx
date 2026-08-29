@@ -587,7 +587,7 @@ function SpreadsheetImportWizard({ api }: { api: Api }) {
       {step === 1 && (
         <div className="rounded-lg border-2 border-dashed border-neutral-300 p-8 text-center">
           <p className="mb-3 text-sm text-neutral-500">
-            Envie um arquivo <strong>.xlsx</strong>, <strong>.xls</strong> ou <strong>.csv</strong> com seus clientes —
+            Envie um arquivo <strong>.xlsx</strong>, <strong>.xls</strong> ou <strong>.csv</strong> com seus clientes.
             pode exportar direto do Excel ou Google Planilhas.
           </p>
           <input

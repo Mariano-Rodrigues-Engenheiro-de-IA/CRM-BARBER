@@ -19,7 +19,7 @@ import { adminListLeads, adminUpdateLeadStatus } from "@/lib/admin-leads.functio
 export const Route = createFileRoute("/admin/")({
   head: () => ({
     meta: [
-      { title: "Admin — CRM Zaylo" },
+      { title: "Admin | CRM Zaylo" },
       { name: "robots", content: "noindex, nofollow" },
       { name: "description", content: "Painel administrativo unificado." },
     ],

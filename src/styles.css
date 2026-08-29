@@ -19,6 +19,11 @@
  */
 
 @theme inline {
+  /* Mesma fonte já usada na extensão do WhatsApp (Inter) — deixa os dois
+     ambientes com a mesma identidade visual em vez da fonte padrão do
+     sistema operacional. Carregada via Google Fonts em __root.tsx. */
+  --font-sans: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+
   /* Azul da marca Zaylo — atualizado para o mesmo matiz usado na
      identidade unificada com o painel Zaylo IA, mas numa versão mais
      escura/saturada: o tom "claro" usado como --primary/--accent abaixo
@@ -152,6 +157,7 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-sans);
   }
 }
 

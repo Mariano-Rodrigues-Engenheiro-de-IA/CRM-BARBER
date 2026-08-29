@@ -421,7 +421,7 @@ export function DispatchCenter({
           />
           {sheetName && sheetContacts.length > 0 && (
             <p className="mt-1 text-xs text-neutral-500">
-              {sheetName} — {sheetContacts.length} contato(s) prontos para disparo.
+              {sheetName}: {sheetContacts.length} contato(s) prontos para disparo.
             </p>
           )}
           {sheetErr && <p className="mt-1 text-xs text-red-500">{sheetErr}</p>}
@@ -468,7 +468,7 @@ export function DispatchCenter({
         </div>
         <p className="mt-1 text-xs text-neutral-500">
           {dispatchType === "template"
-            ? "Obrigatório para contatos que não te mandaram mensagem nas últimas 24h — a API oficial só permite modelo pré-aprovado nesse caso."
+            ? "Obrigatório para contatos que não te mandaram mensagem nas últimas 24h. A API oficial só permite modelo pré-aprovado nesse caso."
             : "Para contatos que já conversaram com você recentemente (últimas 24h)."}
         </p>
       </div>

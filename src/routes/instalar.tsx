@@ -7,13 +7,13 @@ import { CHROME_STORE_URL, hasChromeStore } from "@/lib/site-config";
 export const Route = createFileRoute("/instalar")({
   head: () => ({
     meta: [
-      { title: "Adicionar ao Chrome — CRM Zaylo" },
+      { title: "Adicionar ao Chrome | CRM Zaylo" },
       {
         name: "description",
         content:
           "Adicione a extensão ao Chrome e comece a usar o CRM de assinaturas dentro do WhatsApp Web.",
       },
-      { property: "og:title", content: "Adicionar ao Chrome — CRM Zaylo" },
+      { property: "og:title", content: "Adicionar ao Chrome | CRM Zaylo" },
       {
         property: "og:description",
         content:
@@ -66,7 +66,7 @@ function Install() {
           <CardTitle>Cadastro concluído</CardTitle>
           <CardDescription className="text-neutral-400">
             {naStore
-              ? "Agora é só adicionar a extensão ao Chrome e abrir o WhatsApp Web. Pronto — nada mais pra configurar."
+              ? "Agora é só adicionar a extensão ao Chrome e abrir o WhatsApp Web. Pronto, nada mais pra configurar."
               : "A extensão está em publicação na Chrome Web Store. Enquanto isso, instale como extensão descompactada (30 segundos)."}
           </CardDescription>
         </CardHeader>
@@ -109,7 +109,7 @@ function Install() {
                 </li>
                 <li>Ative o <strong>Modo do desenvolvedor</strong> (canto superior direito).</li>
                 <li>Clique em <strong>Carregar sem compactação</strong> e selecione a pasta.</li>
-                <li>Abra o <strong>WhatsApp Web</strong> — o CRM aparece na lateral esquerda.</li>
+                <li>Abra o <strong>WhatsApp Web</strong>. O CRM aparece na lateral esquerda.</li>
               </ol>
             </>
           )}

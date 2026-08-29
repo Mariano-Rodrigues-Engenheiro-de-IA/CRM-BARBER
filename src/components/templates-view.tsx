@@ -112,7 +112,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
       return;
     }
     if (varNames.some((v) => !bodyExamples[v]?.trim())) {
-      setErr("Preencha um valor de exemplo para cada variável — a Meta exige isso pra analisar o modelo.");
+      setErr("Preencha um valor de exemplo para cada variável. A Meta exige isso pra analisar o modelo.");
       return;
     }
     if (useCarousel) {
@@ -187,7 +187,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
         <div>
           <h1 className="text-lg font-semibold text-neutral-900">Modelos de mensagem</h1>
           <p className="mt-1 text-xs text-neutral-500">
-            Templates aprovados pela Meta, gerenciados direto por aqui — sem precisar entrar no site deles.
+            Templates aprovados pela Meta, gerenciados direto por aqui, sem precisar entrar no site deles.
           </p>
         </div>
         <button
@@ -206,7 +206,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
         <div className="space-y-3 rounded-xl border border-neutral-300 bg-white p-5 shadow-sm">
           <div>
             <label className="mb-1 block text-xs font-medium text-neutral-700">
-              Nome (só letras minúsculas, números e _ — sem espaço/acento)
+              Nome (só letras minúsculas, números e _, sem espaço/acento)
             </label>
             <input
               className={inputCls}
@@ -242,7 +242,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
                 setHeaderFile(null);
               }}
             >
-              <option value="">Nenhum — só texto</option>
+              <option value="">Nenhum (só texto)</option>
               <option value="IMAGE">Imagem</option>
               <option value="VIDEO">Vídeo</option>
               <option value="DOCUMENT">Documento (PDF)</option>
@@ -263,14 +263,14 @@ export function TemplatesView({ api }: { api: ApiFn }) {
               </label>
             )}
             <p className="mt-1 text-[11px] text-neutral-400">
-              Aqui você só escolhe o TIPO de mídia do cabeçalho — a Meta pede um arquivo de exemplo pra aprovar o
-              modelo, mas na hora de enviar de verdade pra cada cliente, você poderá usar qualquer imagem/vídeo/documento
+              Aqui você só escolhe o tipo de mídia do cabeçalho. A Meta pede um arquivo de exemplo pra aprovar o modelo,
+              mas na hora de enviar de verdade pra cada cliente, você pode usar qualquer imagem, vídeo ou documento
               daquele tipo.
             </p>
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-neutral-700">
-              Texto do modelo (use {"{{nome}}"}, {"{{data}}"}... pra variáveis — minúsculas, sem espaço/acento)
+              Texto do modelo (use {"{{nome}}"}, {"{{data}}"}... pra variáveis; minúsculas, sem espaço/acento)
             </label>
             <textarea
               className={inputCls}
@@ -283,7 +283,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
           {varNames.length > 0 && (
             <div className="space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
               <p className="text-xs font-medium text-neutral-700">
-                Valor de exemplo pra cada variável (a Meta exige isso pra analisar o modelo — não é o que será
+                Valor de exemplo pra cada variável (a Meta exige isso pra analisar o modelo; não é o que será
                 enviado de verdade, só um exemplo)
               </p>
               {varNames.map((v) => (
@@ -306,7 +306,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
             <div className="space-y-3 rounded-lg border border-neutral-200 p-3">
               <label className="flex items-center gap-2 text-xs font-medium text-neutral-700">
                 <input type="checkbox" checked={useCarousel} onChange={(e) => setUseCarousel(e.target.checked)} />
-                Adicionar carrossel (cartões que o cliente arrasta pro lado — só disponível aqui, a Meta nem oferece
+                Adicionar carrossel (cartões que o cliente arrasta pro lado; só disponível aqui, a Meta nem oferece
                 isso na tela dela)
               </label>
 
@@ -318,12 +318,12 @@ export function TemplatesView({ api }: { api: ApiFn }) {
                       <option value="IMAGE">Imagem</option>
                       <option value="VIDEO">Vídeo</option>
                     </select>
-                    <p className="mt-1 text-[11px] text-neutral-400">Todos os cartões precisam ter o mesmo tipo — regra da Meta.</p>
+                    <p className="mt-1 text-[11px] text-neutral-400">Todos os cartões precisam ter o mesmo tipo (regra da Meta).</p>
                   </div>
 
                   <div>
                     <label className="mb-1 block text-xs font-medium text-neutral-700">
-                      Botões dos cartões (opcional, até 2 — iguais em todos os cartões)
+                      Botões dos cartões (opcional, até 2, iguais em todos os cartões)
                     </label>
                     <div className="space-y-2">
                       {carouselButtons.map((b, i) => (
@@ -375,7 +375,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
 
                   <div className="space-y-3">
                     <label className="block text-xs font-medium text-neutral-700">
-                      Cartões ({carouselCards.length} de 10 — mínimo 2)
+                      Cartões ({carouselCards.length} de 10, mínimo 2)
                     </label>
                     {carouselCards.map((card, i) => (
                       <div key={i} className="space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
@@ -438,7 +438,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
             {saving ? "Enviando pra análise…" : "Enviar pra aprovação"}
           </button>
           <p className="text-[11px] text-neutral-500">
-            A Meta analisa o modelo antes de liberar — geralmente minutos, podendo levar até ~24h.
+            A Meta analisa o modelo antes de liberar. Geralmente leva minutos, podendo levar até ~24h.
           </p>
         </div>
       )}

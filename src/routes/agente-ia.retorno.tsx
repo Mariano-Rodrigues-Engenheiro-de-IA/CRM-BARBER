@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/agente-ia/retorno")({
   head: () => ({
     meta: [
-      { title: "Compra confirmada — Agente de IA — CRM Zaylo" },
+      { title: "Compra confirmada | Agente de IA | CRM Zaylo" },
       { name: "robots", content: "noindex" },
     ],
   }),

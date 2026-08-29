@@ -1170,7 +1170,7 @@
         refresh();
         return;
       }
-      pairHint = `Zetta CRM · não consegui vincular: ${res?.error || "sem resposta do servidor"} — tentando de novo…`;
+      pairHint = `Zetta CRM · não consegui vincular: ${res?.error || "sem resposta do servidor"}. Tentando de novo…`;
       renderTopbar();
     } finally {
       pairing = false;

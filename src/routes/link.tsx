@@ -10,13 +10,13 @@ import { PREMIUM_PRICE_LABEL, FREE_LIMITS } from "@/lib/billing";
 export const Route = createFileRoute("/link")({
   head: () => ({
     meta: [
-      { title: "Zaylo CRM — CRM completo dentro do WhatsApp" },
+      { title: "Zaylo CRM | CRM completo dentro do WhatsApp" },
       {
         name: "description",
         content:
           "Conheça o Zaylo CRM: disparo em massa, agente de IA, funis, automações, agenda, respostas rápidas e gestão de equipe dentro do WhatsApp da sua empresa.",
       },
-      { property: "og:title", content: "Zaylo CRM — CRM completo dentro do WhatsApp" },
+      { property: "og:title", content: "Zaylo CRM | CRM completo dentro do WhatsApp" },
       {
         property: "og:description",
         content:
@@ -97,7 +97,7 @@ const FAQ = [
   },
   {
     q: "Serve para qualquer tipo de empresa?",
-    a: "Sim. Se o seu atendimento e a sua venda acontecem no WhatsApp, o Zaylo CRM se encaixa — serviços, comércio, clínicas, agências e assinaturas.",
+    a: "Sim. Se o seu atendimento e a sua venda acontecem no WhatsApp, o Zaylo CRM se encaixa: serviços, comércio, clínicas, agências e assinaturas.",
   },
   {
     q: "Consigo testar antes de pagar?",
@@ -162,7 +162,7 @@ function Landing() {
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base text-slate-300 md:text-lg">
             Disparo em massa, agente de IA, funis, automações, agenda, respostas rápidas,
-            treinamentos e gestão de equipe — tudo dentro do WhatsApp que você já usa.
+            treinamentos e gestão de equipe, tudo dentro do WhatsApp que você já usa.
           </p>
           <div className="mt-8 flex flex-col items-center gap-3">
             <Button
@@ -183,7 +183,7 @@ function Landing() {
       <section className="border-y border-white/10 bg-[#0d1830]">
         <div className="mx-auto max-w-6xl px-5 py-14">
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Se você se identifica com isso, o problema não é o seu time — é a falta de processo
+            Se você se identifica com isso, o problema não é o seu time. É a falta de processo
           </h2>
           <ul className="mt-8 grid gap-4 sm:grid-cols-2">
             {DORES.map((d) => (

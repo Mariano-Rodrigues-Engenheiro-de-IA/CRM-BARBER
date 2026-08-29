@@ -97,6 +97,22 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       {
+        rel: "preconnect",
+        href: "https://fonts.googleapis.com",
+      },
+      {
+        rel: "preconnect",
+        href: "https://fonts.gstatic.com",
+        crossOrigin: "anonymous",
+      },
+      {
+        rel: "stylesheet",
+        // Mesma fonte já usada na extensão do WhatsApp (Inter) — antes o
+        // site rodava na fonte padrão do sistema operacional, deixando os
+        // dois ambientes com identidade visual inconsistente.
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap",
+      },
+      {
         rel: "stylesheet",
         href: appCss,
       },

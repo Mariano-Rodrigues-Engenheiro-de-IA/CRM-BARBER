@@ -6,7 +6,7 @@ import { AdminClientsPanel } from "@/components/admin/clients-panel";
 export const Route = createFileRoute("/admin/clients")({
   head: () => ({
     meta: [
-      { title: "Admin — Clientes — CRM Zaylo" },
+      { title: "Admin | Clientes | CRM Zaylo" },
       { name: "robots", content: "noindex, nofollow" },
       { name: "description", content: "Painel geral de clientes: contato, conexão e status." },
     ],

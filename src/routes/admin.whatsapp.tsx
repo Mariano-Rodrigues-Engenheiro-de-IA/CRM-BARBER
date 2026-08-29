@@ -6,7 +6,7 @@ import { AdminWhatsAppPanel } from "@/components/admin/whatsapp-panel";
 export const Route = createFileRoute("/admin/whatsapp")({
   head: () => ({
     meta: [
-      { title: "Admin — Conexão WhatsApp oficial — CRM Zaylo" },
+      { title: "Admin | Conexão WhatsApp oficial | CRM Zaylo" },
       { name: "robots", content: "noindex, nofollow" },
       { name: "description", content: "Configuração manual do número WhatsApp oficial de cada barbearia." },
     ],

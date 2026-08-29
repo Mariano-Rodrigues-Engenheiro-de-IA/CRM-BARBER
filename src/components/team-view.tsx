@@ -790,7 +790,7 @@ function AddEntryModal({
               {kind === "service" ? "Serviço do catálogo" : "Produto do catálogo"}
             </span>
             <select onChange={(e) => pickCatalog(e.target.value)} defaultValue="" className={inputCls}>
-              <option value="">— escolher para preencher automaticamente —</option>
+              <option value="">Escolher para preencher automaticamente</option>
               {catalog.map((c) => (
                 <option key={c.id} value={c.id}>{c.name} · {fmtBRL(c.priceCents)}</option>
               ))}
@@ -807,7 +807,7 @@ function AddEntryModal({
             className={inputCls}
           />
           <select value={clientId} onChange={(e) => setClientId(e.target.value)} className={inputCls}>
-            <option value="">— sem cliente —</option>
+            <option value="">Sem cliente</option>
             {filteredClients.map((c) => (
               <option key={c.id} value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ""}</option>
             ))}

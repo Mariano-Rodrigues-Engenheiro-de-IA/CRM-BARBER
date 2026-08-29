@@ -52,10 +52,10 @@ import {
 export const Route = createFileRoute("/painel")({
   head: () => ({
     meta: [
-      { title: "Painel — CRM Zaylo" },
+      { title: "Painel | CRM Zaylo" },
       { name: "robots", content: "noindex" },
       { name: "description", content: "Painel de gestão de assinantes da barbearia." },
-      { property: "og:title", content: "Painel — CRM Zaylo" },
+      { property: "og:title", content: "Painel | CRM Zaylo" },
       { property: "og:description", content: "Painel de gestão de assinantes da barbearia." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -532,7 +532,7 @@ function Painel() {
         <div className="max-w-md rounded-lg border border-yellow-500/30 bg-neutral-900 p-8 text-center">
           <h1 className="text-2xl font-bold text-yellow-400">Painel bloqueado</h1>
           <p className="mt-3 text-sm text-neutral-300">
-            Abra este painel pela extensão do CRM no WhatsApp Web — o botão manda
+            Abra este painel pela extensão do CRM no WhatsApp Web. O botão manda
             você pra cá já autenticado.
           </p>
         </div>
@@ -1152,7 +1152,7 @@ function WhatsAppActionModal({
   }
 
   return (
-    <Modal onClose={onClose} title={`WhatsApp — ${customer.name}`}>
+    <Modal onClose={onClose} title={`WhatsApp: ${customer.name}`}>
       <div className="space-y-4">
         <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-700">
           {isRealPhone(phone) ? (
@@ -1183,7 +1183,7 @@ function WhatsAppActionModal({
 
         <Field label="Resposta rápida">
           <select value={selected} onChange={(e) => setSelected(e.target.value)} className={inputCls}>
-            <option value="">— nenhuma (mensagem manual) —</option>
+            <option value="">Nenhuma (mensagem manual)</option>
             {replies.map((q) => (
               <option key={q.id} value={q.id}>{q.title}</option>
             ))}
@@ -1426,7 +1426,7 @@ function KanbanView({
         <div className="rounded-xl border border-dashed border-neutral-300 bg-white p-8 text-center">
           <p className="text-sm font-medium text-neutral-800">Nenhum kanban ainda</p>
           <p className="mx-auto mt-1 max-w-md text-xs text-neutral-500">
-            Importe uma planilha — os kanbans são criados automaticamente com a mesma estrutura dela —
+            Importe uma planilha (os kanbans são criados automaticamente com a mesma estrutura dela)
             ou crie os seus com “+ Kanban”.
           </p>
         </div>
@@ -1654,7 +1654,7 @@ function CustomerDrawer({
     const r = await api(token, "/api/public/extension/campaigns", {
       method: "POST",
       body: JSON.stringify({
-        name: `Mensagem — ${customer.name}`,
+        name: `Mensagem: ${customer.name}`,
         message: msg.trim(),
         customer_ids: [customer.id],
         scheduled_for: when ? new Date(when).toISOString() : undefined,
@@ -1901,9 +1901,9 @@ function ImportModal({
           (r.archived ? ` · Removidos da planilha antiga: ${r.archived}` : "") +
           (dist ? `\n${dist}` : "") +
           (detected.length ? `\nPlanos detectados: ${detected.join(" · ")}` : "") +
-          (semValor ? `\n${semValor} plano(s) sem valor — cadastre em Configurações.` : "") +
+          (semValor ? `\n${semValor} plano(s) sem valor. Cadastre em Configurações.` : "") +
           (semTelefone
-            ? `\n${semTelefone} assinante(s) sem telefone na planilha — entram no Kanban, mas ficam fora dos disparos.`
+            ? `\n${semTelefone} assinante(s) sem telefone na planilha. Entram no Kanban, mas ficam fora dos disparos.`
             : "") +
           (report.unmappedStatuses.length
             ? `\nStatus não reconhecidos (usei a data de vencimento): ${report.unmappedStatuses.join(", ")}`
@@ -1935,7 +1935,7 @@ function ImportModal({
   }
 
   return (
-    <Modal onClose={onClose} title={`Importar planilha — ${meta?.label ?? ""}`}>
+    <Modal onClose={onClose} title={`Importar planilha: ${meta?.label ?? ""}`}>
       <form onSubmit={submit} className="space-y-4">
         <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-700">
           {meta?.hint}

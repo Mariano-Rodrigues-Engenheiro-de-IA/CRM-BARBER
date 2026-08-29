@@ -6,7 +6,7 @@ import { AdminTokensPanel } from "@/components/admin/tokens-panel";
 export const Route = createFileRoute("/admin/tokens")({
   head: () => ({
     meta: [
-      { title: "Admin — Tokens de integração — CRM Zaylo" },
+      { title: "Admin | Tokens de integração | CRM Zaylo" },
       { name: "robots", content: "noindex, nofollow" },
       { name: "description", content: "Emissão de tokens de integração por barbearia." },
     ],

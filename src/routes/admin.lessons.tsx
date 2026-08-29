@@ -6,7 +6,7 @@ import { AdminLessonsPanel } from "@/components/admin/lessons-panel";
 export const Route = createFileRoute("/admin/lessons")({
   head: () => ({
     meta: [
-      { title: "Admin — Aulas — CRM Zaylo" },
+      { title: "Admin | Aulas | CRM Zaylo" },
       { name: "robots", content: "noindex, nofollow" },
       { name: "description", content: "Gestão da área de Aulas (academy) para os clientes." },
     ],

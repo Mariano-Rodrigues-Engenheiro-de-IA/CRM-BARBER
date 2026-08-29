@@ -1110,7 +1110,7 @@ function ProductFormDialog({
                         />
                       </div>
                     </div>
-                    <Label className="text-xs">Variações e valores (ex: 4x0, 4x1, 4x4 — ou "padrao" se só tiver um valor)</Label>
+                    <Label className="text-xs">Variações e valores (ex: 4x0, 4x1, 4x4, ou "padrao" se só tiver um valor)</Label>
                     {faixa.variacoes.map((v, vi) => (
                       <div key={vi} className="flex items-center gap-2">
                         <Input

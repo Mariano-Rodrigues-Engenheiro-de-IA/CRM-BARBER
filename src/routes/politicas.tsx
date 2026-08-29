@@ -3,13 +3,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 export const Route = createFileRoute("/politicas")({
   head: () => ({
     meta: [
-      { title: "Política de Privacidade e Termos — CRM Zaylo" },
+      { title: "Política de Privacidade e Termos | CRM Zaylo" },
       {
         name: "description",
         content:
           "Política de privacidade e termos de uso do Zaylo CRM, extensão de Chrome para gestão de assinantes e campanhas no WhatsApp Web.",
       },
-      { property: "og:title", content: "Política de Privacidade e Termos — CRM Zaylo" },
+      { property: "og:title", content: "Política de Privacidade e Termos | CRM Zaylo" },
       {
         property: "og:description",
         content:
@@ -201,7 +201,7 @@ function PoliticasPage() {
             <p>
               O Zaylo CRM oferece um plano gratuito com limites de uso (assinalantes e mensagens) e
               um plano Premium (R$ 97/mês) com uso ampliado. A cobrança do Premium é processada pela
-              Stripe e é recorrente mensalmente, sem fidelidade — você pode cancelar quando quiser.
+              Stripe e é recorrente mensalmente, sem fidelidade. Você pode cancelar quando quiser.
             </p>
             <p>
               O cancelamento interrompe a renovação; o acesso ao Premium permanece até o fim do

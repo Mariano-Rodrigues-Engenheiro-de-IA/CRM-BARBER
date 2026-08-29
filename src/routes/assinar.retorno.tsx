@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/assinar/retorno")({
   head: () => ({
     meta: [
-      { title: "Assinatura confirmada — CRM Zaylo" },
+      { title: "Assinatura confirmada | CRM Zaylo" },
       { name: "description", content: "Sua assinatura Premium do CRM foi processada." },
-      { property: "og:title", content: "Assinatura confirmada — CRM Zaylo" },
+      { property: "og:title", content: "Assinatura confirmada | CRM Zaylo" },
       { property: "og:description", content: "Sua assinatura Premium do CRM foi processada." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -29,7 +29,7 @@ function Retorno() {
         </h1>
         <p className="text-sm text-muted-foreground">
           {session_id
-            ? "Sua assinatura Premium foi ativada. Volte ao painel — os limites do plano grátis já foram liberados."
+            ? "Sua assinatura Premium foi ativada. Volte ao painel: os limites do plano grátis já foram liberados."
             : "Não recebemos os dados da sua compra. Se você já pagou, aguarde alguns segundos e recarregue o painel."}
         </p>
         <Button asChild>
