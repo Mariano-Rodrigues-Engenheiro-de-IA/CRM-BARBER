@@ -490,8 +490,17 @@ export const cloudAdapter: BspAdapter = {
       });
       const json = (await res.json().catch(() => ({}))) as Json;
       if (!res.ok) {
-        const error = (json.error as Json | undefined)?.message;
-        return { ok: false, error: typeof error === "string" ? error : `HTTP ${res.status}` };
+        const errObj = (json.error as Json | undefined) ?? {};
+        const parts = [errObj.error_user_title, errObj.error_user_msg, errObj.message]
+          .filter((v): v is string => typeof v === "string" && v.length > 0);
+        // Log completo (payload enviado + resposta da Meta) pro servidor —
+        // "Invalid parameter" sozinho não diz QUAL parâmetro; com isso dá
+        // pra investigar de verdade da próxima vez que acontecer.
+        console.error("[createTemplate] Meta rejeitou:", JSON.stringify({ sent: components, response: json }).slice(0, 4000));
+        return {
+          ok: false,
+          error: parts.length ? parts.join(" — ") : `HTTP ${res.status}${errObj.code ? ` (código ${errObj.code}${errObj.error_subcode ? `/${errObj.error_subcode}` : ""})` : ""}`,
+        };
       }
       const id = str(json.id);
       if (!id) return { ok: false, error: "Meta não devolveu o ID do modelo criado." };

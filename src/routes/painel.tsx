@@ -1006,7 +1006,7 @@ function Painel() {
         {section === "templates" && token && isAdmin && isMetaProvider && (
           <>
             <SectionHeader icon={<IconNote />} title="Modelos de mensagem" />
-            <main className="max-w-3xl px-4 py-4">
+            <main className="max-w-6xl px-4 py-4">
               <TemplatesView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
             </main>
           </>

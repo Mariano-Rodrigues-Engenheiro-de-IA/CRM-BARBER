@@ -231,7 +231,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold text-neutral-900">Modelos de mensagem</h1>
@@ -249,7 +249,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
       )}
 
       {showNew && (
-        <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+        <div className="grid gap-5 lg:grid-cols-[1fr_1fr]">
         <div className="space-y-4 rounded-xl border border-neutral-300 bg-white p-5 shadow-sm">
           <div>
             <label className="mb-1 block text-xs font-medium text-neutral-700">Nome</label>
@@ -679,12 +679,20 @@ function TemplatePreview({
     );
   }
 
-  function MediaBox({ file, kind }: { file: { dataUrl: string; mime: string; filename: string } | null; kind: "image" | "video" | "document" }) {
+  function MediaBox({
+    file,
+    kind,
+    heightCls = "h-56",
+  }: {
+    file: { dataUrl: string; mime: string; filename: string } | null;
+    kind: "image" | "video" | "document";
+    heightCls?: string;
+  }) {
     if (kind === "image") {
       return file ? (
-        <img src={file.dataUrl} alt="" className="h-36 w-full rounded-t-lg object-cover" />
+        <img src={file.dataUrl} alt="" className={`${heightCls} w-full rounded-t-lg object-cover`} />
       ) : (
-        <div className="flex h-36 w-full items-center justify-center rounded-t-lg bg-neutral-200 text-neutral-400">
+        <div className={`flex ${heightCls} w-full items-center justify-center rounded-t-lg bg-neutral-200 text-neutral-400`}>
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <rect x="3" y="3" width="18" height="18" rx="2" />
             <circle cx="8.5" cy="8.5" r="1.5" />
@@ -695,9 +703,9 @@ function TemplatePreview({
     }
     if (kind === "video") {
       return file ? (
-        <video src={file.dataUrl} className="h-36 w-full rounded-t-lg bg-black object-cover" controls />
+        <video src={file.dataUrl} className={`${heightCls} w-full rounded-t-lg bg-black object-cover`} controls />
       ) : (
-        <div className="flex h-36 w-full items-center justify-center rounded-t-lg bg-neutral-200 text-neutral-400">
+        <div className={`flex ${heightCls} w-full items-center justify-center rounded-t-lg bg-neutral-200 text-neutral-400`}>
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <path d="m10 8 6 4-6 4V8Z" />
             <rect x="2" y="4" width="20" height="16" rx="2" />
@@ -744,7 +752,7 @@ function TemplatePreview({
         <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
           {carouselCards.map((card, i) => (
             <div key={i} className="w-40 shrink-0 overflow-hidden rounded-lg bg-white shadow-sm">
-              <MediaBox file={card.file} kind="image" />
+              <MediaBox file={card.file} kind="image" heightCls="h-28" />
               {card.bodyText && <p className="px-2 py-1.5 text-[11px] text-neutral-800">{card.bodyText}</p>}
               {carouselButtons.length > 0 && (
                 <div className="border-t border-neutral-100">

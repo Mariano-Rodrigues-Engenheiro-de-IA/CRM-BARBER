@@ -453,14 +453,9 @@ export function DispatchCenter({
 
       <div>
         <Label>Tipo de disparo</Label>
-        {isMetaProvider ? (
-          <p className="mt-1 text-xs text-neutral-500">
-            Conectado pela API oficial: todo disparo em massa usa um modelo aprovado pela Meta. Pra contatos fora
-            da janela de 24h (o caso mais comum num disparo), a API oficial só permite esse formato.
-          </p>
-        ) : (
-          <p className="mt-1 text-xs text-neutral-500">Mensagem personalizada, pra contatos que já conversaram com você recentemente (últimas 24h).</p>
-        )}
+        <p className="mt-1 text-sm font-medium text-neutral-800">
+          {isMetaProvider ? "Modelo aprovado" : "Mensagem personalizada"}
+        </p>
       </div>
 
       {isMetaProvider ? (
