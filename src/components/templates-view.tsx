@@ -335,7 +335,7 @@ export function TemplatesView({ api }: { api: ApiFn }) {
       )}
 
       {showNew && (
-        <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+        <div className="grid items-start gap-5 lg:grid-cols-[1fr_320px]">
         <div className="space-y-4 rounded-xl border border-neutral-300 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-neutral-900">{editingId ? "Editar modelo" : "Novo modelo"}</h2>
@@ -888,27 +888,33 @@ function TemplatePreview({
          w-full (em vez de largura fixa) pra sempre caber certinho dentro
          do espaçamento, sem ficar desalinhado. */}
       <div className="rounded-xl bg-[#e5ddd5] p-5">
-        <div className="mx-auto w-full max-w-[240px] overflow-hidden rounded-lg bg-white shadow-md">
-          {(templateType === "image" || templateType === "video" || templateType === "document") && (
-            <MediaBox file={mediaFile} kind={templateType} />
-          )}
-          <div className="px-2.5 pb-1.5 pt-2">
-            <p className="whitespace-pre-wrap text-[12px] leading-snug text-neutral-800">{renderBody(bodyText)}</p>
-            {footerText && <p className="mt-1 text-[10.5px] text-neutral-400">{footerText}</p>}
-            <p className="mt-1 text-right text-[9.5px] text-neutral-400">
-              {new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-            </p>
-          </div>
-          {templateType !== "carousel" && buttons.length > 0 && (
-            <div className="border-t border-neutral-100">
-              {buttons.map((b, i) => (
-                <div key={i} className="flex items-center justify-center gap-1.5 border-t border-neutral-100 py-1.5 text-[12px] text-blue-600 first:border-t-0">
-                  <ButtonIcon type={b.type} />
-                  {b.text || "Botão"}
-                </div>
-              ))}
+        <div className="relative mx-auto w-full max-w-[240px]">
+          {/* Pontinha do balão — mesmo efeito visual de balão de mensagem
+             do WhatsApp, sem copiar a cor (o modelo aparece em cinza
+             neutro tanto na Meta quanto aqui, só o formato do balão). */}
+          <div className="absolute -left-[7px] top-0 h-0 w-0 border-y-[7px] border-r-[8px] border-y-transparent border-r-white drop-shadow-sm" />
+          <div className="overflow-hidden rounded-lg bg-white shadow-md">
+            {(templateType === "image" || templateType === "video" || templateType === "document") && (
+              <MediaBox file={mediaFile} kind={templateType} />
+            )}
+            <div className="px-2.5 pb-1.5 pt-2">
+              <p className="whitespace-pre-wrap text-[12px] leading-snug text-neutral-800">{renderBody(bodyText)}</p>
+              {footerText && <p className="mt-1 text-[10.5px] text-neutral-400">{footerText}</p>}
+              <p className="mt-1 text-right text-[9.5px] text-neutral-400">
+                {new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+              </p>
             </div>
-          )}
+            {templateType !== "carousel" && buttons.length > 0 && (
+              <div className="border-t border-neutral-100">
+                {buttons.map((b, i) => (
+                  <div key={i} className="flex items-center justify-center gap-1.5 border-t border-neutral-100 py-1.5 text-[12px] text-blue-600 first:border-t-0">
+                    <ButtonIcon type={b.type} />
+                    {b.text || "Botão"}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {templateType === "carousel" && (
