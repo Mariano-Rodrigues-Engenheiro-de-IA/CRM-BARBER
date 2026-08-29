@@ -99,6 +99,7 @@ type Connection = {
   provider: string;
   auth_mode?: string | null;
   needs_manual_credentials?: boolean;
+  last_error?: string | null;
   signup?: {
     url?: string | null;
     params?: { app_id?: string; config_id?: string } | null;
@@ -145,6 +146,8 @@ export function ConnectionView({ api }: { api: Api }) {
       statusRef.current = next.status;
       setAuthMode(next.auth_mode ?? (next.provider === "meta" ? "embedded_signup" : null));
       setConn(next);
+      setLoading(false);
+      return next;
     } else if (res.error) {
       setErr(res.error);
     }
@@ -290,18 +293,26 @@ export function ConnectionView({ api }: { api: Api }) {
               // via fetch em vez de redirect de página completa.
               const callbackUrl = `/api/public/whatsapp/signup-callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}&source=sdk`;
               fetch(callbackUrl)
-                .then((callbackResponse) => {
-                  if (!callbackResponse.ok) {
-                    throw new Error("A Meta autorizou o acesso, mas o CRM não conseguiu concluir o vínculo.");
-                  }
+                .catch(() => {
+                  // Falha de rede pura (nem chegou a bater no servidor) — o
+                  // refresh() logo abaixo ainda vai tentar buscar o status
+                  // real; isso aqui é só um log, não precisa de setErr,
+                  // porque senão o refresh() apaga a mensagem na hora
+                  // (setErr(null) roda no início dela) antes do usuário
+                  // conseguir ler.
+                  console.error("[whatsapp/connect] falha de rede no callback do signup");
                 })
-                .catch((callbackError: unknown) => {
-                  setErr(callbackError instanceof Error ? callbackError.message : "Falha ao concluir o vínculo.");
-                })
-                .finally(() => {
+                .finally(async () => {
                   actionRef.current = null;
                   setBusy(false);
-                  void refresh(true);
+                  // Espera o refresh terminar ANTES de decidir se mostra
+                  // erro — assim a mensagem de verdade (vinda do
+                  // last_error salvo no banco) não é apagada pelo
+                  // setErr(null) que roda no começo do refresh().
+                  const next = await refresh(true);
+                  if (next && next.status !== "connected" && next.last_error) {
+                    setErr(next.last_error);
+                  }
                 });
             },
             {

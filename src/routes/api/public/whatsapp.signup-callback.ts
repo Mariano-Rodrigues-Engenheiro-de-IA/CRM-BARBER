@@ -82,6 +82,7 @@ export const Route = createFileRoute("/api/public/whatsapp/signup-callback")({
             phone_number_id: result.phone_number_id,
             meta_access_token: result.access_token,
             meta_business_id: result.business_id ?? null,
+            last_error: null,
             is_coexistence: result.is_coexistence,
             last_synced_at: new Date().toISOString(),
           };
@@ -109,6 +110,21 @@ export const Route = createFileRoute("/api/public/whatsapp/signup-callback")({
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           console.error("[whatsapp/signup-callback]", msg);
+          // Sem isso, a instância ficava travada em "connecting" pra
+          // sempre — o /connect inicial já tinha marcado esse status, e
+          // se o exchangeSignup falhar (ex: WABA sem número ainda), nada
+          // mais atualizava a linha. O CRM ficava com a tela de
+          // "conectando..." girando indefinidamente, mesmo com a
+          // autorização da Meta já tendo sido concedida (ou negada).
+          try {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            await supabaseAdmin
+              .from("whatsapp_instances")
+              .update({ status: "disconnected", last_error: msg, last_synced_at: new Date().toISOString() })
+              .eq("barbershop_id", verified.barbershop_id);
+          } catch {
+            /* melhor mostrar o erro original do que mascarar com um erro de limpeza */
+          }
           return page("Falha ao vincular", msg, false, 502);
         }
       },

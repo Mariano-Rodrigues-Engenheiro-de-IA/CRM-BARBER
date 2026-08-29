@@ -28,7 +28,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/status")({
 
         const { data: inst } = await supabaseAdmin
           .from("whatsapp_instances")
-          .select("id, status, phone, last_qr, last_synced_at, instance_id, instance_token, provider, phone_number_id, meta_access_token, shared_with_ai")
+          .select("id, status, phone, last_qr, last_synced_at, instance_id, instance_token, provider, phone_number_id, meta_access_token, shared_with_ai, last_error")
           .eq("barbershop_id", auth.token.barbershop_id)
           .maybeSingle();
 
@@ -116,6 +116,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/status")({
             provider: providerName,
             auth_mode: provider.authMode,
             needs_manual_credentials: metaNeedsManualCredentials,
+            last_error: status === "connected" ? null : inst.last_error,
           },
         });
       },

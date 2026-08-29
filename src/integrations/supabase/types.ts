@@ -1610,6 +1610,7 @@ export type Database = {
           instance_id: string | null
           instance_token: string | null
           is_coexistence: boolean
+          last_error: string | null
           last_qr: string | null
           last_synced_at: string | null
           meta_access_token: string | null
@@ -1631,6 +1632,7 @@ export type Database = {
           instance_id?: string | null
           instance_token?: string | null
           is_coexistence?: boolean
+          last_error?: string | null
           last_qr?: string | null
           last_synced_at?: string | null
           meta_access_token?: string | null
@@ -1652,6 +1654,7 @@ export type Database = {
           instance_id?: string | null
           instance_token?: string | null
           is_coexistence?: boolean
+          last_error?: string | null
           last_qr?: string | null
           last_synced_at?: string | null
           meta_access_token?: string | null
