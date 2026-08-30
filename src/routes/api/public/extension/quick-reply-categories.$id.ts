@@ -1,14 +1,17 @@
-// PATCH  /api/public/extension/quick-replies/:id -> atualiza título/ações
-// DELETE /api/public/extension/quick-replies/:id -> remove a resposta rápida
+// PATCH  /api/public/extension/quick-reply-categories/:id -> renomeia/muda cor
+// DELETE /api/public/extension/quick-reply-categories/:id -> apaga a categoria
+//
+// Apagar uma categoria NÃO apaga as respostas rápidas dela — elas ficam
+// "sem categoria" (category_id vira NULL via ON DELETE SET NULL no banco).
 
 import { createFileRoute } from "@tanstack/react-router";
 import { jsonResponse, preflight } from "@/lib/extension-cors";
 import { authenticateExtension } from "@/lib/extension-auth";
-import { quickReplySchema } from "@/lib/quick-replies";
+import { quickReplyCategorySchema } from "@/lib/quick-replies";
 
-const patchSchema = quickReplySchema.partial();
+const patchSchema = quickReplyCategorySchema.partial();
 
-export const Route = createFileRoute("/api/public/extension/quick-replies/$id")({
+export const Route = createFileRoute("/api/public/extension/quick-reply-categories/$id")({
   server: {
     handlers: {
       OPTIONS: async ({ request }) => preflight(request),
@@ -34,20 +37,20 @@ export const Route = createFileRoute("/api/public/extension/quick-replies/$id")(
           );
         }
         const { data, error } = await supabaseAdmin
-          .from("quick_replies")
+          .from("quick_reply_categories")
           .update(parsed.data)
           .eq("id", params.id)
           .eq("barbershop_id", auth.token.barbershop_id)
-          .select("id, title, actions, sort_order, category_id, shortcut, is_favorite")
+          .select("id, name, color, sort_order")
           .maybeSingle();
         if (error) {
           if (error.code === "23505") {
-            return jsonResponse(request, { ok: false, error: "Esse atalho já está em uso por outra resposta." }, { status: 409 });
+            return jsonResponse(request, { ok: false, error: "Já existe uma categoria com esse nome." }, { status: 409 });
           }
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
         }
         if (!data) return jsonResponse(request, { ok: false, error: "Not found" }, { status: 404 });
-        return jsonResponse(request, { ok: true, quick_reply: data });
+        return jsonResponse(request, { ok: true, category: data });
       },
 
       DELETE: async ({ request, params }) => {
@@ -57,7 +60,7 @@ export const Route = createFileRoute("/api/public/extension/quick-replies/$id")(
           return jsonResponse(request, { ok: false, error: auth.error }, { status: auth.status });
         }
         const { error } = await supabaseAdmin
-          .from("quick_replies")
+          .from("quick_reply_categories")
           .delete()
           .eq("id", params.id)
           .eq("barbershop_id", auth.token.barbershop_id);

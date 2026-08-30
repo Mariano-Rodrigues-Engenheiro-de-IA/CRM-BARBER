@@ -878,18 +878,47 @@ html body.crm-shell.crm-qr-open #app {
 .crm-qrp-filter-chip:hover { border-color: var(--z-accent); color: var(--z-accent); }
 .crm-qrp-filter-chip.is-active { background: var(--z-accent); border-color: var(--z-accent); color: #fff; }
 .crm-qrp-filter-fav.is-active svg { fill: #fff; }
+/* Chip de categoria usa a cor de verdade da categoria (--chip-color, vem
+   inline no elemento) em vez da cor padrão de "ativo". */
+.crm-qrp-filter-chip-cat.is-active { background: var(--chip-color); border-color: var(--chip-color); color: #fff; }
+.crm-qrp-filter-chip-cat.is-active .crm-qrp-cat-dot { background: #fff !important; }
+
+/* Bolinha colorida da categoria (chip de filtro, badge da linha, tela de
+   gerenciar categorias) */
+.crm-qrp-cat-dot { flex-shrink: 0; width: 7px; height: 7px; border-radius: 999px; display: inline-block; }
 
 /* Estrela de favorito na linha da lista */
 .crm-qrp-star { color: var(--z-text-dim); }
 .crm-qrp-star.is-fav, .crm-qrp-star:hover { color: #f5a623; }
 .crm-qrp-star.is-fav svg { fill: #f5a623; }
 
-/* Badge de categoria ao lado do nome, na lista */
+/* Badge de categoria ao lado do nome, na lista — usa a cor de verdade da
+   categoria (--chip-color) só no texto/bolinha, fundo neutro. */
 .crm-qrp-row-cat {
-  display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: var(--z-surface-2);
-  color: var(--z-text-dim); font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em;
+  display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; padding: 1px 8px 1px 6px; border-radius: 999px;
+  background: var(--z-surface-2); color: var(--chip-color, var(--z-text-dim)); font-size: 9.5px; font-weight: 700;
   vertical-align: middle;
 }
+
+/* Tela de gerenciar categorias */
+.crm-qrp-new-cat {
+  border: 1px solid var(--z-line-soft); border-radius: 12px; padding: 12px; margin-bottom: 14px; background: var(--z-bar);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.crm-qrp-color-row { display: flex; gap: 8px; }
+.crm-qrp-color-swatch {
+  width: 24px; height: 24px; border-radius: 999px; border: 2px solid transparent; cursor: pointer; padding: 0;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+}
+.crm-qrp-color-swatch:hover { transform: scale(1.1); }
+.crm-qrp-color-swatch.is-selected { border-color: var(--z-text); }
+.crm-qrp-cat-list { display: flex; flex-direction: column; gap: 4px; }
+.crm-qrp-cat-row {
+  display: flex; align-items: center; gap: 9px; padding: 8px 6px; border-radius: 10px; transition: background-color 0.12s ease;
+}
+.crm-qrp-cat-row:hover { background: var(--z-surface-2); }
+.crm-qrp-cat-row .crm-qrp-cat-dot { width: 11px; height: 11px; }
+.crm-qrp-cat-row-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: var(--z-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Categoria + atalho no formulário */
 .crm-qrp-meta-row { display: flex; gap: 8px; margin-bottom: 4px; }

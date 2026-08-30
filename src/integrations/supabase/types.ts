@@ -1307,7 +1307,7 @@ export type Database = {
         Row: {
           actions: Json
           barbershop_id: string
-          category: string | null
+          category_id: string | null
           created_at: string
           id: string
           is_favorite: boolean
@@ -1319,7 +1319,7 @@ export type Database = {
         Insert: {
           actions?: Json
           barbershop_id: string
-          category?: string | null
+          category_id?: string | null
           created_at?: string
           id?: string
           is_favorite?: boolean
@@ -1331,7 +1331,7 @@ export type Database = {
         Update: {
           actions?: Json
           barbershop_id?: string
-          category?: string | null
+          category_id?: string | null
           created_at?: string
           id?: string
           is_favorite?: boolean
@@ -1343,6 +1343,48 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "quick_replies_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quick_replies_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "quick_reply_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quick_reply_categories: {
+        Row: {
+          barbershop_id: string
+          color: string
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          barbershop_id: string
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          barbershop_id?: string
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quick_reply_categories_barbershop_id_fkey"
             columns: ["barbershop_id"]
             isOneToOne: false
             referencedRelation: "barbershops"

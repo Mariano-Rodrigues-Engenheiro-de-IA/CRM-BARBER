@@ -44,14 +44,15 @@ export const quickReplySchema = z.object({
   title: z.string().trim().min(1).max(120),
   actions: z.array(quickReplyActionSchema).min(1).max(20),
   sort_order: z.number().int().min(0).max(9999).optional(),
-  // Categoria livre — quem decide o nome é o usuário, sem lista fixa.
-  category: z
+  // Categoria é uma entidade própria agora (tabela quick_reply_categories,
+  // criada antes pelo usuário) — aqui só guarda a referência, ou null pra
+  // "sem categoria". "" também vira null (select com opção vazia).
+  category_id: z
     .string()
-    .trim()
-    .max(60)
+    .uuid()
     .nullable()
     .optional()
-    .transform((v) => (v ? v : null)),
+    .transform((v) => v || null),
   // Atalho: digitar "/palavra" na caixa do WhatsApp aciona esta resposta.
   // Sem espaços (é uma "palavra" só) — normaliza pra minúsculas aqui pra
   // a comparação na hora de digitar não depender de caixa alta/baixa.
@@ -65,6 +66,37 @@ export const quickReplySchema = z.object({
     .transform((v) => (v ? v.toLowerCase() : null)),
   is_favorite: z.boolean().optional(),
 });
+
+// Categoria como entidade própria — criada antes (nome + cor), depois
+// atribuída às respostas por seleção.
+export const quickReplyCategorySchema = z.object({
+  name: z.string().trim().min(1).max(60),
+  color: z
+    .string()
+    .trim()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Cor precisa estar em formato hex (#rrggbb).")
+    .optional(),
+  sort_order: z.number().int().min(0).max(9999).optional(),
+});
+
+export type QuickReplyCategory = {
+  id: string;
+  name: string;
+  color: string;
+  sort_order: number;
+};
+
+// Paleta sugerida no seletor de cor — o usuário não é obrigado a usar só
+// essas (o input é um color picker de verdade), mas ajuda a bater logo de
+// cara com algo que combina com o resto da interface.
+export const QUICK_REPLY_CATEGORY_COLORS = [
+  "#3d5fa8", // azul (cor da marca)
+  "#2e9e6b", // verde
+  "#c9822a", // laranja
+  "#a34747", // vermelho
+  "#7b5ec7", // roxo
+  "#3a9fb5", // ciano
+] as const;
 
 export type QuickReplyAction = z.infer<typeof quickReplyActionSchema> & { url?: string | null };
 
@@ -84,7 +116,7 @@ export type QuickReply = {
   title: string;
   actions: QuickReplyAction[];
   sort_order: number;
-  category: string | null;
+  category_id: string | null;
   shortcut: string | null;
   is_favorite: boolean;
 };

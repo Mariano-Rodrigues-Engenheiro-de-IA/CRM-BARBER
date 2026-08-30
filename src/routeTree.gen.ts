@@ -51,6 +51,7 @@ import { Route as ApiPublicExtensionPairRouteImport } from './routes/api/public/
 import { Route as ApiPublicExtensionProductsRouteImport } from './routes/api/public/extension/products'
 import { Route as ApiPublicExtensionProfessionalsRouteImport } from './routes/api/public/extension/professionals'
 import { Route as ApiPublicExtensionQuickRepliesRouteImport } from './routes/api/public/extension/quick-replies'
+import { Route as ApiPublicExtensionQuickReplyCategoriesRouteImport } from './routes/api/public/extension/quick-reply-categories'
 import { Route as ApiPublicExtensionServicesRouteImport } from './routes/api/public/extension/services'
 import { Route as ApiPublicExtensionShopRouteImport } from './routes/api/public/extension/shop'
 import { Route as ApiPublicExtensionTimeBlocksRouteImport } from './routes/api/public/extension/time-blocks'
@@ -74,6 +75,7 @@ import { Route as ApiPublicExtensionProductsIdRouteImport } from './routes/api/p
 import { Route as ApiPublicExtensionProfessionalsIdRouteImport } from './routes/api/public/extension/professionals.$id'
 import { Route as ApiPublicExtensionQuickRepliesIdRouteImport } from './routes/api/public/extension/quick-replies.$id'
 import { Route as ApiPublicExtensionQuickRepliesUploadRouteImport } from './routes/api/public/extension/quick-replies.upload'
+import { Route as ApiPublicExtensionQuickReplyCategoriesIdRouteImport } from './routes/api/public/extension/quick-reply-categories.$id'
 import { Route as ApiPublicExtensionServicesIdRouteImport } from './routes/api/public/extension/services.$id'
 import { Route as ApiPublicExtensionTimeBlocksIdRouteImport } from './routes/api/public/extension/time-blocks.$id'
 import { Route as ApiPublicExtensionWaDataRouteImport } from './routes/api/public/extension/wa.data'
@@ -317,6 +319,12 @@ const ApiPublicExtensionQuickRepliesRoute =
     path: '/api/public/extension/quick-replies',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicExtensionQuickReplyCategoriesRoute =
+  ApiPublicExtensionQuickReplyCategoriesRouteImport.update({
+    id: '/api/public/extension/quick-reply-categories',
+    path: '/api/public/extension/quick-reply-categories',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicExtensionServicesRoute =
   ApiPublicExtensionServicesRouteImport.update({
     id: '/api/public/extension/services',
@@ -454,6 +462,12 @@ const ApiPublicExtensionQuickRepliesUploadRoute =
     path: '/upload',
     getParentRoute: () => ApiPublicExtensionQuickRepliesRoute,
   } as any)
+const ApiPublicExtensionQuickReplyCategoriesIdRoute =
+  ApiPublicExtensionQuickReplyCategoriesIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicExtensionQuickReplyCategoriesRoute,
+  } as any)
 const ApiPublicExtensionServicesIdRoute =
   ApiPublicExtensionServicesIdRouteImport.update({
     id: '/$id',
@@ -570,6 +584,7 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/products': typeof ApiPublicExtensionProductsRouteWithChildren
   '/api/public/extension/professionals': typeof ApiPublicExtensionProfessionalsRouteWithChildren
   '/api/public/extension/quick-replies': typeof ApiPublicExtensionQuickRepliesRouteWithChildren
+  '/api/public/extension/quick-reply-categories': typeof ApiPublicExtensionQuickReplyCategoriesRouteWithChildren
   '/api/public/extension/services': typeof ApiPublicExtensionServicesRouteWithChildren
   '/api/public/extension/shop': typeof ApiPublicExtensionShopRoute
   '/api/public/extension/time-blocks': typeof ApiPublicExtensionTimeBlocksRouteWithChildren
@@ -593,6 +608,7 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/professionals/$id': typeof ApiPublicExtensionProfessionalsIdRoute
   '/api/public/extension/quick-replies/$id': typeof ApiPublicExtensionQuickRepliesIdRoute
   '/api/public/extension/quick-replies/upload': typeof ApiPublicExtensionQuickRepliesUploadRoute
+  '/api/public/extension/quick-reply-categories/$id': typeof ApiPublicExtensionQuickReplyCategoriesIdRoute
   '/api/public/extension/services/$id': typeof ApiPublicExtensionServicesIdRoute
   '/api/public/extension/time-blocks/$id': typeof ApiPublicExtensionTimeBlocksIdRoute
   '/api/public/extension/wa/data': typeof ApiPublicExtensionWaDataRoute
@@ -649,6 +665,7 @@ export interface FileRoutesByTo {
   '/api/public/extension/products': typeof ApiPublicExtensionProductsRouteWithChildren
   '/api/public/extension/professionals': typeof ApiPublicExtensionProfessionalsRouteWithChildren
   '/api/public/extension/quick-replies': typeof ApiPublicExtensionQuickRepliesRouteWithChildren
+  '/api/public/extension/quick-reply-categories': typeof ApiPublicExtensionQuickReplyCategoriesRouteWithChildren
   '/api/public/extension/services': typeof ApiPublicExtensionServicesRouteWithChildren
   '/api/public/extension/shop': typeof ApiPublicExtensionShopRoute
   '/api/public/extension/time-blocks': typeof ApiPublicExtensionTimeBlocksRouteWithChildren
@@ -672,6 +689,7 @@ export interface FileRoutesByTo {
   '/api/public/extension/professionals/$id': typeof ApiPublicExtensionProfessionalsIdRoute
   '/api/public/extension/quick-replies/$id': typeof ApiPublicExtensionQuickRepliesIdRoute
   '/api/public/extension/quick-replies/upload': typeof ApiPublicExtensionQuickRepliesUploadRoute
+  '/api/public/extension/quick-reply-categories/$id': typeof ApiPublicExtensionQuickReplyCategoriesIdRoute
   '/api/public/extension/services/$id': typeof ApiPublicExtensionServicesIdRoute
   '/api/public/extension/time-blocks/$id': typeof ApiPublicExtensionTimeBlocksIdRoute
   '/api/public/extension/wa/data': typeof ApiPublicExtensionWaDataRoute
@@ -729,6 +747,7 @@ export interface FileRoutesById {
   '/api/public/extension/products': typeof ApiPublicExtensionProductsRouteWithChildren
   '/api/public/extension/professionals': typeof ApiPublicExtensionProfessionalsRouteWithChildren
   '/api/public/extension/quick-replies': typeof ApiPublicExtensionQuickRepliesRouteWithChildren
+  '/api/public/extension/quick-reply-categories': typeof ApiPublicExtensionQuickReplyCategoriesRouteWithChildren
   '/api/public/extension/services': typeof ApiPublicExtensionServicesRouteWithChildren
   '/api/public/extension/shop': typeof ApiPublicExtensionShopRoute
   '/api/public/extension/time-blocks': typeof ApiPublicExtensionTimeBlocksRouteWithChildren
@@ -752,6 +771,7 @@ export interface FileRoutesById {
   '/api/public/extension/professionals/$id': typeof ApiPublicExtensionProfessionalsIdRoute
   '/api/public/extension/quick-replies/$id': typeof ApiPublicExtensionQuickRepliesIdRoute
   '/api/public/extension/quick-replies/upload': typeof ApiPublicExtensionQuickRepliesUploadRoute
+  '/api/public/extension/quick-reply-categories/$id': typeof ApiPublicExtensionQuickReplyCategoriesIdRoute
   '/api/public/extension/services/$id': typeof ApiPublicExtensionServicesIdRoute
   '/api/public/extension/time-blocks/$id': typeof ApiPublicExtensionTimeBlocksIdRoute
   '/api/public/extension/wa/data': typeof ApiPublicExtensionWaDataRoute
@@ -810,6 +830,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/products'
     | '/api/public/extension/professionals'
     | '/api/public/extension/quick-replies'
+    | '/api/public/extension/quick-reply-categories'
     | '/api/public/extension/services'
     | '/api/public/extension/shop'
     | '/api/public/extension/time-blocks'
@@ -833,6 +854,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/professionals/$id'
     | '/api/public/extension/quick-replies/$id'
     | '/api/public/extension/quick-replies/upload'
+    | '/api/public/extension/quick-reply-categories/$id'
     | '/api/public/extension/services/$id'
     | '/api/public/extension/time-blocks/$id'
     | '/api/public/extension/wa/data'
@@ -889,6 +911,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/products'
     | '/api/public/extension/professionals'
     | '/api/public/extension/quick-replies'
+    | '/api/public/extension/quick-reply-categories'
     | '/api/public/extension/services'
     | '/api/public/extension/shop'
     | '/api/public/extension/time-blocks'
@@ -912,6 +935,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/professionals/$id'
     | '/api/public/extension/quick-replies/$id'
     | '/api/public/extension/quick-replies/upload'
+    | '/api/public/extension/quick-reply-categories/$id'
     | '/api/public/extension/services/$id'
     | '/api/public/extension/time-blocks/$id'
     | '/api/public/extension/wa/data'
@@ -968,6 +992,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/products'
     | '/api/public/extension/professionals'
     | '/api/public/extension/quick-replies'
+    | '/api/public/extension/quick-reply-categories'
     | '/api/public/extension/services'
     | '/api/public/extension/shop'
     | '/api/public/extension/time-blocks'
@@ -991,6 +1016,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/professionals/$id'
     | '/api/public/extension/quick-replies/$id'
     | '/api/public/extension/quick-replies/upload'
+    | '/api/public/extension/quick-reply-categories/$id'
     | '/api/public/extension/services/$id'
     | '/api/public/extension/time-blocks/$id'
     | '/api/public/extension/wa/data'
@@ -1047,6 +1073,7 @@ export interface RootRouteChildren {
   ApiPublicExtensionProductsRoute: typeof ApiPublicExtensionProductsRouteWithChildren
   ApiPublicExtensionProfessionalsRoute: typeof ApiPublicExtensionProfessionalsRouteWithChildren
   ApiPublicExtensionQuickRepliesRoute: typeof ApiPublicExtensionQuickRepliesRouteWithChildren
+  ApiPublicExtensionQuickReplyCategoriesRoute: typeof ApiPublicExtensionQuickReplyCategoriesRouteWithChildren
   ApiPublicExtensionServicesRoute: typeof ApiPublicExtensionServicesRouteWithChildren
   ApiPublicExtensionShopRoute: typeof ApiPublicExtensionShopRoute
   ApiPublicExtensionTimeBlocksRoute: typeof ApiPublicExtensionTimeBlocksRouteWithChildren
@@ -1365,6 +1392,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensionQuickRepliesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/extension/quick-reply-categories': {
+      id: '/api/public/extension/quick-reply-categories'
+      path: '/api/public/extension/quick-reply-categories'
+      fullPath: '/api/public/extension/quick-reply-categories'
+      preLoaderRoute: typeof ApiPublicExtensionQuickReplyCategoriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/extension/services': {
       id: '/api/public/extension/services'
       path: '/api/public/extension/services'
@@ -1525,6 +1559,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/public/extension/quick-replies/upload'
       preLoaderRoute: typeof ApiPublicExtensionQuickRepliesUploadRouteImport
       parentRoute: typeof ApiPublicExtensionQuickRepliesRoute
+    }
+    '/api/public/extension/quick-reply-categories/$id': {
+      id: '/api/public/extension/quick-reply-categories/$id'
+      path: '/$id'
+      fullPath: '/api/public/extension/quick-reply-categories/$id'
+      preLoaderRoute: typeof ApiPublicExtensionQuickReplyCategoriesIdRouteImport
+      parentRoute: typeof ApiPublicExtensionQuickReplyCategoriesRoute
     }
     '/api/public/extension/services/$id': {
       id: '/api/public/extension/services/$id'
@@ -1775,6 +1816,21 @@ const ApiPublicExtensionQuickRepliesRouteWithChildren =
     ApiPublicExtensionQuickRepliesRouteChildren,
   )
 
+interface ApiPublicExtensionQuickReplyCategoriesRouteChildren {
+  ApiPublicExtensionQuickReplyCategoriesIdRoute: typeof ApiPublicExtensionQuickReplyCategoriesIdRoute
+}
+
+const ApiPublicExtensionQuickReplyCategoriesRouteChildren: ApiPublicExtensionQuickReplyCategoriesRouteChildren =
+  {
+    ApiPublicExtensionQuickReplyCategoriesIdRoute:
+      ApiPublicExtensionQuickReplyCategoriesIdRoute,
+  }
+
+const ApiPublicExtensionQuickReplyCategoriesRouteWithChildren =
+  ApiPublicExtensionQuickReplyCategoriesRoute._addFileChildren(
+    ApiPublicExtensionQuickReplyCategoriesRouteChildren,
+  )
+
 interface ApiPublicExtensionServicesRouteChildren {
   ApiPublicExtensionServicesIdRoute: typeof ApiPublicExtensionServicesIdRoute
 }
@@ -1871,6 +1927,8 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicExtensionProfessionalsRouteWithChildren,
   ApiPublicExtensionQuickRepliesRoute:
     ApiPublicExtensionQuickRepliesRouteWithChildren,
+  ApiPublicExtensionQuickReplyCategoriesRoute:
+    ApiPublicExtensionQuickReplyCategoriesRouteWithChildren,
   ApiPublicExtensionServicesRoute: ApiPublicExtensionServicesRouteWithChildren,
   ApiPublicExtensionShopRoute: ApiPublicExtensionShopRoute,
   ApiPublicExtensionTimeBlocksRoute:
