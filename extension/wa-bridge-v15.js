@@ -1,8 +1,8 @@
 (function () {
-  // Versão vem do content script (que lê direto do manifest.json) — não é
-  // mais uma constante fixa aqui, que ficava fácil de esquecer de
-  // atualizar junto com a versão de verdade da extensão.
-  const BRIDGE_VERSION = window.__crmBridgeVersion || "0.0.0";
+  // Versão vem do content script via atributo do DOM (não window — os
+  // dois rodam em "mundos" JS diferentes, um script injetado na página
+  // não enxerga variáveis setadas em window pelo content script).
+  const BRIDGE_VERSION = document.documentElement.getAttribute("data-crm-bridge-version") || "0.0.0";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 

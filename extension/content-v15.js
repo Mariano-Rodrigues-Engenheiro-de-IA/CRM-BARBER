@@ -56,10 +56,12 @@
   function ensureWaScriptsInjected() {
     if (waScriptsPromise) return waScriptsPromise;
     window.__crmWaJsInjected = true;
-    // A ponte roda no MAIN world (script injetado), sem acesso a
-    // chrome.runtime — passa a versão por aqui, assim ela nunca mais
-    // fica desincronizada da versão de verdade da extensão.
-    window.__crmBridgeVersion = CRM_VERSION;
+    // A ponte roda em outro "mundo" JS (script injetado na própria
+    // página) — não compartilha o window do content script (mundo
+    // isolado), então setar window.__crmBridgeVersion aqui não chegava
+    // lá (foi isso que deu "Bridge 0.0.0"). Atributo do DOM, sim, é
+    // compartilhado entre os dois mundos.
+    document.documentElement.setAttribute("data-crm-bridge-version", CRM_VERSION);
     waScriptsPromise = waitForWaReady()
       .then(() => injectMain("wa-js.js"))
       .then(() => injectMain("wa-bridge-v15.js"))
