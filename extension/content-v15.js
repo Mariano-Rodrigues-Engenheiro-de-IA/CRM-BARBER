@@ -1425,13 +1425,13 @@
     // e serve de last-resort se a ponte falhar.
     const dom = activeChatFromDom();
 
-    if (dom?.wa_id) {
-      const cached = (waData.contacts || []).find((c) => c.wa_id === dom.wa_id);
-      if (cached?.name) {
-        return { ...dom, name: cached.name, contact_db_id: cached.id || dom.contact_db_id || null };
-      }
-    }
-
+    // Antes havia um atalho aqui: se o contato já tivesse um nome no
+    // cache da sincronização, devolvia direto sem chamar a ponte. Só que
+    // esse nome vem do perfil da PRÓPRIA pessoa (pushname/notifyName),
+    // que existe pra quase todo mundo, salvo ou não — o atalho pulava a
+    // checagem de is_saved pra praticamente todo mundo, deixando o
+    // ícone de "salvar contato" sem nunca aparecer de verdade. Agora
+    // sempre passa pela ponte, que é quem calcula isso.
     const fromBridge = await askBridge("active_chat_v290", "active_chat_done_v290", { domWaId: dom?.wa_id || null }, 8000);
     if (fromBridge && (fromBridge.wa_id || fromBridge.phone)) {
       const cached = fromBridge.wa_id ? (waData.contacts || []).find((c) => c.wa_id === fromBridge.wa_id) : null;
