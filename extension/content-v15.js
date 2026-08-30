@@ -2537,8 +2537,16 @@
   // docado do painel de respostas rápidas (não sobrepõe a conversa),
   // buscando e salvando pelos dois endpoints novos.
   // ---------------------------------------------------------------------
+  // Contador de "qual foi a chamada mais recente" — troca de lead rápida
+  // dispara renderProfilePanel várias vezes antes da anterior terminar de
+  // carregar (ela tem dois "await" no meio); sem isso, uma chamada velha
+  // podia escrever por cima depois da mais nova já ter desenhado a tela
+  // certa, dando a impressão de botão duplicado.
+  let profileRenderSeq = 0;
+
   async function renderProfilePanel(panel) {
     const kind = "profile";
+    const mySeq = ++profileRenderSeq;
     panel.innerHTML = `<div class="crm-qrp-head"><div class="crm-qr-mark">${PROFILE_SVG}</div><p class="crm-qrp-title">Perfil do cliente</p><button class="crm-qrp-close" data-close title="Fechar">&times;</button></div>${panelSwitcherHtml(kind)}<div class="crm-qrp-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
     panelClickHandler = (e) => {
       if (e.target.closest("[data-close]")) return closeSharedPanel();
@@ -2557,7 +2565,7 @@
     const chat = await activeChat();
     const contactQuery = contactIdentityQuery(chat?.contact_db_id, chat?.phone);
 
-    if (activePanelKind !== kind || !panel.isConnected) return; // usuário trocou/fechou enquanto carregava
+    if (mySeq !== profileRenderSeq || activePanelKind !== kind || !panel.isConnected) return; // uma chamada mais nova já assumiu, ou usuário trocou/fechou
     if (!chat || !contactQuery) {
       panel.querySelector(".crm-qrp-body").innerHTML = `<p class="crm-fn-pop-empty">Não consegui identificar o contato dessa conversa.</p>`;
       return;
@@ -2573,7 +2581,7 @@
           ? askBridge("profile_picture_v1", "profile_picture_done_v1", { waId: chat.wa_id }, 8000).then((r) => r?.url || null)
           : Promise.resolve(null),
     ]);
-    if (activePanelKind !== kind || !panel.isConnected) return;
+    if (mySeq !== profileRenderSeq || activePanelKind !== kind || !panel.isConnected) return;
     profilePanelWaId = chat.wa_id || null;
     const profile = (profileRes?.ok ? profileRes.profile : null) || {};
     const deal = (dealRes?.ok ? dealRes.deal : null) || {};
