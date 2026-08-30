@@ -1425,13 +1425,19 @@
     // e serve de last-resort se a ponte falhar.
     const dom = activeChatFromDom();
 
-    // Antes havia um atalho aqui: se o contato já tivesse um nome no
-    // cache da sincronização, devolvia direto sem chamar a ponte. Só que
-    // esse nome vem do perfil da PRÓPRIA pessoa (pushname/notifyName),
-    // que existe pra quase todo mundo, salvo ou não — o atalho pulava a
-    // checagem de is_saved pra praticamente todo mundo, deixando o
-    // ícone de "salvar contato" sem nunca aparecer de verdade. Agora
-    // sempre passa pela ponte, que é quem calcula isso.
+    // Atalho: se o contato já tiver um nome no cache da sincronização,
+    // devolve na hora sem esperar a ponte — é o que faz o Perfil e o
+    // nome no cabeçalho abrirem instantâneos. is_saved NÃO entra nesse
+    // atalho (fica undefined aqui de propósito): esse status muda com
+    // frequência e quem precisa dele de verdade (updateSaveContactButton)
+    // usa a função dedicada isContactSaved(), não este atalho.
+    if (dom?.wa_id) {
+      const cached = (waData.contacts || []).find((c) => c.wa_id === dom.wa_id);
+      if (cached?.name) {
+        return { ...dom, name: cached.name, contact_db_id: cached.id || dom.contact_db_id || null };
+      }
+    }
+
     const fromBridge = await askBridge("active_chat_v290", "active_chat_done_v290", { domWaId: dom?.wa_id || null }, 8000);
     if (fromBridge && (fromBridge.wa_id || fromBridge.phone)) {
       const cached = fromBridge.wa_id ? (waData.contacts || []).find((c) => c.wa_id === fromBridge.wa_id) : null;
@@ -2297,11 +2303,27 @@
    * não está salva na agenda de quem está usando o WhatsApp — sem isso,
    * o ícone ficaria sempre visível, mesmo pra contatos já salvos. Fica
    * plantado do ladinho do nome/número, separado dos outros 5 ícones. */
+  /** Checagem dedicada e leve de "está salvo ou não" — não reaproveita
+   * activeChat() de propósito, porque ali o nome vem de um atalho de
+   * cache (rápido, mas não carrega is_saved). Sempre passa pela ponte,
+   * mas só pra esse status — não busca telefone/nome/foto junto, então
+   * fica bem mais rápido que o fluxo completo do Perfil. */
+  async function isContactSaved() {
+    const dom = activeChatFromDom();
+    const fromBridge = await askBridge("active_chat_v290", "active_chat_done_v290", { domWaId: dom?.wa_id || null }, 8000);
+    if (!fromBridge) return null;
+    return {
+      is_saved: !!fromBridge.is_saved,
+      is_group: !!fromBridge.is_group,
+      phone: fromBridge.phone || dom?.phone || null,
+    };
+  }
+
   async function updateSaveContactButton() {
     const btn = document.getElementById(SAVE_CONTACT_BTN_ID);
     if (!btn) return;
     try {
-      const chat = await activeChat();
+      const chat = await isContactSaved();
       const show = !!(chat && !chat.is_group && chat.is_saved === false && chat.phone);
       if (!show) {
         btn.style.display = "none";
