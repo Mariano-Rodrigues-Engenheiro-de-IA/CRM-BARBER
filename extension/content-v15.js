@@ -2325,8 +2325,8 @@
    * oficial (ela não tem esse conceito de agenda pra escrever). */
   async function saveActiveContact(anchor) {
     const chat = await activeChat();
-    if (!chat?.phone) {
-      crmToast("Não consegui identificar o número dessa conversa.", "err", anchor);
+    if (!chat?.wa_id) {
+      crmToast("Não consegui identificar o contato dessa conversa.", "err", anchor);
       return;
     }
     const name = await openInlinePrompt(anchor, {
@@ -2335,18 +2335,15 @@
       confirmLabel: "Salvar",
     });
     if (!name || !name.trim()) return;
-    const r = await chrome.runtime
-      .sendMessage({
-        type: "api",
-        path: "/api/public/extension/wa/contact-add",
-        opts: { method: "POST", body: JSON.stringify({ number: chat.phone, name: name.trim() }) },
-      })
-      .catch(() => null);
-    if (r?.ok) {
+    // Chama a função nativa do próprio WhatsApp (mesma coisa que o botão
+    // "Adicionar" na tela de dados do contato) — não depende de nenhuma
+    // API externa nem de qual conexão a barbearia está usando.
+    const r = await askBridge("save_contact_v1", "save_contact_done_v1", { waId: chat.wa_id, name: name.trim() }, 10000);
+    if (r) {
       crmToast("Contato salvo!", "ok", anchor);
       void updateSaveContactButton();
     } else {
-      crmToast(r?.error || "Falha ao salvar contato.", "err", anchor);
+      crmToast("Falha ao salvar contato.", "err", anchor);
     }
   }
 

@@ -390,18 +390,6 @@ export const uazapiProvider: WhatsAppProvider = {
     return { ok: false, error: `UAZAPI ${res.status}: ${msg}`, retryable };
   },
 
-  async addContact({ instance_token, number, name }) {
-    const digits = number.replace(/\D+/g, "");
-    const res = await uaz("/contact/add", {
-      method: "POST",
-      token: instance_token,
-      body: { number: digits, name },
-    });
-    if (res.ok) return { ok: true };
-    const msg = res.data.error ?? res.data.message ?? res.raw.slice(0, 200);
-    return { ok: false, error: `UAZAPI ${res.status}: ${msg}` };
-  },
-
   async disconnect({ instance_token, shared_with_ai }) {
     // Instância COMPARTILHADA com a IA: nunca desconecta a sessão real de
     // WhatsApp por aqui — isso derrubaria a IA junto, já que é a mesma

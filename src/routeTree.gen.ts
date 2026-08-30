@@ -76,7 +76,6 @@ import { Route as ApiPublicExtensionQuickRepliesIdRouteImport } from './routes/a
 import { Route as ApiPublicExtensionQuickRepliesUploadRouteImport } from './routes/api/public/extension/quick-replies.upload'
 import { Route as ApiPublicExtensionServicesIdRouteImport } from './routes/api/public/extension/services.$id'
 import { Route as ApiPublicExtensionTimeBlocksIdRouteImport } from './routes/api/public/extension/time-blocks.$id'
-import { Route as ApiPublicExtensionWaContactAddRouteImport } from './routes/api/public/extension/wa.contact-add'
 import { Route as ApiPublicExtensionWaDataRouteImport } from './routes/api/public/extension/wa.data'
 import { Route as ApiPublicExtensionWaSyncRouteImport } from './routes/api/public/extension/wa.sync'
 import { Route as ApiPublicExtensionWhatsappConnectRouteImport } from './routes/api/public/extension/whatsapp.connect'
@@ -467,12 +466,6 @@ const ApiPublicExtensionTimeBlocksIdRoute =
     path: '/$id',
     getParentRoute: () => ApiPublicExtensionTimeBlocksRoute,
   } as any)
-const ApiPublicExtensionWaContactAddRoute =
-  ApiPublicExtensionWaContactAddRouteImport.update({
-    id: '/api/public/extension/wa/contact-add',
-    path: '/api/public/extension/wa/contact-add',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiPublicExtensionWaDataRoute =
   ApiPublicExtensionWaDataRouteImport.update({
     id: '/api/public/extension/wa/data',
@@ -602,7 +595,6 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/quick-replies/upload': typeof ApiPublicExtensionQuickRepliesUploadRoute
   '/api/public/extension/services/$id': typeof ApiPublicExtensionServicesIdRoute
   '/api/public/extension/time-blocks/$id': typeof ApiPublicExtensionTimeBlocksIdRoute
-  '/api/public/extension/wa/contact-add': typeof ApiPublicExtensionWaContactAddRoute
   '/api/public/extension/wa/data': typeof ApiPublicExtensionWaDataRoute
   '/api/public/extension/wa/sync': typeof ApiPublicExtensionWaSyncRoute
   '/api/public/extension/whatsapp/connect': typeof ApiPublicExtensionWhatsappConnectRoute
@@ -682,7 +674,6 @@ export interface FileRoutesByTo {
   '/api/public/extension/quick-replies/upload': typeof ApiPublicExtensionQuickRepliesUploadRoute
   '/api/public/extension/services/$id': typeof ApiPublicExtensionServicesIdRoute
   '/api/public/extension/time-blocks/$id': typeof ApiPublicExtensionTimeBlocksIdRoute
-  '/api/public/extension/wa/contact-add': typeof ApiPublicExtensionWaContactAddRoute
   '/api/public/extension/wa/data': typeof ApiPublicExtensionWaDataRoute
   '/api/public/extension/wa/sync': typeof ApiPublicExtensionWaSyncRoute
   '/api/public/extension/whatsapp/connect': typeof ApiPublicExtensionWhatsappConnectRoute
@@ -763,7 +754,6 @@ export interface FileRoutesById {
   '/api/public/extension/quick-replies/upload': typeof ApiPublicExtensionQuickRepliesUploadRoute
   '/api/public/extension/services/$id': typeof ApiPublicExtensionServicesIdRoute
   '/api/public/extension/time-blocks/$id': typeof ApiPublicExtensionTimeBlocksIdRoute
-  '/api/public/extension/wa/contact-add': typeof ApiPublicExtensionWaContactAddRoute
   '/api/public/extension/wa/data': typeof ApiPublicExtensionWaDataRoute
   '/api/public/extension/wa/sync': typeof ApiPublicExtensionWaSyncRoute
   '/api/public/extension/whatsapp/connect': typeof ApiPublicExtensionWhatsappConnectRoute
@@ -845,7 +835,6 @@ export interface FileRouteTypes {
     | '/api/public/extension/quick-replies/upload'
     | '/api/public/extension/services/$id'
     | '/api/public/extension/time-blocks/$id'
-    | '/api/public/extension/wa/contact-add'
     | '/api/public/extension/wa/data'
     | '/api/public/extension/wa/sync'
     | '/api/public/extension/whatsapp/connect'
@@ -925,7 +914,6 @@ export interface FileRouteTypes {
     | '/api/public/extension/quick-replies/upload'
     | '/api/public/extension/services/$id'
     | '/api/public/extension/time-blocks/$id'
-    | '/api/public/extension/wa/contact-add'
     | '/api/public/extension/wa/data'
     | '/api/public/extension/wa/sync'
     | '/api/public/extension/whatsapp/connect'
@@ -1005,7 +993,6 @@ export interface FileRouteTypes {
     | '/api/public/extension/quick-replies/upload'
     | '/api/public/extension/services/$id'
     | '/api/public/extension/time-blocks/$id'
-    | '/api/public/extension/wa/contact-add'
     | '/api/public/extension/wa/data'
     | '/api/public/extension/wa/sync'
     | '/api/public/extension/whatsapp/connect'
@@ -1071,7 +1058,6 @@ export interface RootRouteChildren {
   ApiPublicAiProductsSearchRoute: typeof ApiPublicAiProductsSearchRoute
   ApiPublicExtensionJobsIdRoute: typeof ApiPublicExtensionJobsIdRoute
   ApiPublicExtensionJobsNextRoute: typeof ApiPublicExtensionJobsNextRoute
-  ApiPublicExtensionWaContactAddRoute: typeof ApiPublicExtensionWaContactAddRoute
   ApiPublicExtensionWaDataRoute: typeof ApiPublicExtensionWaDataRoute
   ApiPublicExtensionWaSyncRoute: typeof ApiPublicExtensionWaSyncRoute
   ApiPublicExtensionWhatsappConnectRoute: typeof ApiPublicExtensionWhatsappConnectRoute
@@ -1554,13 +1540,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensionTimeBlocksIdRouteImport
       parentRoute: typeof ApiPublicExtensionTimeBlocksRoute
     }
-    '/api/public/extension/wa/contact-add': {
-      id: '/api/public/extension/wa/contact-add'
-      path: '/api/public/extension/wa/contact-add'
-      fullPath: '/api/public/extension/wa/contact-add'
-      preLoaderRoute: typeof ApiPublicExtensionWaContactAddRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/extension/wa/data': {
       id: '/api/public/extension/wa/data'
       path: '/api/public/extension/wa/data'
@@ -1905,7 +1884,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicAiProductsSearchRoute: ApiPublicAiProductsSearchRoute,
   ApiPublicExtensionJobsIdRoute: ApiPublicExtensionJobsIdRoute,
   ApiPublicExtensionJobsNextRoute: ApiPublicExtensionJobsNextRoute,
-  ApiPublicExtensionWaContactAddRoute: ApiPublicExtensionWaContactAddRoute,
   ApiPublicExtensionWaDataRoute: ApiPublicExtensionWaDataRoute,
   ApiPublicExtensionWaSyncRoute: ApiPublicExtensionWaSyncRoute,
   ApiPublicExtensionWhatsappConnectRoute:

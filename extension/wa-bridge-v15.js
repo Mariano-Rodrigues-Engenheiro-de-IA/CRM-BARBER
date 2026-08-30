@@ -792,6 +792,25 @@
       return;
     }
 
+    // Salva o contato de verdade dentro do WhatsApp — mesma função por
+    // trás do botão nativo "Adicionar" que aparece quando abre os dados
+    // de um contato não salvo. Não depende de nenhuma API externa: é a
+    // própria função exportada pela wa-js (WPPConnect) que a extensão já
+    // carrega. https://wppconnect.io/wa-js/functions/whatsapp.WPP.contact.save.html
+    if (d.__crm === "save_contact_v1") {
+      try {
+        await waitForWpp();
+        if (typeof window.WPP?.contact?.save !== "function") {
+          throw new Error("Função de salvar contato indisponível nessa versão do WhatsApp Web.");
+        }
+        await window.WPP.contact.save(d.waId, d.name, { syncAddressBook: true });
+        window.postMessage({ __crm: "save_contact_done_v1", id: d.id, ok: true }, "*");
+      } catch (e) {
+        window.postMessage({ __crm: "save_contact_done_v1", id: d.id, ok: false, error: e?.message || String(e) }, "*");
+      }
+      return;
+    }
+
     if (d.__crm === "apply_label_v290") {
       try {
         await waitForWpp();
