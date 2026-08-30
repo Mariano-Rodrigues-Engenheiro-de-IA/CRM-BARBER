@@ -71,6 +71,10 @@ export interface BspAdapter {
     language_code: string;
     /** Textos das variáveis {{1}}, {{2}}... do corpo do template, na ordem. */
     body_params?: string[];
+    // URL (assinada, temporária) da imagem de cabeçalho do template — a
+    // Meta exige isso a CADA envio quando o modelo tem cabeçalho de
+    // imagem (não fica salvo no modelo aprovado em si).
+    header_image_url?: string | null;
   }): Promise<SendResult>;
 
   /** Lista os modelos de mensagem (templates) da WABA, com status de

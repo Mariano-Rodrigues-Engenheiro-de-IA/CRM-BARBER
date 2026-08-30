@@ -375,20 +375,30 @@ export const cloudAdapter: BspAdapter = {
     template_name,
     language_code,
     body_params,
+    header_image_url,
   }): Promise<SendResult> {
     if (!phone_number_id) {
       return { ok: false, error: "phone_number_id ausente na instância", retryable: false };
     }
     try {
-      const components =
-        body_params && body_params.length > 0
-          ? [
-              {
-                type: "body",
-                parameters: body_params.map((text) => ({ type: "text", text })),
-              },
-            ]
-          : undefined;
+      // Causa raiz de disparos com modelo aprovado falhando: quando o
+      // modelo tem cabeçalho de imagem, a Meta exige um componente
+      // "header" com a imagem em TODO envio (a aprovação do modelo não
+      // "grava" nenhuma imagem específica) — antes isso nunca era
+      // montado, e a Meta rejeitava o envio.
+      const components: Array<Record<string, unknown>> = [];
+      if (header_image_url) {
+        components.push({
+          type: "header",
+          parameters: [{ type: "image", image: { link: header_image_url } }],
+        });
+      }
+      if (body_params && body_params.length > 0) {
+        components.push({
+          type: "body",
+          parameters: body_params.map((text) => ({ type: "text", text })),
+        });
+      }
       const res = await fetch(graphUrl(`${phone_number_id}/messages`), {
         method: "POST",
         headers: {
@@ -403,7 +413,7 @@ export const cloudAdapter: BspAdapter = {
           template: {
             name: template_name,
             language: { code: language_code },
-            ...(components ? { components } : {}),
+            ...(components.length > 0 ? { components } : {}),
           },
         }),
       });

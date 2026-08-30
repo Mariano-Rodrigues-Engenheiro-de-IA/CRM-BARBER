@@ -118,6 +118,10 @@ export interface WhatsAppProvider {
     template_name: string;
     language_code: string;
     body_params?: string[];
+    // URL (assinada, temporária) da imagem de cabeçalho — a Meta exige
+    // isso a CADA envio quando o modelo tem cabeçalho de imagem; não fica
+    // gravado no modelo aprovado.
+    header_image_url?: string | null;
   }): Promise<SendResult>;
 
   /** Só na API oficial — lista modelos de mensagem com status de aprovação. */

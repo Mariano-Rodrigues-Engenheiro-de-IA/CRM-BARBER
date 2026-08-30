@@ -103,7 +103,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
           // silenciosamente jobs com campaign_id nulo, se algum existir.)
           const { data: jobs } = await supabaseAdmin
             .from("message_jobs")
-            .select("id, customer_id, rendered_body, message_actions, template_name, template_language, campaign_id, attempts")
+            .select("id, customer_id, rendered_body, message_actions, template_name, template_language, template_header_media_path, campaign_id, attempts")
             .eq("barbershop_id", inst.barbershop_id)
             .eq("status", "pending")
             // Jobs marcados force_extension nunca passam pela API oficial
@@ -182,6 +182,24 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
                   retryable: false,
                 };
               } else {
+                // Modelo com cabeçalho de imagem: a Meta exige a imagem
+                // em TODO envio (não fica gravada no modelo aprovado) —
+                // gera uma URL assinada aqui, na hora do disparo (não fica
+                // salva pronta em lugar nenhum, pra não expirar antes do
+                // TTL de 48h da campanha).
+                let headerImageUrl: string | null = null;
+                if (job.template_header_media_path) {
+                  const { data: signed } = await supabaseAdmin.storage
+                    .from("quick-reply-media")
+                    .createSignedUrl(job.template_header_media_path, 60 * 60);
+                  headerImageUrl = signed?.signedUrl ?? null;
+                  if (!headerImageUrl) {
+                    console.error(
+                      "[dispatch-jobs] falha ao gerar URL assinada da imagem de cabeçalho do modelo:",
+                      job.template_header_media_path,
+                    );
+                  }
+                }
                 result = await provider
                   .sendTemplate({
                     instance_token: instanceToken,
@@ -189,6 +207,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
                     to: phone,
                     template_name: job.template_name,
                     language_code: job.template_language ?? "pt_BR",
+                    header_image_url: headerImageUrl,
                   })
                   .catch((e: unknown) => ({
                     ok: false as const,

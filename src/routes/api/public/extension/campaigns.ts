@@ -31,6 +31,10 @@ const bodySchema = z
     // fora da janela de 24h de conversa ativa. Alternativa a message/actions.
     template_name: z.string().trim().min(1).max(512).optional(),
     template_language: z.string().trim().min(2).max(10).optional(),
+    // Caminho (no bucket quick-reply-media) da imagem de cabeçalho, quando
+    // o modelo escolhido tiver cabeçalho do tipo Imagem — a Meta exige
+    // isso em TODO envio, não só na criação do modelo.
+    template_header_media_path: z.string().trim().max(400).optional(),
     pace_seconds: z.number().int().min(5).max(600).optional(),
     pace_seconds_min: z.number().int().min(5).max(600).optional(),
     pace_seconds_max: z.number().int().min(5).max(600).optional(),
@@ -114,6 +118,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
           message_actions,
           template_name,
           template_language,
+          template_header_media_path,
           pace_seconds,
           pace_seconds_min,
           pace_seconds_max,
@@ -274,6 +279,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
             pace_seconds_max: paceHi,
             message_variants: variants,
             message_actions: message_actions ?? [],
+            template_header_media_path: template_header_media_path ?? null,
             audience_filter: {
               ...(filter ?? { customer_ids: customer_ids ?? [] }),
               scope: scope ?? "assinaturas",
@@ -306,6 +312,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
               rendered_body: `[Modelo: ${template_name}]`,
               template_name,
               template_language: template_language ?? "pt_BR",
+              template_header_media_path: template_header_media_path ?? null,
               status: "pending" as const,
               scheduled_for: new Date(cursor).toISOString(),
               expires_at: expiresAt,

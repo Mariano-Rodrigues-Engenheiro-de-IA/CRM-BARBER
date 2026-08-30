@@ -35,6 +35,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/send-templa
         const bodyParams = Array.isArray(body?.body_params)
           ? body.body_params.filter((p: unknown) => typeof p === "string")
           : undefined;
+        const headerImageUrl = typeof body?.header_image_url === "string" ? body.header_image_url.trim() : undefined;
 
         if (!to || !templateName || !languageCode) {
           return jsonResponse(
@@ -74,6 +75,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/send-templa
           template_name: templateName,
           language_code: languageCode,
           body_params: bodyParams,
+          header_image_url: headerImageUrl,
         });
 
         if (!result.ok) {

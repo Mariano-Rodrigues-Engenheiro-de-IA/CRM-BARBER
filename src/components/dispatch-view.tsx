@@ -28,7 +28,7 @@ export type DispatchCustomer = { id: string; name: string; phone: string; status
 type Audience = "assinantes" | "funis" | "planilha";
 type MessageMode = "custom" | "quick";
 type DispatchType = "message" | "template";
-type TemplateOption = { name: string; language: string; status: string };
+type TemplateOption = { name: string; language: string; status: string; hasImageHeader: boolean };
 
 const inputCls =
   "w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-neutral-900";
@@ -101,6 +101,9 @@ export function DispatchCenter({
   const [templatesLoaded, setTemplatesLoaded] = useState(false);
   const [isMetaProvider, setIsMetaProvider] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState("");
+  const [templateHeaderPath, setTemplateHeaderPath] = useState<string | null>(null);
+  const [templateHeaderPreview, setTemplateHeaderPreview] = useState<string | null>(null);
+  const [templateHeaderUploading, setTemplateHeaderUploading] = useState(false);
   const [paceMin, setPaceMin] = useState(20);
   const [paceMax, setPaceMax] = useState(60);
   const [accepted, setAccepted] = useState(false);
@@ -131,10 +134,20 @@ export function DispatchCenter({
       // aparece disponível se a lista carregar com sucesso.
       if (t?.ok) {
         setTemplates(
-          ((t.templates as Array<{ name: string; language: string; status: string }>) || []).map((tpl) => ({
+          (
+            (t.templates as Array<{
+              name: string;
+              language: string;
+              status: string;
+              components?: Array<{ type?: string; format?: string }>;
+            }>) || []
+          ).map((tpl) => ({
             name: tpl.name,
             language: tpl.language,
             status: tpl.status,
+            hasImageHeader: (tpl.components || []).some(
+              (c) => String(c.type).toUpperCase() === "HEADER" && String(c.format).toUpperCase() === "IMAGE",
+            ),
           })),
         );
       }
@@ -210,12 +223,37 @@ export function DispatchCenter({
     if (!name.trim()) setName(qr.title);
   }
 
+  async function handleTemplateHeaderFile(file: File) {
+    setTemplateHeaderUploading(true);
+    setErr(null);
+    try {
+      const dataUrl = await fileToBase64(file);
+      const r = await api("/api/public/extension/quick-replies/upload", {
+        method: "POST",
+        body: JSON.stringify({ filename: file.name, mime: file.type || "image/jpeg", data_base64: dataUrl }),
+      });
+      if (!r?.ok) {
+        setErr((r?.error as string) || "Falha ao enviar a imagem do cabeçalho.");
+        return;
+      }
+      setTemplateHeaderPath((r.path as string) || null);
+      setTemplateHeaderPreview(dataUrl);
+    } finally {
+      setTemplateHeaderUploading(false);
+    }
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
 
     if (dispatchType === "template") {
       if (!name.trim() || !selectedTemplate) {
         setErr("Preencha o nome e escolha um modelo aprovado.");
+        return;
+      }
+      const tplNeedsHeader = templates.find((x) => x.name === selectedTemplate)?.hasImageHeader;
+      if (tplNeedsHeader && !templateHeaderPath) {
+        setErr("Esse modelo tem imagem no cabeçalho — envie uma imagem antes de disparar.");
         return;
       }
       if (!accepted) {
@@ -240,6 +278,7 @@ export function DispatchCenter({
         name: name.trim(),
         template_name: selectedTemplate,
         template_language: tpl?.language || "pt_BR",
+        ...(templateHeaderPath ? { template_header_media_path: templateHeaderPath } : {}),
         pace_seconds_min: Math.min(paceMin, paceMax),
         pace_seconds_max: Math.max(paceMin, paceMax),
       };
@@ -470,7 +509,13 @@ export function DispatchCenter({
           ) : (
             <select
               value={selectedTemplate}
-              onChange={(e) => setSelectedTemplate(e.target.value)}
+              onChange={(e) => {
+                setSelectedTemplate(e.target.value);
+                // Trocar de modelo invalida a imagem escolhida antes —
+                // cada modelo tem seu próprio cabeçalho (ou nenhum).
+                setTemplateHeaderPath(null);
+                setTemplateHeaderPreview(null);
+              }}
               className={inputCls}
             >
               <option value="">Escolha um modelo…</option>
@@ -479,9 +524,37 @@ export function DispatchCenter({
                 .map((t) => (
                   <option key={t.name} value={t.name}>
                     {t.name}
+                    {t.hasImageHeader ? " (tem imagem)" : ""}
                   </option>
                 ))}
             </select>
+          )}
+          {isMetaProvider && templates.find((t) => t.name === selectedTemplate)?.hasImageHeader && (
+            <div className="mt-3 rounded-xl border border-neutral-300 bg-neutral-50 p-3">
+              <Label>Imagem do cabeçalho</Label>
+              <p className="mb-2 text-xs text-neutral-500">
+                Esse modelo tem imagem no cabeçalho — a Meta exige uma imagem em todo envio (mesma pra todos os
+                contatos desse disparo).
+              </p>
+              {templateHeaderPreview && (
+                <img
+                  src={templateHeaderPreview}
+                  alt="Prévia do cabeçalho"
+                  className="mb-2 max-h-32 rounded-lg border border-neutral-200 object-cover"
+                />
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                disabled={templateHeaderUploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void handleTemplateHeaderFile(file);
+                }}
+                className="block w-full text-sm text-neutral-600"
+              />
+              {templateHeaderUploading && <p className="mt-1 text-xs text-neutral-500">Enviando imagem…</p>}
+            </div>
           )}
         </div>
       ) : (
