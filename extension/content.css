@@ -882,47 +882,27 @@ html body.crm-shell.crm-qr-open #app {
 .crm-cp-save-contact svg { width: 14px; height: 14px; }
 .crm-cp-save-contact:hover { text-decoration: underline; }
 
-/* Badge de "salvar contato" plantado do ladinho do nome/número no
-   cabeçalho da conversa — pequeno e alinhado com o texto, bem diferente
-   dos 5 ícones de ação (que ficam agrupados do lado direito). */
+/* Ícone de "salvar contato" plantado do ladinho do nome/número — mesmo
+   estilo simples dos outros ícones (sem fundo, sem bolinha), só reposicionado
+   pra ficar junto do nome em vez de agrupado com os 5 ícones de ação. */
 .crm-save-contact-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   vertical-align: middle;
   margin-left: 6px;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   border: 0;
   border-radius: 999px;
-  background: var(--z-accent);
-  color: #fff;
+  background: transparent;
+  color: var(--z-accent);
   cursor: pointer;
   flex: 0 0 auto;
-  position: relative;
 }
-.crm-save-contact-badge svg { width: 13px; height: 13px; }
-.crm-save-contact-badge:hover { filter: brightness(1.1); }
-.crm-save-contact-badge::after {
-  content: attr(data-label);
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--z-accent);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 6px;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.12s ease;
-  z-index: 5;
-}
-.crm-save-contact-badge:hover::after { opacity: 1; }
+.crm-save-contact-badge svg { width: 17px; height: 17px; }
+.crm-save-contact-badge:hover { background: rgba(0, 0, 0, 0.06); }
 .crm-cp-field { display: block; margin-bottom: 10px; }
 .crm-cp-field span { display: flex; align-items: center; gap: 5px; margin-bottom: 4px; font-size: 11px; font-weight: 700; color: var(--z-text-dim); }
 .crm-cp-field span svg { flex-shrink: 0; }

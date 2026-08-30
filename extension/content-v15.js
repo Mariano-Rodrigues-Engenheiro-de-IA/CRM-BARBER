@@ -2291,8 +2291,11 @@
         return;
       }
       const nameNode = headerNameNode();
-      if (nameNode?.parentElement && btn.previousSibling !== nameNode) {
-        nameNode.parentElement.insertBefore(btn, nameNode.nextSibling);
+      if (nameNode?.parentElement) {
+        // Anexa no FIM do mesmo grupo do nome — não logo depois do nome
+        // em si, porque contas verificadas têm um selinho ali do lado, e
+        // entrar bem entre nome e selo ficava esquisito.
+        nameNode.parentElement.appendChild(btn);
       }
       btn.style.display = "";
     } catch {

@@ -758,7 +758,22 @@
         // ícone de "salvar contato".
         let contact = null;
         try {
-          contact = chat?.contact || window.WPP?.whatsapp?.ContactStore?.get?.(waId) || null;
+          contact =
+            chat?.contact ||
+            window.WPP?.whatsapp?.ContactStore?.get?.(waId) ||
+            (chat?.id ? window.WPP?.whatsapp?.ContactStore?.get?.(chat.id) : null) ||
+            null;
+          // Em builds novas o WhatsApp identifica a conversa por @lid — o
+          // contato de verdade (com o .name salvo) pode estar guardado só
+          // sob a chave {telefone}@c.us. Sem esse fallback (mesmo usado em
+          // resolveName), is_saved dava falso negativo pra esses casos.
+          if (!contact?.name) {
+            const fromLid = lidIndex.get(String(waId));
+            if (fromLid?.phone) {
+              const byPhone = window.WPP?.whatsapp?.ContactStore?.get?.(`${fromLid.phone}@c.us`);
+              if (byPhone?.name) contact = byPhone;
+            }
+          }
         } catch {}
         const isSaved = !!String(contact?.name || "").trim();
         const pushName = String(contact?.pushname || contact?.notifyName || "").trim() || null;
