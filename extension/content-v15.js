@@ -2255,6 +2255,10 @@
       saveContactBtn.insertAdjacentElement("afterend", boltBtn);
     }
     updateFunnelBadge();
+    // Dispara na hora, sem esperar o ciclo de 1.5s — é aqui que detecta
+    // que a conversa mudou de verdade (cabeçalho recriado), então é o
+    // ponto certo pra já checar se o novo contato está salvo.
+    void updateSaveContactButton();
   }
 
 
@@ -2611,7 +2615,7 @@
     }
 
     const cached = (waData.contacts || []).find((c) => chat.wa_id && c.wa_id === chat.wa_id);
-    const [profileRes, dealRes, photo] = await Promise.all([
+    const [profileRes, dealRes, photo, savedInfo] = await Promise.all([
       chrome.runtime.sendMessage({ type: "api", path: `/api/public/extension/customer-profile?${contactQuery}` }).catch(() => null),
       chrome.runtime.sendMessage({ type: "api", path: `/api/public/extension/customer-deal?${contactQuery}` }).catch(() => null),
       cached?.profile_picture_url
@@ -2619,6 +2623,10 @@
         : chat.wa_id
           ? askBridge("profile_picture_v1", "profile_picture_done_v1", { waId: chat.wa_id }, 8000).then((r) => r?.url || null)
           : Promise.resolve(null),
+      // activeChat() não carrega is_saved (é um atalho de cache, ver
+      // comentário lá) — busca isso separado, em paralelo, pra não
+      // atrasar o resto do Perfil.
+      isContactSaved().catch(() => null),
     ]);
     if (mySeq !== profileRenderSeq || activePanelKind !== kind || !panel.isConnected) return;
     profilePanelWaId = chat.wa_id || null;
@@ -2646,7 +2654,7 @@
           </div>
           <p class="crm-cp-phone">${escapeHtml(chat.phone || "")}</p>
           ${
-            chat.is_saved === false
+            savedInfo?.is_saved === false
               ? `<button type="button" class="crm-cp-save-contact" data-save-contact>${SAVE_CONTACT_SVG} Salvar na agenda</button>`
               : ""
           }
