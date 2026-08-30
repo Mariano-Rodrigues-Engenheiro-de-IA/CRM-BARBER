@@ -1432,7 +1432,7 @@
       }
     }
 
-    const fromBridge = await askBridge("active_chat_v290", "active_chat_done_v290", {}, 8000);
+    const fromBridge = await askBridge("active_chat_v290", "active_chat_done_v290", { domWaId: dom?.wa_id || null }, 8000);
     if (fromBridge && (fromBridge.wa_id || fromBridge.phone)) {
       const cached = fromBridge.wa_id ? (waData.contacts || []).find((c) => c.wa_id === fromBridge.wa_id) : null;
       return {

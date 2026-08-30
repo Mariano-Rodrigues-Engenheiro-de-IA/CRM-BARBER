@@ -749,26 +749,44 @@
     if (d.__crm === "active_chat_v290") {
       try {
         await waitForWpp();
-        const chat =
+        let chat =
           (typeof window.WPP?.chat?.getActiveChat === "function" && window.WPP.chat.getActiveChat()) ||
           null;
-        if (!chat) throw new Error("Nenhuma conversa aberta");
-        const waId = serialized(chat?.id);
+        let usedFallback = false;
+        // Reserva: se getActiveChat() não achar nada (aconteceu bastante
+        // pra contatos não salvos, segundo os testes), tenta pegar direto
+        // pelo id que o content script já leu do próprio DOM.
+        if (!chat && d.domWaId) {
+          try {
+            chat = (await window.WPP?.chat?.get?.(d.domWaId)) || null;
+            usedFallback = !!chat;
+          } catch {}
+        }
+        // LOG DE DIAGNÓSTICO — roda sempre, ANTES de qualquer coisa que
+        // possa falhar/parar o código, pra nunca ficar "mudo" numa
+        // conversa específica sem explicar o motivo.
+        if (!chat) {
+          console.log("[CRM salvar-contato] getActiveChat() não achou nada, e o fallback por domWaId também não. domWaId recebido:", d.domWaId);
+          throw new Error("Nenhuma conversa aberta");
+        }
+        const waId = serialized(chat?.id) || d.domWaId;
         let contact = null;
+        let contactErr = null;
         try {
           // Uma busca só (rápida) — as tentativas extras de resolução por
           // @lid nas rodadas anteriores deixaram isso mais lento sem
           // resolver o problema de verdade, então voltamos pro simples.
           contact = chat?.contact || (await window.WPP?.contact?.get?.(waId)) || null;
-        } catch {}
+        } catch (e) {
+          contactErr = e?.message || String(e);
+        }
         const isSaved = contact?.isMyContact === true;
-        // LOG DE DIAGNÓSTICO — abre o Console do navegador (F12) numa
-        // conversa que deveria aparecer como "não salva" e manda pra mim
-        // o que aparece aqui. Isso vai mostrar exatamente o que a
-        // biblioteca está enxergando pra esse contato específico.
         console.log("[CRM salvar-contato]", {
           waId,
+          usedFallback,
+          hasChatContact: !!chat?.contact,
           contactFound: !!contact,
+          contactErr,
           isMyContact: contact?.isMyContact,
           name: contact?.name,
           pushname: contact?.pushname,
@@ -786,6 +804,7 @@
         };
         window.postMessage({ __crm: "active_chat_done_v290", id: d.id, ok: true, data }, "*");
       } catch (e) {
+        console.log("[CRM salvar-contato] erro geral:", e?.message || String(e));
         window.postMessage({ __crm: "active_chat_done_v290", id: d.id, ok: false, error: e?.message || String(e) }, "*");
       }
       return;
