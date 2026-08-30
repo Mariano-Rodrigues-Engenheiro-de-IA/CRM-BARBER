@@ -1428,6 +1428,7 @@
   const RAIO_BTN_ID = "crm-chat-bolt";
   const NOTES_BTN_ID = "crm-chat-notes";
   const SCHEDULE_BTN_ID = "crm-chat-schedule";
+  const PROFILE_BTN_ID = "crm-chat-profile";
   const BOLT_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>`;
   const PROFILE_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="18" height="17" rx="3.2"/><circle cx="12" cy="10" r="3"/><path d="M6.5 17.2c.9-2.3 3-3.7 5.5-3.7s4.6 1.4 5.5 3.7"/></svg>`;
   const DEAL_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9v.01M18 15v.01"/></svg>`;
@@ -2073,9 +2074,10 @@
     const hasBolt = document.getElementById(RAIO_BTN_ID);
     const hasNotes = document.getElementById(NOTES_BTN_ID);
     const hasSchedule = document.getElementById(SCHEDULE_BTN_ID);
+    const hasProfile = document.getElementById(PROFILE_BTN_ID);
     if (
-      hasCrm && hasBolt && hasNotes && hasSchedule &&
-      header.contains(hasCrm) && header.contains(hasBolt) && header.contains(hasNotes) && header.contains(hasSchedule)
+      hasCrm && hasBolt && hasNotes && hasSchedule && hasProfile &&
+      header.contains(hasCrm) && header.contains(hasBolt) && header.contains(hasNotes) && header.contains(hasSchedule) && header.contains(hasProfile)
     ) {
       updateFunnelBadge();
       return;
@@ -2084,6 +2086,7 @@
     hasBolt?.remove();
     hasNotes?.remove();
     hasSchedule?.remove();
+    hasProfile?.remove();
 
     const btn = document.createElement("button");
     btn.id = CHAT_BTN_ID;
@@ -2148,17 +2151,34 @@
       void openSharedPanel("qr");
     });
 
+    // Perfil do cliente — ícone próprio, cai direto na aba certa dentro
+    // do painel compartilhado (antes só dava pra chegar lá pelo raio).
+    const profileBtn = document.createElement("button");
+    profileBtn.id = PROFILE_BTN_ID;
+    profileBtn.className = "crm-chat-btn crm-chat-btn-icon";
+    profileBtn.type = "button";
+    profileBtn.setAttribute("data-label", "Perfil do cliente");
+    profileBtn.innerHTML = PROFILE_SVG;
+    profileBtn.addEventListener("mouseenter", prewarmEngine);
+    profileBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      void openSharedPanel("profile");
+    });
+
     const slot = headerActionsSlot(header);
     if (slot === header) {
       header.appendChild(btn);
       header.appendChild(notesBtn);
       header.appendChild(scheduleBtn);
+      header.appendChild(profileBtn);
       header.appendChild(boltBtn);
     } else {
       slot.insertAdjacentElement("beforebegin", btn);
       btn.insertAdjacentElement("afterend", notesBtn);
       notesBtn.insertAdjacentElement("afterend", scheduleBtn);
-      scheduleBtn.insertAdjacentElement("afterend", boltBtn);
+      scheduleBtn.insertAdjacentElement("afterend", profileBtn);
+      profileBtn.insertAdjacentElement("afterend", boltBtn);
     }
     updateFunnelBadge();
   }

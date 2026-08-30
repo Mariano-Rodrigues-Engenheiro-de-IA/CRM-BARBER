@@ -13,7 +13,7 @@
   --z-line-soft: #e4e7ec;  /* bordas suaves */
 
   /* acento - azul Zaylo IA */
-  --z-accent: #1a3a8a;     /* azul Zaylo IA (cor principal da marca) */
+  --z-accent: #3d5fa8;     /* azul Zaylo (mesmo tom usado no painel/CRM) */
   --z-accent-strong: #122a6b;  /* azul mais escuro para hover */
   --z-accent-soft: rgba(26, 58, 138, 0.10);  /* azul com transparência */
   --z-on-accent: #ffffff;  /* texto branco sobre azul */
@@ -402,7 +402,7 @@ html body.crm-shell.crm-qr-open #app {
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: var(--z-text-dim);
+  color: var(--z-accent);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
