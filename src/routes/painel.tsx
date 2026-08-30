@@ -240,7 +240,7 @@ function nudgeExtensionPoll() {
   window.postMessage({ __crm: "poll_now_v180" }, window.location.origin);
 }
 
-type Section = "agenda" | "agente-ia" | "treinamento" | "configuracoes" | "assinantes" | "funis" | "disparo" | "respostas" | "equipe" | "conexao" | "templates";
+type Section = "agenda" | "agente-ia" | "treinamento" | "configuracoes" | "assinantes" | "funis" | "disparo" | "equipe" | "conexao" | "templates";
 /** Sub-abas da sanfona de Assinaturas. */
 type AssinTab = "visao" | "assinantes";
 /** Sub-abas da sanfona de Configurações. */
@@ -296,13 +296,6 @@ function IconGear({ size = 18 }: { size?: number }) {
 }
 /** Raio — Respostas rápidas. Mesmo ícone usado no rail do WhatsApp e dentro
  * de cada conversa, pra ficar padronizado em todo o sistema. */
-function IconChat() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" />
-    </svg>
-  );
-}
 function IconChart() {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -435,7 +428,7 @@ function Painel() {
   const initialSection: Section = (() => {
     if (typeof window === "undefined") return "assinantes";
     const s = new URLSearchParams(window.location.search).get("section");
-    if (s === "agenda" || s === "agente-ia" || s === "treinamento" || s === "configuracoes" || s === "equipe" || s === "conexao" || s === "respostas" || s === "funis" || s === "disparo" || s === "templates") return s;
+    if (s === "agenda" || s === "agente-ia" || s === "treinamento" || s === "configuracoes" || s === "equipe" || s === "conexao" || s === "funis" || s === "disparo" || s === "templates") return s;
     return "assinantes";
   })();
   const [section, setSection] = useState<Section>(initialSection);
@@ -606,7 +599,6 @@ function Painel() {
     { key: "agenda", label: "Agenda", icon: <IconCalendar /> },
     { key: "funis", label: "Funis de Vendas", icon: <IconChart /> },
     { key: "disparo", label: "Disparo", icon: <IconSend /> },
-    { key: "respostas", label: "Respostas rápidas", icon: <IconChat /> },
     {
       key: "assinantes",
       label: "Assinaturas",
@@ -976,26 +968,6 @@ function Painel() {
                 api={(path: string, opts?: RequestInit) => api(token, path, opts)}
                 headerHost={funisHeaderEl}
               />
-            </main>
-          </>
-        )}
-
-        {section === "respostas" && token && (
-          <>
-            <SectionHeader title="Respostas rápidas" />
-            <main className="px-4 py-4">
-              <div className="mx-auto max-w-md space-y-4 rounded-xl border border-neutral-200 bg-white p-8 text-center shadow-sm">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand/10 text-brand">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" />
-                  </svg>
-                </div>
-                <h2 className="text-base font-semibold text-neutral-900">Agora fica só no WhatsApp</h2>
-                <p className="text-sm text-neutral-500">
-                  Respostas rápidas foram movidas pra dentro da extensão. Abre o WhatsApp Web e clica no ícone de raio
-                  em cima de qualquer conversa pra criar, editar e usar suas respostas.
-                </p>
-              </div>
             </main>
           </>
         )}

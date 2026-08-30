@@ -177,6 +177,15 @@ export interface WhatsAppProvider {
     { ok: true } | { ok: false; error: string }
   >;
 
+  /** Salva um contato na agenda da própria conta conectada — só a uazapi
+   * suporta (ela opera no nível do protocolo do WhatsApp; a API oficial
+   * da Meta não tem conceito de "agenda de contatos" pra escrever). */
+  addContact?(input: {
+    instance_token: string;
+    number: string;
+    name: string;
+  }): Promise<{ ok: true } | { ok: false; error: string }>;
+
   /** Desconecta/hiberna a instância (preserva credenciais). */
   disconnect(input: {
     instance_id: string;

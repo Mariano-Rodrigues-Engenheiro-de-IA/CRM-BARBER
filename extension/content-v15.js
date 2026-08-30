@@ -242,7 +242,6 @@
       <button class="crm-rail-btn" data-go="agenda" data-label="Agenda">${ICONS.calendar}</button>
       <button class="crm-rail-btn" data-go="funis" data-label="Funis de Vendas">${ICONS.funnel}</button>
       <button class="crm-rail-btn" data-go="disparo" data-label="Disparo">${ICONS.send}</button>
-      <button class="crm-rail-btn" data-go="respostas" data-label="Respostas rápidas">${ICONS.chat}</button>
       <button class="crm-rail-btn" data-go="assinantes" data-label="Assinaturas">${ICONS.badge}</button>
       <button class="crm-rail-btn" data-go="equipe" data-label="Ranking de vendas">${ICONS.ranking}</button>
       <button class="crm-rail-btn" data-go="agente-ia" data-label="Agente de IA">${ICONS.robot}</button>
@@ -1402,6 +1401,8 @@
         // Só cai pro nome "de tela" (dom) em último caso.
         name: cached?.name || fromBridge.name || dom?.name || "Contato",
         is_group: !!fromBridge.is_group,
+        is_saved: !!fromBridge.is_saved,
+        push_name: fromBridge.push_name || null,
       };
     }
     return dom;
@@ -1429,8 +1430,12 @@
   const NOTES_BTN_ID = "crm-chat-notes";
   const SCHEDULE_BTN_ID = "crm-chat-schedule";
   const PROFILE_BTN_ID = "crm-chat-profile";
+  const SAVE_CONTACT_BTN_ID = "crm-chat-save-contact";
   const BOLT_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>`;
   const PROFILE_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="18" height="17" rx="3.2"/><circle cx="12" cy="10" r="3"/><path d="M6.5 17.2c.9-2.3 3-3.7 5.5-3.7s4.6 1.4 5.5 3.7"/></svg>`;
+  // Pessoa com "+" — aparece só quando o contato ainda não está salvo na
+  // agenda de quem está usando o WhatsApp (ver is_saved em activeChat()).
+  const SAVE_CONTACT_SVG = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.3"/><path d="M3.2 19c.9-3.1 3.1-4.8 5.8-4.8"/><path d="M18 8v6M15 11h6"/></svg>`;
   const DEAL_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9v.01M18 15v.01"/></svg>`;
   const NOTES_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3.3A1.3 1.3 0 0 1 10.3 2h3.4A1.3 1.3 0 0 1 15 3.3V4"/><path d="m10 17 6.2-6.2a1.15 1.15 0 0 0-1.6-1.6L8.4 15.4l-.5 2.1z"/></svg>`;
   const SCHEDULE_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5h11"/><path d="M14.5 4.5H5.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2H10"/><path d="M8 3v3M12 3v3"/><circle cx="16.5" cy="15.5" r="5"/><path d="M16.5 13v2.5l1.7 1"/></svg>`;
@@ -2075,11 +2080,13 @@
     const hasNotes = document.getElementById(NOTES_BTN_ID);
     const hasSchedule = document.getElementById(SCHEDULE_BTN_ID);
     const hasProfile = document.getElementById(PROFILE_BTN_ID);
+    const hasSaveContact = document.getElementById(SAVE_CONTACT_BTN_ID);
     if (
-      hasCrm && hasBolt && hasNotes && hasSchedule && hasProfile &&
-      header.contains(hasCrm) && header.contains(hasBolt) && header.contains(hasNotes) && header.contains(hasSchedule) && header.contains(hasProfile)
+      hasCrm && hasBolt && hasNotes && hasSchedule && hasProfile && hasSaveContact &&
+      header.contains(hasCrm) && header.contains(hasBolt) && header.contains(hasNotes) && header.contains(hasSchedule) && header.contains(hasProfile) && header.contains(hasSaveContact)
     ) {
       updateFunnelBadge();
+      void updateSaveContactButton();
       return;
     }
     hasCrm?.remove();
@@ -2087,6 +2094,7 @@
     hasNotes?.remove();
     hasSchedule?.remove();
     hasProfile?.remove();
+    hasSaveContact?.remove();
 
     const btn = document.createElement("button");
     btn.id = CHAT_BTN_ID;
@@ -2166,21 +2174,39 @@
       void openSharedPanel("profile");
     });
 
+    // Salvar contato — só fica visível quando o contato ainda não está
+    // salvo (updateSaveContactButton cuida de mostrar/esconder).
+    const saveContactBtn = document.createElement("button");
+    saveContactBtn.id = SAVE_CONTACT_BTN_ID;
+    saveContactBtn.className = "crm-chat-btn crm-chat-btn-icon";
+    saveContactBtn.type = "button";
+    saveContactBtn.style.display = "none";
+    saveContactBtn.setAttribute("data-label", "Salvar contato");
+    saveContactBtn.innerHTML = SAVE_CONTACT_SVG;
+    saveContactBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      void saveActiveContact(saveContactBtn);
+    });
+
     const slot = headerActionsSlot(header);
     if (slot === header) {
       header.appendChild(btn);
       header.appendChild(notesBtn);
       header.appendChild(scheduleBtn);
       header.appendChild(profileBtn);
+      header.appendChild(saveContactBtn);
       header.appendChild(boltBtn);
     } else {
       slot.insertAdjacentElement("beforebegin", btn);
       btn.insertAdjacentElement("afterend", notesBtn);
       notesBtn.insertAdjacentElement("afterend", scheduleBtn);
       scheduleBtn.insertAdjacentElement("afterend", profileBtn);
-      profileBtn.insertAdjacentElement("afterend", boltBtn);
+      profileBtn.insertAdjacentElement("afterend", saveContactBtn);
+      saveContactBtn.insertAdjacentElement("afterend", boltBtn);
     }
     updateFunnelBadge();
+    void updateSaveContactButton();
   }
 
 
@@ -2223,6 +2249,51 @@
     const btn = document.getElementById(CHAT_BTN_ID);
     if (!btn) return;
     btn.classList.toggle("crm-chat-btn-active", activeChatInMainFunnel());
+  }
+
+  /** Mostra o ícone de "salvar contato" só quando a conversa aberta ainda
+   * não está salva na agenda de quem está usando o WhatsApp — sem isso,
+   * o ícone ficaria sempre visível, mesmo pra contatos já salvos. */
+  async function updateSaveContactButton() {
+    const btn = document.getElementById(SAVE_CONTACT_BTN_ID);
+    if (!btn) return;
+    try {
+      const chat = await activeChat();
+      const show = !!(chat && !chat.is_group && chat.is_saved === false && chat.phone);
+      btn.style.display = show ? "" : "none";
+    } catch {
+      btn.style.display = "none";
+    }
+  }
+
+  /** Salva o contato da conversa aberta na agenda — só funciona no modo
+   * não oficial (uazapi); o endpoint já barra e explica se for API
+   * oficial (ela não tem esse conceito de agenda pra escrever). */
+  async function saveActiveContact(anchor) {
+    const chat = await activeChat();
+    if (!chat?.phone) {
+      crmToast("Não consegui identificar o número dessa conversa.", "err", anchor);
+      return;
+    }
+    const name = await openInlinePrompt(anchor, {
+      title: "Salvar contato",
+      value: chat.push_name || "",
+      confirmLabel: "Salvar",
+    });
+    if (!name || !name.trim()) return;
+    const r = await chrome.runtime
+      .sendMessage({
+        type: "api",
+        path: "/api/public/extension/wa/contact-add",
+        opts: { method: "POST", body: JSON.stringify({ number: chat.phone, name: name.trim() }) },
+      })
+      .catch(() => null);
+    if (r?.ok) {
+      crmToast("Contato salvo!", "ok", anchor);
+      void updateSaveContactButton();
+    } else {
+      crmToast(r?.error || "Falha ao salvar contato.", "err", anchor);
+    }
   }
 
   // ---------------------------------------------------------------------
@@ -2422,6 +2493,14 @@
       if (e.target.closest("[data-close]")) return closeSharedPanel();
       const sw = e.target.closest("[data-switch]");
       if (sw) return void openSharedPanel(sw.getAttribute("data-switch"));
+      const saveBtn = e.target.closest("[data-save-contact]");
+      if (saveBtn) {
+        void saveActiveContact(saveBtn).then(() => {
+          // Some o botão da tela assim que salvar, sem esperar reabrir o painel.
+          if (activePanelKind === kind) saveBtn.remove();
+        });
+        return;
+      }
     };
 
     const chat = await activeChat();
@@ -2467,6 +2546,11 @@
             <span class="crm-cp-name-pencil">${PENCIL_SVG}</span>
           </div>
           <p class="crm-cp-phone">${escapeHtml(chat.phone || "")}</p>
+          ${
+            chat.is_saved === false
+              ? `<button type="button" class="crm-cp-save-contact" data-save-contact>${SAVE_CONTACT_SVG} Salvar na agenda</button>`
+              : ""
+          }
         </div>
       </div>
       <label class="crm-cp-field"><span>Email</span><input class="crm-qrp-input" data-f="email" value="${escapeHtml(profile.email || "")}" placeholder="email@exemplo.com" /></label>

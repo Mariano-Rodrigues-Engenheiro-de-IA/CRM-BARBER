@@ -751,11 +751,24 @@
           null;
         if (!chat) throw new Error("Nenhuma conversa aberta");
         const waId = serialized(chat?.id);
+        // "contact.name" só existe se a pessoa já está salva na agenda de
+        // quem está usando o WhatsApp — é diferente de pushname/notifyName
+        // (o nome que a PRÓPRIA pessoa escolheu no perfil dela, visível
+        // mesmo sem estar salva). É essa distinção que decide se mostra o
+        // ícone de "salvar contato".
+        let contact = null;
+        try {
+          contact = chat?.contact || window.WPP?.whatsapp?.ContactStore?.get?.(waId) || null;
+        } catch {}
+        const isSaved = !!String(contact?.name || "").trim();
+        const pushName = String(contact?.pushname || contact?.notifyName || "").trim() || null;
         const data = {
           wa_id: waId,
           phone: resolvePhoneDigits(chat, waId || ""),
           name: resolveName(chat, waId || ""),
           is_group: String(waId || "").endsWith("@g.us"),
+          is_saved: isSaved,
+          push_name: pushName,
         };
         window.postMessage({ __crm: "active_chat_done_v290", id: d.id, ok: true, data }, "*");
       } catch (e) {
