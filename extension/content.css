@@ -920,15 +920,23 @@ html body.crm-shell.crm-qr-open #app {
 .crm-qrp-cat-row .crm-qrp-cat-dot { width: 11px; height: 11px; }
 .crm-qrp-cat-row-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: var(--z-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Blocos fixos das categorias ativas no filtro (cor sólida de verdade,
-   nome dentro) — aparecem abaixo da barra de filtros quando "Por
-   categoria" está selecionado. Clicar de novo tira aquela categoria. */
-.crm-qrp-active-cats { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 14px 0; }
-.crm-qrp-cat-block {
-  border: 0; border-radius: 8px; font-size: 11.5px; font-weight: 700; padding: 6px 10px; cursor: pointer;
+/* Bloco de categoria na lista — cabeçalho cheio da cor escolhida, com as
+   respostas dela agrupadas dentro (dobrável clicando no cabeçalho). Isso
+   substitui a etiqueta ao lado de cada resposta: a categoria vira o
+   "container" visual, não uma marcação individual repetida em cada linha. */
+.crm-qrp-cat-section { margin-bottom: 10px; }
+.crm-qrp-cat-section-head {
+  width: 100%; display: flex; align-items: center; gap: 8px; border: 0; border-radius: 10px; padding: 10px 12px;
+  font-size: 12.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; cursor: pointer;
   transition: filter 0.15s ease;
 }
-.crm-qrp-cat-block:hover { filter: brightness(0.92); }
+.crm-qrp-cat-section-head:hover { filter: brightness(0.94); }
+.crm-qrp-cat-section-name { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.crm-qrp-cat-section-count {
+  flex-shrink: 0; background: rgba(255, 255, 255, 0.28); border-radius: 999px; padding: 1px 7px; font-size: 10.5px;
+}
+.crm-qrp-cat-section-caret { flex-shrink: 0; display: flex; opacity: 0.85; }
+.crm-qrp-cat-section .crm-qrp-list { margin-top: 4px; }
 
 /* Popup de escolher categoria(s) pra filtrar (seleção múltipla) */
 .crm-cat-filter-pop {

@@ -2992,53 +2992,87 @@
       });
     }
 
+    let collapsedCategoryIds = new Set(); // categorias recolhidas (clicou pra fechar o bloco)
+
+    function rowHtml(q, { showCategoryBadge = false } = {}) {
+      return `<div class="crm-qrp-row">
+        <button class="crm-qrp-icon crm-qrp-star ${q.is_favorite ? "is-fav" : ""}" data-fav="${q.id}" title="${q.is_favorite ? "Remover dos favoritos" : "Favoritar"}">${q.is_favorite ? STAR_FILLED_SVG : STAR_OUTLINE_SVG}</button>
+        <div class="crm-qrp-row-info" data-edit="${q.id}">
+          <p class="crm-qrp-row-name">${escapeHtml(q.title)}${showCategoryBadge ? categoryChipHtml(categoryById(q.category_id)) : ""}</p>
+          <p class="crm-qrp-row-sub">${q.shortcut ? `/${escapeHtml(q.shortcut)} · ` : ""}${escapeHtml(stepSummary(q))}${firstTextOf(q) ? " · " + escapeHtml(firstTextOf(q)).slice(0, 40) : ""}</p>
+        </div>
+        <button class="crm-qrp-icon" data-edit="${q.id}" title="Editar">${PENCIL_SVG}</button>
+        <button class="crm-qrp-icon crm-qrp-icon-danger" data-del="${q.id}" title="Excluir">${TRASH_SVG}</button>
+        <button class="crm-qrp-send" data-send="${q.id}" title="Enviar">${ICONS.send}</button>
+      </div>`;
+    }
+
+    // Bloco de categoria — cabeçalho cheio da cor, com as respostas dela
+    // agrupadas dentro (dobrável). É assim que o Mariano quer: não uma
+    // etiqueta do lado de cada resposta, e sim a categoria virar o
+    // "container" visual que agrupa as respostas dela.
+    function categorySectionHtml(cat, items) {
+      if (!items.length) return "";
+      const collapsed = collapsedCategoryIds.has(cat.id);
+      const textColor = contrastTextColor(cat.color);
+      return `<div class="crm-qrp-cat-section">
+        <button type="button" class="crm-qrp-cat-section-head" data-toggle-collapse="${cat.id}" style="background:${escapeHtml(cat.color)};color:${textColor}">
+          <span class="crm-qrp-cat-section-name">${escapeHtml(cat.name)}</span>
+          <span class="crm-qrp-cat-section-count">${items.length}</span>
+          <span class="crm-qrp-cat-section-caret">${collapsed ? DOWN_SVG : UP_SVG}</span>
+        </button>
+        ${collapsed ? "" : `<div class="crm-qrp-list">${items.map((q) => rowHtml(q)).join("")}</div>`}
+      </div>`;
+    }
+
     function renderList() {
       if (activePanelKind !== "qr" || !panel.isConnected) return;
       mode = "list";
-      const visible = quickReplies.filter((q) => {
-        if (filterMode === "fav") return !!q.is_favorite;
-        if (filterMode === "none") return !q.category_id;
-        if (filterMode === "cat") return q.category_id && filterCategoryIds.includes(q.category_id);
-        return true;
-      });
+
       const filtersHtml = quickReplies.length || quickReplyCategories.length
         ? `<div class="crm-qrp-filters">
             <button class="crm-qrp-filter-chip ${filterMode === "all" ? "is-active" : ""}" data-filter-all>Todas</button>
             <button class="crm-qrp-filter-chip crm-qrp-filter-fav ${filterMode === "fav" ? "is-active" : ""}" data-filter-fav>${STAR_FILLED_SVG} Favoritas</button>
             <button class="crm-qrp-filter-chip ${filterMode === "none" ? "is-active" : ""}" data-filter-none>Sem categoria</button>
             <button class="crm-qrp-filter-chip ${filterMode === "cat" ? "is-active" : ""}" data-filter-by-cat>${TAG_SVG} Por categoria</button>
-          </div>
-          ${
-            filterMode === "cat" && filterCategoryIds.length
-              ? `<div class="crm-qrp-active-cats">${filterCategoryIds
-                  .map((id) => categoryById(id))
-                  .filter(Boolean)
-                  .map(
-                    (c) =>
-                      `<button type="button" class="crm-qrp-cat-block" data-remove-cat-filter="${c.id}" style="background:${escapeHtml(c.color)};color:${contrastTextColor(c.color)}">${escapeHtml(c.name)} &times;</button>`,
-                  )
-                  .join("")}</div>`
-              : ""
-          }`
+          </div>`
         : "";
-      const rows = visible.length
-        ? `<div class="crm-qrp-list">${visible
-            .map(
-              (q) => `<div class="crm-qrp-row">
-                <button class="crm-qrp-icon crm-qrp-star ${q.is_favorite ? "is-fav" : ""}" data-fav="${q.id}" title="${q.is_favorite ? "Remover dos favoritos" : "Favoritar"}">${q.is_favorite ? STAR_FILLED_SVG : STAR_OUTLINE_SVG}</button>
-                <div class="crm-qrp-row-info" data-edit="${q.id}">
-                  <p class="crm-qrp-row-name">${escapeHtml(q.title)}${categoryChipHtml(categoryById(q.category_id))}</p>
-                  <p class="crm-qrp-row-sub">${q.shortcut ? `/${escapeHtml(q.shortcut)} · ` : ""}${escapeHtml(stepSummary(q))}${firstTextOf(q) ? " · " + escapeHtml(firstTextOf(q)).slice(0, 40) : ""}</p>
-                </div>
-                <button class="crm-qrp-icon" data-edit="${q.id}" title="Editar">${PENCIL_SVG}</button>
-                <button class="crm-qrp-icon crm-qrp-icon-danger" data-del="${q.id}" title="Excluir">${TRASH_SVG}</button>
-                <button class="crm-qrp-send" data-send="${q.id}" title="Enviar">${ICONS.send}</button>
-              </div>`,
-            )
-            .join("")}</div>`
-        : quickReplies.length
-          ? `<p class="crm-qrp-empty">Nenhuma resposta nesse filtro.</p>`
-          : `<p class="crm-qrp-empty">Nenhuma resposta cadastrada ainda. Clica em "+ Nova" pra criar a primeira.</p>`;
+
+      let bodyHtml;
+      if (filterMode === "fav") {
+        // Favoritas cruzam categorias — lista simples (com a etiqueta da
+        // categoria no rótulo, já que aqui não tem o bloco agrupando).
+        const visible = quickReplies.filter((q) => q.is_favorite);
+        bodyHtml = visible.length
+          ? `<div class="crm-qrp-list">${visible.map((q) => rowHtml(q, { showCategoryBadge: true })).join("")}</div>`
+          : `<p class="crm-qrp-empty">Nenhuma resposta favoritada ainda.</p>`;
+      } else if (filterMode === "none") {
+        const visible = quickReplies.filter((q) => !q.category_id);
+        bodyHtml = visible.length
+          ? `<div class="crm-qrp-list">${visible.map((q) => rowHtml(q)).join("")}</div>`
+          : `<p class="crm-qrp-empty">Todas as respostas já têm categoria.</p>`;
+      } else {
+        // "all" (todas as categorias, cada uma como bloco) ou "cat"
+        // (só as categorias escolhidas no popup "Por categoria").
+        const catsToShow =
+          filterMode === "cat"
+            ? quickReplyCategories.filter((c) => filterCategoryIds.includes(c.id))
+            : quickReplyCategories;
+        const sections = catsToShow
+          .map((c) => categorySectionHtml(c, quickReplies.filter((q) => q.category_id === c.id)))
+          .join("");
+        const uncategorized = filterMode === "all" ? quickReplies.filter((q) => !q.category_id) : [];
+        const uncategorizedHtml = uncategorized.length
+          ? `<div class="crm-qrp-list">${uncategorized.map((q) => rowHtml(q)).join("")}</div>`
+          : "";
+        bodyHtml =
+          sections || uncategorizedHtml
+            ? sections + uncategorizedHtml
+            : quickReplies.length
+              ? `<p class="crm-qrp-empty">Nenhuma resposta nas categorias escolhidas.</p>`
+              : `<p class="crm-qrp-empty">Nenhuma resposta cadastrada ainda. Clica em "+ Nova" pra criar a primeira.</p>`;
+      }
+
       panel.innerHTML = `
         <div class="crm-qrp-head">
           <div class="crm-qr-mark">${BOLT_SVG}</div>
@@ -3048,7 +3082,7 @@
         </div>
         ${panelSwitcherHtml("qr")}
         ${filtersHtml}
-        <div class="crm-qrp-body">${rows}</div>
+        <div class="crm-qrp-body">${bodyHtml}</div>
       `;
     }
 
@@ -3234,14 +3268,13 @@
         openCategoryFilterPopup(filterByCatBtn);
         return;
       }
-      // Bloco fixo de uma categoria já selecionada no filtro — clicar nele
-      // de novo tira só aquela categoria do filtro (sem precisar reabrir o
-      // popup de seleção).
-      const removeCatFilter = e.target.closest("[data-remove-cat-filter]");
-      if (removeCatFilter) {
-        const id = removeCatFilter.getAttribute("data-remove-cat-filter");
-        filterCategoryIds = filterCategoryIds.filter((x) => x !== id);
-        filterMode = filterCategoryIds.length ? "cat" : "all";
+      // Clicar no cabeçalho colorido de uma categoria dobra/desdobra o
+      // bloco dela (as respostas continuam ali, só ficam escondidas).
+      const toggleCollapse = e.target.closest("[data-toggle-collapse]");
+      if (toggleCollapse) {
+        const id = toggleCollapse.getAttribute("data-toggle-collapse");
+        if (collapsedCategoryIds.has(id)) collapsedCategoryIds.delete(id);
+        else collapsedCategoryIds.add(id);
         return renderList();
       }
 
