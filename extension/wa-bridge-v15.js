@@ -758,19 +758,36 @@
         // ícone de "salvar contato".
         let contact = null;
         try {
-          contact =
-            chat?.contact ||
-            window.WPP?.whatsapp?.ContactStore?.get?.(waId) ||
-            (chat?.id ? window.WPP?.whatsapp?.ContactStore?.get?.(chat.id) : null) ||
-            null;
-          // Em builds novas o WhatsApp identifica a conversa por @lid — o
-          // contato de verdade (com isMyContact certo) pode estar guardado
-          // só sob a chave {telefone}@c.us. Sem esse fallback (mesmo usado
-          // em resolveName), is_saved dava falso negativo pra esses casos.
+          // WPP.contact.get() é a função oficial exposta — ela converte o
+          // id pra um objeto Wid de verdade antes de buscar no
+          // ContactStore. Chamar ContactStore.get() direto com a STRING
+          // crua (como o código fazia antes) podia falhar silenciosamente
+          // pra grande parte dos contatos, dependendo de como a
+          // comparação interna da lib funciona.
+          contact = chat?.contact || (await window.WPP?.contact?.get?.(waId)) || null;
+          if (!contact && chat?.id) {
+            contact = (await window.WPP?.contact?.get?.(chat.id)) || null;
+          }
+          // Resolução OFICIAL entre @lid e telefone, a mesma que a própria
+          // wa-js usa por trás de queryWidExists — mais confiável que
+          // adivinhar por conta própria.
+          if (contact?.isMyContact !== true) {
+            try {
+              const wid = window.WPP?.whatsapp?.WidFactory?.createWid?.(waId);
+              const cache = window.WPP?.whatsapp?.lidPnCache;
+              const alt = wid && cache ? (wid.isLid?.() ? cache.getPhoneNumber?.(wid) : cache.getCurrentLid?.(wid)) : null;
+              if (alt) {
+                const altContact = (await window.WPP?.contact?.get?.(alt)) || null;
+                if (altContact?.isMyContact === true) contact = altContact;
+              }
+            } catch {}
+          }
+          // Fallback com o índice próprio da extensão (lidIndex), só se a
+          // resolução oficial acima não achar nada.
           if (contact?.isMyContact !== true) {
             const fromLid = lidIndex.get(String(waId));
             if (fromLid?.phone) {
-              const byPhone = window.WPP?.whatsapp?.ContactStore?.get?.(`${fromLid.phone}@c.us`);
+              const byPhone = (await window.WPP?.contact?.get?.(`${fromLid.phone}@c.us`)) || null;
               if (byPhone?.isMyContact === true) contact = byPhone;
             }
           }
