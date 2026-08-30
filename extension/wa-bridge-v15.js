@@ -764,18 +764,23 @@
             (chat?.id ? window.WPP?.whatsapp?.ContactStore?.get?.(chat.id) : null) ||
             null;
           // Em builds novas o WhatsApp identifica a conversa por @lid — o
-          // contato de verdade (com o .name salvo) pode estar guardado só
-          // sob a chave {telefone}@c.us. Sem esse fallback (mesmo usado em
-          // resolveName), is_saved dava falso negativo pra esses casos.
-          if (!contact?.name) {
+          // contato de verdade (com isMyContact certo) pode estar guardado
+          // só sob a chave {telefone}@c.us. Sem esse fallback (mesmo usado
+          // em resolveName), is_saved dava falso negativo pra esses casos.
+          if (contact?.isMyContact !== true) {
             const fromLid = lidIndex.get(String(waId));
             if (fromLid?.phone) {
               const byPhone = window.WPP?.whatsapp?.ContactStore?.get?.(`${fromLid.phone}@c.us`);
-              if (byPhone?.name) contact = byPhone;
+              if (byPhone?.isMyContact === true) contact = byPhone;
             }
           }
         } catch {}
-        const isSaved = !!String(contact?.name || "").trim();
+        // isMyContact é o campo de verdade da biblioteca pra "está salvo
+        // na agenda". Chegamos a usar .name como sinal, mas ele vinha
+        // positivo demais (empresas verificadas, e até gente comum às
+        // vezes tem .name preenchido sem estar salva de fato), fazendo o
+        // ícone quase nunca aparecer — troca pra usar só o campo certo.
+        const isSaved = contact?.isMyContact === true;
         const pushName = String(contact?.pushname || contact?.notifyName || "").trim() || null;
         const data = {
           wa_id: waId,
