@@ -2373,14 +2373,14 @@
     const chat = await activeChat();
     if (!chat?.wa_id) {
       crmToast("Não consegui identificar o contato dessa conversa.", "err", anchor);
-      return;
+      return false;
     }
     const name = await openInlinePrompt(anchor, {
       title: "Salvar contato",
       value: chat.push_name || "",
       confirmLabel: "Salvar",
     });
-    if (!name || !name.trim()) return;
+    if (!name || !name.trim()) return false; // cancelou (Esc, clicou fora, ou deixou vazio)
     // Chama a função nativa do próprio WhatsApp (mesma coisa que o botão
     // "Adicionar" na tela de dados do contato) — não depende de nenhuma
     // API externa nem de qual conexão a barbearia está usando.
@@ -2388,8 +2388,10 @@
     if (r) {
       crmToast("Contato salvo!", "ok", anchor);
       void updateSaveContactButton();
+      return true;
     } else {
       crmToast("Falha ao salvar contato.", "err", anchor);
+      return false;
     }
   }
 
@@ -2707,8 +2709,11 @@
       if (saveContactBtn) {
         e.preventDefault();
         e.stopPropagation();
-        void saveActiveContact(saveContactBtn).then(() => {
-          if (activePanelKind === "profile") saveContactBtn.remove();
+        void saveActiveContact(saveContactBtn).then((saved) => {
+          // Só some o botão se salvou de verdade — cancelar (clicar fora,
+          // Esc, ou deixar o nome vazio) devolve false, e o botão continua
+          // ali pra tentar de novo.
+          if (saved && activePanelKind === "profile") saveContactBtn.remove();
         });
         return;
       }
