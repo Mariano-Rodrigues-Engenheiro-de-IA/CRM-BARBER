@@ -2570,6 +2570,7 @@
   const STAR_OUTLINE_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l2.9 6.3 6.9.7-5.2 4.7 1.5 6.8L12 17.7l-6.1 3.3 1.5-6.8-5.2-4.7 6.9-.7Z"/></svg>`;
   const STAR_FILLED_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l2.9 6.3 6.9.7-5.2 4.7 1.5 6.8L12 17.7l-6.1 3.3 1.5-6.8-5.2-4.7 6.9-.7Z"/></svg>`;
   const TAG_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 12.6 12 21.2 2.8 12 2.8 3.2 11.6 3.2Z"/><circle cx="7.2" cy="7.2" r="1.3" fill="currentColor" stroke="none"/></svg>`;
+  const CHECK_SVG = `<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
 
   // Paleta de cores sugerida ao criar uma categoria (o usuário não é
   // obrigado a usar só essas — só ajuda a bater logo de cara com o
@@ -2679,41 +2680,50 @@
     body.innerHTML = `
       <div class="crm-cp-avatar-row">
         ${photo ? `<img src="${escapeHtml(photo)}" class="crm-cp-avatar-photo" alt="" />` : `<div class="crm-cp-avatar">${escapeHtml(initial)}</div>`}
-        <div class="crm-cp-avatar-info">
-          <div class="crm-cp-name-row">
-            <input class="crm-cp-name-input" data-f="name" value="${escapeHtml(profile.name || chat.name || "")}" placeholder="Nome do contato" />
-            <span class="crm-cp-name-pencil">${PENCIL_SVG}</span>
-          </div>
-          <p class="crm-cp-phone">${escapeHtml(chat.phone || "")}</p>
-          ${
-            savedInfo?.is_saved === false
-              ? `<button type="button" class="crm-cp-save-contact" data-save-contact>${SAVE_CONTACT_SVG} Salvar na agenda</button>`
-              : ""
-          }
+        <div class="crm-cp-name-row">
+          <input class="crm-cp-name-input" data-f="name" value="${escapeHtml(profile.name || chat.name || "")}" placeholder="Nome do contato" />
+          <span class="crm-cp-name-pencil">${PENCIL_SVG}</span>
         </div>
+        <p class="crm-cp-phone">${escapeHtml(chat.phone || "")}</p>
+        ${
+          savedInfo?.is_saved === false
+            ? `<button type="button" class="crm-cp-save-contact" data-save-contact>${SAVE_CONTACT_SVG} Salvar na agenda</button>`
+            : ""
+        }
       </div>
-      <label class="crm-cp-field"><span>Email</span><input class="crm-qrp-input" data-f="email" value="${escapeHtml(profile.email || "")}" placeholder="email@exemplo.com" /></label>
-      <label class="crm-cp-field"><span>Sexo</span>
-        <select class="crm-qrp-select" data-f="gender">
-          <option value="">Selecione um sexo</option>
-          <option value="feminino" ${profile.gender === "feminino" ? "selected" : ""}>Feminino</option>
-          <option value="masculino" ${profile.gender === "masculino" ? "selected" : ""}>Masculino</option>
-          <option value="outro" ${profile.gender === "outro" ? "selected" : ""}>Outro</option>
-          <option value="prefiro_nao_dizer" ${profile.gender === "prefiro_nao_dizer" ? "selected" : ""}>Prefiro não dizer</option>
-        </select>
-      </label>
-      <label class="crm-cp-field"><span>Data de nascimento</span><input class="crm-qrp-input" type="date" data-f="birth_date" value="${escapeHtml(profile.birth_date || "")}" /></label>
-      <label class="crm-cp-field"><span>Cidade</span><input class="crm-qrp-input" data-f="city" value="${escapeHtml(profile.city || "")}" /></label>
-      <div class="crm-cp-divider"></div>
-      <label class="crm-cp-field"><span>Origem do lead</span><input class="crm-qrp-input" data-f="lead_source" value="${escapeHtml(deal.lead_source || "")}" placeholder="Ex: Instagram, indicação..." /></label>
-      <label class="crm-cp-field"><span>Estágio do contato</span><input class="crm-qrp-input" data-f="stage_label" value="${escapeHtml(deal.stage_label || "")}" placeholder="Ex: Qualificando" /></label>
+
+      <p class="crm-cp-section-title">Dados pessoais</p>
+      <div class="crm-cp-row2">
+        <label class="crm-cp-field"><span>Email</span><input class="crm-qrp-input" data-f="email" value="${escapeHtml(profile.email || "")}" placeholder="email@exemplo.com" /></label>
+        <label class="crm-cp-field"><span>Sexo</span>
+          <select class="crm-qrp-select" data-f="gender">
+            <option value="">Selecione</option>
+            <option value="feminino" ${profile.gender === "feminino" ? "selected" : ""}>Feminino</option>
+            <option value="masculino" ${profile.gender === "masculino" ? "selected" : ""}>Masculino</option>
+            <option value="outro" ${profile.gender === "outro" ? "selected" : ""}>Outro</option>
+            <option value="prefiro_nao_dizer" ${profile.gender === "prefiro_nao_dizer" ? "selected" : ""}>Prefiro não dizer</option>
+          </select>
+        </label>
+      </div>
+      <div class="crm-cp-row2">
+        <label class="crm-cp-field"><span>Data de nascimento</span><input class="crm-qrp-input" type="date" data-f="birth_date" value="${escapeHtml(profile.birth_date || "")}" /></label>
+        <label class="crm-cp-field"><span>Cidade</span><input class="crm-qrp-input" data-f="city" value="${escapeHtml(profile.city || "")}" /></label>
+      </div>
+
+      <p class="crm-cp-section-title">Negociação</p>
+      <div class="crm-cp-row2">
+        <label class="crm-cp-field"><span>Origem do lead</span><input class="crm-qrp-input" data-f="lead_source" value="${escapeHtml(deal.lead_source || "")}" placeholder="Ex: Instagram, indicação..." /></label>
+        <label class="crm-cp-field"><span>Estágio do contato</span><input class="crm-qrp-input" data-f="stage_label" value="${escapeHtml(deal.stage_label || "")}" placeholder="Ex: Qualificando" /></label>
+      </div>
       <div class="crm-cp-row2">
         <label class="crm-cp-field"><span>Data de entrada</span><input class="crm-qrp-input" type="date" data-f="entry_date" value="${escapeHtml(deal.entry_date || "")}" /></label>
         <label class="crm-cp-field"><span>Data de saída</span><input class="crm-qrp-input" type="date" data-f="exit_date" value="${escapeHtml(deal.exit_date || "")}" /></label>
       </div>
       <label class="crm-cp-field"><span>${DEAL_SVG} Valor do negócio (R$)</span><input class="crm-qrp-input" data-f="value_reais" value="${deal.value_cents != null ? (deal.value_cents / 100).toFixed(2) : ""}" placeholder="0,00" /></label>
       <label class="crm-cp-field"><span>Produto de interesse</span><input class="crm-qrp-input" data-f="products_of_interest" value="${escapeHtml(deal.products_of_interest || "")}" /></label>
-      <label class="crm-cp-field"><span>Observações</span><textarea class="crm-qrp-textarea" data-f="notes" placeholder="Adicione uma observação">${escapeHtml(deal.notes || "")}</textarea></label>
+
+      <p class="crm-cp-section-title">Observações</p>
+      <label class="crm-cp-field"><textarea class="crm-qrp-textarea" data-f="notes" placeholder="Adicione uma observação">${escapeHtml(deal.notes || "")}</textarea></label>
     `;
 
     const foot = document.createElement("div");
@@ -2801,6 +2811,18 @@
     };
   }
 
+  /** Cor de texto (preto ou branco) com bom contraste em cima da cor de
+   * fundo dada — pra blocos sólidos de categoria ficarem sempre legíveis,
+   * seja a cor escolhida clara ou escura. */
+  function contrastTextColor(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+    if (!m) return "#fff";
+    const n = parseInt(m[1], 16);
+    const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.62 ? "#1a1a1a" : "#ffffff";
+  }
+
   async function renderQuickReplyPanel(panel) {
     prewarmEngine();
 
@@ -2810,9 +2832,9 @@
     let savingFile = false;
     let favoriteValue = false;
     // Filtros da lista — resetam toda vez que o painel é reaberto.
-    // "all" | "fav" | "none" (sem categoria) | "cat" (usa filterCategoryId)
+    // "all" | "fav" | "none" (sem categoria) | "cat" (usa filterCategoryIds)
     let filterMode = "all";
-    let filterCategoryId = null;
+    let filterCategoryIds = []; // pode selecionar mais de uma categoria ao mesmo tempo
 
     function firstTextOf(reply) {
       return (reply?.actions || []).find((a) => a.type === "text")?.text || "";
@@ -2824,9 +2846,150 @@
     function categoryById(id) {
       return id ? quickReplyCategories.find((c) => c.id === id) || null : null;
     }
+    // Bloco cheio da cor da categoria (não só uma bolinha) — dá pra
+    // reconhecer a categoria de longe, só pela cor.
     function categoryChipHtml(cat) {
       if (!cat) return "";
-      return `<span class="crm-qrp-row-cat" style="--chip-color:${escapeHtml(cat.color)}"><span class="crm-qrp-cat-dot" style="background:${escapeHtml(cat.color)}"></span>${escapeHtml(cat.name)}</span>`;
+      return `<span class="crm-qrp-row-cat" style="background:${escapeHtml(cat.color)};color:${contrastTextColor(cat.color)}">${escapeHtml(cat.name)}</span>`;
+    }
+
+    /** Popup de escolher categoria(s) pra filtrar — seleção múltipla, fica
+     * aberto até clicar fora, atualizando a lista embaixo em tempo real a
+     * cada categoria marcada/desmarcada. Separado num popup em vez de
+     * mostrar todas as categorias lado a lado nos filtros, porque com
+     * várias categoriais isso poluía a tela inteira. */
+    function openCategoryFilterPopup(anchor) {
+      document.querySelectorAll(".crm-menu, .crm-lite-pop, .crm-confirm-pop, .crm-cat-filter-pop").forEach((el) => el.remove());
+      const pop = document.createElement("div");
+      pop.className = "crm-cat-filter-pop";
+      const rect = anchor.getBoundingClientRect();
+      pop.style.top = `${rect.bottom + 8}px`;
+      pop.style.left = `${Math.min(Math.max(8, rect.left), window.innerWidth - 260)}px`;
+      document.body.appendChild(pop);
+      animatePopIn(pop);
+
+      function paint() {
+        pop.innerHTML = quickReplyCategories.length
+          ? `<p class="crm-cat-filter-pop-hint">Escolha uma ou mais categorias</p>${quickReplyCategories
+              .map((c) => {
+                const checked = filterCategoryIds.includes(c.id);
+                return `<div class="crm-cat-filter-pop-item ${checked ? "is-checked" : ""}" data-toggle-cat="${c.id}">
+                  <span class="crm-cat-filter-pop-check" style="${checked ? `background:${escapeHtml(c.color)};border-color:${escapeHtml(c.color)}` : ""}">${checked ? CHECK_SVG : ""}</span>
+                  <span class="crm-qrp-cat-dot" style="background:${escapeHtml(c.color)}"></span>
+                  <span class="crm-cat-filter-pop-name">${escapeHtml(c.name)}</span>
+                  <button type="button" class="crm-cat-filter-pop-del" data-del-cat-inline="${c.id}" title="Excluir categoria">${TRASH_SVG}</button>
+                </div>`;
+              })
+              .join("")}`
+          : `<p class="crm-qrp-empty" style="padding:14px">Nenhuma categoria criada ainda.</p>`;
+      }
+      paint();
+
+      pop.addEventListener("click", async (e) => {
+        const delBtn = e.target.closest("[data-del-cat-inline]");
+        if (delBtn) {
+          const id = delBtn.getAttribute("data-del-cat-inline");
+          const cat = quickReplyCategories.find((c) => c.id === id);
+          if (!cat) return;
+          const ok = await openConfirmPop(delBtn, {
+            text: `Excluir "${cat.name}"? As respostas dela ficam sem categoria.`,
+            confirmLabel: "Sim, excluir",
+          });
+          if (!ok) return;
+          await chrome.runtime
+            .sendMessage({ type: "api", path: `/api/public/extension/quick-reply-categories/${id}`, opts: { method: "DELETE" } })
+            .catch(() => null);
+          filterCategoryIds = filterCategoryIds.filter((x) => x !== id);
+          filterMode = filterCategoryIds.length ? "cat" : "all";
+          await loadQuickReplyCategories();
+          await loadQuickReplies();
+          paint();
+          renderList();
+          return;
+        }
+        const item = e.target.closest("[data-toggle-cat]");
+        if (!item) return;
+        const id = item.getAttribute("data-toggle-cat");
+        filterCategoryIds = filterCategoryIds.includes(id)
+          ? filterCategoryIds.filter((x) => x !== id)
+          : [...filterCategoryIds, id];
+        filterMode = filterCategoryIds.length ? "cat" : "all";
+        paint();
+        renderList();
+      });
+
+      const close = () => {
+        pop.remove();
+        document.removeEventListener("mousedown", onDoc, true);
+      };
+      function onDoc(ev) {
+        if (!pop.contains(ev.target)) close();
+      }
+      setTimeout(() => document.addEventListener("mousedown", onDoc, true), 0);
+    }
+
+    /** Popup de criar categoria (nome + cor) — aberto a partir do menu do
+     * botão único "+ Nova". */
+    function openCategoryCreatePopup(anchor) {
+      return new Promise((resolve) => {
+        document.querySelectorAll(".crm-menu, .crm-lite-pop, .crm-cat-filter-pop").forEach((el) => el.remove());
+        const pop = document.createElement("div");
+        pop.className = "crm-lite-pop crm-cat-create-pop";
+        const rect = anchor.getBoundingClientRect();
+        pop.style.top = `${rect.bottom + 8}px`;
+        pop.style.left = `${Math.min(Math.max(8, rect.left), window.innerWidth - 260)}px`;
+        pop.innerHTML = `
+          <p class="crm-lite-pop-title">Nova categoria</p>
+          <input class="crm-lite-pop-input" placeholder="Nome da categoria" maxlength="60" />
+          <div class="crm-qrp-color-row">
+            ${QUICK_REPLY_CATEGORY_COLORS.map((hex, i) => `<button type="button" class="crm-qrp-color-swatch ${i === 0 ? "is-selected" : ""}" data-color-swatch="${hex}" style="background:${hex}"></button>`).join("")}
+          </div>
+          <button class="crm-lite-pop-confirm">Criar categoria</button>
+        `;
+        document.body.appendChild(pop);
+        animatePopIn(pop);
+        const input = pop.querySelector(".crm-lite-pop-input");
+        pop.querySelectorAll("[data-color-swatch]").forEach((sw) => {
+          sw.addEventListener("click", () => {
+            pop.querySelectorAll("[data-color-swatch]").forEach((el) => el.classList.remove("is-selected"));
+            sw.classList.add("is-selected");
+          });
+        });
+        const cleanup = () => {
+          pop.remove();
+          document.removeEventListener("mousedown", onDoc, true);
+        };
+        const submit = async () => {
+          const name = input.value.trim();
+          if (!name) { crmToast("Dá um nome pra categoria.", "err"); return; }
+          const color = pop.querySelector(".crm-qrp-color-swatch.is-selected")?.getAttribute("data-color-swatch") || QUICK_REPLY_CATEGORY_COLORS[0];
+          const r = await chrome.runtime
+            .sendMessage({
+              type: "api",
+              path: "/api/public/extension/quick-reply-categories",
+              opts: { method: "POST", body: JSON.stringify({ name, color }) },
+            })
+            .catch(() => null);
+          if (r?.ok) {
+            crmToast("Categoria criada");
+            await loadQuickReplyCategories();
+            cleanup();
+            resolve(r.category);
+          } else {
+            crmToast(r?.error || "Não consegui criar a categoria.", "err");
+          }
+        };
+        function onDoc(ev) {
+          if (!pop.contains(ev.target) && ev.target !== anchor) { cleanup(); resolve(null); }
+        }
+        setTimeout(() => document.addEventListener("mousedown", onDoc, true), 150);
+        pop.querySelector(".crm-lite-pop-confirm").addEventListener("click", submit);
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") submit();
+          if (e.key === "Escape") { cleanup(); resolve(null); }
+        });
+        setTimeout(() => input.focus(), 30);
+      });
     }
 
     function renderList() {
@@ -2835,7 +2998,7 @@
       const visible = quickReplies.filter((q) => {
         if (filterMode === "fav") return !!q.is_favorite;
         if (filterMode === "none") return !q.category_id;
-        if (filterMode === "cat") return q.category_id === filterCategoryId;
+        if (filterMode === "cat") return q.category_id && filterCategoryIds.includes(q.category_id);
         return true;
       });
       const filtersHtml = quickReplies.length || quickReplyCategories.length
@@ -2843,13 +3006,20 @@
             <button class="crm-qrp-filter-chip ${filterMode === "all" ? "is-active" : ""}" data-filter-all>Todas</button>
             <button class="crm-qrp-filter-chip crm-qrp-filter-fav ${filterMode === "fav" ? "is-active" : ""}" data-filter-fav>${STAR_FILLED_SVG} Favoritas</button>
             <button class="crm-qrp-filter-chip ${filterMode === "none" ? "is-active" : ""}" data-filter-none>Sem categoria</button>
-            ${quickReplyCategories
-              .map(
-                (c) =>
-                  `<button class="crm-qrp-filter-chip crm-qrp-filter-chip-cat ${filterMode === "cat" && filterCategoryId === c.id ? "is-active" : ""}" data-filter-cat="${c.id}" style="--chip-color:${escapeHtml(c.color)}"><span class="crm-qrp-cat-dot" style="background:${escapeHtml(c.color)}"></span>${escapeHtml(c.name)}</button>`,
-              )
-              .join("")}
-          </div>`
+            <button class="crm-qrp-filter-chip ${filterMode === "cat" ? "is-active" : ""}" data-filter-by-cat>${TAG_SVG} Por categoria</button>
+          </div>
+          ${
+            filterMode === "cat" && filterCategoryIds.length
+              ? `<div class="crm-qrp-active-cats">${filterCategoryIds
+                  .map((id) => categoryById(id))
+                  .filter(Boolean)
+                  .map(
+                    (c) =>
+                      `<button type="button" class="crm-qrp-cat-block" data-remove-cat-filter="${c.id}" style="background:${escapeHtml(c.color)};color:${contrastTextColor(c.color)}">${escapeHtml(c.name)} &times;</button>`,
+                  )
+                  .join("")}</div>`
+              : ""
+          }`
         : "";
       const rows = visible.length
         ? `<div class="crm-qrp-list">${visible
@@ -2873,49 +3043,12 @@
         <div class="crm-qrp-head">
           <div class="crm-qr-mark">${BOLT_SVG}</div>
           <p class="crm-qrp-title">Respostas rápidas</p>
-          <button class="crm-qrp-icon" data-manage-cats title="Categorias">${TAG_SVG}</button>
           <button class="crm-qrp-new" data-new>+ Nova</button>
           <button class="crm-qrp-close" data-close title="Fechar">&times;</button>
         </div>
         ${panelSwitcherHtml("qr")}
         ${filtersHtml}
         <div class="crm-qrp-body">${rows}</div>
-      `;
-    }
-
-    // Tela própria de gerenciar categorias — criar (nome + cor) e excluir.
-    // Excluir uma categoria não apaga as respostas dela, só solta elas
-    // (voltam a ficar "sem categoria" — ON DELETE SET NULL no banco).
-    function renderCategoriesScreen() {
-      if (activePanelKind !== "qr" || !panel.isConnected) return;
-      mode = "categories";
-      const rows = quickReplyCategories.length
-        ? quickReplyCategories
-            .map(
-              (c) => `<div class="crm-qrp-cat-row">
-                <span class="crm-qrp-cat-dot" style="background:${escapeHtml(c.color)}"></span>
-                <span class="crm-qrp-cat-row-name">${escapeHtml(c.name)}</span>
-                <button class="crm-qrp-icon crm-qrp-icon-danger" data-del-cat="${c.id}" title="Excluir categoria">${TRASH_SVG}</button>
-              </div>`,
-            )
-            .join("")
-        : `<p class="crm-qrp-empty">Nenhuma categoria criada ainda.</p>`;
-      panel.innerHTML = `
-        <div class="crm-qrp-head" style="border-bottom:1px solid var(--z-line-soft)">
-          <button class="crm-qrp-back" data-back title="Voltar">&larr;</button>
-          <p class="crm-qrp-title">Categorias</p>
-          <button class="crm-qrp-close" data-close title="Fechar">&times;</button>
-        </div>
-        <div class="crm-qrp-body">
-          <div class="crm-qrp-new-cat">
-            <input class="crm-qrp-input" data-new-cat-name placeholder="Nome da categoria (ex: Atendimento)" maxlength="60" />
-            <div class="crm-qrp-color-row">
-              ${QUICK_REPLY_CATEGORY_COLORS.map((hex, i) => `<button type="button" class="crm-qrp-color-swatch ${i === 0 ? "is-selected" : ""}" data-color-swatch="${hex}" style="background:${hex}" title="${hex}"></button>`).join("")}
-            </div>
-            <button class="crm-qrp-add-step" data-create-cat>+ Criar categoria</button>
-          </div>
-          <div class="crm-qrp-cat-list">${rows}</div>
-        </div>
       `;
     }
 
@@ -3063,91 +3196,53 @@
       if (e.target.closest("[data-close]")) return closeSharedPanel();
       const sw = e.target.closest("[data-switch]");
       if (sw) return void openSharedPanel(sw.getAttribute("data-switch"));
-      if (e.target.closest("[data-new]")) return renderForm(null);
       if (e.target.closest("[data-back]")) return renderList();
-      if (e.target.closest("[data-manage-cats]")) return renderCategoriesScreen();
+
+      // Botão único "+ Nova" — pergunta se é categoria ou resposta, em vez
+      // de dois botões separados no cabeçalho.
+      const newBtn = e.target.closest("[data-new]");
+      if (newBtn) {
+        openMenu(newBtn, [
+          {
+            label: "+ Nova categoria",
+            onClick: () => {
+              void openCategoryCreatePopup(newBtn).then(() => renderList());
+            },
+          },
+          { label: "+ Nova resposta", onClick: () => renderForm(null) },
+        ]);
+        return;
+      }
 
       if (e.target.closest("[data-filter-all]")) {
         filterMode = "all";
-        filterCategoryId = null;
+        filterCategoryIds = [];
         return renderList();
       }
       if (e.target.closest("[data-filter-fav]")) {
         filterMode = filterMode === "fav" ? "all" : "fav";
-        filterCategoryId = null;
+        filterCategoryIds = [];
         return renderList();
       }
       if (e.target.closest("[data-filter-none]")) {
         filterMode = filterMode === "none" ? "all" : "none";
-        filterCategoryId = null;
+        filterCategoryIds = [];
         return renderList();
       }
-      const catChip = e.target.closest("[data-filter-cat]");
-      if (catChip) {
-        const catId = catChip.getAttribute("data-filter-cat");
-        if (filterMode === "cat" && filterCategoryId === catId) {
-          filterMode = "all";
-          filterCategoryId = null;
-        } else {
-          filterMode = "cat";
-          filterCategoryId = catId;
-        }
+      const filterByCatBtn = e.target.closest("[data-filter-by-cat]");
+      if (filterByCatBtn) {
+        openCategoryFilterPopup(filterByCatBtn);
+        return;
+      }
+      // Bloco fixo de uma categoria já selecionada no filtro — clicar nele
+      // de novo tira só aquela categoria do filtro (sem precisar reabrir o
+      // popup de seleção).
+      const removeCatFilter = e.target.closest("[data-remove-cat-filter]");
+      if (removeCatFilter) {
+        const id = removeCatFilter.getAttribute("data-remove-cat-filter");
+        filterCategoryIds = filterCategoryIds.filter((x) => x !== id);
+        filterMode = filterCategoryIds.length ? "cat" : "all";
         return renderList();
-      }
-
-      // Tela de categorias: escolher cor ao criar uma nova.
-      const swatch = e.target.closest("[data-color-swatch]");
-      if (swatch) {
-        panel.querySelectorAll("[data-color-swatch]").forEach((el) => el.classList.remove("is-selected"));
-        swatch.classList.add("is-selected");
-        return;
-      }
-
-      if (e.target.closest("[data-create-cat]")) {
-        const nameInput = panel.querySelector("[data-new-cat-name]");
-        const name = nameInput?.value.trim();
-        if (!name) { crmToast("Dá um nome pra categoria.", "err"); return; }
-        const color =
-          panel.querySelector(".crm-qrp-color-swatch.is-selected")?.getAttribute("data-color-swatch") ||
-          QUICK_REPLY_CATEGORY_COLORS[0];
-        const r = await chrome.runtime
-          .sendMessage({
-            type: "api",
-            path: "/api/public/extension/quick-reply-categories",
-            opts: { method: "POST", body: JSON.stringify({ name, color }) },
-          })
-          .catch(() => null);
-        if (r?.ok) {
-          crmToast("Categoria criada");
-          await loadQuickReplyCategories();
-          renderCategoriesScreen();
-        } else {
-          crmToast(r?.error || "Não consegui criar a categoria.", "err");
-        }
-        return;
-      }
-
-      const delCat = e.target.closest("[data-del-cat]");
-      if (delCat) {
-        const cat = quickReplyCategories.find((c) => c.id === delCat.getAttribute("data-del-cat"));
-        if (!cat) return;
-        const ok = await openConfirmPop(delCat, {
-          text: `Excluir a categoria "${cat.name}"? As respostas dela ficam sem categoria.`,
-          confirmLabel: "Sim, excluir",
-        });
-        if (!ok) return;
-        const r = await chrome.runtime
-          .sendMessage({ type: "api", path: `/api/public/extension/quick-reply-categories/${cat.id}`, opts: { method: "DELETE" } })
-          .catch(() => null);
-        if (r?.ok) {
-          crmToast("Categoria excluída", "ok", delCat);
-          await loadQuickReplyCategories();
-          await loadQuickReplies(); // reflete category_id=null nas que usavam essa categoria
-          renderCategoriesScreen();
-        } else {
-          crmToast(r?.error || "Não consegui excluir.", "err", delCat);
-        }
-        return;
       }
 
       // Favoritar direto na lista, sem precisar abrir a resposta pra editar.

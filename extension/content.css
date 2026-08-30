@@ -920,6 +920,43 @@ html body.crm-shell.crm-qr-open #app {
 .crm-qrp-cat-row .crm-qrp-cat-dot { width: 11px; height: 11px; }
 .crm-qrp-cat-row-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: var(--z-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* Blocos fixos das categorias ativas no filtro (cor sólida de verdade,
+   nome dentro) — aparecem abaixo da barra de filtros quando "Por
+   categoria" está selecionado. Clicar de novo tira aquela categoria. */
+.crm-qrp-active-cats { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 14px 0; }
+.crm-qrp-cat-block {
+  border: 0; border-radius: 8px; font-size: 11.5px; font-weight: 700; padding: 6px 10px; cursor: pointer;
+  transition: filter 0.15s ease;
+}
+.crm-qrp-cat-block:hover { filter: brightness(0.92); }
+
+/* Popup de escolher categoria(s) pra filtrar (seleção múltipla) */
+.crm-cat-filter-pop {
+  position: fixed; z-index: 2147483647; background: var(--z-surface); border: 1px solid var(--z-line);
+  border-radius: 12px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22); padding: 6px; min-width: 220px; max-width: 300px;
+  max-height: 280px; overflow-y: auto; font-family: var(--z-font);
+}
+.crm-cat-filter-pop-hint { margin: 4px 8px 6px; font-size: 10.5px; font-weight: 700; color: var(--z-text-dim); text-transform: uppercase; letter-spacing: 0.03em; }
+.crm-cat-filter-pop-item {
+  display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 8px; cursor: pointer;
+}
+.crm-cat-filter-pop-item:hover { background: var(--z-surface-2); }
+.crm-cat-filter-pop-check {
+  flex-shrink: 0; width: 15px; height: 15px; border-radius: 4px; border: 1.5px solid var(--z-line);
+  display: flex; align-items: center; justify-content: center;
+}
+.crm-cat-filter-pop-name { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 600; color: var(--z-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.crm-cat-filter-pop-del {
+  flex-shrink: 0; border: 0; background: transparent; color: var(--z-text-dim); padding: 3px; border-radius: 6px; cursor: pointer;
+  display: flex; opacity: 0; transition: opacity 0.12s ease, color 0.12s ease, background-color 0.12s ease;
+}
+.crm-cat-filter-pop-item:hover .crm-cat-filter-pop-del { opacity: 1; }
+.crm-cat-filter-pop-del:hover { color: #c0392b; background: rgba(192, 57, 43, 0.1); }
+
+/* Popup de criar categoria (nome + cor), aberto a partir do menu do
+   botão único "+ Nova" */
+.crm-cat-create-pop .crm-qrp-color-row { margin: 4px 0 8px; }
+
 /* Categoria + atalho no formulário */
 .crm-qrp-meta-row { display: flex; gap: 8px; margin-bottom: 4px; }
 .crm-qrp-meta-field { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
@@ -948,31 +985,37 @@ html body.crm-shell.crm-qr-open #app {
 
 /* Perfil do cliente / Valor do cliente — reaproveita os campos do painel
    de respostas rápidas (mesmo input/select/textarea), só adiciona o
-   cabeçalho com avatar e o espaçamento de formulário vertical. */
-.crm-cp-avatar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+   cabeçalho com avatar e o espaçamento de formulário vertical.
+   Cabeçalho centralizado, foto bem maior — antes era um avatarzinho de
+   44px do lado do nome; agora é o destaque do topo do Perfil. */
+.crm-cp-avatar-row {
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px;
+  padding: 4px 0 18px; margin-bottom: 14px; border-bottom: 1px solid var(--z-line-soft);
+}
 .crm-cp-avatar {
-  flex-shrink: 0; width: 44px; height: 44px; border-radius: 999px; background: var(--z-accent);
-  color: #fff; font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; width: 96px; height: 96px; border-radius: 999px; background: var(--z-accent);
+  color: #fff; font-size: 34px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  margin-bottom: 8px;
 }
 .crm-cp-avatar-photo {
-  flex-shrink: 0; width: 44px; height: 44px; border-radius: 999px; object-fit: cover; background: var(--z-surface-2);
+  flex-shrink: 0; width: 96px; height: 96px; border-radius: 999px; object-fit: cover; background: var(--z-surface-2);
+  margin-bottom: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
 }
-.crm-cp-avatar-info { flex: 1; min-width: 0; }
-.crm-cp-name { margin: 0; font-size: 13.5px; font-weight: 700; color: var(--z-text); }
-.crm-cp-name-row { display: flex; align-items: center; gap: 6px; }
+.crm-cp-name-row { display: flex; align-items: center; justify-content: center; gap: 6px; }
 .crm-cp-name-input {
-  min-width: 0; flex: 1; border: 0; border-bottom: 1.5px solid transparent; background: transparent; padding: 2px 0;
-  font-family: var(--z-font); font-size: 14.5px; font-weight: 800; color: var(--z-text); transition: border-color 0.15s ease;
+  min-width: 0; max-width: 220px; border: 0; border-bottom: 1.5px solid transparent; background: transparent; padding: 2px 0;
+  font-family: var(--z-font); font-size: 17px; font-weight: 800; color: var(--z-text); text-align: center;
+  transition: border-color 0.15s ease;
 }
 .crm-cp-name-input:hover { border-bottom-color: var(--z-line); }
 .crm-cp-name-input:focus { outline: none; border-bottom-color: var(--z-accent); }
 .crm-cp-name-pencil { flex-shrink: 0; color: var(--z-line); display: flex; }
-.crm-cp-phone { margin: 1px 0 0; font-size: 11.5px; color: var(--z-text-dim); }
+.crm-cp-phone { margin: 1px 0 0; font-size: 12.5px; color: var(--z-text-dim); }
 .crm-cp-save-contact {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-top: 4px;
+  margin-top: 6px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -983,6 +1026,13 @@ html body.crm-shell.crm-qr-open #app {
 }
 .crm-cp-save-contact svg { width: 14px; height: 14px; }
 .crm-cp-save-contact:hover { text-decoration: underline; }
+
+/* Título de cada seção de campos (Dados pessoais / Negociação / Observações) */
+.crm-cp-section-title {
+  margin: 18px 0 10px; font-size: 11px; font-weight: 800; color: var(--z-accent); text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.crm-cp-avatar-row + .crm-cp-section-title { margin-top: 0; }
 
 /* Ícone de "salvar contato" plantado do ladinho do nome/número — mesmo
    estilo simples dos outros ícones (sem fundo, sem bolinha), só reposicionado
