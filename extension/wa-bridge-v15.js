@@ -1,5 +1,8 @@
 (function () {
-  const BRIDGE_VERSION = "0.35.22";
+  // Versão vem do content script (que lê direto do manifest.json) — não é
+  // mais uma constante fixa aqui, que ficava fácil de esquecer de
+  // atualizar junto com a versão de verdade da extensão.
+  const BRIDGE_VERSION = window.__crmBridgeVersion || "0.0.0";
   if (window.__crmWaBridgeVersion === BRIDGE_VERSION) return;
   window.__crmWaBridgeVersion = BRIDGE_VERSION;
 

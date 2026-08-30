@@ -3,7 +3,11 @@
 // lista de conversas do WhatsApp (não abre o CRM).
 
 (function () {
-  const CRM_VERSION = "0.35.22";
+  // Versão lida direto do manifest.json — fonte única. Antes eram duas
+  // constantes fixas (aqui e na ponte) que eu esquecia de sincronizar a
+  // cada atualização, o que já causou confusão de "será que é a versão
+  // nova mesmo?" tanto pra mim quanto pra quem está testando.
+  const CRM_VERSION = chrome.runtime.getManifest().version;
   const EXTENSION_BRIDGE_TOKEN = "__extension_bridge__";
   const SHELL_CLASS = "crm-shell";
   if (window.__crmAssinaturasInjectedVersion === CRM_VERSION) return;
@@ -52,6 +56,10 @@
   function ensureWaScriptsInjected() {
     if (waScriptsPromise) return waScriptsPromise;
     window.__crmWaJsInjected = true;
+    // A ponte roda no MAIN world (script injetado), sem acesso a
+    // chrome.runtime — passa a versão por aqui, assim ela nunca mais
+    // fica desincronizada da versão de verdade da extensão.
+    window.__crmBridgeVersion = CRM_VERSION;
     waScriptsPromise = waitForWaReady()
       .then(() => injectMain("wa-js.js"))
       .then(() => injectMain("wa-bridge-v15.js"))
