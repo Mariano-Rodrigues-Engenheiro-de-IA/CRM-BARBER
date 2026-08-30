@@ -440,7 +440,10 @@
       function onDoc(ev) {
         if (!pop.contains(ev.target) && ev.target !== anchor) done(null);
       }
-      setTimeout(() => document.addEventListener("mousedown", onDoc, true), 0);
+      // 150ms de folga (não 0) — dá uma margem de segurança contra
+      // qualquer resquício do mesmo clique que abriu a caixinha acabar
+      // fechando ela sozinha antes da pessoa conseguir digitar.
+      setTimeout(() => document.addEventListener("mousedown", onDoc, true), 150);
       pop.querySelector(".crm-lite-pop-confirm").addEventListener("click", () => done(input.value.trim() || null));
       input.addEventListener("keydown", (e) => {
         if (e.key === "Enter") done(input.value.trim() || null);
@@ -2600,7 +2603,14 @@
       if (sw) return void openSharedPanel(sw.getAttribute("data-switch"));
       const saveBtn = e.target.closest("[data-save-contact]");
       if (saveBtn) {
-        console.log("[CRM salvar-contato] botão do Perfil clicado");
+        // O botão que já funcionava (o do cabeçalho, do lado do nome) para
+        // a propagação do clique antes de chamar saveActiveContact — este
+        // aqui, dentro do painel, não parava, e o clique continuava se
+        // espalhando pela página. É bem provável que fosse isso que
+        // fechava a caixinha de digitar o nome sozinha, sem dar tempo de
+        // escrever nada.
+        e.preventDefault();
+        e.stopPropagation();
         void saveActiveContact(saveBtn).then(() => {
           // Some o botão da tela assim que salvar, sem esperar reabrir o painel.
           if (activePanelKind === kind) saveBtn.remove();
