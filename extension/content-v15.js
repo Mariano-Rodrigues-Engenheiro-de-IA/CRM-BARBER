@@ -2371,7 +2371,6 @@
    * oficial (ela não tem esse conceito de agenda pra escrever). */
   async function saveActiveContact(anchor) {
     const chat = await activeChat();
-    console.log("[CRM salvar-contato] saveActiveContact — chat:", chat);
     if (!chat?.wa_id) {
       crmToast("Não consegui identificar o contato dessa conversa.", "err", anchor);
       return;
@@ -2381,13 +2380,11 @@
       value: chat.push_name || "",
       confirmLabel: "Salvar",
     });
-    console.log("[CRM salvar-contato] nome digitado:", name);
     if (!name || !name.trim()) return;
     // Chama a função nativa do próprio WhatsApp (mesma coisa que o botão
     // "Adicionar" na tela de dados do contato) — não depende de nenhuma
     // API externa nem de qual conexão a barbearia está usando.
     const r = await askBridge("save_contact_v1", "save_contact_done_v1", { waId: chat.wa_id, name: name.trim() }, 10000);
-    console.log("[CRM salvar-contato] resultado do save_contact_v1:", r);
     if (r) {
       crmToast("Contato salvo!", "ok", anchor);
       void updateSaveContactButton();
@@ -2597,26 +2594,15 @@
     const kind = "profile";
     const mySeq = ++profileRenderSeq;
     panel.innerHTML = `<div class="crm-qrp-head"><div class="crm-qr-mark">${PROFILE_SVG}</div><p class="crm-qrp-title">Perfil do cliente</p><button class="crm-qrp-close" data-close title="Fechar">&times;</button></div>${panelSwitcherHtml(kind)}<div class="crm-qrp-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
+    // Handler temporário, só pra enquanto os dados carregam (fechar/trocar
+    // de aba). O de verdade — que também cobre o botão "Salvar na agenda" —
+    // é montado mais abaixo, depois que o conteúdo real existe; ACHADO DO
+    // BUG: aquele de baixo pisava em cima deste sem saber lidar com
+    // [data-save-contact], fazendo o clique nesse botão não fazer nada.
     panelClickHandler = (e) => {
       if (e.target.closest("[data-close]")) return closeSharedPanel();
       const sw = e.target.closest("[data-switch]");
       if (sw) return void openSharedPanel(sw.getAttribute("data-switch"));
-      const saveBtn = e.target.closest("[data-save-contact]");
-      if (saveBtn) {
-        // O botão que já funcionava (o do cabeçalho, do lado do nome) para
-        // a propagação do clique antes de chamar saveActiveContact — este
-        // aqui, dentro do painel, não parava, e o clique continuava se
-        // espalhando pela página. É bem provável que fosse isso que
-        // fechava a caixinha de digitar o nome sozinha, sem dar tempo de
-        // escrever nada.
-        e.preventDefault();
-        e.stopPropagation();
-        void saveActiveContact(saveBtn).then(() => {
-          // Some o botão da tela assim que salvar, sem esperar reabrir o painel.
-          if (activePanelKind === kind) saveBtn.remove();
-        });
-        return;
-      }
     };
 
     const chat = await activeChat();
@@ -2712,6 +2698,20 @@
       if (e.target.closest("[data-close]")) return closeSharedPanel();
       const sw = e.target.closest("[data-switch]");
       if (sw) return void openSharedPanel(sw.getAttribute("data-switch"));
+      // ESTE handler substitui por completo o de cima (mesma variável
+      // panelClickHandler) — era aqui que o clique em "Salvar na agenda"
+      // se perdia silenciosamente, porque esse bloco só sabia lidar com
+      // [data-save] (o botão geral do rodapé) e ignorava [data-save-contact]
+      // (o botão de dentro do card de avatar/nome/telefone).
+      const saveContactBtn = e.target.closest("[data-save-contact]");
+      if (saveContactBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        void saveActiveContact(saveContactBtn).then(() => {
+          if (activePanelKind === "profile") saveContactBtn.remove();
+        });
+        return;
+      }
       if (!e.target.closest("[data-save]") || saveBtn.disabled) return;
 
       const profileFields = {};

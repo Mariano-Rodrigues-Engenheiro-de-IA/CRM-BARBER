@@ -762,37 +762,18 @@
             usedFallback = !!chat;
           } catch {}
         }
-        // LOG DE DIAGNÓSTICO — roda sempre, ANTES de qualquer coisa que
-        // possa falhar/parar o código, pra nunca ficar "mudo" numa
-        // conversa específica sem explicar o motivo.
         if (!chat) {
-          console.log("[CRM salvar-contato] getActiveChat() não achou nada, e o fallback por domWaId também não. domWaId recebido:", d.domWaId);
           throw new Error("Nenhuma conversa aberta");
         }
         const waId = serialized(chat?.id) || d.domWaId;
         let contact = null;
-        let contactErr = null;
         try {
           // Uma busca só (rápida) — as tentativas extras de resolução por
           // @lid nas rodadas anteriores deixaram isso mais lento sem
           // resolver o problema de verdade, então voltamos pro simples.
           contact = chat?.contact || (await window.WPP?.contact?.get?.(waId)) || null;
-        } catch (e) {
-          contactErr = e?.message || String(e);
-        }
+        } catch {}
         const isSaved = contact?.isMyContact === true;
-        console.log("[CRM salvar-contato]", {
-          waId,
-          usedFallback,
-          hasChatContact: !!chat?.contact,
-          contactFound: !!contact,
-          contactErr,
-          isMyContact: contact?.isMyContact,
-          name: contact?.name,
-          pushname: contact?.pushname,
-          notifyName: contact?.notifyName,
-          isSaved,
-        });
         const pushName = String(contact?.pushname || contact?.notifyName || "").trim() || null;
         const data = {
           wa_id: waId,
@@ -804,7 +785,6 @@
         };
         window.postMessage({ __crm: "active_chat_done_v290", id: d.id, ok: true, data }, "*");
       } catch (e) {
-        console.log("[CRM salvar-contato] erro geral:", e?.message || String(e));
         window.postMessage({ __crm: "active_chat_done_v290", id: d.id, ok: false, error: e?.message || String(e) }, "*");
       }
       return;
