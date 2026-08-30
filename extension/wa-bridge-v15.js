@@ -751,53 +751,27 @@
           null;
         if (!chat) throw new Error("Nenhuma conversa aberta");
         const waId = serialized(chat?.id);
-        // "contact.name" só existe se a pessoa já está salva na agenda de
-        // quem está usando o WhatsApp — é diferente de pushname/notifyName
-        // (o nome que a PRÓPRIA pessoa escolheu no perfil dela, visível
-        // mesmo sem estar salva). É essa distinção que decide se mostra o
-        // ícone de "salvar contato".
         let contact = null;
         try {
-          // WPP.contact.get() é a função oficial exposta — ela converte o
-          // id pra um objeto Wid de verdade antes de buscar no
-          // ContactStore. Chamar ContactStore.get() direto com a STRING
-          // crua (como o código fazia antes) podia falhar silenciosamente
-          // pra grande parte dos contatos, dependendo de como a
-          // comparação interna da lib funciona.
+          // Uma busca só (rápida) — as tentativas extras de resolução por
+          // @lid nas rodadas anteriores deixaram isso mais lento sem
+          // resolver o problema de verdade, então voltamos pro simples.
           contact = chat?.contact || (await window.WPP?.contact?.get?.(waId)) || null;
-          if (!contact && chat?.id) {
-            contact = (await window.WPP?.contact?.get?.(chat.id)) || null;
-          }
-          // Resolução OFICIAL entre @lid e telefone, a mesma que a própria
-          // wa-js usa por trás de queryWidExists — mais confiável que
-          // adivinhar por conta própria.
-          if (contact?.isMyContact !== true) {
-            try {
-              const wid = window.WPP?.whatsapp?.WidFactory?.createWid?.(waId);
-              const cache = window.WPP?.whatsapp?.lidPnCache;
-              const alt = wid && cache ? (wid.isLid?.() ? cache.getPhoneNumber?.(wid) : cache.getCurrentLid?.(wid)) : null;
-              if (alt) {
-                const altContact = (await window.WPP?.contact?.get?.(alt)) || null;
-                if (altContact?.isMyContact === true) contact = altContact;
-              }
-            } catch {}
-          }
-          // Fallback com o índice próprio da extensão (lidIndex), só se a
-          // resolução oficial acima não achar nada.
-          if (contact?.isMyContact !== true) {
-            const fromLid = lidIndex.get(String(waId));
-            if (fromLid?.phone) {
-              const byPhone = (await window.WPP?.contact?.get?.(`${fromLid.phone}@c.us`)) || null;
-              if (byPhone?.isMyContact === true) contact = byPhone;
-            }
-          }
         } catch {}
-        // isMyContact é o campo de verdade da biblioteca pra "está salvo
-        // na agenda". Chegamos a usar .name como sinal, mas ele vinha
-        // positivo demais (empresas verificadas, e até gente comum às
-        // vezes tem .name preenchido sem estar salva de fato), fazendo o
-        // ícone quase nunca aparecer — troca pra usar só o campo certo.
         const isSaved = contact?.isMyContact === true;
+        // LOG DE DIAGNÓSTICO — abre o Console do navegador (F12) numa
+        // conversa que deveria aparecer como "não salva" e manda pra mim
+        // o que aparece aqui. Isso vai mostrar exatamente o que a
+        // biblioteca está enxergando pra esse contato específico.
+        console.log("[CRM salvar-contato]", {
+          waId,
+          contactFound: !!contact,
+          isMyContact: contact?.isMyContact,
+          name: contact?.name,
+          pushname: contact?.pushname,
+          notifyName: contact?.notifyName,
+          isSaved,
+        });
         const pushName = String(contact?.pushname || contact?.notifyName || "").trim() || null;
         const data = {
           wa_id: waId,

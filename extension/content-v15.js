@@ -1254,9 +1254,18 @@
   setInterval(() => {
     if (document.visibilityState === "visible") {
       ensureChatButton();
-      void refreshProfilePanelIfStale();
     }
   }, 400);
+  // Salvar contato e o Perfil (se aberto) checam a conversa ativa num
+  // ciclo mais espaçado — colado no de 400ms, isso ficava chamando a
+  // biblioteca do WhatsApp demais (2,5x por segundo, o tempo todo),
+  // deixando tudo mais lento sem necessidade.
+  setInterval(() => {
+    if (document.visibilityState === "visible") {
+      void updateSaveContactButton();
+      void refreshProfilePanelIfStale();
+    }
+  }, 1500);
   setInterval(() => {
     if (document.visibilityState === "visible") void loadFunnels();
   }, 300000);
@@ -2109,7 +2118,6 @@
       header.contains(hasCrm) && header.contains(hasBolt) && header.contains(hasNotes) && header.contains(hasSchedule) && header.contains(hasProfile) && header.contains(hasSaveContact)
     ) {
       updateFunnelBadge();
-      void updateSaveContactButton();
       return;
     }
     hasCrm?.remove();
@@ -2231,7 +2239,6 @@
       saveContactBtn.insertAdjacentElement("afterend", boltBtn);
     }
     updateFunnelBadge();
-    void updateSaveContactButton();
   }
 
 
