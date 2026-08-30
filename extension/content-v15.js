@@ -501,7 +501,6 @@
     const menu = document.createElement("div");
     menu.className = "crm-menu";
     menu.style.top = `${rect.bottom + 6}px`;
-    menu.style.left = `${Math.max(8, rect.left)}px`;
     menu.innerHTML = items
       .map(
         (i, idx) =>
@@ -509,6 +508,12 @@
       )
       .join("");
     document.body.appendChild(menu);
+    // Precisa medir DEPOIS de anexar ao DOM (offsetWidth só existe depois
+    // de renderizado) — o painel fica encostado na borda direita da tela,
+    // então só grudar no rect.left do botão fazia o menu sair pra fora
+    // quando o botão estava perto dessa borda.
+    const left = Math.min(Math.max(8, rect.left), window.innerWidth - menu.offsetWidth - 8);
+    menu.style.left = `${left}px`;
     const close = () => {
       menu.remove();
       document.removeEventListener("mousedown", onDoc, true);
@@ -2823,6 +2828,19 @@
     return luminance > 0.62 ? "#1a1a1a" : "#ffffff";
   }
 
+  /** Mistura a cor com branco (0 = cor original, 1 = branco puro) — usada
+   * pra pintar o fundo de cada resposta dentro do bloco da categoria com
+   * uma versão bem clara da cor, só pra dar identidade visual sem
+   * atrapalhar a leitura do texto por cima. */
+  function lightenColor(hex, amount) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+    if (!m) return hex;
+    const n = parseInt(m[1], 16);
+    const mix = (c) => Math.round(c + (255 - c) * amount);
+    const r = mix((n >> 16) & 255), g = mix((n >> 8) & 255), b = mix(n & 255);
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+
   async function renderQuickReplyPanel(panel) {
     prewarmEngine();
 
@@ -2994,8 +3012,8 @@
 
     let collapsedCategoryIds = new Set(); // categorias recolhidas (clicou pra fechar o bloco)
 
-    function rowHtml(q, { showCategoryBadge = false } = {}) {
-      return `<div class="crm-qrp-row">
+    function rowHtml(q, { showCategoryBadge = false, bgColor = null } = {}) {
+      return `<div class="crm-qrp-row"${bgColor ? ` style="background:${bgColor}"` : ""}>
         <button class="crm-qrp-icon crm-qrp-star ${q.is_favorite ? "is-fav" : ""}" data-fav="${q.id}" title="${q.is_favorite ? "Remover dos favoritos" : "Favoritar"}">${q.is_favorite ? STAR_FILLED_SVG : STAR_OUTLINE_SVG}</button>
         <div class="crm-qrp-row-info" data-edit="${q.id}">
           <p class="crm-qrp-row-name">${escapeHtml(q.title)}${showCategoryBadge ? categoryChipHtml(categoryById(q.category_id)) : ""}</p>
@@ -3008,20 +3026,21 @@
     }
 
     // Bloco de categoria — cabeçalho cheio da cor, com as respostas dela
-    // agrupadas dentro (dobrável). É assim que o Mariano quer: não uma
-    // etiqueta do lado de cada resposta, e sim a categoria virar o
-    // "container" visual que agrupa as respostas dela.
+    // agrupadas dentro (dobrável). Cada resposta do bloco também recebe um
+    // fundo bem clareado da MESMA cor (não branco) — dá identidade visual
+    // ao bloco inteiro sem atrapalhar a leitura do texto por cima.
     function categorySectionHtml(cat, items) {
       if (!items.length) return "";
       const collapsed = collapsedCategoryIds.has(cat.id);
       const textColor = contrastTextColor(cat.color);
+      const rowBg = lightenColor(cat.color, 0.86);
       return `<div class="crm-qrp-cat-section">
         <button type="button" class="crm-qrp-cat-section-head" data-toggle-collapse="${cat.id}" style="background:${escapeHtml(cat.color)};color:${textColor}">
           <span class="crm-qrp-cat-section-name">${escapeHtml(cat.name)}</span>
           <span class="crm-qrp-cat-section-count">${items.length}</span>
           <span class="crm-qrp-cat-section-caret">${collapsed ? DOWN_SVG : UP_SVG}</span>
         </button>
-        ${collapsed ? "" : `<div class="crm-qrp-list">${items.map((q) => rowHtml(q)).join("")}</div>`}
+        ${collapsed ? "" : `<div class="crm-qrp-list">${items.map((q) => rowHtml(q, { bgColor: rowBg })).join("")}</div>`}
       </div>`;
     }
 
