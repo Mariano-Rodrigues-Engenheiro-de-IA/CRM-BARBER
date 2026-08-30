@@ -44,6 +44,26 @@ export const quickReplySchema = z.object({
   title: z.string().trim().min(1).max(120),
   actions: z.array(quickReplyActionSchema).min(1).max(20),
   sort_order: z.number().int().min(0).max(9999).optional(),
+  // Categoria livre — quem decide o nome é o usuário, sem lista fixa.
+  category: z
+    .string()
+    .trim()
+    .max(60)
+    .nullable()
+    .optional()
+    .transform((v) => (v ? v : null)),
+  // Atalho: digitar "/palavra" na caixa do WhatsApp aciona esta resposta.
+  // Sem espaços (é uma "palavra" só) — normaliza pra minúsculas aqui pra
+  // a comparação na hora de digitar não depender de caixa alta/baixa.
+  shortcut: z
+    .string()
+    .trim()
+    .max(30)
+    .regex(/^[\p{L}\p{N}_-]*$/u, "Atalho não pode ter espaços ou símbolos.")
+    .nullable()
+    .optional()
+    .transform((v) => (v ? v.toLowerCase() : null)),
+  is_favorite: z.boolean().optional(),
 });
 
 export type QuickReplyAction = z.infer<typeof quickReplyActionSchema> & { url?: string | null };
@@ -64,9 +84,21 @@ export type QuickReply = {
   title: string;
   actions: QuickReplyAction[];
   sort_order: number;
+  category: string | null;
+  shortcut: string | null;
+  is_favorite: boolean;
 };
 
 export const QUICK_REPLY_BUCKET = "quick-reply-media";
+
+// Variáveis que o usuário pode usar no texto — substituídas na hora do
+// envio (ver fill() em handleWaAction, na extensão). Mantém essa lista e
+// a de lá em sincronia se adicionar uma nova.
+export const QUICK_REPLY_VARIABLES = [
+  { key: "nome", label: "Nome do contato" },
+  { key: "primeiro_nome", label: "Só o primeiro nome" },
+  { key: "telefone", label: "Telefone" },
+] as const;
 
 /** Aplica {nome} e afins no texto da ação. */
 export function renderQuickReplyText(text: string, vars: Record<string, string>) {

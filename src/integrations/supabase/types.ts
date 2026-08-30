@@ -1307,8 +1307,11 @@ export type Database = {
         Row: {
           actions: Json
           barbershop_id: string
+          category: string | null
           created_at: string
           id: string
+          is_favorite: boolean
+          shortcut: string | null
           sort_order: number
           title: string
           updated_at: string
@@ -1316,8 +1319,11 @@ export type Database = {
         Insert: {
           actions?: Json
           barbershop_id: string
+          category?: string | null
           created_at?: string
           id?: string
+          is_favorite?: boolean
+          shortcut?: string | null
           sort_order?: number
           title: string
           updated_at?: string
@@ -1325,8 +1331,11 @@ export type Database = {
         Update: {
           actions?: Json
           barbershop_id?: string
+          category?: string | null
           created_at?: string
           id?: string
+          is_favorite?: boolean
+          shortcut?: string | null
           sort_order?: number
           title?: string
           updated_at?: string

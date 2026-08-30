@@ -38,9 +38,12 @@ export const Route = createFileRoute("/api/public/extension/quick-replies/$id")(
           .update(parsed.data)
           .eq("id", params.id)
           .eq("barbershop_id", auth.token.barbershop_id)
-          .select("id, title, actions, sort_order")
+          .select("id, title, actions, sort_order, category, shortcut, is_favorite")
           .maybeSingle();
         if (error) {
+          if (error.code === "23505") {
+            return jsonResponse(request, { ok: false, error: "Esse atalho já está em uso por outra resposta." }, { status: 409 });
+          }
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
         }
         if (!data) return jsonResponse(request, { ok: false, error: "Not found" }, { status: 404 });

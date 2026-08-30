@@ -1267,6 +1267,7 @@
   setInterval(() => {
     if (document.visibilityState === "visible") {
       ensureChatButton();
+      ensureShortcutListener();
     }
   }, 400);
   // Salvar contato e o Perfil (se aberto) checam a conversa ativa num
@@ -2555,6 +2556,10 @@
   const TRASH_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>`;
   const UP_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg>`;
   const DOWN_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M18 13l-6 6-6-6"/></svg>`;
+  // Estrela vazada (não favoritada) e preenchida (favoritada) — mesma
+  // silhueta, só muda fill/stroke, pra não trocar o ícone inteiro no toggle.
+  const STAR_OUTLINE_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l2.9 6.3 6.9.7-5.2 4.7 1.5 6.8L12 17.7l-6.1 3.3 1.5-6.8-5.2-4.7 6.9-.7Z"/></svg>`;
+  const STAR_FILLED_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l2.9 6.3 6.9.7-5.2 4.7 1.5 6.8L12 17.7l-6.1 3.3 1.5-6.8-5.2-4.7 6.9-.7Z"/></svg>`;
 
   const QR_STEP_TYPES = [
     { type: "text", label: "Texto" },
@@ -2563,6 +2568,16 @@
     { type: "audio", label: "Áudio" },
     { type: "funnel_add", label: "Mover no funil" },
     { type: "funnel_remove", label: "Remover do funil" },
+  ];
+
+  // Mesma lista de src/lib/quick-replies.ts (QUICK_REPLY_VARIABLES) — só
+  // pra montar os "chips" clicáveis no formulário. A substituição de
+  // verdade acontece em handleWaAction() (fill()), que fica mais abaixo
+  // neste mesmo arquivo.
+  const QUICK_REPLY_VARIABLES = [
+    { key: "nome", label: "Nome do contato" },
+    { key: "primeiro_nome", label: "Só o primeiro nome" },
+    { key: "telefone", label: "Telefone" },
   ];
 
   function fileToBase64(file) {
@@ -2778,6 +2793,10 @@
     let editingId = null;
     let steps = [];
     let savingFile = false;
+    let favoriteValue = false;
+    // Filtros da lista — resetam toda vez que o painel é reaberto.
+    let filterCategory = null; // string escolhida, ou null = sem filtro de categoria
+    let filterFav = false;
 
     function firstTextOf(reply) {
       return (reply?.actions || []).find((a) => a.type === "text")?.text || "";
@@ -2786,25 +2805,54 @@
       const n = (reply?.actions || []).length;
       return `${n} passo${n === 1 ? "" : "s"}`;
     }
+    // Lista de categorias existentes — não tem tabela própria, vem só dos
+    // valores já usados nas respostas cadastradas (é assim que o próprio
+    // usuário "cria" uma categoria: digitando ela pela primeira vez).
+    function knownCategories() {
+      const set = new Set();
+      quickReplies.forEach((q) => { if (q.category) set.add(q.category); });
+      return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
+    }
 
     function renderList() {
       if (activePanelKind !== "qr" || !panel.isConnected) return;
       mode = "list";
-      const rows = quickReplies.length
-        ? `<div class="crm-qrp-list">${quickReplies
+      const categories = knownCategories();
+      const visible = quickReplies.filter((q) => {
+        if (filterFav) return !!q.is_favorite;
+        if (filterCategory) return q.category === filterCategory;
+        return true;
+      });
+      const filtersHtml = quickReplies.length
+        ? `<div class="crm-qrp-filters">
+            <button class="crm-qrp-filter-chip ${!filterCategory && !filterFav ? "is-active" : ""}" data-filter-all>Todas</button>
+            <button class="crm-qrp-filter-chip crm-qrp-filter-fav ${filterFav ? "is-active" : ""}" data-filter-fav>${STAR_FILLED_SVG} Favoritas</button>
+            ${categories
+              .map(
+                (c) =>
+                  `<button class="crm-qrp-filter-chip" data-filter-cat="${escapeHtml(c)}" data-active="${filterCategory === c}">${escapeHtml(c)}</button>`,
+              )
+              .join("")}
+          </div>`
+        : "";
+      const rows = visible.length
+        ? `<div class="crm-qrp-list">${visible
             .map(
-              (q, i) => `<div class="crm-qrp-row">
-                <div class="crm-qrp-row-info" data-edit="${i}">
-                  <p class="crm-qrp-row-name">${escapeHtml(q.title)}</p>
-                  <p class="crm-qrp-row-sub">${escapeHtml(stepSummary(q))}${firstTextOf(q) ? " · " + escapeHtml(firstTextOf(q)).slice(0, 40) : ""}</p>
+              (q) => `<div class="crm-qrp-row">
+                <button class="crm-qrp-icon crm-qrp-star ${q.is_favorite ? "is-fav" : ""}" data-fav="${q.id}" title="${q.is_favorite ? "Remover dos favoritos" : "Favoritar"}">${q.is_favorite ? STAR_FILLED_SVG : STAR_OUTLINE_SVG}</button>
+                <div class="crm-qrp-row-info" data-edit="${q.id}">
+                  <p class="crm-qrp-row-name">${escapeHtml(q.title)}${q.category ? `<span class="crm-qrp-row-cat">${escapeHtml(q.category)}</span>` : ""}</p>
+                  <p class="crm-qrp-row-sub">${q.shortcut ? `/${escapeHtml(q.shortcut)} · ` : ""}${escapeHtml(stepSummary(q))}${firstTextOf(q) ? " · " + escapeHtml(firstTextOf(q)).slice(0, 40) : ""}</p>
                 </div>
-                <button class="crm-qrp-icon" data-edit="${i}" title="Editar">${PENCIL_SVG}</button>
-                <button class="crm-qrp-icon crm-qrp-icon-danger" data-del="${i}" title="Excluir">${TRASH_SVG}</button>
-                <button class="crm-qrp-send" data-send="${i}" title="Enviar">${ICONS.send}</button>
+                <button class="crm-qrp-icon" data-edit="${q.id}" title="Editar">${PENCIL_SVG}</button>
+                <button class="crm-qrp-icon crm-qrp-icon-danger" data-del="${q.id}" title="Excluir">${TRASH_SVG}</button>
+                <button class="crm-qrp-send" data-send="${q.id}" title="Enviar">${ICONS.send}</button>
               </div>`,
             )
             .join("")}</div>`
-        : `<p class="crm-qrp-empty">Nenhuma resposta cadastrada ainda. Clica em "+ Nova" pra criar a primeira.</p>`;
+        : quickReplies.length
+          ? `<p class="crm-qrp-empty">Nenhuma resposta nesse filtro.</p>`
+          : `<p class="crm-qrp-empty">Nenhuma resposta cadastrada ainda. Clica em "+ Nova" pra criar a primeira.</p>`;
       panel.innerHTML = `
         <div class="crm-qrp-head">
           <div class="crm-qr-mark">${BOLT_SVG}</div>
@@ -2813,13 +2861,23 @@
           <button class="crm-qrp-close" data-close title="Fechar">&times;</button>
         </div>
         ${panelSwitcherHtml("qr")}
+        ${filtersHtml}
         <div class="crm-qrp-body">${rows}</div>
       `;
+      // data-active no chip de categoria decide o "is-active" via classe —
+      // fazer isso depois de montar o HTML evita escapar aspas dentro de
+      // atributo (categoria pode ter caractere estranho).
+      panel.querySelectorAll("[data-filter-cat]").forEach((btn) => {
+        if (btn.getAttribute("data-active") === "true") btn.classList.add("is-active");
+      });
     }
 
     function stepFieldsHtml(s, i) {
       if (s.type === "text") {
-        return `<textarea class="crm-qrp-textarea" data-step-field="text" data-i="${i}" placeholder="Digite a mensagem…">${escapeHtml(s.text || "")}</textarea>`;
+        return `<textarea class="crm-qrp-textarea" data-step-field="text" data-i="${i}" placeholder="Digite a mensagem…">${escapeHtml(s.text || "")}</textarea>
+          <div class="crm-qrp-vars">
+            ${QUICK_REPLY_VARIABLES.map((v) => `<button type="button" class="crm-qrp-var-chip" data-insert-var="{${v.key}}" data-target-i="${i}" title="${escapeHtml(v.label)}">{${v.key}}</button>`).join("")}
+          </div>`;
       }
       if (s.type === "image" || s.type === "video" || s.type === "audio") {
         const fileLabel = s._uploading ? "Enviando..." : s.filename ? s.filename : "Nenhum arquivo escolhido";
@@ -2897,17 +2955,35 @@
       mode = "form";
       editingId = reply?.id || null;
       steps = reply ? JSON.parse(JSON.stringify(reply.actions || [])) : [{ type: "text", text: "", delay_seconds: 5 }];
-      paintForm(reply?.title || "");
+      favoriteValue = !!reply?.is_favorite;
+      paintForm(reply?.title || "", reply?.category || "", reply?.shortcut || "");
     }
 
-    function paintForm(titleValue) {
+    function paintForm(titleValue, categoryValue, shortcutValue) {
+      const categories = knownCategories();
       panel.innerHTML = `
         <div class="crm-qrp-head" style="border-bottom:1px solid var(--z-line-soft)">
           <button class="crm-qrp-back" data-back title="Voltar">&larr;</button>
           <input class="crm-qrp-title-input" data-field="title" value="${escapeHtml(titleValue)}" placeholder="Nome da resposta" maxlength="120" />
+          <button class="crm-qrp-icon crm-qrp-fav-toggle ${favoriteValue ? "is-fav" : ""}" data-fav-toggle title="${favoriteValue ? "Remover dos favoritos" : "Favoritar"}">${favoriteValue ? STAR_FILLED_SVG : STAR_OUTLINE_SVG}</button>
           <button class="crm-qrp-close" data-close title="Fechar">&times;</button>
         </div>
         <div class="crm-qrp-body">
+          <div class="crm-qrp-meta-row">
+            <label class="crm-qrp-meta-field">
+              <span>Categoria</span>
+              <input class="crm-qrp-input" data-field="category" list="crm-qrp-cat-list" value="${escapeHtml(categoryValue || "")}" placeholder="Ex: Atendimento, Vendas…" maxlength="60" />
+              <datalist id="crm-qrp-cat-list">${categories.map((c) => `<option value="${escapeHtml(c)}"></option>`).join("")}</datalist>
+            </label>
+            <label class="crm-qrp-meta-field">
+              <span>Atalho (opcional)</span>
+              <div class="crm-qrp-shortcut-wrap">
+                <span class="crm-qrp-shortcut-prefix">/</span>
+                <input class="crm-qrp-input crm-qrp-shortcut-input" data-field="shortcut" value="${escapeHtml(shortcutValue || "")}" placeholder="ex: orcamento" maxlength="30" />
+              </div>
+            </label>
+          </div>
+          <p class="crm-qrp-shortcut-hint">${shortcutValue ? `Digite <b>/${escapeHtml(shortcutValue)}</b> na caixa de mensagem do WhatsApp pra usar essa resposta direto.` : "Defina um atalho pra poder chamar essa resposta digitando /atalho na caixa de mensagem."}</p>
           <div class="crm-qrp-steps">${steps.map((s, i) => stepCardHtml(s, i, steps.length)).join("")}</div>
           <button class="crm-qrp-add-step" data-add-step>+ Adicionar passo</button>
         </div>
@@ -2919,6 +2995,12 @@
 
     function currentTitle() {
       return panel.querySelector('[data-field="title"]')?.value.trim() || "";
+    }
+    function currentCategory() {
+      return panel.querySelector('[data-field="category"]')?.value.trim() || "";
+    }
+    function currentShortcut() {
+      return panel.querySelector('[data-field="shortcut"]')?.value.trim() || "";
     }
 
     renderList();
@@ -2933,12 +3015,80 @@
       if (e.target.closest("[data-new]")) return renderForm(null);
       if (e.target.closest("[data-back]")) return renderList();
 
+      if (e.target.closest("[data-filter-all]")) {
+        filterCategory = null;
+        filterFav = false;
+        return renderList();
+      }
+      if (e.target.closest("[data-filter-fav]")) {
+        filterFav = !filterFav;
+        filterCategory = null;
+        return renderList();
+      }
+      const catChip = e.target.closest("[data-filter-cat]");
+      if (catChip) {
+        const cat = catChip.getAttribute("data-filter-cat");
+        filterCategory = filterCategory === cat ? null : cat;
+        filterFav = false;
+        return renderList();
+      }
+
+      // Favoritar direto na lista, sem precisar abrir a resposta pra editar.
+      const favBtn = e.target.closest("[data-fav]");
+      if (favBtn) {
+        const reply = quickReplies.find((q) => q.id === favBtn.getAttribute("data-fav"));
+        if (!reply) return;
+        const next = !reply.is_favorite;
+        reply.is_favorite = next; // otimista — já reflete na tela antes da resposta do servidor
+        renderList();
+        const r = await chrome.runtime
+          .sendMessage({
+            type: "api",
+            path: `/api/public/extension/quick-replies/${reply.id}`,
+            opts: { method: "PATCH", body: JSON.stringify({ is_favorite: next }) },
+          })
+          .catch(() => null);
+        if (!r?.ok) {
+          reply.is_favorite = !next; // desfaz se der erro
+          renderList();
+          crmToast(r?.error || "Não consegui favoritar.", "err");
+        }
+        return;
+      }
+
+      // Favoritar dentro do próprio formulário (some junto no salvar).
+      if (e.target.closest("[data-fav-toggle]")) {
+        favoriteValue = !favoriteValue;
+        paintForm(currentTitle(), currentCategory(), currentShortcut());
+        return;
+      }
+
+      // Insere {nome}/{telefone}/etc no textarea do passo, na posição do
+      // cursor — sem repintar o formulário inteiro (perderia o foco).
+      const varChip = e.target.closest("[data-insert-var]");
+      if (varChip) {
+        const i = Number(varChip.getAttribute("data-target-i"));
+        const varText = varChip.getAttribute("data-insert-var");
+        const textarea = panel.querySelector(`[data-step-field="text"][data-i="${i}"]`);
+        if (textarea && steps[i]) {
+          const start = textarea.selectionStart ?? textarea.value.length;
+          const end = textarea.selectionEnd ?? textarea.value.length;
+          const newValue = textarea.value.slice(0, start) + varText + textarea.value.slice(end);
+          textarea.value = newValue;
+          steps[i].text = newValue;
+          textarea.focus();
+          const newPos = start + varText.length;
+          textarea.setSelectionRange(newPos, newPos);
+        }
+        return;
+      }
+
       const editBtn = e.target.closest("[data-edit]");
-      if (editBtn) return renderForm(quickReplies[Number(editBtn.getAttribute("data-edit"))]);
+      if (editBtn) return renderForm(quickReplies.find((q) => q.id === editBtn.getAttribute("data-edit")));
 
       const delBtn = e.target.closest("[data-del]");
       if (delBtn) {
-        const reply = quickReplies[Number(delBtn.getAttribute("data-del"))];
+        const reply = quickReplies.find((q) => q.id === delBtn.getAttribute("data-del"));
         if (!reply) return;
         const ok = await openConfirmPop(delBtn, {
           text: `Tem certeza que quer excluir "${reply.title}"?`,
@@ -2962,7 +3112,7 @@
       // respostas seguidas durante o atendimento sem reabrir toda vez.
       const send = e.target.closest("[data-send]");
       if (send && !quickReplySending) {
-        const reply = quickReplies[Number(send.getAttribute("data-send"))];
+        const reply = quickReplies.find((q) => q.id === send.getAttribute("data-send"));
         if (!reply) return;
         quickReplySending = true;
         send.disabled = true;
@@ -2987,7 +3137,7 @@
       const addStep = e.target.closest("[data-add-step]");
       if (addStep) {
         steps.push({ type: "text", text: "", delay_seconds: 5 });
-        paintForm(currentTitle());
+        paintForm(currentTitle(), currentCategory(), currentShortcut());
         return;
       }
 
@@ -2995,7 +3145,7 @@
       if (delStep) {
         steps.splice(Number(delStep.getAttribute("data-del-step")), 1);
         if (!steps.length) steps.push({ type: "text", text: "", delay_seconds: 5 });
-        paintForm(currentTitle());
+        paintForm(currentTitle(), currentCategory(), currentShortcut());
         return;
       }
 
@@ -3006,7 +3156,7 @@
         const j = i + dir;
         if (j >= 0 && j < steps.length) {
           [steps[i], steps[j]] = [steps[j], steps[i]];
-          paintForm(currentTitle());
+          paintForm(currentTitle(), currentCategory(), currentShortcut());
         }
         return;
       }
@@ -3036,9 +3186,20 @@
             return !!s.path;
           });
         if (!cleaned.length) { crmToast("Preenche pelo menos um passo válido.", "err"); return; }
+        const shortcutValue = currentShortcut();
+        if (shortcutValue && /\s/.test(shortcutValue)) {
+          crmToast("O atalho não pode ter espaços.", "err");
+          return;
+        }
         saveBtn.disabled = true;
         saveBtn.textContent = "Salvando...";
-        const body = JSON.stringify({ title, actions: cleaned });
+        const body = JSON.stringify({
+          title,
+          actions: cleaned,
+          category: currentCategory() || null,
+          shortcut: shortcutValue || null,
+          is_favorite: favoriteValue,
+        });
         const path = editingId ? `/api/public/extension/quick-replies/${editingId}` : "/api/public/extension/quick-replies";
         const method = editingId ? "PATCH" : "POST";
         const r = await chrome.runtime.sendMessage({ type: "api", path, opts: { method, body } }).catch(() => null);
@@ -3062,7 +3223,7 @@
         // Passo novo já nasce com 5s de espera (padrão pedido); mídia
         // e texto usam, funil ignora (não mostra esse campo).
         steps[i] = { type: typeSel.value, delay_seconds: 5 };
-        paintForm(currentTitle());
+        paintForm(currentTitle(), currentCategory(), currentShortcut());
         return;
       }
       const field = e.target.closest("[data-step-field]");
@@ -3077,7 +3238,7 @@
         }
         if (key === "funnel_id" && steps[i].type === "funnel_add") {
           steps[i].stage_id = "";
-          paintForm(currentTitle());
+          paintForm(currentTitle(), currentCategory(), currentShortcut());
         }
         return;
       }
@@ -3088,7 +3249,7 @@
         if (!file) return;
         steps[i]._uploading = true;
         savingFile = true;
-        paintForm(currentTitle());
+        paintForm(currentTitle(), currentCategory(), currentShortcut());
         try {
           const dataUrl = await fileToBase64(file);
           const r = await chrome.runtime
@@ -3117,7 +3278,7 @@
           crmToast(err?.message || "Não consegui ler o arquivo.", "err");
         } finally {
           savingFile = false;
-          paintForm(currentTitle());
+          paintForm(currentTitle(), currentCategory(), currentShortcut());
         }
       }
     };
@@ -3205,6 +3366,149 @@
     updateFunnelBadge();
   }
 
+  // ── Atalho "/palavra" na caixa de mensagem do WhatsApp ──────────────────
+  // Digitar "/" seguido de uma palavra que bate com o atalho de alguma
+  // resposta rápida abre uma listinha flutuante ali mesmo, sem precisar
+  // clicar no ícone do raio. Selecionar (clique, Enter ou Tab) limpa o que
+  // foi digitado e dispara a resposta na hora.
+  let shortcutComposeBox = null; // <div contenteditable> da conversa atual, ou null
+  let shortcutPicker = null; // { el, matches, selectedIndex } enquanto a listinha está aberta
+
+  function findComposeBox() {
+    const footer = document.querySelector("#main footer");
+    return footer?.querySelector('div[contenteditable="true"]') || null;
+  }
+
+  /** Se o texto da caixa é exatamente "/algumacoisa" (sem espaço), devolve
+   * "algumacoisa" (pode ser vazio, logo depois de digitar só "/"). Fora
+   * desse padrão (sem "/", com espaço, texto normal), devolve null. */
+  function extractShortcutFragment(box) {
+    const text = (box.textContent || "").trim();
+    const m = text.match(/^\/(\S*)$/);
+    return m ? m[1] : null;
+  }
+
+  function ensureShortcutListener() {
+    const box = findComposeBox();
+    if (box === shortcutComposeBox) return; // mesma caixa de sempre, nada a fazer
+    // Trocou de conversa (ou a caixa foi recriada) — a listinha antiga não
+    // faz mais sentido nesse contexto novo.
+    closeShortcutPicker();
+    shortcutComposeBox = box;
+    if (box) box.addEventListener("input", onShortcutComposeInput);
+  }
+
+  function onShortcutComposeInput() {
+    const box = shortcutComposeBox;
+    if (!box) return;
+    const fragment = extractShortcutFragment(box);
+    if (fragment === null) return closeShortcutPicker();
+    const frag = fragment.toLowerCase();
+    const matches = quickReplies.filter((q) => q.shortcut && q.shortcut.toLowerCase().startsWith(frag)).slice(0, 8);
+    if (!matches.length) return closeShortcutPicker();
+    openShortcutPicker(matches);
+  }
+
+  function openShortcutPicker(matches) {
+    if (!shortcutPicker) {
+      const el = document.createElement("div");
+      el.className = "crm-qr-shortcut-pop";
+      document.body.appendChild(el);
+      shortcutPicker = { el, matches: [], selectedIndex: 0 };
+      // mousedown (não click): dispara antes da caixa de mensagem perder o
+      // foco, evitando qualquer efeito colateral do WhatsApp nessa troca.
+      el.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        const item = e.target.closest("[data-shortcut-pick]");
+        if (item) void confirmShortcutPick(Number(item.getAttribute("data-shortcut-pick")));
+      });
+    }
+    shortcutPicker.matches = matches;
+    shortcutPicker.selectedIndex = Math.min(shortcutPicker.selectedIndex, matches.length - 1);
+    paintShortcutPicker();
+  }
+
+  function paintShortcutPicker() {
+    if (!shortcutPicker || !shortcutComposeBox) return;
+    const rect = shortcutComposeBox.getBoundingClientRect();
+    shortcutPicker.el.style.left = `${Math.min(Math.max(8, rect.left), window.innerWidth - 280)}px`;
+    shortcutPicker.el.style.top = `${rect.top - 8}px`;
+    shortcutPicker.el.innerHTML = shortcutPicker.matches
+      .map(
+        (q, i) => `<div class="crm-qr-shortcut-item ${i === shortcutPicker.selectedIndex ? "is-active" : ""}" data-shortcut-pick="${i}">
+          <span class="crm-qr-shortcut-item-cmd">/${escapeHtml(q.shortcut)}</span>
+          <span class="crm-qr-shortcut-item-title">${escapeHtml(q.title)}</span>
+        </div>`,
+      )
+      .join("");
+  }
+
+  function closeShortcutPicker() {
+    if (!shortcutPicker) return;
+    shortcutPicker.el.remove();
+    shortcutPicker = null;
+  }
+
+  function clearComposeBox(box) {
+    // document.execCommand ainda funciona pra isso e, ao contrário de
+    // simplesmente zerar textContent, dispara os eventos que o React do
+    // WhatsApp espera pra atualizar o próprio estado interno da caixa.
+    box.focus();
+    document.execCommand("selectAll", false, null);
+    document.execCommand("delete", false, null);
+  }
+
+  async function confirmShortcutPick(index) {
+    const reply = shortcutPicker?.matches?.[index];
+    const box = shortcutComposeBox;
+    closeShortcutPicker();
+    if (!reply || !box) return;
+    clearComposeBox(box);
+    const chat = await activeChat();
+    if (!chat) return crmToast("Não consegui ler a conversa aberta.", "err");
+    await sendQuickReply(reply, chat);
+  }
+
+  // Registrado uma vez só, no document, em fase de captura — assim
+  // intercepta Enter/Tab/setas ANTES do próprio WhatsApp decidir enviar a
+  // mensagem com o "/atalho" ainda digitado. Filtra pelo alvo pra só agir
+  // quando o evento é mesmo da caixa de digitar da conversa atual.
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      if (!shortcutPicker || e.target !== shortcutComposeBox) return;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        shortcutPicker.selectedIndex = Math.min(shortcutPicker.selectedIndex + 1, shortcutPicker.matches.length - 1);
+        paintShortcutPicker();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        shortcutPicker.selectedIndex = Math.max(shortcutPicker.selectedIndex - 1, 0);
+        paintShortcutPicker();
+      } else if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        e.stopPropagation();
+        void confirmShortcutPick(shortcutPicker.selectedIndex);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        closeShortcutPicker();
+      }
+    },
+    true,
+  );
+
+  // Clicar fora da listinha (sem ser na própria caixa de digitar) fecha
+  // ela, do mesmo jeito que os outros popups da extensão funcionam.
+  document.addEventListener(
+    "mousedown",
+    (e) => {
+      if (!shortcutPicker) return;
+      if (shortcutPicker.el.contains(e.target) || e.target === shortcutComposeBox) return;
+      closeShortcutPicker();
+    },
+    true,
+  );
 
   // Modal próprio do CRM — nada de confirm()/alert() nativos do navegador.
   function crmConfirm({ title, body: text, confirmLabel = "Confirmar", cancelLabel = "Cancelar" }) {
@@ -3300,7 +3604,11 @@
     } catch (e) {
       return { ok: false, error: `Falha ao carregar wa-js/bridge: ${String(e?.message || e)}` };
     }
-    const vars = { nome: action?.name || "" };
+    const vars = {
+      nome: action?.name || "",
+      primeiro_nome: String(action?.name || "").trim().split(/\s+/)[0] || "",
+      telefone: action?.phone || "",
+    };
     const fill = (t) => String(t || "").replace(/\{(\w+)\}/g, (m, k) => (vars[k] !== undefined ? vars[k] : m));
 
     const actions = [];

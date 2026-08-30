@@ -40,7 +40,7 @@ export const Route = createFileRoute("/api/public/extension/quick-replies")({
         }
         const { data, error } = await supabaseAdmin
           .from("quick_replies")
-          .select("id, title, actions, sort_order")
+          .select("id, title, actions, sort_order, category, shortcut, is_favorite")
           .eq("barbershop_id", auth.token.barbershop_id)
           .order("sort_order", { ascending: true })
           .order("created_at", { ascending: true });
@@ -84,10 +84,18 @@ export const Route = createFileRoute("/api/public/extension/quick-replies")({
             title: parsed.data.title,
             actions: parsed.data.actions,
             sort_order: parsed.data.sort_order ?? 0,
+            category: parsed.data.category ?? null,
+            shortcut: parsed.data.shortcut ?? null,
+            is_favorite: parsed.data.is_favorite ?? false,
           })
-          .select("id, title, actions, sort_order")
+          .select("id, title, actions, sort_order, category, shortcut, is_favorite")
           .single();
         if (error) {
+          // Código 23505 = violação de índice único (o atalho já está em
+          // uso por outra resposta dessa barbearia).
+          if (error.code === "23505") {
+            return jsonResponse(request, { ok: false, error: "Esse atalho já está em uso por outra resposta." }, { status: 409 });
+          }
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
         }
         return jsonResponse(request, { ok: true, quick_reply: data });

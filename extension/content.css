@@ -504,6 +504,27 @@ html body.crm-shell.crm-qr-open #app {
 }
 .crm-lite-pop-confirm:hover { background: var(--z-accent-strong); }
 
+/* Listinha de atalho "/palavra" na caixa de mensagem do WhatsApp */
+.crm-qr-shortcut-pop {
+  position: fixed; z-index: 2147483647; background: var(--z-surface); border: 1px solid var(--z-line);
+  border-radius: 12px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22); padding: 6px; min-width: 220px; max-width: 320px;
+  transform: translateY(-100%); font-family: var(--z-font); max-height: 240px; overflow-y: auto;
+}
+.crm-qr-shortcut-item {
+  display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 8px; cursor: pointer;
+}
+.crm-qr-shortcut-item.is-active, .crm-qr-shortcut-item:hover { background: var(--z-accent); }
+.crm-qr-shortcut-item.is-active .crm-qr-shortcut-item-cmd,
+.crm-qr-shortcut-item.is-active .crm-qr-shortcut-item-title,
+.crm-qr-shortcut-item:hover .crm-qr-shortcut-item-cmd,
+.crm-qr-shortcut-item:hover .crm-qr-shortcut-item-title { color: #fff; }
+.crm-qr-shortcut-item-cmd {
+  flex-shrink: 0; font-family: ui-monospace, monospace; font-size: 11.5px; font-weight: 700; color: var(--z-accent);
+}
+.crm-qr-shortcut-item-title {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; color: var(--z-text);
+}
+
 /* Confirmação leve de exclusão — "tem certeza?" ancorado, nada de modal
    escurecendo a tela. */
 .crm-confirm-pop { width: 220px; padding: 12px; position: fixed; z-index: 2147483646; background: var(--z-surface); border: 1px solid var(--z-line); border-radius: 12px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.18); opacity: 0; transform: translateY(-6px) scale(0.98); transition: opacity 0.16s cubic-bezier(0.4, 0, 0.2, 1), transform 0.16s cubic-bezier(0.4, 0, 0.2, 1); }
@@ -843,6 +864,58 @@ html body.crm-shell.crm-qr-open #app {
 }
 .crm-qrp-save:hover { background: var(--z-accent-strong); }
 .crm-qrp-save:disabled { opacity: 0.6; cursor: default; }
+
+/* Filtros da lista (categoria + favoritos) */
+.crm-qrp-filters {
+  display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 0;
+}
+.crm-qrp-filter-chip {
+  border: 1px solid var(--z-line); border-radius: 999px; background: var(--z-surface); color: var(--z-text-dim);
+  font-size: 11.5px; font-weight: 600; padding: 5px 11px; cursor: pointer; display: flex; align-items: center; gap: 4px;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.crm-qrp-filter-chip svg { width: 11px; height: 11px; }
+.crm-qrp-filter-chip:hover { border-color: var(--z-accent); color: var(--z-accent); }
+.crm-qrp-filter-chip.is-active { background: var(--z-accent); border-color: var(--z-accent); color: #fff; }
+.crm-qrp-filter-fav.is-active svg { fill: #fff; }
+
+/* Estrela de favorito na linha da lista */
+.crm-qrp-star { color: var(--z-text-dim); }
+.crm-qrp-star.is-fav, .crm-qrp-star:hover { color: #f5a623; }
+.crm-qrp-star.is-fav svg { fill: #f5a623; }
+
+/* Badge de categoria ao lado do nome, na lista */
+.crm-qrp-row-cat {
+  display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: var(--z-surface-2);
+  color: var(--z-text-dim); font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+
+/* Categoria + atalho no formulário */
+.crm-qrp-meta-row { display: flex; gap: 8px; margin-bottom: 4px; }
+.crm-qrp-meta-field { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.crm-qrp-meta-field span { font-size: 10.5px; font-weight: 700; color: var(--z-text-dim); text-transform: uppercase; letter-spacing: 0.02em; }
+.crm-qrp-shortcut-wrap {
+  display: flex; align-items: center; border: 1px solid var(--z-line); border-radius: 8px; background: var(--z-surface);
+  overflow: hidden;
+}
+.crm-qrp-shortcut-wrap:focus-within { border-color: var(--z-accent); }
+.crm-qrp-shortcut-prefix { flex-shrink: 0; padding: 7px 0 7px 9px; color: var(--z-text-dim); font-size: 12.5px; font-weight: 700; }
+.crm-qrp-shortcut-input { border: 0 !important; background: transparent !important; padding-left: 2px !important; }
+.crm-qrp-shortcut-hint { margin: 0 0 12px; font-size: 10.5px; color: var(--z-text-dim); line-height: 1.4; }
+.crm-qrp-shortcut-hint b { color: var(--z-accent); }
+.crm-qrp-fav-toggle { flex-shrink: 0; color: var(--z-text-dim); }
+.crm-qrp-fav-toggle.is-fav, .crm-qrp-fav-toggle:hover { color: #f5a623; }
+.crm-qrp-fav-toggle.is-fav svg { fill: #f5a623; }
+
+/* Chips de variável ({nome}, {telefone}...) abaixo do texto do passo */
+.crm-qrp-vars { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.crm-qrp-var-chip {
+  border: 1px dashed var(--z-line); border-radius: 6px; background: transparent; color: var(--z-text-dim);
+  font-family: ui-monospace, monospace; font-size: 10.5px; padding: 3px 7px; cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.crm-qrp-var-chip:hover { border-color: var(--z-accent); color: var(--z-accent); }
 
 /* Perfil do cliente / Valor do cliente — reaproveita os campos do painel
    de respostas rápidas (mesmo input/select/textarea), só adiciona o
