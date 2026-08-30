@@ -9,7 +9,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { TeamView } from "@/components/team-view";
 import { ConnectionView } from "@/components/connection-view";
-import { QuickRepliesView } from "@/components/quick-replies-view";
 import { TemplatesView } from "@/components/templates-view";
 import { FunnelsView } from "@/components/funnels-view";
 import { DispatchCenter } from "@/components/dispatch-view";
@@ -983,9 +982,20 @@ function Painel() {
 
         {section === "respostas" && token && (
           <>
-            <SectionHeader icon={<IconChat />} title="Respostas rápidas" />
+            <SectionHeader title="Respostas rápidas" />
             <main className="px-4 py-4">
-              <QuickRepliesView token={token} api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+              <div className="mx-auto max-w-md space-y-4 rounded-xl border border-neutral-200 bg-white p-8 text-center shadow-sm">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand/10 text-brand">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" />
+                  </svg>
+                </div>
+                <h2 className="text-base font-semibold text-neutral-900">Agora fica só no WhatsApp</h2>
+                <p className="text-sm text-neutral-500">
+                  Respostas rápidas foram movidas pra dentro da extensão. Abre o WhatsApp Web e clica no ícone de raio
+                  em cima de qualquer conversa pra criar, editar e usar suas respostas.
+                </p>
+              </div>
             </main>
           </>
         )}

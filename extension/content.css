@@ -109,7 +109,7 @@ html body.crm-shell.crm-qr-open #app {
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
-.crm-rail-btn svg { width: 19px; height: 19px; }
+.crm-rail-btn svg { width: 22px; height: 22px; }
 .crm-rail-btn:hover { background: var(--z-accent); color: var(--z-on-accent); }
 .crm-rail-spacer { flex: 1; }
 .crm-rail-divider {
