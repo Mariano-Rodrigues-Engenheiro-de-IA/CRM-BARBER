@@ -333,6 +333,10 @@
   // clicar de novo no MESMO ícone fecha.
   // ---------------------------------------------------------------------
   let activePanelKind = null; // "qr" | "funnel" | "profile" | "deal" | null
+  // Qual conversa (wa_id) está sendo mostrada no painel de Perfil agora —
+  // usado só pra saber quando precisa atualizar sozinho (troca de
+  // conversa com o painel já aberto), sem duplicar o de activePanelKind.
+  let profilePanelWaId = null;
   // O painel é reaproveitado entre trocas de ícone (não criado do zero a
   // cada vez), então NÃO dá pra usar addEventListener direto em cada
   // render — acumularia um listener por cada troca. Um listener só,
@@ -359,6 +363,7 @@
     document.querySelector(".crm-qrp")?.remove();
     document.body.classList.remove("crm-qr-open");
     activePanelKind = null;
+    profilePanelWaId = null;
   }
 
   function showPanelSpinner(panel) {
@@ -1247,7 +1252,10 @@
   // dava a impressão de sistema quebrado. Esta varredura é barata
   // (querySelector + contains) e só roda com a aba visível.
   setInterval(() => {
-    if (document.visibilityState === "visible") ensureChatButton();
+    if (document.visibilityState === "visible") {
+      ensureChatButton();
+      void refreshProfilePanelIfStale();
+    }
   }, 400);
   setInterval(() => {
     if (document.visibilityState === "visible") void loadFunnels();
@@ -1328,6 +1336,22 @@
     return null;
   }
 
+  const CHROME_HEADER_STRINGS = /^(menu|pesquisar|buscar|dados do contato|dados do perfil|informações do contato|informações do perfil|informações do grupo|ver perfil|abrir perfil|chamada de voz|chamada de vídeo|mais opções|anexar|emoji|figurinhas|status)$/i;
+
+  /** Acha o elemento de verdade (não só o texto) onde o WhatsApp mostra o
+   * nome/número do contato no cabeçalho — usado tanto pra ler o texto
+   * quanto pra plantar o ícone de "salvar contato" bem do ladinho. */
+  function headerNameNode() {
+    const header = document.querySelector("#main header");
+    if (!header) return null;
+    const nodes = Array.from(header.querySelectorAll('[title], span[dir="auto"], h1, h2'));
+    for (const node of nodes) {
+      const value = String(node.getAttribute?.("title") || node.textContent || "").trim();
+      if (value && value.length <= 160 && !CHROME_HEADER_STRINGS.test(value)) return node;
+    }
+    return null;
+  }
+
   function activeChatFromDom() {
     const header = document.querySelector("#main header");
     if (!header) return null;
@@ -1335,12 +1359,11 @@
     // Filtra textos que são da própria interface do WhatsApp (botões do
     // cabeçalho como "Dados do contato", "Pesquisar" etc.) — sem isso, às
     // vezes um desses textos era lido como se fosse o nome do contato.
-    const CHROME_STRINGS = /^(menu|pesquisar|buscar|dados do contato|dados do perfil|informações do contato|informações do perfil|informações do grupo|ver perfil|abrir perfil|chamada de voz|chamada de vídeo|mais opções|anexar|emoji|figurinhas|status)$/i;
     const candidates = Array.from(
       header.querySelectorAll('[title], span[dir="auto"], h1, h2'),
     )
       .map((node) => String(node.getAttribute?.("title") || node.textContent || "").trim())
-      .filter((value) => value && value.length <= 160 && !CHROME_STRINGS.test(value));
+      .filter((value) => value && value.length <= 160 && !CHROME_HEADER_STRINGS.test(value));
     const name = candidates[0] || "Contato";
     const digits = String(header.textContent || "").replace(/\D/g, "");
     const visiblePhone = digits.length >= 10 && digits.length <= 13 ? digits : null;
@@ -2178,7 +2201,9 @@
     // salvo (updateSaveContactButton cuida de mostrar/esconder).
     const saveContactBtn = document.createElement("button");
     saveContactBtn.id = SAVE_CONTACT_BTN_ID;
-    saveContactBtn.className = "crm-chat-btn crm-chat-btn-icon";
+    // Classe própria — não é mais um dos 5 ícones da fileira, fica
+    // pequeno e alinhado com o texto do nome/número, do ladinho dele.
+    saveContactBtn.className = "crm-save-contact-badge";
     saveContactBtn.type = "button";
     saveContactBtn.style.display = "none";
     saveContactBtn.setAttribute("data-label", "Salvar contato");
@@ -2253,16 +2278,42 @@
 
   /** Mostra o ícone de "salvar contato" só quando a conversa aberta ainda
    * não está salva na agenda de quem está usando o WhatsApp — sem isso,
-   * o ícone ficaria sempre visível, mesmo pra contatos já salvos. */
+   * o ícone ficaria sempre visível, mesmo pra contatos já salvos. Fica
+   * plantado do ladinho do nome/número, separado dos outros 5 ícones. */
   async function updateSaveContactButton() {
     const btn = document.getElementById(SAVE_CONTACT_BTN_ID);
     if (!btn) return;
     try {
       const chat = await activeChat();
       const show = !!(chat && !chat.is_group && chat.is_saved === false && chat.phone);
-      btn.style.display = show ? "" : "none";
+      if (!show) {
+        btn.style.display = "none";
+        return;
+      }
+      const nameNode = headerNameNode();
+      if (nameNode?.parentElement && btn.previousSibling !== nameNode) {
+        nameNode.parentElement.insertBefore(btn, nameNode.nextSibling);
+      }
+      btn.style.display = "";
     } catch {
       btn.style.display = "none";
+    }
+  }
+
+  /** Se o painel de Perfil estiver aberto e a pessoa trocar de conversa,
+   * atualiza sozinho pro novo lead — sem isso, ficava mostrando os dados
+   * do contato anterior até fechar e abrir de novo. */
+  async function refreshProfilePanelIfStale() {
+    if (activePanelKind !== "profile") return;
+    const panel = document.querySelector(".crm-qrp");
+    if (!panel) return;
+    try {
+      const chat = await activeChat();
+      if (chat?.wa_id && chat.wa_id !== profilePanelWaId) {
+        await renderProfilePanel(panel);
+      }
+    } catch {
+      /* silencioso — só é uma atualização automática, não uma ação do usuário */
     }
   }
 
@@ -2523,6 +2574,7 @@
           : Promise.resolve(null),
     ]);
     if (activePanelKind !== kind || !panel.isConnected) return;
+    profilePanelWaId = chat.wa_id || null;
     const profile = (profileRes?.ok ? profileRes.profile : null) || {};
     const deal = (dealRes?.ok ? dealRes.deal : null) || {};
 

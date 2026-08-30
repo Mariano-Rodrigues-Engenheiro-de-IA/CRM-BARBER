@@ -37,7 +37,7 @@ export const Route = createFileRoute("/api/public/extension/wa/contact-add")({
         if (!instance || instance.provider !== "uazapi" || !instance.instance_token) {
           return jsonResponse(
             request,
-            { ok: false, error: "Salvar contato só funciona no modo não oficial (QR Code) por enquanto." },
+            { ok: false, error: "Pra salvar contato, sua barbearia precisa estar conectada pela API não oficial (QR Code) — a API oficial da Meta não tem esse recurso." },
             { status: 400 },
           );
         }
