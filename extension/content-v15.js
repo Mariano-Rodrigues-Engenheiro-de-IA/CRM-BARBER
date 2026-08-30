@@ -2368,6 +2368,7 @@
    * oficial (ela não tem esse conceito de agenda pra escrever). */
   async function saveActiveContact(anchor) {
     const chat = await activeChat();
+    console.log("[CRM salvar-contato] saveActiveContact — chat:", chat);
     if (!chat?.wa_id) {
       crmToast("Não consegui identificar o contato dessa conversa.", "err", anchor);
       return;
@@ -2377,11 +2378,13 @@
       value: chat.push_name || "",
       confirmLabel: "Salvar",
     });
+    console.log("[CRM salvar-contato] nome digitado:", name);
     if (!name || !name.trim()) return;
     // Chama a função nativa do próprio WhatsApp (mesma coisa que o botão
     // "Adicionar" na tela de dados do contato) — não depende de nenhuma
     // API externa nem de qual conexão a barbearia está usando.
     const r = await askBridge("save_contact_v1", "save_contact_done_v1", { waId: chat.wa_id, name: name.trim() }, 10000);
+    console.log("[CRM salvar-contato] resultado do save_contact_v1:", r);
     if (r) {
       crmToast("Contato salvo!", "ok", anchor);
       void updateSaveContactButton();
@@ -2597,6 +2600,7 @@
       if (sw) return void openSharedPanel(sw.getAttribute("data-switch"));
       const saveBtn = e.target.closest("[data-save-contact]");
       if (saveBtn) {
+        console.log("[CRM salvar-contato] botão do Perfil clicado");
         void saveActiveContact(saveBtn).then(() => {
           // Some o botão da tela assim que salvar, sem esperar reabrir o painel.
           if (activePanelKind === kind) saveBtn.remove();
