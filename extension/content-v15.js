@@ -304,6 +304,12 @@
     });
 
     topbar.addEventListener("click", (e) => {
+      const funnelPicker = e.target.closest("[data-open-funnel-picker]");
+      if (funnelPicker) {
+        e.stopPropagation();
+        return openTopbarFunnelPicker(funnelPicker);
+      }
+
       const gear = e.target.closest(".crm-pill-gear");
       if (gear) {
         e.stopPropagation();
@@ -541,11 +547,47 @@
    * estava instável (funcionava numa hora, na outra não) e a prioridade
    * é ter o Funil principal funcionando 100% do tempo. */
   function currentFilterLabel() {
-    return "FUNIL PRINCIPAL";
+    return currentFunnel()?.name || "ESCOLHER FUNIL";
   }
 
+  let selectedTopbarFunnelId = null;
+  try {
+    selectedTopbarFunnelId = localStorage.getItem("crm-topbar-funnel-id") || null;
+  } catch {}
+
+  function nonLabelFunnels() {
+    return funnels.filter((f) => f.mode !== "label");
+  }
+
+  // Antes só existia UM funil possível aqui ("Funil principal" / modo
+  // "tab"). Agora dá pra ter vários — o que aparece como abas lá em cima
+  // é sempre o último funil escolhido no seletor (persistido, sobrevive
+  // a fechar e abrir o WhatsApp de novo). Sem nada escolhido ainda (ou o
+  // escolhido foi apagado), cai no primeiro da lista.
   function currentFunnel() {
-    return tabFunnel();
+    const list = nonLabelFunnels();
+    if (!list.length) return null;
+    const found = selectedTopbarFunnelId && list.find((f) => f.id === selectedTopbarFunnelId);
+    return found || list[0];
+  }
+
+  function setSelectedTopbarFunnel(funnelId) {
+    selectedTopbarFunnelId = funnelId;
+    try { localStorage.setItem("crm-topbar-funnel-id", funnelId); } catch {}
+    activeFilter = null; // filtro de pílula (etapa) era de outro funil, não faz mais sentido
+    renderTopbar();
+  }
+
+  function openTopbarFunnelPicker(anchor) {
+    const list = nonLabelFunnels();
+    if (!list.length) {
+      crmToast("Nenhum funil criado ainda.", "err", anchor);
+      return;
+    }
+    openMenu(
+      anchor,
+      list.map((f) => ({ label: f.name, onClick: () => setSelectedTopbarFunnel(f.id) })),
+    );
   }
 
   // ---------------------------------------------------------------------
@@ -1050,14 +1092,119 @@
     loadFunnels();
   }
 
+  /** Popup de mover leads EM MASSA pra essa etapa — escolhe funil + etapa
+   * de ORIGEM (qualquer outro funil, não o atual) e move todos os leads
+   * de lá pra cá de uma vez. Mesma lógica do CRM (site), só que aqui
+   * dentro do WhatsApp, sem precisar abrir o painel. */
+  function openBulkMoveLocalPopup(anchor, targetFunnel, targetStage) {
+    document.querySelectorAll(".crm-menu, .crm-lite-pop, .crm-cat-filter-pop").forEach((el) => el.remove());
+    const pop = document.createElement("div");
+    pop.className = "crm-lite-pop crm-bulk-move-pop";
+    const rect = anchor.getBoundingClientRect();
+    pop.style.top = `${rect.bottom + 8}px`;
+    pop.style.left = `${Math.min(Math.max(8, rect.left), window.innerWidth - 280)}px`;
+    document.body.appendChild(pop);
+    animatePopIn(pop);
+
+    const close = () => {
+      pop.remove();
+      document.removeEventListener("mousedown", onDoc, true);
+    };
+    function onDoc(ev) {
+      if (!pop.contains(ev.target) && ev.target !== anchor) close();
+    }
+    setTimeout(() => document.addEventListener("mousedown", onDoc, true), 150);
+
+    const others = funnels.filter((f) => f.id !== targetFunnel.id && f.mode !== "label");
+    if (!others.length) {
+      pop.innerHTML = `<p class="crm-lite-pop-title">Mover leads para "${escapeHtml(targetStage.name)}"</p><p class="crm-qrp-empty" style="padding:6px 0 0">Você precisa de outro funil pra puxar leads — crie um funil novo primeiro.</p>`;
+      return;
+    }
+
+    let sourceFunnelId = others[0].id;
+    let sourceStageId = others[0].stages?.[0]?.id || "";
+
+    function paint() {
+      const sourceFunnel = funnels.find((f) => f.id === sourceFunnelId);
+      const count = (sourceFunnel?.cards || []).filter((c) => c.stage_id === sourceStageId).length;
+      pop.innerHTML = `
+        <p class="crm-lite-pop-title">Mover leads para "${escapeHtml(targetStage.name)}"</p>
+        <label class="crm-qrp-meta-field" style="margin-bottom:8px">
+          <span>Funil de origem</span>
+          <select class="crm-qrp-select" data-bulk-source-funnel>
+            ${others.map((f) => `<option value="${escapeHtml(f.id)}" ${f.id === sourceFunnelId ? "selected" : ""}>${escapeHtml(f.name)}</option>`).join("")}
+          </select>
+        </label>
+        <label class="crm-qrp-meta-field" style="margin-bottom:8px">
+          <span>Etapa de origem</span>
+          <select class="crm-qrp-select" data-bulk-source-stage>
+            ${(sourceFunnel?.stages || []).map((s) => `<option value="${escapeHtml(s.id)}" ${s.id === sourceStageId ? "selected" : ""}>${escapeHtml(s.name)}</option>`).join("")}
+          </select>
+        </label>
+        <p class="crm-qrp-shortcut-hint">${count === 0 ? "Essa etapa não tem nenhum lead no momento." : `${count} lead${count === 1 ? "" : "s"} ${count === 1 ? "vai" : "vão"} ser movido${count === 1 ? "" : "s"} pra cá.`}</p>
+        <button class="crm-lite-pop-confirm" data-bulk-confirm ${count === 0 ? "disabled" : ""}>${count ? `Mover ${count} lead${count === 1 ? "" : "s"}` : "Mover"}</button>
+      `;
+      pop.querySelector("[data-bulk-source-funnel]").addEventListener("change", (e) => {
+        sourceFunnelId = e.target.value;
+        const nf = funnels.find((f) => f.id === sourceFunnelId);
+        sourceStageId = nf?.stages?.[0]?.id || "";
+        paint();
+      });
+      pop.querySelector("[data-bulk-source-stage]").addEventListener("change", (e) => {
+        sourceStageId = e.target.value;
+        paint();
+      });
+      pop.querySelector("[data-bulk-confirm]")?.addEventListener("click", async () => {
+        const confirmBtn = pop.querySelector("[data-bulk-confirm]");
+        const sourceFunnel = funnels.find((f) => f.id === sourceFunnelId);
+        const cardsToMove = (sourceFunnel?.cards || []).filter((c) => c.stage_id === sourceStageId);
+        if (!cardsToMove.length) return;
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = "Movendo...";
+        // Sequencial de propósito — evita disparar dezenas de requisições
+        // simultâneas se a etapa de origem tiver muitos leads.
+        for (const card of cardsToMove) {
+          const r = await chrome.runtime
+            .sendMessage({
+              type: "api",
+              path: "/api/public/extension/funnel-cards",
+              opts: {
+                method: "POST",
+                body: JSON.stringify({
+                  funnel_id: targetFunnel.id,
+                  stage_id: targetStage.id,
+                  title: card.title,
+                  phone: card.phone || undefined,
+                  wa_contact_id: card.wa_contact_id || undefined,
+                  wa_id: card.wa_id || undefined,
+                }),
+              },
+            })
+            .catch(() => null);
+          if (r?.ok) {
+            await chrome.runtime
+              .sendMessage({ type: "api", path: "/api/public/extension/funnel-cards", opts: { method: "DELETE", body: JSON.stringify({ id: card.id }) } })
+              .catch(() => null);
+          }
+        }
+        crmToast(`${cardsToMove.length} lead${cardsToMove.length === 1 ? "" : "s"} movido${cardsToMove.length === 1 ? "" : "s"}`, "ok", anchor);
+        close();
+        await loadFunnels();
+        renderTopbar();
+        updateFunnelBadge();
+      });
+    }
+    paint();
+  }
+
   function openStageMenu(anchor, funnelId, stageId) {
     const funnel = funnels.find((f) => f.id === funnelId);
     const stage = funnel?.stages?.find((s) => s.id === stageId);
     if (!funnel || !stage) return;
     openMenu(anchor, [
       {
-        label: "Adicionar / remover contatos",
-        onClick: () => openPainel("funis", `&funnel=${encodeURIComponent(funnel.id)}`),
+        label: "Mover leads para cá",
+        onClick: () => openBulkMoveLocalPopup(anchor, funnel, stage),
       },
       {
         label: "Renomear",
@@ -1131,10 +1278,10 @@
       return;
     }
 
-    // "Listas" (etiquetas do WhatsApp) saiu do topbar — instável, dava
-    // erro de filtro. Só existe o Funil principal aqui agora; o rótulo
-    // vira só uma etiqueta fixa, não abre menu.
-    const filter = `<span class="crm-filter crm-filter-static">${FILTER_SVG}${escapeHtml(currentFilterLabel())}</span>`;
+    // Antes era só uma etiqueta fixa ("FUNIL PRINCIPAL"), sem clique —
+    // agora é um botão de verdade: clicar abre o seletor de qual funil
+    // mostrar aqui (pode ter vários).
+    const filter = `<button class="crm-filter crm-filter-picker" data-open-funnel-picker title="Escolher funil">${FILTER_SVG}${escapeHtml(currentFilterLabel())}</button>`;
 
     const f = currentFunnel();
     const pills = ((f?.stages) || [])
@@ -2304,13 +2451,13 @@
     return out;
   }
 
-  /** true se a conversa aberta agora tem card no Funil principal. */
+  /** true se a conversa aberta agora tem card em QUALQUER funil (não só
+   * um "principal") — o popover do ícone já cobre todos, então o
+   * indicador precisa bater com isso. */
   function activeChatInMainFunnel() {
     const waId = activeChatIdFromDom();
     if (!waId) return false;
-    const funnel = tabFunnel();
-    if (!funnel) return false;
-    return (funnel.cards || []).some((c) => c.wa_id === waId);
+    return funnels.some((f) => f.mode !== "label" && (f.cards || []).some((c) => c.wa_id === waId));
   }
 
   /** Bolinha no ícone do funil — indica de cara que o lead já está no
@@ -2412,10 +2559,10 @@
 
   // ---------------------------------------------------------------------
   // Popover leve do funil — ancorado no ícone, sem escurecer/desfocar o
-  // fundo (não é mais um modal de tela cheia). Lista as etapas do Funil
-  // principal; clicar na bolinha adiciona (se vazia) ou remove (se cheia).
-  // Mover pra outro funil virou uma ação em massa por coluna, no CRM
-  // (site) — não faz sentido aqui, um lead por vez.
+  // fundo (não é mais um modal de tela cheia). Lista TODOS os funis (não
+  // só um "principal"), um bloco por funil com divisória clara entre eles
+  // — um lead pode estar em vários ao mesmo tempo. Clicar na bolinha
+  // adiciona (se vazia) ou remove (se cheia) naquele funil específico.
   // ---------------------------------------------------------------------
   function openFunnelPopover(anchor) {
     document.querySelector(".crm-fn-pop")?.remove();
@@ -2428,48 +2575,55 @@
     pop.style.left = `${Math.min(Math.max(8, centered), window.innerWidth - popWidth - 8)}px`;
 
     let chat = null;
-    // Estado conhecido da etapa atual, guardado localmente. NÃO comparamos
-    // mais contra o array global `funnels` a cada render: ele é trocado por
-    // inteiro a cada loadFunnels() (rodando em segundo plano o tempo
-    // todo), e comparar contra um snapshot antigo é a causa exata do bug
-    // "preciso clicar duas vezes" — o clique fazia efeito no servidor, mas
-    // a tela só reconhecia isso na consulta seguinte.
-    let currentCardId = null;
-    let currentStageId = null;
+    // Estado conhecido de em quais funis/etapas o lead está, guardado
+    // localmente. NÃO comparamos mais contra o array global `funnels` a
+    // cada render: ele é trocado por inteiro a cada loadFunnels() (rodando
+    // em segundo plano o tempo todo), e comparar contra um snapshot antigo
+    // é a causa exata do bug "preciso clicar duas vezes" — o clique fazia
+    // efeito no servidor, mas a tela só reconhecia isso na consulta
+    // seguinte.
+    let membership = {}; // funnelId -> { cardId, stageId } | null
+
+    function targetFunnels() {
+      return funnels.filter((f) => f.mode !== "label");
+    }
 
     function syncFromFunnels() {
-      const funnel = tabFunnel();
-      if (!funnel || !chat) { currentCardId = null; currentStageId = null; return; }
-      const card = (funnel.cards || []).find(
-        (c) => (chat.wa_id && c.wa_id === chat.wa_id) || (chat.phone && c.phone === chat.phone),
-      );
-      currentCardId = card?.id || null;
-      currentStageId = card?.stage_id || null;
+      membership = {};
+      if (!chat) return;
+      for (const f of targetFunnels()) {
+        const card = (f.cards || []).find(
+          (c) => (chat.wa_id && c.wa_id === chat.wa_id) || (chat.phone && c.phone === chat.phone),
+        );
+        membership[f.id] = card ? { cardId: card.id, stageId: card.stage_id } : null;
+      }
     }
 
     const renderRows = () => {
-      const funnel = tabFunnel();
-      if (!funnel) {
-        pop.innerHTML = `<p class="crm-fn-pop-title">Funil principal</p><p class="crm-fn-pop-empty">Funil principal ainda não foi criado.</p>`;
+      const list = targetFunnels();
+      if (!list.length) {
+        pop.innerHTML = `<p class="crm-fn-pop-title">Funis</p><p class="crm-fn-pop-empty">Nenhum funil criado ainda.</p>`;
         return;
       }
-      const stages = funnel.stages || [];
-      if (!stages.length) {
-        pop.innerHTML = `<p class="crm-fn-pop-title">Funil principal</p><p class="crm-fn-pop-empty">Ainda não tem etapas.</p>`;
-        return;
-      }
-      pop.innerHTML = `
-        <p class="crm-fn-pop-title">Funil principal</p>
-        ${stages
-          .map((st) => {
-            const isOn = st.id === currentStageId;
-            return `<button class="crm-fn-pop-row" data-stage="${escapeHtml(st.id)}">
-              <span class="crm-fn-pop-dot${isOn ? " is-on" : ""}"></span>
-              <span class="crm-fn-pop-name">${escapeHtml(st.name)}</span>
-            </button>`;
-          })
-          .join("")}
-      `;
+      pop.innerHTML = list
+        .map((f, i) => {
+          const stages = f.stages || [];
+          const currentStageId = membership[f.id]?.stageId || null;
+          const divider = i > 0 ? `<div class="crm-fn-pop-divider"></div>` : "";
+          if (!stages.length) {
+            return `${divider}<p class="crm-fn-pop-title">${escapeHtml(f.name)}</p><p class="crm-fn-pop-empty">Ainda não tem etapas.</p>`;
+          }
+          return `${divider}<p class="crm-fn-pop-title">${escapeHtml(f.name)}</p>${stages
+            .map((st) => {
+              const isOn = st.id === currentStageId;
+              return `<button class="crm-fn-pop-row" data-funnel="${escapeHtml(f.id)}" data-stage="${escapeHtml(st.id)}">
+                <span class="crm-fn-pop-dot${isOn ? " is-on" : ""}"></span>
+                <span class="crm-fn-pop-name">${escapeHtml(st.name)}</span>
+              </button>`;
+            })
+            .join("")}`;
+        })
+        .join("");
     };
 
     document.body.appendChild(pop);
@@ -2497,8 +2651,9 @@
     pop.addEventListener("click", async (e) => {
       const row = e.target.closest("[data-stage]");
       if (!row || row.disabled) return;
+      const funnelId = row.getAttribute("data-funnel");
       const stageId = row.getAttribute("data-stage");
-      const funnel = tabFunnel();
+      const funnel = funnels.find((f) => f.id === funnelId);
       const stage = funnel && (funnel.stages || []).find((s) => s.id === stageId);
       if (!funnel || !stage) return;
       row.disabled = true;
@@ -2508,17 +2663,17 @@
         row.disabled = false;
         return;
       }
-      const wasOn = stageId === currentStageId;
+      const current = membership[funnelId];
+      const wasOn = current?.stageId === stageId;
 
       if (wasOn) {
-        if (!currentCardId) { row.disabled = false; return; }
+        if (!current?.cardId) { row.disabled = false; return; }
         const r = await chrome.runtime
-          .sendMessage({ type: "api", path: "/api/public/extension/funnel-cards", opts: { method: "DELETE", body: JSON.stringify({ id: currentCardId } ) } })
+          .sendMessage({ type: "api", path: "/api/public/extension/funnel-cards", opts: { method: "DELETE", body: JSON.stringify({ id: current.cardId } ) } })
           .catch(() => null);
         if (r?.ok) {
-          crmToast("Removido do funil", "ok", anchor);
-          currentCardId = null;
-          currentStageId = null;
+          crmToast(`Removido de ${funnel.name}`, "ok", anchor);
+          membership[funnelId] = null;
           updateFunnelBadge();
           renderRows();
           void loadFunnels();
@@ -2546,9 +2701,8 @@
         })
         .catch(() => null);
       if (r?.ok) {
-        crmToast(`Adicionado em ${stage.name}`, "ok", anchor);
-        currentCardId = r.card?.id || currentCardId;
-        currentStageId = stage.id;
+        crmToast(`Adicionado em ${funnel.name} · ${stage.name}`, "ok", anchor);
+        membership[funnelId] = { cardId: r.card?.id || current?.cardId, stageId: stage.id };
         updateFunnelBadge();
         renderRows();
         void loadFunnels();
