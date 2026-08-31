@@ -478,16 +478,15 @@ html body.crm-shell.crm-qr-open #app {
   opacity: 1;
   transform: translateY(0) scale(1);
 }
-.crm-fn-pop { width: 240px; max-height: 60vh; overflow-y: auto; padding: 10px; }
+.crm-fn-pop { width: 240px; padding: 10px; }
 .crm-fn-pop-title {
-  margin: 12px 4px 6px;
+  margin: 0 4px 6px;
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--z-text-dim);
 }
-.crm-fn-pop-title:first-child { margin-top: 0; }
 .crm-fn-pop-empty { margin: 4px; font-size: 12px; color: var(--z-text-dim); }
 
 /* Prompt leve (ex: nome de nova etapa) — mesmo padrão dos outros popovers,

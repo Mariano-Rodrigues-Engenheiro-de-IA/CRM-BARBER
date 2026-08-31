@@ -45,6 +45,8 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
   const [err, setErr] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [detail, setDetail] = useState<FunnelCard | null>(null);
+  const [bulkMoveTarget, setBulkMoveTarget] = useState<{ stageId: string; stageName: string } | null>(null);
+  const [bulkMoving, setBulkMoving] = useState(false);
   const [detailTab, setDetailTab] = useState<"notes" | "schedule" | "profile">("notes");
   const [inboxQuery, setInboxQuery] = useState("");
   const [renamingStage, setRenamingStage] = useState<string | null>(null);
@@ -382,6 +384,27 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
         return f;
       }),
     );
+  }
+
+  /** Mover em massa: pega TODOS os leads de uma etapa de origem (de
+   * qualquer outro funil) e move um por um pra etapa de destino no funil
+   * atual — sequencial (não Promise.all) de propósito, pra não disparar
+   * dezenas de requisições simultâneas se a coluna de origem tiver muitos
+   * leads. */
+  async function bulkMoveLeads(sourceFunnelId: string, sourceStageId: string, targetStageId: string) {
+    const sourceFunnel = funnels.find((f) => f.id === sourceFunnelId);
+    const cardsToMove = (sourceFunnel?.cards ?? []).filter((c) => c.stage_id === sourceStageId);
+    if (!cardsToMove.length) return;
+    setBulkMoving(true);
+    let moved = 0;
+    for (const card of cardsToMove) {
+      await moveCardToFunnel(card, active!.id, targetStageId);
+      moved += 1;
+    }
+    setBulkMoving(false);
+    setBulkMoveTarget(null);
+    setErr(null);
+    return moved;
   }
 
   async function addCard(
@@ -913,6 +936,10 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                           items={[
                             { label: "Renomear", onClick: () => setRenamingStage(stage.id) },
                             {
+                              label: "Mover leads para cá",
+                              onClick: () => setBulkMoveTarget({ stageId: stage.id, stageName: stage.name }),
+                            },
+                            {
                               label: "Excluir",
                               danger: true,
                               onClick: () => void removeStage(stage.id),
@@ -998,15 +1025,6 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                               {card.title}
                             </p>
                           </div>
-                          {active.mode !== "label" && (
-                            <MoveToFunnelButton
-                              card={card}
-                              funnels={funnels}
-                              onMove={(targetFunnelId, targetStageId) =>
-                                void moveCardToFunnel(card, targetFunnelId, targetStageId)
-                              }
-                            />
-                          )}
                           {active.mode !== "label" && (
                             <button
                               onClick={() => removeCard(card)}
@@ -1126,6 +1144,19 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
         />
       )}
 
+      {bulkMoveTarget && active && (
+        <BulkMoveModal
+          targetStageName={bulkMoveTarget.stageName}
+          funnels={funnels}
+          currentFunnelId={active.id}
+          moving={bulkMoving}
+          onClose={() => (bulkMoving ? null : setBulkMoveTarget(null))}
+          onConfirm={(sourceFunnelId, sourceStageId) =>
+            void bulkMoveLeads(sourceFunnelId, sourceStageId, bulkMoveTarget.stageId)
+          }
+        />
+      )}
+
       {creating && (
         <NewFunnelModal
           onClose={() => setCreating(false)}
@@ -1179,67 +1210,6 @@ function StageTitle({
       }}
       className="w-full min-w-0 rounded-md border border-neutral-300 px-2 py-1 text-sm font-semibold uppercase tracking-wide text-neutral-900 outline-none focus:border-brand"
     />
-  );
-}
-
-/** Botão "mover pra outro funil" em cada card — lista, achatada, de
- * "Funil → Etapa" pra todo funil que não seja o atual (nem os de modo
- * "label", que são auto-gerados a partir de etiquetas do WhatsApp e não
- * aceitam mover/remover manual). Uma lista achatada em vez de submenu de
- * dois passos (funil, depois etapa) porque normalmente são poucos funis
- * e poucas etapas — mais rápido de usar assim. */
-function MoveToFunnelButton({
-  card,
-  funnels,
-  onMove,
-}: {
-  card: FunnelCard;
-  funnels: Funnel[];
-  onMove: (targetFunnelId: string, targetStageId: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const others = funnels.filter((f) => f.id !== card.funnel_id && f.mode !== "label");
-  if (!others.length) return null;
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
-        title="Mover para outro funil"
-        className="shrink-0 rounded-md p-1 text-neutral-400 transition hover:bg-brand/10 hover:text-brand"
-      >
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M17 3v6h-6" />
-          <path d="M22.5 9a9.5 9.5 0 0 0-16.2-6.5L1 8" />
-          <path d="M7 21v-6h6" />
-          <path d="M1.5 15a9.5 9.5 0 0 0 16.2 6.5L23 16" />
-        </svg>
-      </button>
-      {open && (
-        <div className="absolute right-0 top-6 z-30 max-h-64 w-56 overflow-y-auto rounded-xl border border-neutral-300 bg-white py-1 shadow-lg">
-          {others.map((f) => (
-            <div key={f.id}>
-              <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wide text-neutral-400">
-                {f.name}
-              </p>
-              {f.stages.map((s) => (
-                <button
-                  key={s.id}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    setOpen(false);
-                    onMove(f.id, s.id);
-                  }}
-                  className="block w-full px-3 py-1.5 text-left text-xs text-neutral-700 transition hover:bg-neutral-100"
-                >
-                  {s.name}
-                </button>
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -1541,6 +1511,111 @@ function Overlay({
         <div className="px-5 pb-5 pt-3">{children}</div>
       </div>
     </div>
+  );
+}
+
+/** Mover em massa: escolhe funil + etapa de ORIGEM (todo funil que não
+ * seja o atual, exceto os de modo "label" — auto-gerados do WhatsApp,
+ * sem mover manual) — confirma e TODOS os leads daquela etapa vêm pra
+ * cá de uma vez, um por um (delete lá, create aqui). */
+function BulkMoveModal({
+  targetStageName,
+  funnels,
+  currentFunnelId,
+  moving,
+  onClose,
+  onConfirm,
+}: {
+  targetStageName: string;
+  funnels: Funnel[];
+  currentFunnelId: string;
+  moving: boolean;
+  onClose: () => void;
+  onConfirm: (sourceFunnelId: string, sourceStageId: string) => void;
+}) {
+  const otherFunnels = funnels.filter((f) => f.id !== currentFunnelId && f.mode !== "label");
+  const [sourceFunnelId, setSourceFunnelId] = useState(otherFunnels[0]?.id ?? "");
+  const sourceFunnel = funnels.find((f) => f.id === sourceFunnelId);
+  const [sourceStageId, setSourceStageId] = useState(sourceFunnel?.stages[0]?.id ?? "");
+
+  // Trocou de funil de origem — a etapa selecionada é de outro funil e
+  // não faz mais sentido, volta pra primeira etapa do novo escolhido.
+  useEffect(() => {
+    setSourceStageId(sourceFunnel?.stages[0]?.id ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sourceFunnelId]);
+
+  const count = (sourceFunnel?.cards ?? []).filter((c) => c.stage_id === sourceStageId).length;
+
+  if (!otherFunnels.length) {
+    return (
+      <Overlay title={`Mover leads para "${targetStageName}"`} onClose={onClose}>
+        <p className="text-sm text-neutral-500">
+          Mover em massa precisa de outro funil pra puxar os leads — crie um funil novo primeiro.
+        </p>
+      </Overlay>
+    );
+  }
+
+  return (
+    <Overlay title={`Mover leads para "${targetStageName}"`} onClose={onClose}>
+      <div className="space-y-4">
+        <p className="text-sm text-neutral-500">
+          Escolha de qual funil e etapa você quer puxar TODOS os leads — eles saem de lá e entram aqui.
+        </p>
+        <div className="space-y-1">
+          <label className="text-xs font-semibold text-neutral-600">Funil de origem</label>
+          <select
+            value={sourceFunnelId}
+            onChange={(e) => setSourceFunnelId(e.target.value)}
+            disabled={moving}
+            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-brand disabled:opacity-50"
+          >
+            {otherFunnels.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-semibold text-neutral-600">Etapa de origem</label>
+          <select
+            value={sourceStageId}
+            onChange={(e) => setSourceStageId(e.target.value)}
+            disabled={moving}
+            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-brand disabled:opacity-50"
+          >
+            {(sourceFunnel?.stages ?? []).map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <p className="text-sm text-neutral-600">
+          {count === 0
+            ? "Essa etapa não tem nenhum lead no momento."
+            : `${count} lead${count === 1 ? "" : "s"} ${count === 1 ? "vai" : "vão"} ser movido${count === 1 ? "" : "s"} pra cá.`}
+        </p>
+        <div className="flex justify-end gap-2 pt-1">
+          <button
+            onClick={onClose}
+            disabled={moving}
+            className="rounded-md px-4 py-2 text-sm font-medium text-neutral-600 transition hover:bg-neutral-100 disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => sourceStageId && onConfirm(sourceFunnelId, sourceStageId)}
+            disabled={moving || !sourceStageId || count === 0}
+            className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
+          >
+            {moving ? "Movendo..." : `Mover ${count || ""} lead${count === 1 ? "" : "s"}`}
+          </button>
+        </div>
+      </div>
+    </Overlay>
   );
 }
 
