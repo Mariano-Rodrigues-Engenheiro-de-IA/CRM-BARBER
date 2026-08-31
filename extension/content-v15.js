@@ -2412,13 +2412,11 @@
 
   // ---------------------------------------------------------------------
   // Popover leve do funil — ancorado no ícone, sem escurecer/desfocar o
-  // fundo (não é mais um modal de tela cheia). Lista as etapas do Funil
-  // principal; clicar na bolinha adiciona (se vazia) ou remove (se cheia).
-  // ---------------------------------------------------------------------
-  // ---------------------------------------------------------------------
-  // Popover leve do funil — independente do painel grande (raio/perfil/
-  // valor). Fica ancorado no próprio ícone, fecha ao clicar fora, como
-  // era originalmente.
+  // fundo (não é mais um modal de tela cheia). Lista TODOS os funis (não
+  // só um "principal") — cada lead pode estar em vários ao mesmo tempo, e
+  // "mover pra outro funil" é: marcar a etapa no funil de destino e
+  // desmarcar a etapa antiga no funil de origem, os dois visíveis juntos
+  // aqui. Clicar na bolinha adiciona (se vazia) ou remove (se cheia).
   // ---------------------------------------------------------------------
   function openFunnelPopover(anchor) {
     document.querySelector(".crm-fn-pop")?.remove();
@@ -2431,48 +2429,60 @@
     pop.style.left = `${Math.min(Math.max(8, centered), window.innerWidth - popWidth - 8)}px`;
 
     let chat = null;
-    // Estado conhecido da etapa atual, guardado localmente. NÃO comparamos
-    // mais contra o array global `funnels` a cada render: ele é trocado por
-    // inteiro a cada loadFunnels() (rodando em segundo plano o tempo
-    // todo), e comparar contra um snapshot antigo é a causa exata do bug
-    // "preciso clicar duas vezes" — o clique fazia efeito no servidor, mas
-    // a tela só reconhecia isso na consulta seguinte.
-    let currentCardId = null;
-    let currentStageId = null;
+    // Estado conhecido de em quais funis/etapas o lead está, guardado
+    // localmente. NÃO comparamos mais contra o array global `funnels` a
+    // cada render: ele é trocado por inteiro a cada loadFunnels() (rodando
+    // em segundo plano o tempo todo), e comparar contra um snapshot antigo
+    // é a causa exata do bug "preciso clicar duas vezes" — o clique fazia
+    // efeito no servidor, mas a tela só reconhecia isso na consulta
+    // seguinte.
+    //
+    // Agora mostra TODOS os funis (não só o "principal"/tab) — um lead
+    // pode estar em vários ao mesmo tempo, e "mover pra outro funil" aqui
+    // é: clicar na etapa do funil de destino (adiciona) e clicar de novo
+    // na etapa antiga do funil de origem (remove) — os dois ficam visíveis
+    // juntos no mesmo popover, então dá pra fazer isso sem trocar de tela.
+    let membership = {}; // funnelId -> { cardId, stageId } | null
+
+    function targetFunnels() {
+      return funnels.filter((f) => f.mode !== "label");
+    }
 
     function syncFromFunnels() {
-      const funnel = tabFunnel();
-      if (!funnel || !chat) { currentCardId = null; currentStageId = null; return; }
-      const card = (funnel.cards || []).find(
-        (c) => (chat.wa_id && c.wa_id === chat.wa_id) || (chat.phone && c.phone === chat.phone),
-      );
-      currentCardId = card?.id || null;
-      currentStageId = card?.stage_id || null;
+      membership = {};
+      if (!chat) return;
+      for (const f of targetFunnels()) {
+        const card = (f.cards || []).find(
+          (c) => (chat.wa_id && c.wa_id === chat.wa_id) || (chat.phone && c.phone === chat.phone),
+        );
+        membership[f.id] = card ? { cardId: card.id, stageId: card.stage_id } : null;
+      }
     }
 
     const renderRows = () => {
-      const funnel = tabFunnel();
-      if (!funnel) {
-        pop.innerHTML = `<p class="crm-fn-pop-title">Funil principal</p><p class="crm-fn-pop-empty">Funil principal ainda não foi criado.</p>`;
+      const list = targetFunnels();
+      if (!list.length) {
+        pop.innerHTML = `<p class="crm-fn-pop-title">Funis</p><p class="crm-fn-pop-empty">Nenhum funil criado ainda.</p>`;
         return;
       }
-      const stages = funnel.stages || [];
-      if (!stages.length) {
-        pop.innerHTML = `<p class="crm-fn-pop-title">Funil principal</p><p class="crm-fn-pop-empty">Ainda não tem etapas.</p>`;
-        return;
-      }
-      pop.innerHTML = `
-        <p class="crm-fn-pop-title">Funil principal</p>
-        ${stages
-          .map((st) => {
-            const isOn = st.id === currentStageId;
-            return `<button class="crm-fn-pop-row" data-stage="${escapeHtml(st.id)}">
-              <span class="crm-fn-pop-dot${isOn ? " is-on" : ""}"></span>
-              <span class="crm-fn-pop-name">${escapeHtml(st.name)}</span>
-            </button>`;
-          })
-          .join("")}
-      `;
+      pop.innerHTML = list
+        .map((f) => {
+          const stages = f.stages || [];
+          const currentStageId = membership[f.id]?.stageId || null;
+          if (!stages.length) {
+            return `<p class="crm-fn-pop-title">${escapeHtml(f.name)}</p><p class="crm-fn-pop-empty">Ainda não tem etapas.</p>`;
+          }
+          return `<p class="crm-fn-pop-title">${escapeHtml(f.name)}</p>${stages
+            .map((st) => {
+              const isOn = st.id === currentStageId;
+              return `<button class="crm-fn-pop-row" data-funnel="${escapeHtml(f.id)}" data-stage="${escapeHtml(st.id)}">
+                <span class="crm-fn-pop-dot${isOn ? " is-on" : ""}"></span>
+                <span class="crm-fn-pop-name">${escapeHtml(st.name)}</span>
+              </button>`;
+            })
+            .join("")}`;
+        })
+        .join("");
     };
 
     document.body.appendChild(pop);
@@ -2500,8 +2510,9 @@
     pop.addEventListener("click", async (e) => {
       const row = e.target.closest("[data-stage]");
       if (!row || row.disabled) return;
+      const funnelId = row.getAttribute("data-funnel");
       const stageId = row.getAttribute("data-stage");
-      const funnel = tabFunnel();
+      const funnel = funnels.find((f) => f.id === funnelId);
       const stage = funnel && (funnel.stages || []).find((s) => s.id === stageId);
       if (!funnel || !stage) return;
       row.disabled = true;
@@ -2511,17 +2522,17 @@
         row.disabled = false;
         return;
       }
-      const wasOn = stageId === currentStageId;
+      const current = membership[funnelId];
+      const wasOn = current?.stageId === stageId;
 
       if (wasOn) {
-        if (!currentCardId) { row.disabled = false; return; }
+        if (!current?.cardId) { row.disabled = false; return; }
         const r = await chrome.runtime
-          .sendMessage({ type: "api", path: "/api/public/extension/funnel-cards", opts: { method: "DELETE", body: JSON.stringify({ id: currentCardId } ) } })
+          .sendMessage({ type: "api", path: "/api/public/extension/funnel-cards", opts: { method: "DELETE", body: JSON.stringify({ id: current.cardId } ) } })
           .catch(() => null);
         if (r?.ok) {
-          crmToast("Removido do funil", "ok", anchor);
-          currentCardId = null;
-          currentStageId = null;
+          crmToast(`Removido de ${funnel.name}`, "ok", anchor);
+          membership[funnelId] = null;
           updateFunnelBadge();
           renderRows();
           void loadFunnels();
@@ -2549,9 +2560,8 @@
         })
         .catch(() => null);
       if (r?.ok) {
-        crmToast(`Adicionado em ${stage.name}`, "ok", anchor);
-        currentCardId = r.card?.id || currentCardId;
-        currentStageId = stage.id;
+        crmToast(`Adicionado em ${funnel.name} · ${stage.name}`, "ok", anchor);
+        membership[funnelId] = { cardId: r.card?.id || current?.cardId, stageId: stage.id };
         updateFunnelBadge();
         renderRows();
         void loadFunnels();
@@ -2895,6 +2905,7 @@
                   <span class="crm-cat-filter-pop-check" style="${checked ? `background:${escapeHtml(c.color)};border-color:${escapeHtml(c.color)}` : ""}">${checked ? CHECK_SVG : ""}</span>
                   <span class="crm-qrp-cat-dot" style="background:${escapeHtml(c.color)}"></span>
                   <span class="crm-cat-filter-pop-name">${escapeHtml(c.name)}</span>
+                  <button type="button" class="crm-cat-filter-pop-edit" data-edit-cat-inline="${c.id}" title="Editar categoria">${PENCIL_SVG}</button>
                   <button type="button" class="crm-cat-filter-pop-del" data-del-cat-inline="${c.id}" title="Excluir categoria">${TRASH_SVG}</button>
                 </div>`;
               })
@@ -2904,6 +2915,15 @@
       paint();
 
       pop.addEventListener("click", async (e) => {
+        const editBtn = e.target.closest("[data-edit-cat-inline]");
+        if (editBtn) {
+          const id = editBtn.getAttribute("data-edit-cat-inline");
+          const cat = quickReplyCategories.find((c) => c.id === id);
+          if (!cat) return;
+          const updated = await openCategoryEditPopup(editBtn, cat);
+          if (updated) { paint(); renderList(); }
+          return;
+        }
         const delBtn = e.target.closest("[data-del-cat-inline]");
         if (delBtn) {
           const id = delBtn.getAttribute("data-del-cat-inline");
@@ -2946,9 +2966,11 @@
       setTimeout(() => document.addEventListener("mousedown", onDoc, true), 0);
     }
 
-    /** Popup de criar categoria (nome + cor) — aberto a partir do menu do
-     * botão único "+ Nova". */
-    function openCategoryCreatePopup(anchor) {
+    /** Popup de criar OU editar categoria (nome + cor) — se "existing" for
+     * passado, vira edição (título/botão mudam, e salva com PATCH em vez
+     * de POST). Usado tanto pelo menu do botão único "+ Nova" (criar)
+     * quanto pelo lápis dentro do popup de filtro por categoria (editar). */
+    function openCategoryEditPopup(anchor, existing) {
       return new Promise((resolve) => {
         document.querySelectorAll(".crm-menu, .crm-lite-pop, .crm-cat-filter-pop").forEach((el) => el.remove());
         const pop = document.createElement("div");
@@ -2956,13 +2978,14 @@
         const rect = anchor.getBoundingClientRect();
         pop.style.top = `${rect.bottom + 8}px`;
         pop.style.left = `${Math.min(Math.max(8, rect.left), window.innerWidth - 260)}px`;
+        const initialColor = (existing?.color || QUICK_REPLY_CATEGORY_COLORS[0]).toLowerCase();
         pop.innerHTML = `
-          <p class="crm-lite-pop-title">Nova categoria</p>
-          <input class="crm-lite-pop-input" placeholder="Nome da categoria" maxlength="60" />
+          <p class="crm-lite-pop-title">${existing ? "Editar categoria" : "Nova categoria"}</p>
+          <input class="crm-lite-pop-input" placeholder="Nome da categoria" maxlength="60" value="${escapeHtml(existing?.name || "")}" />
           <div class="crm-qrp-color-row">
-            ${QUICK_REPLY_CATEGORY_COLORS.map((hex, i) => `<button type="button" class="crm-qrp-color-swatch ${i === 0 ? "is-selected" : ""}" data-color-swatch="${hex}" style="background:${hex}"></button>`).join("")}
+            ${QUICK_REPLY_CATEGORY_COLORS.map((hex) => `<button type="button" class="crm-qrp-color-swatch ${hex.toLowerCase() === initialColor ? "is-selected" : ""}" data-color-swatch="${hex}" style="background:${hex}"></button>`).join("")}
           </div>
-          <button class="crm-lite-pop-confirm">Criar categoria</button>
+          <button class="crm-lite-pop-confirm">${existing ? "Salvar" : "Criar categoria"}</button>
         `;
         document.body.appendChild(pop);
         animatePopIn(pop);
@@ -2981,20 +3004,26 @@
           const name = input.value.trim();
           if (!name) { crmToast("Dá um nome pra categoria.", "err"); return; }
           const color = pop.querySelector(".crm-qrp-color-swatch.is-selected")?.getAttribute("data-color-swatch") || QUICK_REPLY_CATEGORY_COLORS[0];
+          const path = existing
+            ? `/api/public/extension/quick-reply-categories/${existing.id}`
+            : "/api/public/extension/quick-reply-categories";
           const r = await chrome.runtime
             .sendMessage({
               type: "api",
-              path: "/api/public/extension/quick-reply-categories",
-              opts: { method: "POST", body: JSON.stringify({ name, color }) },
+              path,
+              opts: { method: existing ? "PATCH" : "POST", body: JSON.stringify({ name, color }) },
             })
             .catch(() => null);
           if (r?.ok) {
-            crmToast("Categoria criada");
+            crmToast(existing ? "Categoria atualizada" : "Categoria criada");
             await loadQuickReplyCategories();
+            // A cor pode ter mudado — os blocos/badges das respostas dessa
+            // categoria precisam recalcular com a cor nova.
+            if (existing) await loadQuickReplies();
             cleanup();
             resolve(r.category);
           } else {
-            crmToast(r?.error || "Não consegui criar a categoria.", "err");
+            crmToast(r?.error || "Não consegui salvar a categoria.", "err");
           }
         };
         function onDoc(ev) {
@@ -3259,7 +3288,7 @@
           {
             label: "+ Nova categoria",
             onClick: () => {
-              void openCategoryCreatePopup(newBtn).then(() => renderList());
+              void openCategoryEditPopup(newBtn, null).then(() => renderList());
             },
           },
           { label: "+ Nova resposta", onClick: () => renderForm(null) },

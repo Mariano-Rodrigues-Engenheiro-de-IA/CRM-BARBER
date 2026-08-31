@@ -4,13 +4,13 @@ import { useState } from "react";
 export const Route = createFileRoute("/baixar")({
   head: () => ({
     meta: [
-      { title: "Baixar pacote da extensão v0.36.6 | CRM Zaylo" },
+      { title: "Baixar pacote da extensão v0.36.7 | CRM Zaylo" },
       {
         name: "description",
         content:
-          "Download direto do pacote .zip da extensão Zaylo CRM v0.36.6, pronto para upload no Chrome Web Store Developer Dashboard.",
+          "Download direto do pacote .zip da extensão Zaylo CRM v0.36.7, pronto para upload no Chrome Web Store Developer Dashboard.",
       },
-      { property: "og:title", content: "Baixar pacote da extensão v0.36.6" },
+      { property: "og:title", content: "Baixar pacote da extensão v0.36.7" },
       {
         property: "og:description",
         content:
@@ -23,8 +23,8 @@ export const Route = createFileRoute("/baixar")({
   component: BaixarPage,
 });
 
-const VERSION = "0.36.6";
-const FILE = "/zaylo-crm-v0.36.6.zip";
+const VERSION = "0.36.7";
+const FILE = "/zaylo-crm-v0.36.7.zip";
 
 function BaixarPage() {
   const [status, setStatus] = useState<string | null>(null);
@@ -39,7 +39,7 @@ function BaixarPage() {
       .then((blob) => {
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `zaylo-crm-v0.36.6.zip`;
+        a.download = `zaylo-crm-v0.36.7.zip`;
         a.click();
         URL.revokeObjectURL(a.href);
         setStatus("Download iniciado.");
@@ -69,7 +69,7 @@ function BaixarPage() {
           onClick={download}
           className="w-full rounded-md bg-primary px-6 py-4 text-sm font-medium text-primary-foreground transition hover:opacity-90"
         >
-          Baixar zaylo-crm-v0.36.6.zip
+          Baixar zaylo-crm-v0.36.7.zip
         </button>
 
         {status && (

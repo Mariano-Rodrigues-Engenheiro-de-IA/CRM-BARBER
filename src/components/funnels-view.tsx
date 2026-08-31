@@ -350,6 +350,40 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
     });
   }
 
+  /** Move um lead pra uma coluna de OUTRO funil — sai do funil de origem
+   * (delete) e entra no funil de destino na etapa escolhida (create). Um
+   * lead pode estar em vários funis ao mesmo tempo (ver POST acima), então
+   * isso é diferente de "duplicar": some daqui, aparece só lá. */
+  async function moveCardToFunnel(card: FunnelCard, targetFunnelId: string, targetStageId: string) {
+    const r = await api("/api/public/extension/funnel-cards", {
+      method: "POST",
+      body: JSON.stringify({
+        funnel_id: targetFunnelId,
+        stage_id: targetStageId,
+        title: card.title,
+        phone: card.phone ?? undefined,
+        wa_contact_id: card.wa_contact_id ?? undefined,
+        wa_id: card.wa_id ?? undefined,
+      }),
+    });
+    if (!r?.ok) {
+      setErr((r?.error as string) || "Erro ao mover para o outro funil");
+      return;
+    }
+    await api("/api/public/extension/funnel-cards", {
+      method: "DELETE",
+      body: JSON.stringify({ id: card.id }),
+    });
+    const created = r.card as FunnelCard | undefined;
+    setFunnels((list) =>
+      list.map((f) => {
+        if (f.id === card.funnel_id) return { ...f, cards: f.cards.filter((c) => c.id !== card.id) };
+        if (f.id === targetFunnelId && created) return { ...f, cards: [...f.cards, created] };
+        return f;
+      }),
+    );
+  }
+
   async function addCard(
     stageId: string | undefined,
     payload: {
@@ -965,6 +999,15 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                             </p>
                           </div>
                           {active.mode !== "label" && (
+                            <MoveToFunnelButton
+                              card={card}
+                              funnels={funnels}
+                              onMove={(targetFunnelId, targetStageId) =>
+                                void moveCardToFunnel(card, targetFunnelId, targetStageId)
+                              }
+                            />
+                          )}
+                          {active.mode !== "label" && (
                             <button
                               onClick={() => removeCard(card)}
                               title="Remover lead"
@@ -1136,6 +1179,67 @@ function StageTitle({
       }}
       className="w-full min-w-0 rounded-md border border-neutral-300 px-2 py-1 text-sm font-semibold uppercase tracking-wide text-neutral-900 outline-none focus:border-brand"
     />
+  );
+}
+
+/** Botão "mover pra outro funil" em cada card — lista, achatada, de
+ * "Funil → Etapa" pra todo funil que não seja o atual (nem os de modo
+ * "label", que são auto-gerados a partir de etiquetas do WhatsApp e não
+ * aceitam mover/remover manual). Uma lista achatada em vez de submenu de
+ * dois passos (funil, depois etapa) porque normalmente são poucos funis
+ * e poucas etapas — mais rápido de usar assim. */
+function MoveToFunnelButton({
+  card,
+  funnels,
+  onMove,
+}: {
+  card: FunnelCard;
+  funnels: Funnel[];
+  onMove: (targetFunnelId: string, targetStageId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const others = funnels.filter((f) => f.id !== card.funnel_id && f.mode !== "label");
+  if (!others.length) return null;
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        title="Mover para outro funil"
+        className="shrink-0 rounded-md p-1 text-neutral-400 transition hover:bg-brand/10 hover:text-brand"
+      >
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M17 3v6h-6" />
+          <path d="M22.5 9a9.5 9.5 0 0 0-16.2-6.5L1 8" />
+          <path d="M7 21v-6h6" />
+          <path d="M1.5 15a9.5 9.5 0 0 0 16.2 6.5L23 16" />
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-6 z-30 max-h-64 w-56 overflow-y-auto rounded-xl border border-neutral-300 bg-white py-1 shadow-lg">
+          {others.map((f) => (
+            <div key={f.id}>
+              <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wide text-neutral-400">
+                {f.name}
+              </p>
+              {f.stages.map((s) => (
+                <button
+                  key={s.id}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setOpen(false);
+                    onMove(f.id, s.id);
+                  }}
+                  className="block w-full px-3 py-1.5 text-left text-xs text-neutral-700 transition hover:bg-neutral-100"
+                >
+                  {s.name}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
