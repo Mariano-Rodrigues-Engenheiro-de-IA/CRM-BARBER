@@ -4,17 +4,17 @@ import { useState } from "react";
 export const Route = createFileRoute("/baixar")({
   head: () => ({
     meta: [
-      { title: "Baixar pacote da extensão v0.36.4 | CRM Zaylo" },
+      { title: "Baixar pacote da extensão v0.36.6 | CRM Zaylo" },
       {
         name: "description",
         content:
-          "Download direto do pacote .zip da extensão Zetta CRM v0.36.4, pronto para upload no Chrome Web Store Developer Dashboard.",
+          "Download direto do pacote .zip da extensão Zaylo CRM v0.36.6, pronto para upload no Chrome Web Store Developer Dashboard.",
       },
-      { property: "og:title", content: "Baixar pacote da extensão v0.36.4" },
+      { property: "og:title", content: "Baixar pacote da extensão v0.36.6" },
       {
         property: "og:description",
         content:
-          "Pacote .zip da extensão Zetta CRM pronto para upload na Chrome Web Store.",
+          "Pacote .zip da extensão Zaylo CRM pronto para upload na Chrome Web Store.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -23,8 +23,8 @@ export const Route = createFileRoute("/baixar")({
   component: BaixarPage,
 });
 
-const VERSION = "0.36.4";
-const FILE = "/zetta-crm-v0.36.5.zip";
+const VERSION = "0.36.6";
+const FILE = "/zaylo-crm-v0.36.6.zip";
 
 function BaixarPage() {
   const [status, setStatus] = useState<string | null>(null);
@@ -39,7 +39,7 @@ function BaixarPage() {
       .then((blob) => {
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `zetta-crm-v0.36.5.zip`;
+        a.download = `zaylo-crm-v0.36.6.zip`;
         a.click();
         URL.revokeObjectURL(a.href);
         setStatus("Download iniciado.");
@@ -55,7 +55,7 @@ function BaixarPage() {
             Pacote da extensão
           </p>
           <h1 className="text-3xl font-medium">
-            Zetta CRM v{VERSION}
+            Zaylo CRM v{VERSION}
           </h1>
           <p className="text-sm text-muted-foreground">
             Arquivo .zip pronto para envio no Chrome Web Store Developer
@@ -69,7 +69,7 @@ function BaixarPage() {
           onClick={download}
           className="w-full rounded-md bg-primary px-6 py-4 text-sm font-medium text-primary-foreground transition hover:opacity-90"
         >
-          Baixar zetta-crm-v0.36.5.zip
+          Baixar zaylo-crm-v0.36.6.zip
         </button>
 
         {status && (

@@ -256,7 +256,7 @@
     const rail = document.createElement("div");
     rail.id = "crm-rail";
     rail.innerHTML = `
-      <div class="crm-rail-mark"><img src="${chrome.runtime.getURL("zetta-z.png")}" alt="Zetta CRM" /></div>
+      <div class="crm-rail-mark"><img src="${chrome.runtime.getURL("zaylo-icon.png")}" alt="Zaylo CRM" /></div>
       <button class="crm-rail-btn" data-go="agenda" data-label="Agenda">${ICONS.calendar}</button>
       <button class="crm-rail-btn" data-go="funis" data-label="Funis de Vendas">${ICONS.funnel}</button>
       <button class="crm-rail-btn" data-go="disparo" data-label="Disparo">${ICONS.send}</button>
@@ -1126,7 +1126,7 @@
 
     if (!status.paired) {
       topbarRef.innerHTML = `<span class="crm-topbar-hint">${escapeHtml(
-        pairHint || "Zetta CRM · conectando ao seu WhatsApp…",
+        pairHint || "Zaylo CRM · conectando ao seu WhatsApp…",
       )}</span>`;
       return;
     }
@@ -1189,7 +1189,7 @@
     try {
       const phone = readLoggedPhone();
       if (!phone) {
-        pairHint = "Zetta CRM · aguardando o WhatsApp Web terminar de carregar…";
+        pairHint = "Zaylo CRM · aguardando o WhatsApp Web terminar de carregar…";
         renderTopbar();
         return;
       }
@@ -1200,7 +1200,7 @@
         refresh();
         return;
       }
-      pairHint = `Zetta CRM · não consegui vincular: ${res?.error || "sem resposta do servidor"}. Tentando de novo…`;
+      pairHint = `Zaylo CRM · não consegui vincular: ${res?.error || "sem resposta do servidor"}. Tentando de novo…`;
       renderTopbar();
     } finally {
       pairing = false;

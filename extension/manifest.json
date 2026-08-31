@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Zaylo — Tudo que você precisa em um só lugar",
-  "version": "0.36.5",
+  "version": "0.36.6",
   "description": "CRM completo que te ajuda a vender mais!",
   "permissions": ["storage", "activeTab", "tabs", "scripting", "alarms"],
   "host_permissions": [
@@ -26,7 +26,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["wa-js.js", "wa-bridge-v15.js", "zetta-z.png"],
+      "resources": ["wa-js.js", "wa-bridge-v15.js", "zaylo-icon.png"],
       "matches": ["https://web.whatsapp.com/*"]
     }
   ],

@@ -32,7 +32,7 @@ function Topbar() {
     <header className="border-b border-white/10">
       <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-4">
         <Link to="/" className="text-[11px] font-semibold tracking-[0.28em] text-yellow-400">
-          ZETTA CRM
+          ZAYLO CRM
         </Link>
         <Link
           to="/"
