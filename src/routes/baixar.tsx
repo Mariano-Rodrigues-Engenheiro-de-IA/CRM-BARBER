@@ -24,7 +24,7 @@ export const Route = createFileRoute("/baixar")({
 });
 
 const VERSION = "0.36.4";
-const FILE = "/zetta-crm-v0.36.4.zip";
+const FILE = "/zetta-crm-v0.36.5.zip";
 
 function BaixarPage() {
   const [status, setStatus] = useState<string | null>(null);
@@ -39,7 +39,7 @@ function BaixarPage() {
       .then((blob) => {
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `zetta-crm-v0.36.4.zip`;
+        a.download = `zetta-crm-v0.36.5.zip`;
         a.click();
         URL.revokeObjectURL(a.href);
         setStatus("Download iniciado.");
@@ -69,7 +69,7 @@ function BaixarPage() {
           onClick={download}
           className="w-full rounded-md bg-primary px-6 py-4 text-sm font-medium text-primary-foreground transition hover:opacity-90"
         >
-          Baixar zetta-crm-v0.36.4.zip
+          Baixar zetta-crm-v0.36.5.zip
         </button>
 
         {status && (
