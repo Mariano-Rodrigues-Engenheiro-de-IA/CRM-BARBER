@@ -28,7 +28,7 @@ export type DispatchCustomer = { id: string; name: string; phone: string; status
 type Audience = "assinantes" | "funis" | "planilha";
 type MessageMode = "custom" | "quick";
 type DispatchType = "message" | "template";
-type TemplateOption = { name: string; language: string; status: string; hasImageHeader: boolean };
+type TemplateOption = { name: string; language: string; status: string; hasImageHeader: boolean; carouselCardCount: number };
 
 const inputCls =
   "w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-neutral-900";
@@ -104,6 +104,11 @@ export function DispatchCenter({
   const [templateHeaderPath, setTemplateHeaderPath] = useState<string | null>(null);
   const [templateHeaderPreview, setTemplateHeaderPreview] = useState<string | null>(null);
   const [templateHeaderUploading, setTemplateHeaderUploading] = useState(false);
+  // Uma imagem por cartão do carrossel — arrays na mesma ordem dos
+  // cartões do modelo (index 0 = primeiro cartão, e assim por diante).
+  const [carouselPaths, setCarouselPaths] = useState<(string | null)[]>([]);
+  const [carouselPreviews, setCarouselPreviews] = useState<(string | null)[]>([]);
+  const [carouselUploadingIndex, setCarouselUploadingIndex] = useState<number | null>(null);
   const [paceMin, setPaceMin] = useState(20);
   const [paceMax, setPaceMax] = useState(60);
   const [accepted, setAccepted] = useState(false);
@@ -139,16 +144,20 @@ export function DispatchCenter({
               name: string;
               language: string;
               status: string;
-              components?: Array<{ type?: string; format?: string }>;
+              components?: Array<{ type?: string; format?: string; cards?: unknown[] }>;
             }>) || []
-          ).map((tpl) => ({
-            name: tpl.name,
-            language: tpl.language,
-            status: tpl.status,
-            hasImageHeader: (tpl.components || []).some(
-              (c) => String(c.type).toUpperCase() === "HEADER" && String(c.format).toUpperCase() === "IMAGE",
-            ),
-          })),
+          ).map((tpl) => {
+            const carouselComp = (tpl.components || []).find((c) => String(c.type).toUpperCase() === "CAROUSEL");
+            return {
+              name: tpl.name,
+              language: tpl.language,
+              status: tpl.status,
+              hasImageHeader: (tpl.components || []).some(
+                (c) => String(c.type).toUpperCase() === "HEADER" && String(c.format).toUpperCase() === "IMAGE",
+              ),
+              carouselCardCount: Array.isArray(carouselComp?.cards) ? carouselComp.cards.length : 0,
+            };
+          }),
         );
       }
       if (st?.ok && st.connection) {
@@ -243,6 +252,37 @@ export function DispatchCenter({
     }
   }
 
+  /** Mesma ideia do cabeçalho simples, só que uma imagem POR CARTÃO do
+   * carrossel — cada cartão faz upload e guarda o caminho na posição
+   * certa do array (índice = posição do cartão no modelo). */
+  async function handleCarouselCardFile(index: number, file: File) {
+    setCarouselUploadingIndex(index);
+    setErr(null);
+    try {
+      const dataUrl = await fileToBase64(file);
+      const r = await api("/api/public/extension/quick-replies/upload", {
+        method: "POST",
+        body: JSON.stringify({ filename: file.name, mime: file.type || "image/jpeg", data_base64: dataUrl }),
+      });
+      if (!r?.ok) {
+        setErr((r?.error as string) || `Falha ao enviar a imagem do cartão ${index + 1}.`);
+        return;
+      }
+      setCarouselPaths((prev) => {
+        const next = [...prev];
+        next[index] = (r.path as string) || null;
+        return next;
+      });
+      setCarouselPreviews((prev) => {
+        const next = [...prev];
+        next[index] = dataUrl;
+        return next;
+      });
+    } finally {
+      setCarouselUploadingIndex(null);
+    }
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
 
@@ -254,6 +294,11 @@ export function DispatchCenter({
       const tplNeedsHeader = templates.find((x) => x.name === selectedTemplate)?.hasImageHeader;
       if (tplNeedsHeader && !templateHeaderPath) {
         setErr("Esse modelo tem imagem no cabeçalho — envie uma imagem antes de disparar.");
+        return;
+      }
+      const cardCount = templates.find((x) => x.name === selectedTemplate)?.carouselCardCount ?? 0;
+      if (cardCount > 0 && carouselPaths.filter(Boolean).length < cardCount) {
+        setErr(`Esse modelo é um carrossel de ${cardCount} cartões — envie a imagem de todos antes de disparar.`);
         return;
       }
       if (!accepted) {
@@ -279,6 +324,7 @@ export function DispatchCenter({
         template_name: selectedTemplate,
         template_language: tpl?.language || "pt_BR",
         ...(templateHeaderPath ? { template_header_media_path: templateHeaderPath } : {}),
+        ...(cardCount > 0 ? { template_carousel_media_paths: carouselPaths } : {}),
         pace_seconds_min: Math.min(paceMin, paceMax),
         pace_seconds_max: Math.max(paceMin, paceMax),
       };
@@ -515,6 +561,9 @@ export function DispatchCenter({
                 // cada modelo tem seu próprio cabeçalho (ou nenhum).
                 setTemplateHeaderPath(null);
                 setTemplateHeaderPreview(null);
+                const tpl = templates.find((t) => t.name === e.target.value);
+                setCarouselPaths(new Array(tpl?.carouselCardCount || 0).fill(null));
+                setCarouselPreviews(new Array(tpl?.carouselCardCount || 0).fill(null));
               }}
               className={inputCls}
             >
@@ -525,6 +574,7 @@ export function DispatchCenter({
                   <option key={t.name} value={t.name}>
                     {t.name}
                     {t.hasImageHeader ? " (tem imagem)" : ""}
+                    {t.carouselCardCount > 0 ? ` (carrossel, ${t.carouselCardCount} cartões)` : ""}
                   </option>
                 ))}
             </select>
@@ -554,6 +604,42 @@ export function DispatchCenter({
                 className="block w-full text-sm text-neutral-600"
               />
               {templateHeaderUploading && <p className="mt-1 text-xs text-neutral-500">Enviando imagem…</p>}
+            </div>
+          )}
+          {isMetaProvider && (templates.find((t) => t.name === selectedTemplate)?.carouselCardCount ?? 0) > 0 && (
+            <div className="mt-3 rounded-xl border border-neutral-300 bg-neutral-50 p-3">
+              <Label>Imagens do carrossel</Label>
+              <p className="mb-2 text-xs text-neutral-500">
+                Esse modelo é um carrossel — a Meta exige uma imagem por cartão em todo envio (mesmas imagens pra
+                todos os contatos desse disparo).
+              </p>
+              <div className="space-y-3">
+                {Array.from({ length: templates.find((t) => t.name === selectedTemplate)?.carouselCardCount ?? 0 }).map(
+                  (_, i) => (
+                    <div key={i} className="rounded-lg border border-neutral-200 bg-white p-2">
+                      <p className="mb-1 text-xs font-medium text-neutral-600">Cartão {i + 1}</p>
+                      {carouselPreviews[i] && (
+                        <img
+                          src={carouselPreviews[i] as string}
+                          alt={`Prévia do cartão ${i + 1}`}
+                          className="mb-2 max-h-28 rounded-lg border border-neutral-200 object-cover"
+                        />
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={carouselUploadingIndex === i}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) void handleCarouselCardFile(i, file);
+                        }}
+                        className="block w-full text-sm text-neutral-600"
+                      />
+                      {carouselUploadingIndex === i && <p className="mt-1 text-xs text-neutral-500">Enviando imagem…</p>}
+                    </div>
+                  ),
+                )}
+              </div>
             </div>
           )}
         </div>

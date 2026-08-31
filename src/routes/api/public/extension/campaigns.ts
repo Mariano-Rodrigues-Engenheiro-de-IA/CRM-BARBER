@@ -35,6 +35,8 @@ const bodySchema = z
     // o modelo escolhido tiver cabeçalho do tipo Imagem — a Meta exige
     // isso em TODO envio, não só na criação do modelo.
     template_header_media_path: z.string().trim().max(400).optional(),
+    // Um caminho por cartão do carrossel, na ordem dos cartões no modelo.
+    template_carousel_media_paths: z.array(z.string().trim().max(400)).max(10).optional(),
     pace_seconds: z.number().int().min(5).max(600).optional(),
     pace_seconds_min: z.number().int().min(5).max(600).optional(),
     pace_seconds_max: z.number().int().min(5).max(600).optional(),
@@ -119,6 +121,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
           template_name,
           template_language,
           template_header_media_path,
+          template_carousel_media_paths,
           pace_seconds,
           pace_seconds_min,
           pace_seconds_max,
@@ -280,6 +283,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
             message_variants: variants,
             message_actions: message_actions ?? [],
             template_header_media_path: template_header_media_path ?? null,
+            template_carousel_media_paths: template_carousel_media_paths ?? null,
             audience_filter: {
               ...(filter ?? { customer_ids: customer_ids ?? [] }),
               scope: scope ?? "assinaturas",
@@ -313,6 +317,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
               template_name,
               template_language: template_language ?? "pt_BR",
               template_header_media_path: template_header_media_path ?? null,
+              template_carousel_media_paths: template_carousel_media_paths ?? null,
               status: "pending" as const,
               scheduled_for: new Date(cursor).toISOString(),
               expires_at: expiresAt,

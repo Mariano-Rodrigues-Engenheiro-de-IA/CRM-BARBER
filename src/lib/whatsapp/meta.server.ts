@@ -75,6 +75,7 @@ export const metaProvider: WhatsAppProvider = {
     language_code,
     body_params,
     header_image_url,
+    carousel_card_image_urls,
   }): Promise<SendResult> {
     const bsp = getBspAdapter();
     if (!bsp.sendTemplate) {
@@ -88,6 +89,7 @@ export const metaProvider: WhatsAppProvider = {
       language_code,
       body_params,
       header_image_url,
+      carousel_card_image_urls,
     });
   },
 

@@ -103,7 +103,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
           // silenciosamente jobs com campaign_id nulo, se algum existir.)
           const { data: jobs } = await supabaseAdmin
             .from("message_jobs")
-            .select("id, customer_id, rendered_body, message_actions, template_name, template_language, template_header_media_path, campaign_id, attempts")
+            .select("id, customer_id, rendered_body, message_actions, template_name, template_language, template_header_media_path, template_carousel_media_paths, campaign_id, attempts")
             .eq("barbershop_id", inst.barbershop_id)
             .eq("status", "pending")
             // Jobs marcados force_extension nunca passam pela API oficial
@@ -200,6 +200,26 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
                     );
                   }
                 }
+                // Mesma ideia pro CARROSSEL — uma URL assinada por cartão,
+                // na mesma ordem salva em template_carousel_media_paths.
+                let carouselCardImageUrls: string[] | null = null;
+                if (job.template_carousel_media_paths?.length) {
+                  const signedUrls = await Promise.all(
+                    job.template_carousel_media_paths.map(async (path) => {
+                      const { data: signed } = await supabaseAdmin.storage
+                        .from("quick-reply-media")
+                        .createSignedUrl(path, 60 * 60);
+                      return signed?.signedUrl ?? null;
+                    }),
+                  );
+                  if (signedUrls.some((u) => !u)) {
+                    console.error(
+                      "[dispatch-jobs] falha ao gerar URL assinada de ao menos um cartão do carrossel:",
+                      job.template_carousel_media_paths,
+                    );
+                  }
+                  carouselCardImageUrls = signedUrls.every((u) => u) ? (signedUrls as string[]) : null;
+                }
                 result = await provider
                   .sendTemplate({
                     instance_token: instanceToken,
@@ -208,6 +228,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
                     template_name: job.template_name,
                     language_code: job.template_language ?? "pt_BR",
                     header_image_url: headerImageUrl,
+                    carousel_card_image_urls: carouselCardImageUrls,
                   })
                   .catch((e: unknown) => ({
                     ok: false as const,

@@ -122,6 +122,9 @@ export interface WhatsAppProvider {
     // isso a CADA envio quando o modelo tem cabeçalho de imagem; não fica
     // gravado no modelo aprovado.
     header_image_url?: string | null;
+    // Mesma ideia, só que pro modelo de CARROSSEL: uma URL de imagem por
+    // cartão, na mesma ordem em que os cartões foram criados no modelo.
+    carousel_card_image_urls?: string[] | null;
   }): Promise<SendResult>;
 
   /** Só na API oficial — lista modelos de mensagem com status de aprovação. */

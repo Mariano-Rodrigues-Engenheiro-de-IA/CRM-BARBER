@@ -36,6 +36,9 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/send-templa
           ? body.body_params.filter((p: unknown) => typeof p === "string")
           : undefined;
         const headerImageUrl = typeof body?.header_image_url === "string" ? body.header_image_url.trim() : undefined;
+        const carouselCardImageUrls = Array.isArray(body?.carousel_card_image_urls)
+          ? body.carousel_card_image_urls.filter((u: unknown): u is string => typeof u === "string")
+          : undefined;
 
         if (!to || !templateName || !languageCode) {
           return jsonResponse(
@@ -76,6 +79,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/send-templa
           language_code: languageCode,
           body_params: bodyParams,
           header_image_url: headerImageUrl,
+          carousel_card_image_urls: carouselCardImageUrls,
         });
 
         if (!result.ok) {

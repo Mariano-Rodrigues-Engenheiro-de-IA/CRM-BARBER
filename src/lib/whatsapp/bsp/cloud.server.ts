@@ -376,16 +376,16 @@ export const cloudAdapter: BspAdapter = {
     language_code,
     body_params,
     header_image_url,
+    carousel_card_image_urls,
   }): Promise<SendResult> {
     if (!phone_number_id) {
       return { ok: false, error: "phone_number_id ausente na instância", retryable: false };
     }
     try {
-      // Causa raiz de disparos com modelo aprovado falhando: quando o
-      // modelo tem cabeçalho de imagem, a Meta exige um componente
-      // "header" com a imagem em TODO envio (a aprovação do modelo não
-      // "grava" nenhuma imagem específica) — antes isso nunca era
-      // montado, e a Meta rejeitava o envio.
+      // Mesma causa raiz do cabeçalho de imagem simples, só que pro
+      // CARROSSEL: a Meta exige uma imagem por CARTÃO em todo envio (não
+      // fica gravada no modelo aprovado) — sem isso, "Failed to send
+      // message" ou "template hydration failed" na resposta da Meta.
       const components: Array<Record<string, unknown>> = [];
       if (header_image_url) {
         components.push({
@@ -397,6 +397,15 @@ export const cloudAdapter: BspAdapter = {
         components.push({
           type: "body",
           parameters: body_params.map((text) => ({ type: "text", text })),
+        });
+      }
+      if (carousel_card_image_urls && carousel_card_image_urls.length > 0) {
+        components.push({
+          type: "carousel",
+          cards: carousel_card_image_urls.map((url, index) => ({
+            card_index: index,
+            components: [{ type: "header", parameters: [{ type: "image", image: { link: url } }] }],
+          })),
         });
       }
       const res = await fetch(graphUrl(`${phone_number_id}/messages`), {

@@ -75,6 +75,9 @@ export interface BspAdapter {
     // Meta exige isso a CADA envio quando o modelo tem cabeçalho de
     // imagem (não fica salvo no modelo aprovado em si).
     header_image_url?: string | null;
+    // Uma URL por cartão do carrossel, na mesma ordem dos cartões no
+    // modelo — mesma regra do header_image_url, só que um por cartão.
+    carousel_card_image_urls?: string[] | null;
   }): Promise<SendResult>;
 
   /** Lista os modelos de mensagem (templates) da WABA, com status de

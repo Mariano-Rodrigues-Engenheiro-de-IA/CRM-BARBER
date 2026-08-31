@@ -322,6 +322,7 @@ export type Database = {
           pace_seconds_min: number | null
           scheduled_for: string | null
           status: string
+          template_carousel_media_paths: string[] | null
           template_header_media_path: string | null
           template_id: string | null
           updated_at: string
@@ -340,6 +341,7 @@ export type Database = {
           pace_seconds_min?: number | null
           scheduled_for?: string | null
           status?: string
+          template_carousel_media_paths?: string[] | null
           template_header_media_path?: string | null
           template_id?: string | null
           updated_at?: string
@@ -358,6 +360,7 @@ export type Database = {
           pace_seconds_min?: number | null
           scheduled_for?: string | null
           status?: string
+          template_carousel_media_paths?: string[] | null
           template_header_media_path?: string | null
           template_id?: string | null
           updated_at?: string
@@ -1012,6 +1015,7 @@ export type Database = {
           scheduled_for: string
           sent_at: string | null
           status: string
+          template_carousel_media_paths: string[] | null
           template_header_media_path: string | null
           template_language: string | null
           template_name: string | null
@@ -1036,6 +1040,7 @@ export type Database = {
           scheduled_for?: string
           sent_at?: string | null
           status?: string
+          template_carousel_media_paths?: string[] | null
           template_header_media_path?: string | null
           template_language?: string | null
           template_name?: string | null
@@ -1060,6 +1065,7 @@ export type Database = {
           scheduled_for?: string
           sent_at?: string | null
           status?: string
+          template_carousel_media_paths?: string[] | null
           template_header_media_path?: string | null
           template_language?: string | null
           template_name?: string | null
