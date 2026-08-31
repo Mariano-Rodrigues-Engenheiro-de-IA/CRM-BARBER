@@ -352,58 +352,49 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
     });
   }
 
-  /** Move um lead pra uma coluna de OUTRO funil — sai do funil de origem
-   * (delete) e entra no funil de destino na etapa escolhida (create). Um
-   * lead pode estar em vários funis ao mesmo tempo (ver POST acima), então
-   * isso é diferente de "duplicar": some daqui, aparece só lá. */
-  async function moveCardToFunnel(card: FunnelCard, targetFunnelId: string, targetStageId: string) {
-    const r = await api("/api/public/extension/funnel-cards", {
-      method: "POST",
-      body: JSON.stringify({
-        funnel_id: targetFunnelId,
-        stage_id: targetStageId,
-        title: card.title,
-        phone: card.phone ?? undefined,
-        wa_contact_id: card.wa_contact_id ?? undefined,
-        wa_id: card.wa_id ?? undefined,
-      }),
-    });
-    if (!r?.ok) {
-      setErr((r?.error as string) || "Erro ao mover para o outro funil");
-      return;
-    }
-    await api("/api/public/extension/funnel-cards", {
-      method: "DELETE",
-      body: JSON.stringify({ id: card.id }),
-    });
-    const created = r.card as FunnelCard | undefined;
-    setFunnels((list) =>
-      list.map((f) => {
-        if (f.id === card.funnel_id) return { ...f, cards: f.cards.filter((c) => c.id !== card.id) };
-        if (f.id === targetFunnelId && created) return { ...f, cards: [...f.cards, created] };
-        return f;
-      }),
-    );
-  }
-
   /** Mover em massa: pega TODOS os leads de uma etapa de origem (de
    * qualquer outro funil) e move um por um pra etapa de destino no funil
    * atual — sequencial (não Promise.all) de propósito, pra não disparar
    * dezenas de requisições simultâneas se a coluna de origem tiver muitos
-   * leads. */
+   * leads. Faz as chamadas de API direto aqui (sem passar por um
+   * setFunnels por card) e só recarrega tudo no final — atualizar o
+   * estado a cada card, no meio de um loop assíncrono longo, arriscava
+   * competir com outras coisas reagindo à mudança de `funnels` a cada
+   * passo (era isso que fazia só o primeiro lead mover de verdade).
+   */
   async function bulkMoveLeads(sourceFunnelId: string, sourceStageId: string, targetStageId: string) {
+    if (!active) return;
     const sourceFunnel = funnels.find((f) => f.id === sourceFunnelId);
     const cardsToMove = (sourceFunnel?.cards ?? []).filter((c) => c.stage_id === sourceStageId);
     if (!cardsToMove.length) return;
     setBulkMoving(true);
+    const targetFunnelId = active.id;
     let moved = 0;
     for (const card of cardsToMove) {
-      await moveCardToFunnel(card, active!.id, targetStageId);
-      moved += 1;
+      const r = await api("/api/public/extension/funnel-cards", {
+        method: "POST",
+        body: JSON.stringify({
+          funnel_id: targetFunnelId,
+          stage_id: targetStageId,
+          title: card.title,
+          phone: card.phone ?? undefined,
+          wa_contact_id: card.wa_contact_id ?? undefined,
+          wa_id: card.wa_id ?? undefined,
+        }),
+      });
+      if (r?.ok) {
+        await api("/api/public/extension/funnel-cards", {
+          method: "DELETE",
+          body: JSON.stringify({ id: card.id }),
+        });
+        moved += 1;
+      } else {
+        setErr((r?.error as string) || `Erro ao mover "${card.title}".`);
+      }
     }
     setBulkMoving(false);
     setBulkMoveTarget(null);
-    setErr(null);
+    await reload();
     return moved;
   }
 

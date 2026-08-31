@@ -3037,6 +3037,9 @@
       document.body.appendChild(pop);
       animatePopIn(pop);
 
+      // Só seleção aqui — editar/excluir categoria ficam no próprio bloco
+      // colorido dela na lista (mais intuitivo que escondido num popup
+      // de filtro à parte).
       function paint() {
         pop.innerHTML = quickReplyCategories.length
           ? `<p class="crm-cat-filter-pop-hint">Escolha uma ou mais categorias</p>${quickReplyCategories
@@ -3046,8 +3049,6 @@
                   <span class="crm-cat-filter-pop-check" style="${checked ? `background:${escapeHtml(c.color)};border-color:${escapeHtml(c.color)}` : ""}">${checked ? CHECK_SVG : ""}</span>
                   <span class="crm-qrp-cat-dot" style="background:${escapeHtml(c.color)}"></span>
                   <span class="crm-cat-filter-pop-name">${escapeHtml(c.name)}</span>
-                  <button type="button" class="crm-cat-filter-pop-edit" data-edit-cat-inline="${c.id}" title="Editar categoria">${PENCIL_SVG}</button>
-                  <button type="button" class="crm-cat-filter-pop-del" data-del-cat-inline="${c.id}" title="Excluir categoria">${TRASH_SVG}</button>
                 </div>`;
               })
               .join("")}`
@@ -3056,36 +3057,6 @@
       paint();
 
       pop.addEventListener("click", async (e) => {
-        const editBtn = e.target.closest("[data-edit-cat-inline]");
-        if (editBtn) {
-          const id = editBtn.getAttribute("data-edit-cat-inline");
-          const cat = quickReplyCategories.find((c) => c.id === id);
-          if (!cat) return;
-          const updated = await openCategoryEditPopup(editBtn, cat);
-          if (updated) { paint(); renderList(); }
-          return;
-        }
-        const delBtn = e.target.closest("[data-del-cat-inline]");
-        if (delBtn) {
-          const id = delBtn.getAttribute("data-del-cat-inline");
-          const cat = quickReplyCategories.find((c) => c.id === id);
-          if (!cat) return;
-          const ok = await openConfirmPop(delBtn, {
-            text: `Excluir "${cat.name}"? As respostas dela ficam sem categoria.`,
-            confirmLabel: "Sim, excluir",
-          });
-          if (!ok) return;
-          await chrome.runtime
-            .sendMessage({ type: "api", path: `/api/public/extension/quick-reply-categories/${id}`, opts: { method: "DELETE" } })
-            .catch(() => null);
-          filterCategoryIds = filterCategoryIds.filter((x) => x !== id);
-          filterMode = filterCategoryIds.length ? "cat" : "all";
-          await loadQuickReplyCategories();
-          await loadQuickReplies();
-          paint();
-          renderList();
-          return;
-        }
         const item = e.target.closest("[data-toggle-cat]");
         if (!item) return;
         const id = item.getAttribute("data-toggle-cat");
@@ -3199,17 +3170,29 @@
     // agrupadas dentro (dobrável). Cada resposta do bloco também recebe um
     // fundo bem clareado da MESMA cor (não branco) — dá identidade visual
     // ao bloco inteiro sem atrapalhar a leitura do texto por cima.
+    //
+    // Lápis e lixeira ficam bem aqui, no próprio bloco — pequenos e
+    // discretos, mas sempre visíveis (não escondidos atrás de hover, e
+    // não escondidos dentro de outro popup). Botões SEPARADOS do toggle
+    // de dobrar/desdobrar (que é só a área do nome/contador + a seta), pra
+    // clicar neles não abrir/fechar o bloco sem querer.
     function categorySectionHtml(cat, items) {
       if (!items.length) return "";
       const collapsed = collapsedCategoryIds.has(cat.id);
       const textColor = contrastTextColor(cat.color);
       const rowBg = lightenColor(cat.color, 0.86);
       return `<div class="crm-qrp-cat-section">
-        <button type="button" class="crm-qrp-cat-section-head" data-toggle-collapse="${cat.id}" style="background:${escapeHtml(cat.color)};color:${textColor}">
-          <span class="crm-qrp-cat-section-name">${escapeHtml(cat.name)}</span>
-          <span class="crm-qrp-cat-section-count">${items.length}</span>
-          <span class="crm-qrp-cat-section-caret">${collapsed ? DOWN_SVG : UP_SVG}</span>
-        </button>
+        <div class="crm-qrp-cat-section-head" style="background:${escapeHtml(cat.color)};color:${textColor}">
+          <button type="button" class="crm-qrp-cat-section-toggle" data-toggle-collapse="${cat.id}">
+            <span class="crm-qrp-cat-section-name">${escapeHtml(cat.name)}</span>
+            <span class="crm-qrp-cat-section-count">${items.length}</span>
+          </button>
+          <button type="button" class="crm-qrp-cat-section-icon" data-edit-cat-section="${cat.id}" title="Editar categoria">${PENCIL_SVG}</button>
+          <button type="button" class="crm-qrp-cat-section-icon" data-del-cat-section="${cat.id}" title="Excluir categoria">${TRASH_SVG}</button>
+          <button type="button" class="crm-qrp-cat-section-toggle crm-qrp-cat-section-caret-btn" data-toggle-collapse="${cat.id}">
+            ${collapsed ? DOWN_SVG : UP_SVG}
+          </button>
+        </div>
         ${collapsed ? "" : `<div class="crm-qrp-list">${items.map((q) => rowHtml(q, { bgColor: rowBg })).join("")}</div>`}
       </div>`;
     }
@@ -3455,6 +3438,36 @@
       const filterByCatBtn = e.target.closest("[data-filter-by-cat]");
       if (filterByCatBtn) {
         openCategoryFilterPopup(filterByCatBtn);
+        return;
+      }
+      // Lápis/lixeira no próprio bloco colorido da categoria — o popup de
+      // editar abre ancorado NESSE botão, então aparece perto do bloco
+      // (não em outro canto da tela).
+      const editCatSection = e.target.closest("[data-edit-cat-section]");
+      if (editCatSection) {
+        const cat = quickReplyCategories.find((c) => c.id === editCatSection.getAttribute("data-edit-cat-section"));
+        if (!cat) return;
+        const updated = await openCategoryEditPopup(editCatSection, cat);
+        if (updated) renderList();
+        return;
+      }
+      const delCatSection = e.target.closest("[data-del-cat-section]");
+      if (delCatSection) {
+        const cat = quickReplyCategories.find((c) => c.id === delCatSection.getAttribute("data-del-cat-section"));
+        if (!cat) return;
+        const ok = await openConfirmPop(delCatSection, {
+          text: `Excluir "${cat.name}"? As respostas dela ficam sem categoria.`,
+          confirmLabel: "Sim, excluir",
+        });
+        if (!ok) return;
+        await chrome.runtime
+          .sendMessage({ type: "api", path: `/api/public/extension/quick-reply-categories/${cat.id}`, opts: { method: "DELETE" } })
+          .catch(() => null);
+        filterCategoryIds = filterCategoryIds.filter((x) => x !== cat.id);
+        filterMode = filterCategoryIds.length ? "cat" : "all";
+        await loadQuickReplyCategories();
+        await loadQuickReplies();
+        renderList();
         return;
       }
       // Clicar no cabeçalho colorido de uma categoria dobra/desdobra o
