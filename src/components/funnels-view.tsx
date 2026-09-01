@@ -334,7 +334,17 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
       withNewOrder.map((c) =>
         api("/api/public/extension/funnel-cards", {
           method: "PATCH",
-          body: JSON.stringify({ id: c.id, stage_id: c.stage_id, sort_order: c.sort_order }),
+          body: JSON.stringify({
+            id: c.id,
+            sort_order: c.sort_order,
+            // Só manda stage_id pro card que REALMENTE mudou de etapa — os
+            // outros só estão sendo reordenados dentro da mesma coluna
+            // (arrastou um card por cima deles), não é uma entrada nova
+            // na etapa. Sem essa distinção, TODO card da coluna de
+            // destino tinha o tempo de follow-up resetado a cada
+            // arraste, mesmo os que já estavam lá parados.
+            ...(c.id === card.id ? { stage_id: c.stage_id } : {}),
+          }),
         }),
       ),
     );

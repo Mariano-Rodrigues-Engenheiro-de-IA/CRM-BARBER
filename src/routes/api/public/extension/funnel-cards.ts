@@ -230,6 +230,20 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
           return jsonResponse(request, { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" }, { status: 400 });
         }
         const { id, ...rest } = parsed.data;
+        // Confere a etapa ATUAL antes de decidir se isso é uma troca de
+        // etapa de verdade (reseta stage_entered_at e o histórico de
+        // follow-up) ou só reordenação dentro da mesma coluna (stage_id
+        // igual ao que já tinha — não deve resetar nada).
+        let stageReallyChanged = false;
+        if (rest.stage_id !== undefined) {
+          const { data: current } = await supabaseAdmin
+            .from("funnel_cards")
+            .select("stage_id")
+            .eq("id", id)
+            .eq("barbershop_id", auth.token.barbershop_id)
+            .maybeSingle();
+          stageReallyChanged = !!current && current.stage_id !== rest.stage_id;
+        }
         const patch: {
           stage_id?: string;
           stage_entered_at?: string;
@@ -241,7 +255,7 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
         } = {};
         if (rest.stage_id !== undefined) {
           patch.stage_id = rest.stage_id;
-          patch.stage_entered_at = new Date().toISOString();
+          if (stageReallyChanged) patch.stage_entered_at = new Date().toISOString();
         }
         if (rest.sort_order !== undefined) patch.sort_order = rest.sort_order;
         if (rest.title !== undefined) patch.title = rest.title;
@@ -255,9 +269,10 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
           .eq("id", id)
           .eq("barbershop_id", auth.token.barbershop_id);
         if (error) return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
-        // Mesma lógica do POST: mudou de etapa, os passos "já enviados"
-        // da etapa anterior não valem mais — reinicia o histórico.
-        if (patch.stage_id) {
+        // Mesma lógica do POST: mudou de etapa DE VERDADE, os passos "já
+        // enviados" da etapa anterior não valem mais — reinicia o
+        // histórico. Reordenação na mesma coluna não mexe nisso.
+        if (stageReallyChanged) {
           await supabaseAdmin.from("funnel_followup_sent_log").delete().eq("card_id", id);
         }
         return jsonResponse(request, { ok: true });
