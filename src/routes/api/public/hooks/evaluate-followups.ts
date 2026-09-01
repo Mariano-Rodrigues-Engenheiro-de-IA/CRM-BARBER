@@ -77,7 +77,45 @@ export const Route = createFileRoute("/api/public/hooks/evaluate-followups")({
           const sentSet = new Set((sentRows ?? []).map((r) => `${r.card_id}:${r.step_id}`));
 
           for (const card of cards) {
-            if (!card.phone || !card.customer_id) continue;
+            if (!card.phone) continue;
+            // Muitos leads (principalmente vindos direto do WhatsApp, sem
+            // passar pela Agenda) não têm customer_id vinculado no card —
+            // message_jobs exige um cliente de verdade, então antes esses
+            // casos eram pulados silenciosamente e o follow-up nunca
+            // disparava pra eles. Reaproveita um cliente já existente com
+            // esse telefone, ou cria um (arquivado, mesma convenção já
+            // usada em lead-schedule.ts) — e grava no card, pra não
+            // repetir essa busca a cada rodada.
+            let customerId = card.customer_id as string | null;
+            if (!customerId) {
+              const { data: existingCustomer } = await supabaseAdmin
+                .from("customers")
+                .select("id")
+                .eq("barbershop_id", rule.barbershop_id)
+                .eq("phone", card.phone)
+                .maybeSingle();
+              if (existingCustomer) {
+                customerId = existingCustomer.id;
+              } else {
+                const { data: createdCustomer } = await supabaseAdmin
+                  .from("customers")
+                  .insert({
+                    barbershop_id: rule.barbershop_id,
+                    name: card.title || card.phone,
+                    phone: card.phone,
+                    status: "lead",
+                    source: "funil",
+                    archived_at: new Date().toISOString(),
+                  })
+                  .select("id")
+                  .single();
+                customerId = createdCustomer?.id ?? null;
+              }
+              if (customerId) {
+                await supabaseAdmin.from("funnel_cards").update({ customer_id: customerId }).eq("id", card.id);
+              }
+            }
+            if (!customerId) continue;
             const enteredAt = new Date(card.stage_entered_at as string).getTime();
 
             for (const step of steps) {
@@ -122,7 +160,7 @@ export const Route = createFileRoute("/api/public/hooks/evaluate-followups")({
                 .from("message_jobs")
                 .insert({
                   barbershop_id: rule.barbershop_id,
-                  customer_id: card.customer_id,
+                  customer_id: customerId,
                   phone: card.phone,
                   rendered_body: usesTemplate ? `[Modelo: ${step.template_name}]` : firstText,
                   message_actions: usesTemplate ? [] : actions,
