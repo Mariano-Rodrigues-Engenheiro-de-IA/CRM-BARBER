@@ -25,6 +25,10 @@ export const agendaReminderRuleBaseSchema = z.object({
   template_name: z.string().trim().max(512).nullable().optional(),
   template_language: z.string().trim().max(10).nullable().optional(),
   confirm_button_text: z.string().trim().max(60).nullable().optional(),
+  // Palavras/frases que, numa resposta DIGITADA (não só clique no
+  // botão), contam como confirmação — comparado sem diferenciar
+  // maiúsculas/acentos (ver normalizeForMatch abaixo).
+  confirm_keywords: z.array(z.string().trim().min(1).max(40)).max(30).optional(),
   active: z.boolean().optional(),
 });
 
@@ -48,8 +52,30 @@ export type AgendaReminderRule = {
   template_name: string | null;
   template_language: string | null;
   confirm_button_text: string | null;
+  confirm_keywords: string[];
   active: boolean;
 };
+
+export const DEFAULT_CONFIRM_KEYWORDS = [
+  "sim", "ok", "okay", "certo", "confirmo", "confirmado", "beleza", "blz", "ta bom", "tá bom",
+];
+
+/** Sem acento e minúsculo, pra comparar resposta digitada do cliente
+ * contra as palavras configuradas sem depender de acento/maiúscula. */
+export function normalizeForMatch(text: string) {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+/** true se o texto digitado pelo cliente contém alguma das palavras de
+ * confirmação da regra (comparação sem acento/maiúscula, por substring). */
+export function textMatchesConfirmKeywords(text: string, keywords: string[]) {
+  const normalized = normalizeForMatch(text);
+  return keywords.some((k) => normalized.includes(normalizeForMatch(k)));
+}
 
 /** Substitui {nome} {data} {hora} {servico} {profissional} no texto —
  * mesma convenção de chaves usada nas Respostas Rápidas. */

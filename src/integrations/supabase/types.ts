@@ -313,6 +313,7 @@ export type Database = {
           applies_to_statuses: string[]
           barbershop_id: string
           confirm_button_text: string | null
+          confirm_keywords: string[]
           created_at: string
           id: string
           kind: string
@@ -328,6 +329,7 @@ export type Database = {
           applies_to_statuses?: string[]
           barbershop_id: string
           confirm_button_text?: string | null
+          confirm_keywords?: string[]
           created_at?: string
           id?: string
           kind: string
@@ -343,6 +345,7 @@ export type Database = {
           applies_to_statuses?: string[]
           barbershop_id?: string
           confirm_button_text?: string | null
+          confirm_keywords?: string[]
           created_at?: string
           id?: string
           kind?: string

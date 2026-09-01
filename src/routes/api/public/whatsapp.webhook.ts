@@ -125,27 +125,39 @@ async function handleAccountUpdate(change: Json) {
 
 async function handleMessagesChange(change: Json) {
   console.info("[whatsapp.webhook] messages recebido:", JSON.stringify(change).slice(0, 2000));
-  // Ingestão de mensagens normais (texto) continua vindo por outro caminho
-  // (sincronização via extensão) — o que ESTE webhook precisa tratar de
-  // verdade é o clique num botão de resposta rápida de um MODELO, usado
-  // pela Confirmação de Agenda: a Meta manda isso como uma mensagem do
-  // tipo "button", com `context.id` = WAMID da mensagem original (casa
-  // com message_jobs.provider_message_id) e `button.text` = texto do
-  // botão clicado.
+  // Ingestão de mensagens normais pro resto do sistema (funil, etc.)
+  // continua vindo por outro caminho (sincronização via extensão) — o que
+  // ESTE webhook trata de verdade é confirmação de agendamento, de duas
+  // formas: clique num botão de resposta rápida do modelo (mensagem tipo
+  // "button", casa pelo WAMID em `context.id`), ou resposta DIGITADA
+  // (mensagem tipo "text" — casa pelo número de telefone com a
+  // confirmação pendente mais recente, e compara o texto contra as
+  // palavras configuradas na regra).
   try {
     const value = (change.value as Json | undefined) ?? {};
+    const metadata = (value.metadata as Json | undefined) ?? {};
+    const phoneNumberId = typeof metadata.phone_number_id === "string" ? metadata.phone_number_id : null;
     const messages = Array.isArray(value.messages) ? (value.messages as Json[]) : [];
     for (const msg of messages) {
-      if (msg.type !== "button") continue;
-      const button = msg.button as Json | undefined;
-      const context = msg.context as Json | undefined;
-      const repliedToWamid = typeof context?.id === "string" ? context.id : null;
-      const buttonText = typeof button?.text === "string" ? button.text : null;
-      if (!repliedToWamid || !buttonText) continue;
-      await handleConfirmationButtonReply(repliedToWamid, buttonText);
+      if (msg.type === "button") {
+        const button = msg.button as Json | undefined;
+        const context = msg.context as Json | undefined;
+        const repliedToWamid = typeof context?.id === "string" ? context.id : null;
+        const buttonText = typeof button?.text === "string" ? button.text : null;
+        if (repliedToWamid && buttonText) {
+          await handleConfirmationButtonReply(repliedToWamid, buttonText);
+        }
+      } else if (msg.type === "text") {
+        const textObj = msg.text as Json | undefined;
+        const body = typeof textObj?.body === "string" ? textObj.body : null;
+        const from = typeof msg.from === "string" ? msg.from : null;
+        if (body && from && phoneNumberId) {
+          await handleConfirmationTextReply(phoneNumberId, from, body);
+        }
+      }
     }
   } catch (e) {
-    console.error("[whatsapp.webhook] falha ao processar clique de botão:", e);
+    console.error("[whatsapp.webhook] falha ao processar mensagem recebida:", e);
   }
 }
 
@@ -173,14 +185,70 @@ async function handleConfirmationButtonReply(repliedToWamid: string, buttonText:
     return;
   }
 
+  await confirmAppointment(job.appointment_id, "botão");
+}
+
+/** Casa uma resposta DIGITADA (não clique) com a confirmação pendente
+ * mais recente daquele número de telefone — não tem WAMID de contexto
+ * pra casar direto, então usa telefone + "ainda não confirmado" + janela
+ * de tempo recente. Se o texto bater com alguma palavra configurada na
+ * regra (sim, ok, confirmo...), confirma. */
+async function handleConfirmationTextReply(phoneNumberId: string, fromPhone: string, text: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { textMatchesConfirmKeywords } = await import("@/lib/agenda-reminders");
+
+  const { data: instance } = await supabaseAdmin
+    .from("whatsapp_instances")
+    .select("barbershop_id")
+    .eq("phone_number_id", phoneNumberId)
+    .maybeSingle();
+  if (!instance?.barbershop_id) return;
+
+  const normalizedPhone = fromPhone.replace(/\D/g, "");
+  const sinceIso = new Date(Date.now() - 48 * 3600_000).toISOString();
+
+  // Confirmação pendente mais recente pra esse telefone: job criado por
+  // uma regra de confirmação, enviado (não falho/pendente), dentro da
+  // janela de 48h, cujo agendamento ainda não está confirmed.
+  const { data: candidates } = await supabaseAdmin
+    .from("message_jobs")
+    .select("id, appointment_id, agenda_reminder_rule_id, sent_at, appointments!inner(status)")
+    .eq("barbershop_id", instance.barbershop_id)
+    .eq("phone", normalizedPhone)
+    .not("agenda_reminder_rule_id", "is", null)
+    .not("appointment_id", "is", null)
+    .eq("status", "sent")
+    .gte("sent_at", sinceIso)
+    .order("sent_at", { ascending: false })
+    .limit(5);
+  if (!candidates?.length) return;
+
+  for (const job of candidates) {
+    const appt = job.appointments as unknown as { status: string } | null;
+    if (appt?.status === "confirmed") continue; // já confirmado, ignora
+    const { data: rule } = await supabaseAdmin
+      .from("agenda_reminder_rules")
+      .select("kind, confirm_keywords")
+      .eq("id", job.agenda_reminder_rule_id as string)
+      .maybeSingle();
+    if (rule?.kind !== "confirmation") continue;
+    const keywords = (rule.confirm_keywords as string[] | null) || [];
+    if (!keywords.length || !textMatchesConfirmKeywords(text, keywords)) continue;
+    await confirmAppointment(job.appointment_id as string, "texto digitado");
+    return; // só a confirmação mais recente que bateu, não continua olhando as outras
+  }
+}
+
+async function confirmAppointment(appointmentId: string, via: "botão" | "texto digitado") {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { error } = await supabaseAdmin
     .from("appointments")
     .update({ status: "confirmed" })
-    .eq("id", job.appointment_id);
+    .eq("id", appointmentId);
   if (error) {
-    console.error("[whatsapp.webhook] falha ao confirmar agendamento via botão:", error.message);
+    console.error(`[whatsapp.webhook] falha ao confirmar agendamento via ${via}:`, error.message);
   } else {
-    console.info("[whatsapp.webhook] agendamento confirmado via botão:", job.appointment_id);
+    console.info(`[whatsapp.webhook] agendamento confirmado via ${via}:`, appointmentId);
   }
 }
 

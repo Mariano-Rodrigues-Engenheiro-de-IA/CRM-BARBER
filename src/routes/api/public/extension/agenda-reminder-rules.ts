@@ -9,7 +9,7 @@ import { authenticateExtension } from "@/lib/extension-auth";
 import { agendaReminderRuleSchema } from "@/lib/agenda-reminders";
 
 const SELECT_COLS =
-  "id, name, kind, offset_minutes, applies_to_statuses, message_text, template_name, template_language, confirm_button_text, active";
+  "id, name, kind, offset_minutes, applies_to_statuses, message_text, template_name, template_language, confirm_button_text, confirm_keywords, active";
 
 export const Route = createFileRoute("/api/public/extension/agenda-reminder-rules")({
   server: {
@@ -65,6 +65,7 @@ export const Route = createFileRoute("/api/public/extension/agenda-reminder-rule
             template_name: parsed.data.template_name ?? null,
             template_language: parsed.data.template_language ?? null,
             confirm_button_text: parsed.data.confirm_button_text ?? null,
+            ...(parsed.data.confirm_keywords ? { confirm_keywords: parsed.data.confirm_keywords } : {}),
             active: parsed.data.active ?? true,
           })
           .select(SELECT_COLS)
