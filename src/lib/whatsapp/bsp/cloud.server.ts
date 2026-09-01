@@ -17,6 +17,20 @@ type Json = Record<string, unknown>;
 
 const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
 
+/** Garante o código do país na frente do número — a Cloud API exige o
+ * formato internacional completo (ex: 5561983012868), e nem todo telefone
+ * salvo no sistema tem isso: números digitados manualmente na Agenda
+ * (sem passar pelo WhatsApp) costumam vir só no formato local (DDD +
+ * número, 10 ou 11 dígitos), enquanto contatos sincronizados do WhatsApp
+ * já vêm com o "55" na frente. Sem essa normalização, a Meta rejeita o
+ * envio com "(#100) Invalid parameter" sem dizer o motivo de verdade. */
+function toE164BR(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("55") && digits.length >= 12) return digits;
+  if (digits.length === 10 || digits.length === 11) return `55${digits}`;
+  return digits;
+}
+
 function graphVersion(): string {
   return process.env.META_GRAPH_VERSION ?? "v26.0";
 }
@@ -348,7 +362,7 @@ export const cloudAdapter: BspAdapter = {
         body: JSON.stringify({
           messaging_product: "whatsapp",
           recipient_type: "individual",
-          to: to.replace(/\D/g, ""),
+          to: toE164BR(to),
           type: "text",
           text: { preview_url: false, body: text },
         }),
@@ -417,7 +431,7 @@ export const cloudAdapter: BspAdapter = {
         body: JSON.stringify({
           messaging_product: "whatsapp",
           recipient_type: "individual",
-          to: to.replace(/\D/g, ""),
+          to: toE164BR(to),
           type: "template",
           template: {
             name: template_name,

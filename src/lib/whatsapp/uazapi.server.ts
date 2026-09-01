@@ -21,6 +21,16 @@ import type {
   InstanceStatus,
 } from "./types";
 
+/** Mesma normalização de src/lib/whatsapp/bsp/cloud.server.ts — garante o
+ * código do país (55) na frente de números salvos só no formato local
+ * (ex: digitados manualmente na Agenda, sem passar pelo WhatsApp). */
+function toE164BR(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("55") && digits.length >= 12) return digits;
+  if (digits.length === 10 || digits.length === 11) return `55${digits}`;
+  return digits;
+}
+
 function baseUrl(): string {
   const raw = process.env.UAZAPI_BASE_URL;
   if (!raw) throw new Error("UAZAPI_BASE_URL não configurada");
@@ -372,7 +382,7 @@ export const uazapiProvider: WhatsAppProvider = {
   },
 
   async sendText({ instance_token, to, text }) {
-    const number = to.replace(/\D+/g, "");
+    const number = toE164BR(to);
     const res = await uaz("/send/text", {
       method: "POST",
       token: instance_token,
