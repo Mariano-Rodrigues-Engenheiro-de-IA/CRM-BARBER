@@ -1,9 +1,4 @@
 // Sub-aba da Agenda: Lembretes / Confirmações.
-//
-// Lembrete = aviso informativo (texto livre com variáveis), sem esperar
-// resposta. Confirmação = manda um MODELO aprovado com botões de resposta
-// rápida — quando o cliente toca em "Confirmar", o agendamento muda pra
-// confirmado sozinho (ver o webhook da Meta + evaluate-agenda-reminders).
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,8 +34,6 @@ const STATUS_LABELS: Record<string, string> = {
   canceled: "Cancelado",
 };
 
-/** Converte minutos pra um valor + unidade mais fácil de editar (ex: 1440
- * min vira "1 dia" em vez de "1440 minutos"). */
 function minutesToValueUnit(min: number): { value: number; unit: "minutos" | "horas" | "dias" } {
   if (min % (60 * 24) === 0 && min > 0) return { value: min / (60 * 24), unit: "dias" };
   if (min % 60 === 0 && min > 0) return { value: min / 60, unit: "horas" };
@@ -55,6 +48,7 @@ function valueUnitToMinutes(value: number, unit: "minutos" | "horas" | "dias") {
 export function AgendaRemindersView({ api }: { api: Api }) {
   const [rules, setRules] = useState<ReminderRule[] | null>(null);
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
+  const [isMetaProvider, setIsMetaProvider] = useState(false);
   const [editing, setEditing] = useState<ReminderRule | null | "new">(null);
   const { confirm, dialog } = useConfirm();
 
@@ -65,6 +59,11 @@ export function AgendaRemindersView({ api }: { api: Api }) {
 
   useEffect(() => {
     void reload();
+    api("/api/public/extension/whatsapp/status").then((st) => {
+      if (st?.ok && st.connection) {
+        setIsMetaProvider((st.connection as { provider?: string }).provider === "meta");
+      }
+    });
     api("/api/public/extension/whatsapp/templates")
       .then((t) => {
         if (!t?.ok) return;
@@ -125,14 +124,7 @@ export function AgendaRemindersView({ api }: { api: Api }) {
   return (
     <div className="space-y-4">
       {dialog}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-neutral-900">Lembretes / Confirmações</h2>
-          <p className="text-sm text-neutral-500">
-            Mensagens automáticas antes do horário do agendamento — quantas regras você quiser, cada uma com seu
-            próprio tempo e conteúdo.
-          </p>
-        </div>
+      <div className="flex items-center justify-end">
         <Button onClick={() => setEditing("new")} className="gap-1.5">
           <Plus className="h-4 w-4" /> Nova regra
         </Button>
@@ -159,7 +151,7 @@ export function AgendaRemindersView({ api }: { api: Api }) {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-neutral-900">{rule.name}</p>
                   <p className="truncate text-xs text-neutral-500">
-                    {rule.kind === "confirmation" ? "Confirmação" : "Lembrete"} · {value} {unit} antes ·{" "}
+                    {rule.kind === "confirmation" ? "Confirmação" : "Lembrete"}, {value} {unit} antes,{" "}
                     {rule.applies_to_statuses.map((s) => STATUS_LABELS[s] || s).join(", ")}
                   </p>
                 </div>
@@ -181,6 +173,7 @@ export function AgendaRemindersView({ api }: { api: Api }) {
           api={api}
           rule={editing === "new" ? null : editing}
           templates={templates}
+          isMetaProvider={isMetaProvider}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
@@ -196,12 +189,14 @@ function ReminderRuleForm({
   api,
   rule,
   templates,
+  isMetaProvider,
   onClose,
   onSaved,
 }: {
   api: Api;
   rule: ReminderRule | null;
   templates: TemplateOption[];
+  isMetaProvider: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -216,13 +211,17 @@ function ReminderRuleForm({
   const [confirmButtonText, setConfirmButtonText] = useState(rule?.confirm_button_text || "");
   const [saving, setSaving] = useState(false);
 
-  const confirmTemplates = templates.filter((t) => t.status === "APPROVED" && t.hasQuickReplyButtons);
+  const reminderNeedsTemplate = kind === "reminder" && isMetaProvider;
+  const allTemplates = templates.filter((t) => t.status === "APPROVED");
+  const confirmTemplates = allTemplates.filter((t) => t.hasQuickReplyButtons);
+  const templateOptions = kind === "confirmation" ? confirmTemplates : allTemplates;
   const selectedTemplate = templates.find((t) => t.name === templateName);
+  const usesTemplate = kind === "confirmation" || reminderNeedsTemplate;
 
   async function submit() {
     if (!name.trim()) return toast.error("Dá um nome pra regra.");
-    if (kind === "reminder" && !messageText.trim()) return toast.error("Escreve a mensagem do lembrete.");
-    if (kind === "confirmation" && !templateName) return toast.error("Escolhe um modelo com botões.");
+    if (usesTemplate && !templateName) return toast.error("Escolhe um modelo aprovado.");
+    if (!usesTemplate && !messageText.trim()) return toast.error("Escreve a mensagem do lembrete.");
     if (kind === "confirmation" && !confirmButtonText) return toast.error("Escolhe qual botão conta como confirmação.");
     if (!statuses.length) return toast.error("Escolhe pelo menos um status de agendamento.");
 
@@ -232,9 +231,9 @@ function ReminderRuleForm({
       kind,
       offset_minutes: valueUnitToMinutes(offsetValue, offsetUnit),
       applies_to_statuses: statuses,
-      message_text: kind === "reminder" ? messageText.trim() : null,
-      template_name: kind === "confirmation" ? templateName : null,
-      template_language: kind === "confirmation" ? selectedTemplate?.language || "pt_BR" : null,
+      message_text: usesTemplate ? null : messageText.trim(),
+      template_name: usesTemplate ? templateName : null,
+      template_language: usesTemplate ? selectedTemplate?.language || "pt_BR" : null,
       confirm_button_text: kind === "confirmation" ? confirmButtonText : null,
     };
     const r = rule
@@ -278,7 +277,7 @@ function ReminderRuleForm({
               >
                 <Bell className="mb-1 h-4 w-4 text-amber-600" />
                 <p className="font-medium text-neutral-900">Lembrete</p>
-                <p className="text-xs text-neutral-500">Aviso informativo, texto livre</p>
+                <p className="text-xs text-neutral-500">Aviso informativo</p>
               </button>
               <button
                 type="button"
@@ -287,7 +286,7 @@ function ReminderRuleForm({
               >
                 <MessageSquareCheck className="mb-1 h-4 w-4 text-sky-600" />
                 <p className="font-medium text-neutral-900">Confirmação</p>
-                <p className="text-xs text-neutral-500">Modelo com botão — confirma sozinho</p>
+                <p className="text-xs text-neutral-500">Modelo com botão, confirma sozinho</p>
               </button>
             </div>
           </div>
@@ -337,7 +336,7 @@ function ReminderRuleForm({
             </div>
           </div>
 
-          {kind === "reminder" ? (
+          {!usesTemplate ? (
             <div>
               <Label>Mensagem</Label>
               <Textarea
@@ -356,12 +355,17 @@ function ReminderRuleForm({
             </div>
           ) : (
             <div className="space-y-3">
+              {reminderNeedsTemplate && (
+                <p className="text-xs text-neutral-500">
+                  Seu número está conectado via Meta, então o lembrete precisa de um modelo aprovado.
+                </p>
+              )}
               <div>
-                <Label>Modelo aprovado (com botões)</Label>
-                {confirmTemplates.length === 0 ? (
+                <Label>Modelo aprovado{kind === "confirmation" ? " com botões" : ""}</Label>
+                {templateOptions.length === 0 ? (
                   <p className="mt-1 text-xs text-amber-600">
-                    Nenhum modelo aprovado com botões de resposta rápida encontrado. Crie um na aba "Modelos" com
-                    botões tipo "Confirmar" / "Cancelar".
+                    Nenhum modelo aprovado{kind === "confirmation" ? " com botões de resposta rápida" : ""} encontrado.
+                    Cria um na aba Modelos{kind === "confirmation" ? ' com botões tipo "Confirmar" e "Cancelar"' : ""}.
                   </p>
                 ) : (
                   <Select value={templateName} onValueChange={(v) => { setTemplateName(v); setConfirmButtonText(""); }}>
@@ -369,7 +373,7 @@ function ReminderRuleForm({
                       <SelectValue placeholder="Escolha um modelo…" />
                     </SelectTrigger>
                     <SelectContent>
-                      {confirmTemplates.map((t) => (
+                      {templateOptions.map((t) => (
                         <SelectItem key={t.name} value={t.name}>
                           {t.name}
                         </SelectItem>
@@ -378,7 +382,7 @@ function ReminderRuleForm({
                   </Select>
                 )}
               </div>
-              {selectedTemplate && selectedTemplate.buttonTexts.length > 0 && (
+              {kind === "confirmation" && selectedTemplate && selectedTemplate.buttonTexts.length > 0 && (
                 <div>
                   <Label>Qual botão conta como confirmação</Label>
                   <Select value={confirmButtonText} onValueChange={setConfirmButtonText}>

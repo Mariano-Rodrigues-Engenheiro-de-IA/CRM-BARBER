@@ -10,7 +10,7 @@ import { jsonResponse, preflight } from "@/lib/extension-cors";
 import { authenticateExtension } from "@/lib/extension-auth";
 import { funnelFollowupRuleSchema } from "@/lib/funnel-followups";
 
-const STEP_COLS = "id, delay_minutes, actions, skip_if_replied, sort_order";
+const STEP_COLS = "id, delay_minutes, actions, template_name, template_language, skip_if_replied, sort_order";
 
 export const Route = createFileRoute("/api/public/extension/funnel-followup-rules")({
   server: {
@@ -110,7 +110,9 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
             rule_id: ruleId,
             sort_order: i,
             delay_minutes: s.delay_minutes,
-            actions: s.actions,
+            actions: s.actions ?? [],
+            template_name: s.template_name ?? null,
+            template_language: s.template_language ?? null,
             skip_if_replied: s.skip_if_replied ?? false,
           })),
         );

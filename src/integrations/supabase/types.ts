@@ -456,6 +456,8 @@ export type Database = {
           rule_id: string
           skip_if_replied: boolean
           sort_order: number
+          template_language: string | null
+          template_name: string | null
         }
         Insert: {
           actions?: Json
@@ -465,6 +467,8 @@ export type Database = {
           rule_id: string
           skip_if_replied?: boolean
           sort_order?: number
+          template_language?: string | null
+          template_name?: string | null
         }
         Update: {
           actions?: Json
@@ -474,6 +478,8 @@ export type Database = {
           rule_id?: string
           skip_if_replied?: boolean
           sort_order?: number
+          template_language?: string | null
+          template_name?: string | null
         }
         Relationships: [
           {

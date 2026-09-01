@@ -1,10 +1,8 @@
-// Aba "Follow-up" — sequência de mensagens programadas por ETAPA de funil.
+// Aba "Follow-up": sequência de mensagens programadas por ETAPA de funil.
 //
-// Lógica: escolhe um funil, escolhe uma etapa dele, configura uma
-// sequência de passos ("3 dias parado aqui, manda X; 7 dias, manda Y").
-// O tempo conta a partir de quando o lead ENTROU na etapa atual
-// (funnel_cards.stage_entered_at) — sai da etapa, a sequência reseta.
-// Pré-configurado pelo usuário; nenhuma IA envolvida por enquanto.
+// O tempo de cada passo conta a partir de quando o lead entrou na etapa
+// atual (funnel_cards.stage_entered_at). Sai da etapa, a sequência
+// reseta. Pré-configurado pelo usuário; nenhuma IA envolvida por enquanto.
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +21,8 @@ type FollowupStep = {
   id?: string;
   delay_minutes: number;
   actions: Array<{ type: "text"; text: string }>;
+  template_name: string | null;
+  template_language: string | null;
   skip_if_replied: boolean;
 };
 
@@ -33,6 +33,8 @@ type FollowupRule = {
   active: boolean;
   steps: FollowupStep[];
 };
+
+type TemplateOption = { name: string; language: string; status: string };
 
 function minutesToValueUnit(min: number): { value: number; unit: "minutos" | "horas" | "dias" } {
   if (min % (60 * 24) === 0 && min > 0) return { value: min / (60 * 24), unit: "dias" };
@@ -45,10 +47,16 @@ function valueUnitToMinutes(value: number, unit: "minutos" | "horas" | "dias") {
   return value;
 }
 
+function emptyStep(): FollowupStep {
+  return { delay_minutes: 60 * 24 * 3, actions: [{ type: "text", text: "" }], template_name: null, template_language: null, skip_if_replied: true };
+}
+
 export function FollowupView({ api }: { api: Api }) {
   const [funnels, setFunnels] = useState<Funnel[] | null>(null);
   const [funnelId, setFunnelId] = useState<string>("");
   const [rules, setRules] = useState<FollowupRule[]>([]);
+  const [templates, setTemplates] = useState<TemplateOption[]>([]);
+  const [isMetaProvider, setIsMetaProvider] = useState(false);
   const [editingStageId, setEditingStageId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -58,6 +66,23 @@ export function FollowupView({ api }: { api: Api }) {
       setFunnels(list);
       if (list.length) setFunnelId((cur) => cur || list[0].id);
     });
+    api("/api/public/extension/whatsapp/status").then((st) => {
+      if (st?.ok && st.connection) {
+        setIsMetaProvider((st.connection as { provider?: string }).provider === "meta");
+      }
+    });
+    api("/api/public/extension/whatsapp/templates")
+      .then((t) => {
+        if (!t?.ok) return;
+        setTemplates(
+          ((t.templates as Array<{ name: string; language: string; status: string }>) || []).map((tpl) => ({
+            name: tpl.name,
+            language: tpl.language,
+            status: tpl.status,
+          })),
+        );
+      })
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -76,19 +101,11 @@ export function FollowupView({ api }: { api: Api }) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold text-neutral-900">Follow-up</h2>
-        <p className="text-sm text-neutral-500">
-          Sequência de mensagens automáticas por etapa do funil — o lead fica parado numa coluna, e depois de um
-          tempo (configurado por você) o sistema manda a próxima mensagem da sequência sozinho.
-        </p>
-      </div>
-
       {!funnels ? (
         <p className="text-sm text-neutral-500">Carregando…</p>
       ) : funnels.length === 0 ? (
         <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-8 text-center">
-          <p className="text-sm text-neutral-500">Nenhum funil criado ainda. Cria um na aba "Funis de Vendas" primeiro.</p>
+          <p className="text-sm text-neutral-500">Nenhum funil criado ainda. Cria um na aba Funis de Vendas primeiro.</p>
         </div>
       ) : (
         <>
@@ -127,7 +144,7 @@ export function FollowupView({ api }: { api: Api }) {
                         <p className="text-xs text-neutral-500">
                           {stepCount === 0
                             ? "Sem follow-up configurado"
-                            : `${stepCount} passo${stepCount === 1 ? "" : "s"} configurado${stepCount === 1 ? "" : "s"}${rule && !rule.active ? " · pausado" : ""}`}
+                            : `${stepCount} passo${stepCount === 1 ? "" : "s"} configurado${stepCount === 1 ? "" : "s"}${rule && !rule.active ? ", pausado" : ""}`}
                         </p>
                       </div>
                       {stepCount > 0 && (
@@ -152,6 +169,8 @@ export function FollowupView({ api }: { api: Api }) {
           stageName={editingStage.name}
           stageId={editingStage.id}
           rule={editingRule}
+          templates={templates}
+          isMetaProvider={isMetaProvider}
           onClose={() => setEditingStageId(null)}
           onSaved={() => {
             setEditingStageId(null);
@@ -169,6 +188,8 @@ function StageFollowupEditor({
   stageId,
   stageName,
   rule,
+  templates,
+  isMetaProvider,
   onClose,
   onSaved,
 }: {
@@ -177,31 +198,33 @@ function StageFollowupEditor({
   stageId: string;
   stageName: string;
   rule: FollowupRule | null;
+  templates: TemplateOption[];
+  isMetaProvider: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [active, setActive] = useState(rule?.active ?? true);
-  const [steps, setSteps] = useState<FollowupStep[]>(
-    rule?.steps.length
-      ? rule.steps
-      : [{ delay_minutes: 60 * 24 * 3, actions: [{ type: "text", text: "" }], skip_if_replied: true }],
-  );
+  const [steps, setSteps] = useState<FollowupStep[]>(rule?.steps.length ? rule.steps : [emptyStep()]);
   const [saving, setSaving] = useState(false);
   const { confirm, dialog } = useConfirm();
+
+  const approvedTemplates = templates.filter((t) => t.status === "APPROVED");
 
   function updateStep(i: number, patch: Partial<FollowupStep>) {
     setSteps((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
   }
   function addStep() {
-    setSteps((prev) => [...prev, { delay_minutes: 60 * 24 * 7, actions: [{ type: "text", text: "" }], skip_if_replied: true }]);
+    setSteps((prev) => [...prev, emptyStep()]);
   }
   function removeStep(i: number) {
     setSteps((prev) => prev.filter((_, idx) => idx !== i));
   }
 
   async function submit() {
-    const cleaned = steps.filter((s) => s.actions[0]?.text?.trim());
-    if (!cleaned.length) return toast.error("Escreve pelo menos uma mensagem.");
+    const cleaned = steps.filter((s) => (isMetaProvider ? !!s.template_name : s.actions[0]?.text?.trim()));
+    if (!cleaned.length) {
+      return toast.error(isMetaProvider ? "Escolhe um modelo em pelo menos um passo." : "Escreve pelo menos uma mensagem.");
+    }
     setSaving(true);
     const r = await api("/api/public/extension/funnel-followup-rules", {
       method: "POST",
@@ -211,7 +234,9 @@ function StageFollowupEditor({
         active,
         steps: cleaned.map((s) => ({
           delay_minutes: s.delay_minutes,
-          actions: [{ type: "text", text: s.actions[0].text.trim() }],
+          actions: isMetaProvider ? [] : [{ type: "text", text: s.actions[0].text.trim() }],
+          template_name: isMetaProvider ? s.template_name : null,
+          template_language: isMetaProvider ? "pt_BR" : null,
           skip_if_replied: s.skip_if_replied,
         })),
       }),
@@ -251,15 +276,16 @@ function StageFollowupEditor({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-1 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-neutral-900">Follow-up · {stageName}</h3>
+          <h3 className="text-base font-semibold text-neutral-900">Follow-up, {stageName}</h3>
           <div className="flex items-center gap-2">
             <span className="text-xs text-neutral-500">{active ? "Ativo" : "Pausado"}</span>
             <Switch checked={active} onCheckedChange={setActive} />
           </div>
         </div>
         <p className="mb-4 text-xs text-neutral-500">
-          O tempo de cada passo conta a partir de quando o lead ENTROU nessa etapa. Só suporta texto por enquanto —
-          imagem/vídeo no envio automático ainda não é suportado.
+          {isMetaProvider
+            ? "Seu número está conectado via Meta, então cada passo precisa de um modelo aprovado."
+            : "O tempo de cada passo conta a partir de quando o lead entrou nessa etapa."}
         </p>
 
         <div className="space-y-3">
@@ -269,7 +295,7 @@ function StageFollowupEditor({
               <div key={i} className="rounded-xl border border-neutral-200 p-3">
                 <div className="mb-2 flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-xs font-medium text-neutral-600">
-                    <Clock className="h-3.5 w-3.5" /> Passo {i + 1} —
+                    <Clock className="h-3.5 w-3.5" /> Passo {i + 1}
                     <Input
                       type="number"
                       min={0}
@@ -297,12 +323,35 @@ function StageFollowupEditor({
                     </button>
                   )}
                 </div>
-                <Textarea
-                  value={step.actions[0]?.text || ""}
-                  onChange={(e) => updateStep(i, { actions: [{ type: "text", text: e.target.value }] })}
-                  rows={2}
-                  placeholder="Mensagem que será enviada…"
-                />
+
+                {isMetaProvider ? (
+                  approvedTemplates.length === 0 ? (
+                    <p className="text-xs text-amber-600">
+                      Nenhum modelo aprovado encontrado. Cria um na aba Modelos.
+                    </p>
+                  ) : (
+                    <Select value={step.template_name || ""} onValueChange={(v) => updateStep(i, { template_name: v })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Escolha um modelo…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {approvedTemplates.map((t) => (
+                          <SelectItem key={t.name} value={t.name}>
+                            {t.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )
+                ) : (
+                  <Textarea
+                    value={step.actions[0]?.text || ""}
+                    onChange={(e) => updateStep(i, { actions: [{ type: "text", text: e.target.value }] })}
+                    rows={2}
+                    placeholder="Mensagem que será enviada…"
+                  />
+                )}
+
                 <label className="mt-2 flex items-center gap-2 text-xs text-neutral-600">
                   <input
                     type="checkbox"

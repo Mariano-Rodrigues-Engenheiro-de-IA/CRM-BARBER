@@ -816,7 +816,7 @@ function Painel() {
       <div className="flex-1 min-w-0 h-full overflow-y-auto">
         {section === "agenda" && token && (
           <>
-            <SectionHeader icon={<IconCalendar />} title={agendaTab === "agenda" ? "Agenda" : "Lembretes / Confirmações"} />
+            <SectionHeader icon={<IconCalendar />} title="Agenda" subtitle={agendaTab === "lembretes" ? "Lembretes / Confirmações" : undefined} />
             <main className="px-4 py-4">
               {agendaTab === "agenda" ? (
                 <AgendaView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />

@@ -101,18 +101,23 @@ export const Route = createFileRoute("/api/public/hooks/evaluate-agenda-reminder
               profissional: professionalName,
             };
 
-            const isConfirmation = rule.kind === "confirmation";
+            // Confirmação sempre usa modelo. Lembrete pode usar modelo OU
+            // texto livre — depende do que foi configurado na regra
+            // (a tela só oferece texto livre quando o número não está
+            // conectado via Meta, já que texto livre não é entregue de
+            // forma confiável na API oficial).
+            const usesTemplate = rule.kind === "confirmation" || !!rule.template_name;
             const { data: job, error: jobErr } = await supabaseAdmin
               .from("message_jobs")
               .insert({
                 barbershop_id: rule.barbershop_id,
                 customer_id: appt.customer_id,
                 phone: customer.phone,
-                rendered_body: isConfirmation
+                rendered_body: usesTemplate
                   ? `[Modelo: ${rule.template_name}]`
                   : renderAgendaReminderText(rule.message_text || "", vars),
-                template_name: isConfirmation ? rule.template_name : null,
-                template_language: isConfirmation ? rule.template_language : null,
+                template_name: usesTemplate ? rule.template_name : null,
+                template_language: usesTemplate ? rule.template_language : null,
                 status: "pending",
                 scheduled_for: now.toISOString(),
                 expires_at: new Date(now.getTime() + 48 * 3600_000).toISOString(),

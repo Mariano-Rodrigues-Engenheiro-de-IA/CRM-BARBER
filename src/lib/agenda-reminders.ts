@@ -3,13 +3,16 @@ import { z } from "zod";
 // Lembretes/Confirmações da Agenda — mensagem automática X minutos antes
 // do horário do agendamento.
 //
-//  - "reminder": aviso informativo, texto livre com variáveis
-//    {nome} {data} {hora} {servico} {profissional} — não espera resposta.
-//  - "confirmation": manda um MODELO aprovado (precisa ter botões de
-//    resposta rápida configurados na Meta, ex: "Confirmar" / "Cancelar").
-//    Quando o cliente toca em "Confirmar", o agendamento muda pra
-//    confirmed sozinho — a correlação usa o WAMID da mensagem enviada
-//    (ver provider_message_id em message_jobs e o webhook da Meta).
+//  - "reminder": aviso informativo, não espera resposta. Manda texto
+//    livre com variáveis {nome} {data} {hora} {servico} {profissional}
+//    OU um modelo aprovado, dependendo do provedor conectado — número
+//    conectado via Meta (API oficial) só entrega mensagem por modelo
+//    aprovado; texto livre só funciona no provedor não oficial.
+//  - "confirmation": manda um MODELO aprovado com botões de resposta
+//    rápida (ex: "Confirmar" / "Cancelar"). Quando o cliente toca em
+//    "Confirmar", o agendamento muda pra confirmed sozinho — a
+//    correlação usa o WAMID da mensagem enviada (ver provider_message_id
+//    em message_jobs e o webhook da Meta).
 
 export const AGENDA_REMINDER_STATUS_OPTIONS = ["scheduled", "confirmed", "done", "canceled"] as const;
 
@@ -26,8 +29,8 @@ export const agendaReminderRuleBaseSchema = z.object({
 });
 
 export const agendaReminderRuleSchema = agendaReminderRuleBaseSchema
-  .refine((v) => v.kind !== "reminder" || !!v.message_text?.trim(), {
-    message: "Lembrete precisa de uma mensagem.",
+  .refine((v) => v.kind !== "reminder" || !!v.message_text?.trim() || !!v.template_name, {
+    message: "Lembrete precisa de uma mensagem ou de um modelo.",
     path: ["message_text"],
   })
   .refine((v) => v.kind !== "confirmation" || (!!v.template_name && !!v.template_language), {
