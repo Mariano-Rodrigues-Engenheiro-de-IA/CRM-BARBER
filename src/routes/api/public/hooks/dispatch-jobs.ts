@@ -103,7 +103,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
           // silenciosamente jobs com campaign_id nulo, se algum existir.)
           const { data: jobs } = await supabaseAdmin
             .from("message_jobs")
-            .select("id, customer_id, rendered_body, message_actions, template_name, template_language, template_header_media_path, template_carousel_media_paths, campaign_id, attempts")
+            .select("id, customer_id, rendered_body, message_actions, template_name, template_language, template_header_media_path, template_carousel_media_paths, campaign_id, attempts, agenda_reminder_rule_id, appointment_id, funnel_followup_step_id")
             .eq("barbershop_id", inst.barbershop_id)
             .eq("status", "pending")
             // Jobs marcados force_extension nunca passam pela API oficial
@@ -162,6 +162,20 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
                 .update({ status: "failed", last_error: "Cliente sem telefone" })
                 .eq("id", job.id);
               totalFailed++;
+              if (job.agenda_reminder_rule_id && job.appointment_id) {
+                await supabaseAdmin
+                  .from("agenda_reminder_sent_log")
+                  .delete()
+                  .eq("appointment_id", job.appointment_id)
+                  .eq("rule_id", job.agenda_reminder_rule_id);
+              }
+              if (job.funnel_followup_step_id) {
+                await supabaseAdmin
+                  .from("funnel_followup_sent_log")
+                  .delete()
+                  .eq("step_id", job.funnel_followup_step_id)
+                  .eq("message_job_id", job.id);
+              }
               continue;
             }
 
@@ -337,6 +351,29 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
                 severity: willRetry ? "warning" : "error",
                 details: { job_id: job.id, error: result.error, attempts },
               });
+              // Falha DEFINITIVA (não vai tentar de novo esse job) num
+              // lembrete/confirmação/follow-up: limpa o registro de "já
+              // mandado" pra esse agendamento/card poder ser avaliado nos
+              // próximos ciclos de novo, em vez de ficar preso pra sempre
+              // achando que já tentou (era isso que fazia o Mariano criar
+              // uma regra nova e nada acontecer — o avaliador pulava o
+              // mesmo agendamento achando que já tinha mandado).
+              if (!willRetry) {
+                if (job.agenda_reminder_rule_id && job.appointment_id) {
+                  await supabaseAdmin
+                    .from("agenda_reminder_sent_log")
+                    .delete()
+                    .eq("appointment_id", job.appointment_id)
+                    .eq("rule_id", job.agenda_reminder_rule_id);
+                }
+                if (job.funnel_followup_step_id) {
+                  await supabaseAdmin
+                    .from("funnel_followup_sent_log")
+                    .delete()
+                    .eq("step_id", job.funnel_followup_step_id)
+                    .eq("message_job_id", job.id);
+                }
+              }
             }
 
 
