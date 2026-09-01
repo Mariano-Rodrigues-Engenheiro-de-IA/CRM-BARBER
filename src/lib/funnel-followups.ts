@@ -15,6 +15,8 @@ export const followupStepSchema = z
     actions: z.array(quickReplyActionSchema).max(10).optional(),
     template_name: z.string().trim().max(512).nullable().optional(),
     template_language: z.string().trim().max(10).nullable().optional(),
+    // Só quando o modelo escolhido nesse passo tiver cabeçalho de imagem.
+    template_header_media_path: z.string().trim().max(400).nullable().optional(),
     skip_if_replied: z.boolean().optional(),
   })
   .refine((v) => (v.actions && v.actions.length > 0) || !!v.template_name, {
@@ -35,6 +37,7 @@ export type FollowupStep = {
   actions: QuickReplyAction[];
   template_name: string | null;
   template_language: string | null;
+  template_header_media_path: string | null;
   skip_if_replied: boolean;
   sort_order: number;
 };

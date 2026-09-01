@@ -32,7 +32,7 @@ export const Route = createFileRoute("/api/public/hooks/evaluate-agenda-reminder
 
         const { data: rules, error: rulesErr } = await supabaseAdmin
           .from("agenda_reminder_rules")
-          .select("id, barbershop_id, name, kind, offset_minutes, applies_to_statuses, message_text, template_name, template_language, confirm_button_text")
+          .select("id, barbershop_id, name, kind, offset_minutes, applies_to_statuses, message_text, template_name, template_language, template_header_media_path, confirm_button_text")
           .eq("active", true);
         if (rulesErr) {
           return new Response(JSON.stringify({ ok: false, error: rulesErr.message }), { status: 500 });
@@ -118,6 +118,7 @@ export const Route = createFileRoute("/api/public/hooks/evaluate-agenda-reminder
                   : renderAgendaReminderText(rule.message_text || "", vars),
                 template_name: usesTemplate ? rule.template_name : null,
                 template_language: usesTemplate ? rule.template_language : null,
+                template_header_media_path: usesTemplate ? rule.template_header_media_path : null,
                 status: "pending",
                 scheduled_for: now.toISOString(),
                 expires_at: new Date(now.getTime() + 48 * 3600_000).toISOString(),

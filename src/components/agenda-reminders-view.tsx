@@ -11,6 +11,15 @@ import { Bell, MessageSquareCheck, Plus, Trash2, Pencil, X } from "lucide-react"
 import { useConfirm } from "@/components/confirm-dialog";
 import { DEFAULT_CONFIRM_KEYWORDS } from "@/lib/agenda-reminders";
 
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
+    reader.readAsDataURL(file);
+  });
+}
+
 type Api = (path: string, opts?: RequestInit) => Promise<any>;
 
 type ReminderRule = {
@@ -22,12 +31,13 @@ type ReminderRule = {
   message_text: string | null;
   template_name: string | null;
   template_language: string | null;
+  template_header_media_path: string | null;
   confirm_button_text: string | null;
   confirm_keywords: string[];
   active: boolean;
 };
 
-type TemplateOption = { name: string; language: string; status: string; hasQuickReplyButtons: boolean; buttonTexts: string[] };
+type TemplateOption = { name: string; language: string; status: string; hasQuickReplyButtons: boolean; buttonTexts: string[]; hasImageHeader: boolean };
 
 const STATUS_LABELS: Record<string, string> = {
   scheduled: "Aguardando confirmação",
@@ -75,7 +85,7 @@ export function AgendaRemindersView({ api }: { api: Api }) {
               name: string;
               language: string;
               status: string;
-              components?: Array<{ type?: string; buttons?: Array<{ type?: string; text?: string }> }>;
+              components?: Array<{ type?: string; format?: string; buttons?: Array<{ type?: string; text?: string }> }>;
             }>) || []
           ).map((tpl) => {
             const buttonsComp = (tpl.components || []).find((c) => String(c.type).toUpperCase() === "BUTTONS");
@@ -86,6 +96,9 @@ export function AgendaRemindersView({ api }: { api: Api }) {
               status: tpl.status,
               hasQuickReplyButtons: quickReplies.length > 0,
               buttonTexts: quickReplies.map((b) => b.text || "").filter(Boolean),
+              hasImageHeader: (tpl.components || []).some(
+                (c) => String(c.type).toUpperCase() === "HEADER" && String(c.format).toUpperCase() === "IMAGE",
+              ),
             };
           }),
         );
@@ -213,6 +226,9 @@ function ReminderRuleForm({
   const [confirmButtonText, setConfirmButtonText] = useState(rule?.confirm_button_text || "");
   const [confirmKeywords, setConfirmKeywords] = useState<string[]>(rule?.confirm_keywords || DEFAULT_CONFIRM_KEYWORDS);
   const [newKeyword, setNewKeyword] = useState("");
+  const [headerMediaPath, setHeaderMediaPath] = useState<string | null>(rule?.template_header_media_path || null);
+  const [headerPreview, setHeaderPreview] = useState<string | null>(null);
+  const [uploadingHeader, setUploadingHeader] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const reminderNeedsTemplate = kind === "reminder" && isMetaProvider;
@@ -222,11 +238,33 @@ function ReminderRuleForm({
   const selectedTemplate = templates.find((t) => t.name === templateName);
   const usesTemplate = kind === "confirmation" || reminderNeedsTemplate;
 
+  async function handleHeaderFile(file: File) {
+    setUploadingHeader(true);
+    try {
+      const dataUrl = await fileToBase64(file);
+      const r = await api("/api/public/extension/quick-replies/upload", {
+        method: "POST",
+        body: JSON.stringify({ filename: file.name, mime: file.type || "image/jpeg", data_base64: dataUrl }),
+      });
+      if (!r?.ok) {
+        toast.error((r?.error as string) || "Falha ao enviar a imagem.");
+        return;
+      }
+      setHeaderMediaPath((r.path as string) || null);
+      setHeaderPreview(dataUrl);
+    } finally {
+      setUploadingHeader(false);
+    }
+  }
+
   async function submit() {
     if (!name.trim()) return toast.error("Dá um nome pra regra.");
     if (usesTemplate && !templateName) return toast.error("Escolhe um modelo aprovado.");
     if (!usesTemplate && !messageText.trim()) return toast.error("Escreve a mensagem do lembrete.");
     if (kind === "confirmation" && !confirmButtonText) return toast.error("Escolhe qual botão conta como confirmação.");
+    if (usesTemplate && selectedTemplate?.hasImageHeader && !headerMediaPath) {
+      return toast.error("Esse modelo tem imagem no cabeçalho, envie uma imagem antes de salvar.");
+    }
     if (!statuses.length) return toast.error("Escolhe pelo menos um status de agendamento.");
 
     setSaving(true);
@@ -238,6 +276,7 @@ function ReminderRuleForm({
       message_text: usesTemplate ? null : messageText.trim(),
       template_name: usesTemplate ? templateName : null,
       template_language: usesTemplate ? selectedTemplate?.language || "pt_BR" : null,
+      template_header_media_path: usesTemplate && selectedTemplate?.hasImageHeader ? headerMediaPath : null,
       confirm_button_text: kind === "confirmation" ? confirmButtonText : null,
       confirm_keywords: kind === "confirmation" ? confirmKeywords : undefined,
     };
@@ -373,20 +412,39 @@ function ReminderRuleForm({
                     Cria um na aba Modelos{kind === "confirmation" ? ' com botões tipo "Confirmar" e "Cancelar"' : ""}.
                   </p>
                 ) : (
-                  <Select value={templateName} onValueChange={(v) => { setTemplateName(v); setConfirmButtonText(""); }}>
+                  <Select value={templateName} onValueChange={(v) => { setTemplateName(v); setConfirmButtonText(""); setHeaderMediaPath(null); setHeaderPreview(null); }}>
                     <SelectTrigger>
                       <SelectValue placeholder="Escolha um modelo…" />
                     </SelectTrigger>
                     <SelectContent>
                       {templateOptions.map((t) => (
                         <SelectItem key={t.name} value={t.name}>
-                          {t.name}
+                          {t.name}{t.hasImageHeader ? " (tem imagem)" : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 )}
               </div>
+              {selectedTemplate?.hasImageHeader && (
+                <div className="rounded-xl border border-neutral-300 bg-neutral-50 p-3">
+                  <Label>Imagem do cabeçalho</Label>
+                  <p className="mb-2 text-xs text-neutral-500">
+                    Esse modelo tem imagem no cabeçalho, precisa enviar a imagem que vai junto em todo disparo.
+                  </p>
+                  {headerPreview && (
+                    <img src={headerPreview} alt="Prévia" className="mb-2 max-h-28 rounded-lg border border-neutral-200 object-cover" />
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={uploadingHeader}
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleHeaderFile(f); }}
+                    className="block w-full text-sm text-neutral-600"
+                  />
+                  {uploadingHeader && <p className="mt-1 text-xs text-neutral-500">Enviando…</p>}
+                </div>
+              )}
               {kind === "confirmation" && selectedTemplate && selectedTemplate.buttonTexts.length > 0 && (
                 <div>
                   <Label>Qual botão conta como confirmação</Label>

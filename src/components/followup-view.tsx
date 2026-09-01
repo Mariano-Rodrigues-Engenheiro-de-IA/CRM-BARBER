@@ -23,6 +23,7 @@ type FollowupStep = {
   actions: Array<{ type: "text"; text: string }>;
   template_name: string | null;
   template_language: string | null;
+  template_header_media_path: string | null;
   skip_if_replied: boolean;
 };
 
@@ -34,7 +35,7 @@ type FollowupRule = {
   steps: FollowupStep[];
 };
 
-type TemplateOption = { name: string; language: string; status: string };
+type TemplateOption = { name: string; language: string; status: string; hasImageHeader: boolean };
 
 function minutesToValueUnit(min: number): { value: number; unit: "minutos" | "horas" | "dias" } {
   if (min % (60 * 24) === 0 && min > 0) return { value: min / (60 * 24), unit: "dias" };
@@ -48,7 +49,7 @@ function valueUnitToMinutes(value: number, unit: "minutos" | "horas" | "dias") {
 }
 
 function emptyStep(): FollowupStep {
-  return { delay_minutes: 60 * 24 * 3, actions: [{ type: "text", text: "" }], template_name: null, template_language: null, skip_if_replied: true };
+  return { delay_minutes: 60 * 24 * 3, actions: [{ type: "text", text: "" }], template_name: null, template_language: null, template_header_media_path: null, skip_if_replied: true };
 }
 
 export function FollowupView({ api }: { api: Api }) {
@@ -75,10 +76,20 @@ export function FollowupView({ api }: { api: Api }) {
       .then((t) => {
         if (!t?.ok) return;
         setTemplates(
-          ((t.templates as Array<{ name: string; language: string; status: string }>) || []).map((tpl) => ({
+          (
+            (t.templates as Array<{
+              name: string;
+              language: string;
+              status: string;
+              components?: Array<{ type?: string; format?: string }>;
+            }>) || []
+          ).map((tpl) => ({
             name: tpl.name,
             language: tpl.language,
             status: tpl.status,
+            hasImageHeader: (tpl.components || []).some(
+              (c) => String(c.type).toUpperCase() === "HEADER" && String(c.format).toUpperCase() === "IMAGE",
+            ),
           })),
         );
       })
@@ -206,6 +217,8 @@ function StageFollowupEditor({
   const [active, setActive] = useState(rule?.active ?? true);
   const [steps, setSteps] = useState<FollowupStep[]>(rule?.steps.length ? rule.steps : [emptyStep()]);
   const [saving, setSaving] = useState(false);
+  const [headerPreviews, setHeaderPreviews] = useState<Record<number, string>>({});
+  const [uploadingHeaderIndex, setUploadingHeaderIndex] = useState<number | null>(null);
   const { confirm, dialog } = useConfirm();
 
   const approvedTemplates = templates.filter((t) => t.status === "APPROVED");
@@ -220,10 +233,42 @@ function StageFollowupEditor({
     setSteps((prev) => prev.filter((_, idx) => idx !== i));
   }
 
+  async function handleStepHeaderFile(i: number, file: File) {
+    setUploadingHeaderIndex(i);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
+        reader.readAsDataURL(file);
+      });
+      const r = await api("/api/public/extension/quick-replies/upload", {
+        method: "POST",
+        body: JSON.stringify({ filename: file.name, mime: file.type || "image/jpeg", data_base64: dataUrl }),
+      });
+      if (!r?.ok) {
+        toast.error((r?.error as string) || "Falha ao enviar a imagem.");
+        return;
+      }
+      updateStep(i, { template_header_media_path: (r.path as string) || null });
+      setHeaderPreviews((prev) => ({ ...prev, [i]: dataUrl }));
+    } finally {
+      setUploadingHeaderIndex(null);
+    }
+  }
+
   async function submit() {
     const cleaned = steps.filter((s) => (isMetaProvider ? !!s.template_name : s.actions[0]?.text?.trim()));
     if (!cleaned.length) {
       return toast.error(isMetaProvider ? "Escolhe um modelo em pelo menos um passo." : "Escreve pelo menos uma mensagem.");
+    }
+    if (isMetaProvider) {
+      for (const s of cleaned) {
+        const tpl = templates.find((t) => t.name === s.template_name);
+        if (tpl?.hasImageHeader && !s.template_header_media_path) {
+          return toast.error(`O modelo do passo com "${tpl.name}" tem imagem no cabeçalho, envie a imagem antes de salvar.`);
+        }
+      }
     }
     setSaving(true);
     const r = await api("/api/public/extension/funnel-followup-rules", {
@@ -237,6 +282,7 @@ function StageFollowupEditor({
           actions: isMetaProvider ? [] : [{ type: "text", text: s.actions[0].text.trim() }],
           template_name: isMetaProvider ? s.template_name : null,
           template_language: isMetaProvider ? "pt_BR" : null,
+          template_header_media_path: isMetaProvider ? s.template_header_media_path : null,
           skip_if_replied: s.skip_if_replied,
         })),
       }),
@@ -330,18 +376,39 @@ function StageFollowupEditor({
                       Nenhum modelo aprovado encontrado. Cria um na aba Modelos.
                     </p>
                   ) : (
-                    <Select value={step.template_name || ""} onValueChange={(v) => updateStep(i, { template_name: v })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Escolha um modelo…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {approvedTemplates.map((t) => (
-                          <SelectItem key={t.name} value={t.name}>
-                            {t.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <>
+                      <Select
+                        value={step.template_name || ""}
+                        onValueChange={(v) => updateStep(i, { template_name: v, template_header_media_path: null })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Escolha um modelo…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {approvedTemplates.map((t) => (
+                            <SelectItem key={t.name} value={t.name}>
+                              {t.name}{t.hasImageHeader ? " (tem imagem)" : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {templates.find((t) => t.name === step.template_name)?.hasImageHeader && (
+                        <div className="mt-2 rounded-lg border border-neutral-200 bg-white p-2">
+                          <p className="mb-1 text-xs font-medium text-neutral-600">Imagem do cabeçalho</p>
+                          {headerPreviews[i] && (
+                            <img src={headerPreviews[i]} alt="Prévia" className="mb-2 max-h-24 rounded-lg border border-neutral-200 object-cover" />
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            disabled={uploadingHeaderIndex === i}
+                            onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleStepHeaderFile(i, f); }}
+                            className="block w-full text-sm text-neutral-600"
+                          />
+                          {uploadingHeaderIndex === i && <p className="mt-1 text-xs text-neutral-500">Enviando…</p>}
+                        </div>
+                      )}
+                    </>
                   )
                 ) : (
                   <Textarea

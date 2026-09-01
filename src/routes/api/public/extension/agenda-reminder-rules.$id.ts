@@ -7,7 +7,7 @@ import { authenticateExtension } from "@/lib/extension-auth";
 import { agendaReminderRuleBaseSchema } from "@/lib/agenda-reminders";
 
 const SELECT_COLS =
-  "id, name, kind, offset_minutes, applies_to_statuses, message_text, template_name, template_language, confirm_button_text, confirm_keywords, active";
+  "id, name, kind, offset_minutes, applies_to_statuses, message_text, template_name, template_language, template_header_media_path, confirm_button_text, confirm_keywords, active";
 
 const patchSchema = agendaReminderRuleBaseSchema.partial();
 

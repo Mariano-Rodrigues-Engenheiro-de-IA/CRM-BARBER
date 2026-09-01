@@ -320,6 +320,7 @@ export type Database = {
           message_text: string | null
           name: string
           offset_minutes: number
+          template_header_media_path: string | null
           template_language: string | null
           template_name: string | null
           updated_at: string
@@ -336,6 +337,7 @@ export type Database = {
           message_text?: string | null
           name: string
           offset_minutes: number
+          template_header_media_path?: string | null
           template_language?: string | null
           template_name?: string | null
           updated_at?: string
@@ -352,6 +354,7 @@ export type Database = {
           message_text?: string | null
           name?: string
           offset_minutes?: number
+          template_header_media_path?: string | null
           template_language?: string | null
           template_name?: string | null
           updated_at?: string
@@ -459,6 +462,7 @@ export type Database = {
           rule_id: string
           skip_if_replied: boolean
           sort_order: number
+          template_header_media_path: string | null
           template_language: string | null
           template_name: string | null
         }
@@ -470,6 +474,7 @@ export type Database = {
           rule_id: string
           skip_if_replied?: boolean
           sort_order?: number
+          template_header_media_path?: string | null
           template_language?: string | null
           template_name?: string | null
         }
@@ -481,6 +486,7 @@ export type Database = {
           rule_id?: string
           skip_if_replied?: boolean
           sort_order?: number
+          template_header_media_path?: string | null
           template_language?: string | null
           template_name?: string | null
         }

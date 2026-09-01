@@ -24,6 +24,10 @@ export const agendaReminderRuleBaseSchema = z.object({
   message_text: z.string().trim().max(2000).nullable().optional(),
   template_name: z.string().trim().max(512).nullable().optional(),
   template_language: z.string().trim().max(10).nullable().optional(),
+  // Só quando o modelo escolhido tiver cabeçalho de imagem — a Meta exige
+  // isso em TODO envio, não só na criação do modelo (mesma regra já
+  // corrigida no Disparo/campanha).
+  template_header_media_path: z.string().trim().max(400).nullable().optional(),
   confirm_button_text: z.string().trim().max(60).nullable().optional(),
   // Palavras/frases que, numa resposta DIGITADA (não só clique no
   // botão), contam como confirmação — comparado sem diferenciar

@@ -38,7 +38,7 @@ export const Route = createFileRoute("/api/public/hooks/evaluate-followups")({
 
         const { data: rules, error: rulesErr } = await supabaseAdmin
           .from("funnel_followup_rules")
-          .select("id, barbershop_id, funnel_id, stage_id, funnel_followup_steps (id, delay_minutes, actions, template_name, template_language, skip_if_replied)")
+          .select("id, barbershop_id, funnel_id, stage_id, funnel_followup_steps (id, delay_minutes, actions, template_name, template_language, template_header_media_path, skip_if_replied)")
           .eq("active", true);
         if (rulesErr) {
           return new Response(JSON.stringify({ ok: false, error: rulesErr.message }), { status: 500 });
@@ -52,6 +52,7 @@ export const Route = createFileRoute("/api/public/hooks/evaluate-followups")({
             actions: unknown;
             template_name: string | null;
             template_language: string | null;
+            template_header_media_path: string | null;
             skip_if_replied: boolean;
           }>) || [];
           if (!steps.length) continue;
@@ -127,6 +128,7 @@ export const Route = createFileRoute("/api/public/hooks/evaluate-followups")({
                   message_actions: usesTemplate ? [] : actions,
                   template_name: usesTemplate ? step.template_name : null,
                   template_language: usesTemplate ? step.template_language ?? "pt_BR" : null,
+                  template_header_media_path: usesTemplate ? step.template_header_media_path : null,
                   status: "pending",
                   scheduled_for: now.toISOString(),
                   expires_at: new Date(now.getTime() + 48 * 3600_000).toISOString(),
