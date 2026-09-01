@@ -48,12 +48,20 @@ function extractErrorMessage(json: Json, status: number): string {
   const errObj = json.error as Json | undefined;
   const message = typeof errObj?.message === "string" ? errObj.message : `HTTP ${status}`;
   const code = errObj?.code;
+  const subcode = errObj?.error_subcode;
   const type = errObj?.type;
+  const userTitle = errObj?.error_user_title;
+  const userMsg = errObj?.error_user_msg;
+  const traceId = errObj?.fbtrace_id;
   const details = (errObj?.error_data as Json | undefined)?.details;
   const parts = [message];
   if (code !== undefined) parts.push(`code=${code}`);
+  if (subcode !== undefined) parts.push(`subcode=${subcode}`);
   if (typeof type === "string") parts.push(`type=${type}`);
+  if (typeof userTitle === "string") parts.push(`user_title="${userTitle}"`);
+  if (typeof userMsg === "string") parts.push(`user_msg="${userMsg}"`);
   if (typeof details === "string") parts.push(`details="${details}"`);
+  if (typeof traceId === "string") parts.push(`fbtrace_id=${traceId}`);
   return parts.join(" | ");
 }
 
