@@ -371,7 +371,7 @@ export const cloudAdapter: BspAdapter = {
       if (!res.ok) {
         return {
           ok: false,
-          error: extractErrorMessage(json, res.status),
+          error: `${extractErrorMessage(json, res.status)} | to_usado[${toE164BR(to)}] | phone_number_id[${phone_number_id}]`,
           retryable: res.status === 429 || res.status >= 500,
         };
       }
@@ -453,7 +453,7 @@ export const cloudAdapter: BspAdapter = {
           : "access_token vazio/undefined";
         return {
           ok: false,
-          error: `${extractErrorMessage(json, res.status)} | token_usado[${tokenFingerprint}]`,
+          error: `${extractErrorMessage(json, res.status)} | token_usado[${tokenFingerprint}] | to_usado[${toE164BR(to)}] | phone_number_id[${phone_number_id}]`,
           retryable: res.status === 429 || res.status >= 500,
         };
       }
