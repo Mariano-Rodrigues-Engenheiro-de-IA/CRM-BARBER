@@ -1372,6 +1372,8 @@ function humanizeDue(dueAtIso: string | null): string {
  * Clicar abre um relatório rápido com os detalhes. */
 function FollowupBadge({ followup, cardTitle }: { followup: NonNullable<FunnelCard["followup"]>; cardTitle: string }) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
   const isOverdue = !followup.all_sent && followup.next_due_at && new Date(followup.next_due_at).getTime() <= Date.now();
   const colorClass = followup.all_sent
     ? "bg-emerald-50 text-emerald-700 border-emerald-200"
@@ -1379,11 +1381,25 @@ function FollowupBadge({ followup, cardTitle }: { followup: NonNullable<FunnelCa
       ? "bg-amber-50 text-amber-700 border-amber-300 animate-pulse"
       : "bg-neutral-100 text-neutral-600 border-neutral-200";
 
+  function toggleOpen(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      const popWidth = 224; // w-56
+      setPos({
+        top: rect.bottom + 6,
+        left: Math.min(Math.max(8, rect.left), window.innerWidth - popWidth - 8),
+      });
+    }
+    setOpen((v) => !v);
+  }
+
   return (
     <div className="relative inline-block">
       <button
+        ref={btnRef}
         type="button"
-        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        onClick={toggleOpen}
         title="Status do follow-up"
         className={`flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium transition hover:brightness-95 ${colorClass}`}
       >
@@ -1393,11 +1409,17 @@ function FollowupBadge({ followup, cardTitle }: { followup: NonNullable<FunnelCa
         </svg>
         {followup.sent_count}/{followup.total_steps}
       </button>
-      {open && (
+      {open && pos && (
         <>
+          {/* position: fixed (não absolute) de propósito — a lista de
+              cards da coluna tem overflow-y-auto, e um popup absolute
+              preso ali dentro fica cortado/espremido pela rolagem da
+              coluna. Fixed escapa disso, ancorado nas coordenadas reais
+              do botão na tela. */}
           <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
           <div
-            className="absolute left-0 top-full z-50 mt-1 w-56 rounded-xl border border-neutral-200 bg-white p-3 text-left shadow-lg"
+            className="fixed z-50 w-56 rounded-xl border border-neutral-200 bg-white p-3 text-left shadow-lg"
+            style={{ top: pos.top, left: pos.left }}
             onClick={(e) => e.stopPropagation()}
           >
             <p className="mb-1 truncate text-xs font-semibold text-neutral-900">{cardTitle}</p>
