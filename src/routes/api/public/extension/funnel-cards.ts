@@ -103,8 +103,13 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
           const existing = existingRes.data;
           if (existing) {
             const { wa_contacts, ...rest } = existing as any;
-            const patch: { stage_id?: string; wa_contact_id?: string; title?: string } = {};
-            if (existing.stage_id !== parsed.data.stage_id) patch.stage_id = parsed.data.stage_id;
+            const patch: { stage_id?: string; stage_entered_at?: string; wa_contact_id?: string; title?: string } = {};
+            if (existing.stage_id !== parsed.data.stage_id) {
+              patch.stage_id = parsed.data.stage_id;
+              // Reinicia a contagem de tempo pro follow-up por etapa —
+              // entrou de novo, conta como uma entrada nova.
+              patch.stage_entered_at = new Date().toISOString();
+            }
             // Contato sincronizou depois do card já existir — aproveita
             // pra linkar o wa_contact_id agora, senão o próximo clique
             // (já com o id disponível) não ia encontrar esse card pelo
@@ -124,6 +129,12 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
                 .eq("barbershop_id", shop);
               if (moveError) {
                 return jsonResponse(request, { ok: false, error: moveError.message }, { status: 500 });
+              }
+              // Mudou de etapa — os passos de follow-up "já enviados" da
+              // etapa anterior não valem mais aqui; se um dia ele voltar
+              // pra essa mesma etapa de novo, a sequência recomeça do zero.
+              if (patch.stage_id) {
+                await supabaseAdmin.from("funnel_followup_sent_log").delete().eq("card_id", existing.id);
               }
             }
             return jsonResponse(request, {
@@ -221,13 +232,17 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
         const { id, ...rest } = parsed.data;
         const patch: {
           stage_id?: string;
+          stage_entered_at?: string;
           sort_order?: number;
           title?: string;
           phone?: string | null;
           value_cents?: number | null;
           notes?: string | null;
         } = {};
-        if (rest.stage_id !== undefined) patch.stage_id = rest.stage_id;
+        if (rest.stage_id !== undefined) {
+          patch.stage_id = rest.stage_id;
+          patch.stage_entered_at = new Date().toISOString();
+        }
         if (rest.sort_order !== undefined) patch.sort_order = rest.sort_order;
         if (rest.title !== undefined) patch.title = rest.title;
         if (rest.phone !== undefined) patch.phone = normalizePhone(rest.phone);
@@ -240,6 +255,11 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
           .eq("id", id)
           .eq("barbershop_id", auth.token.barbershop_id);
         if (error) return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
+        // Mesma lógica do POST: mudou de etapa, os passos "já enviados"
+        // da etapa anterior não valem mais — reinicia o histórico.
+        if (patch.stage_id) {
+          await supabaseAdmin.from("funnel_followup_sent_log").delete().eq("card_id", id);
+        }
         return jsonResponse(request, { ok: true });
       },
 

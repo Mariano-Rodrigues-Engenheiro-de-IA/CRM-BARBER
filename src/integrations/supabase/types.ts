@@ -307,6 +307,223 @@ export type Database = {
           },
         ]
       }
+      agenda_reminder_rules: {
+        Row: {
+          active: boolean
+          applies_to_statuses: string[]
+          barbershop_id: string
+          confirm_button_text: string | null
+          created_at: string
+          id: string
+          kind: string
+          message_text: string | null
+          name: string
+          offset_minutes: number
+          template_language: string | null
+          template_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          applies_to_statuses?: string[]
+          barbershop_id: string
+          confirm_button_text?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          message_text?: string | null
+          name: string
+          offset_minutes: number
+          template_language?: string | null
+          template_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          applies_to_statuses?: string[]
+          barbershop_id?: string
+          confirm_button_text?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          message_text?: string | null
+          name?: string
+          offset_minutes?: number
+          template_language?: string | null
+          template_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agenda_reminder_rules_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agenda_reminder_sent_log: {
+        Row: {
+          appointment_id: string
+          id: string
+          message_job_id: string | null
+          rule_id: string
+          sent_at: string
+        }
+        Insert: {
+          appointment_id: string
+          id?: string
+          message_job_id?: string | null
+          rule_id: string
+          sent_at?: string
+        }
+        Update: {
+          appointment_id?: string
+          id?: string
+          message_job_id?: string | null
+          rule_id?: string
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agenda_reminder_sent_log_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_reminder_sent_log_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_reminder_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funnel_followup_rules: {
+        Row: {
+          active: boolean
+          barbershop_id: string
+          created_at: string
+          funnel_id: string
+          id: string
+          stage_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          barbershop_id: string
+          created_at?: string
+          funnel_id: string
+          id?: string
+          stage_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          barbershop_id?: string
+          created_at?: string
+          funnel_id?: string
+          id?: string
+          stage_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnel_followup_rules_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funnel_followup_rules_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "funnels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funnel_followup_steps: {
+        Row: {
+          actions: Json
+          created_at: string
+          delay_minutes: number
+          id: string
+          rule_id: string
+          skip_if_replied: boolean
+          sort_order: number
+        }
+        Insert: {
+          actions?: Json
+          created_at?: string
+          delay_minutes: number
+          id?: string
+          rule_id: string
+          skip_if_replied?: boolean
+          sort_order?: number
+        }
+        Update: {
+          actions?: Json
+          created_at?: string
+          delay_minutes?: number
+          id?: string
+          rule_id?: string
+          skip_if_replied?: boolean
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnel_followup_steps_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "funnel_followup_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funnel_followup_sent_log: {
+        Row: {
+          card_id: string
+          id: string
+          message_job_id: string | null
+          sent_at: string
+          step_id: string
+        }
+        Insert: {
+          card_id: string
+          id?: string
+          message_job_id?: string | null
+          sent_at?: string
+          step_id: string
+        }
+        Update: {
+          card_id?: string
+          id?: string
+          message_job_id?: string | null
+          sent_at?: string
+          step_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnel_followup_sent_log_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "funnel_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funnel_followup_sent_log_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "funnel_followup_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
           audience_filter: Json
@@ -657,6 +874,7 @@ export type Database = {
           notes: string | null
           phone: string | null
           sort_order: number
+          stage_entered_at: string
           stage_id: string
           title: string
           updated_at: string
@@ -672,6 +890,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           sort_order?: number
+          stage_entered_at?: string
           stage_id: string
           title: string
           updated_at?: string
@@ -687,6 +906,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           sort_order?: number
+          stage_entered_at?: string
           stage_id?: string
           title?: string
           updated_at?: string
@@ -997,6 +1217,8 @@ export type Database = {
       }
       message_jobs: {
         Row: {
+          agenda_reminder_rule_id: string | null
+          appointment_id: string | null
           attempts: number
           barbershop_id: string
           campaign_id: string | null
@@ -1006,11 +1228,13 @@ export type Database = {
           customer_id: string
           expires_at: string | null
           force_extension: boolean
+          funnel_followup_step_id: string | null
           id: string
           last_error: string | null
           max_attempts: number
           message_actions: Json
           phone: string
+          provider_message_id: string | null
           rendered_body: string
           scheduled_for: string
           sent_at: string | null
@@ -1022,6 +1246,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          agenda_reminder_rule_id?: string | null
+          appointment_id?: string | null
           attempts?: number
           barbershop_id: string
           campaign_id?: string | null
@@ -1031,11 +1257,13 @@ export type Database = {
           customer_id: string
           expires_at?: string | null
           force_extension?: boolean
+          funnel_followup_step_id?: string | null
           id?: string
           last_error?: string | null
           max_attempts?: number
           message_actions?: Json
           phone: string
+          provider_message_id?: string | null
           rendered_body: string
           scheduled_for?: string
           sent_at?: string | null
@@ -1047,6 +1275,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          agenda_reminder_rule_id?: string | null
+          appointment_id?: string | null
           attempts?: number
           barbershop_id?: string
           campaign_id?: string | null
@@ -1056,11 +1286,13 @@ export type Database = {
           customer_id?: string
           expires_at?: string | null
           force_extension?: boolean
+          funnel_followup_step_id?: string | null
           id?: string
           last_error?: string | null
           max_attempts?: number
           message_actions?: Json
           phone?: string
+          provider_message_id?: string | null
           rendered_body?: string
           scheduled_for?: string
           sent_at?: string | null

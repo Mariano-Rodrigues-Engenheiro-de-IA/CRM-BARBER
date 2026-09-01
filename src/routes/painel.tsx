@@ -19,6 +19,8 @@ import { FREE_LIMITS, PREMIUM_PRICE_LABEL, type BillingStatus } from "@/lib/bill
 
 import { useConfirm } from "@/components/confirm-dialog";
 import { AgendaView } from "@/components/agenda-view";
+import { AgendaRemindersView } from "@/components/agenda-reminders-view";
+import { FollowupView } from "@/components/followup-view";
 import { AulasView } from "@/components/aulas-view";
 import { AgenteIaView } from "@/components/agente-ia-view";
 import { ServicesTab, ProfessionalsTab, ProductsTab } from "@/components/professionals-services-dialog";
@@ -240,11 +242,13 @@ function nudgeExtensionPoll() {
   window.postMessage({ __crm: "poll_now_v180" }, window.location.origin);
 }
 
-type Section = "agenda" | "agente-ia" | "treinamento" | "configuracoes" | "assinantes" | "funis" | "disparo" | "equipe" | "conexao" | "templates";
+type Section = "agenda" | "agente-ia" | "treinamento" | "configuracoes" | "assinantes" | "funis" | "follow-up" | "disparo" | "equipe" | "conexao" | "templates";
 /** Sub-abas da sanfona de Assinaturas. */
 type AssinTab = "visao" | "assinantes";
 /** Sub-abas da sanfona de Configurações. */
 type ConfigTab = "servicos" | "produtos" | "profissionais" | "clientes" | "gerais" | "conta";
+/** Sub-abas da sanfona de Agenda. */
+type AgendaTab = "agenda" | "lembretes";
 
 /** Selo de assinante ativo — assinatura/fidelidade, sem usar ícone de pessoas. */
 function IconBadgeCheck() {
@@ -428,12 +432,13 @@ function Painel() {
   const initialSection: Section = (() => {
     if (typeof window === "undefined") return "assinantes";
     const s = new URLSearchParams(window.location.search).get("section");
-    if (s === "agenda" || s === "agente-ia" || s === "treinamento" || s === "configuracoes" || s === "equipe" || s === "conexao" || s === "funis" || s === "disparo" || s === "templates") return s;
+    if (s === "agenda" || s === "agente-ia" || s === "treinamento" || s === "configuracoes" || s === "equipe" || s === "conexao" || s === "funis" || s === "follow-up" || s === "disparo" || s === "templates") return s;
     return "assinantes";
   })();
   const [section, setSection] = useState<Section>(initialSection);
   const [assinTab, setAssinTab] = useState<AssinTab>("assinantes");
   const [configTab, setConfigTab] = useState<ConfigTab>("servicos");
+  const [agendaTab, setAgendaTab] = useState<AgendaTab>("agenda");
   // Sanfona do menu: guarda QUAL seção está aberta — antes era um booleano
   // único, o que abria as sub-abas de Assinaturas e Configurações juntas.
   const [openMenu, setOpenMenu] = useState<Section | null>(null);
@@ -594,10 +599,11 @@ function Painel() {
     key: Section;
     label: string;
     icon: React.ReactNode;
-    children?: Array<{ key: AssinTab | ConfigTab; label: string }>;
+    children?: Array<{ key: AssinTab | ConfigTab | AgendaTab; label: string }>;
   }> = [
-    { key: "agenda", label: "Agenda", icon: <IconCalendar /> },
+    { key: "agenda", label: "Agenda", icon: <IconCalendar />, children: [{ key: "agenda", label: "Minha agenda" }, { key: "lembretes", label: "Lembretes / Confirmações" }] },
     { key: "funis", label: "Funis de Vendas", icon: <IconChart /> },
+    { key: "follow-up", label: "Follow-up", icon: <IconClock /> },
     { key: "disparo", label: "Disparo", icon: <IconSend /> },
     {
       key: "assinantes",
@@ -732,7 +738,7 @@ function Painel() {
                 {open && n.children && (
                   <div className="mt-1 space-y-0.5 border-l border-sidebar-border pl-3 ml-4">
                     {n.children.map((sub) => {
-                      const isSubActive = n.key === "assinantes" ? assinTab === sub.key : n.key === "configuracoes" ? configTab === sub.key : false;
+                      const isSubActive = n.key === "assinantes" ? assinTab === sub.key : n.key === "configuracoes" ? configTab === sub.key : n.key === "agenda" ? agendaTab === sub.key : false;
                       return (
                         <button
                           key={sub.key}
@@ -740,6 +746,7 @@ function Painel() {
                             setSection(n.key);
                             if (n.key === "assinantes") setAssinTab(sub.key as AssinTab);
                             else if (n.key === "configuracoes") setConfigTab(sub.key as ConfigTab);
+                            else if (n.key === "agenda") setAgendaTab(sub.key as AgendaTab);
                           }}
                           className={
                             "block w-full rounded-lg px-3 py-1.5 text-left text-[13px] transition " +
@@ -809,9 +816,13 @@ function Painel() {
       <div className="flex-1 min-w-0 h-full overflow-y-auto">
         {section === "agenda" && token && (
           <>
-            <SectionHeader icon={<IconCalendar />} title="Agenda" />
+            <SectionHeader icon={<IconCalendar />} title={agendaTab === "agenda" ? "Agenda" : "Lembretes / Confirmações"} />
             <main className="px-4 py-4">
-              <AgendaView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+              {agendaTab === "agenda" ? (
+                <AgendaView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+              ) : (
+                <AgendaRemindersView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+              )}
             </main>
           </>
         )}
@@ -968,6 +979,15 @@ function Painel() {
                 api={(path: string, opts?: RequestInit) => api(token, path, opts)}
                 headerHost={funisHeaderEl}
               />
+            </main>
+          </>
+        )}
+
+        {section === "follow-up" && token && (
+          <>
+            <SectionHeader icon={<IconClock />} title="Follow-up" />
+            <main className="px-4 py-4">
+              <FollowupView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
             </main>
           </>
         )}

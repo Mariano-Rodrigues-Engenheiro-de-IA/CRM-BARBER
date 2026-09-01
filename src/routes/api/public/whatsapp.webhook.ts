@@ -125,9 +125,63 @@ async function handleAccountUpdate(change: Json) {
 
 async function handleMessagesChange(change: Json) {
   console.info("[whatsapp.webhook] messages recebido:", JSON.stringify(change).slice(0, 2000));
-  // A ingestão de mensagens recebidas pela extensão/painel já acontece por
-  // outro caminho hoje (sincronização via extensão do Chrome). Esse webhook
-  // por ora só confirma recebimento pra Meta considerar a assinatura ativa.
+  // Ingestão de mensagens normais (texto) continua vindo por outro caminho
+  // (sincronização via extensão) — o que ESTE webhook precisa tratar de
+  // verdade é o clique num botão de resposta rápida de um MODELO, usado
+  // pela Confirmação de Agenda: a Meta manda isso como uma mensagem do
+  // tipo "button", com `context.id` = WAMID da mensagem original (casa
+  // com message_jobs.provider_message_id) e `button.text` = texto do
+  // botão clicado.
+  try {
+    const value = (change.value as Json | undefined) ?? {};
+    const messages = Array.isArray(value.messages) ? (value.messages as Json[]) : [];
+    for (const msg of messages) {
+      if (msg.type !== "button") continue;
+      const button = msg.button as Json | undefined;
+      const context = msg.context as Json | undefined;
+      const repliedToWamid = typeof context?.id === "string" ? context.id : null;
+      const buttonText = typeof button?.text === "string" ? button.text : null;
+      if (!repliedToWamid || !buttonText) continue;
+      await handleConfirmationButtonReply(repliedToWamid, buttonText);
+    }
+  } catch (e) {
+    console.error("[whatsapp.webhook] falha ao processar clique de botão:", e);
+  }
+}
+
+/** Casa o clique num botão de volta com o envio original (via WAMID) e,
+ * se o texto do botão bater com o configurado na regra como "botão de
+ * confirmar", muda o agendamento pra confirmed sozinho. */
+async function handleConfirmationButtonReply(repliedToWamid: string, buttonText: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: job } = await supabaseAdmin
+    .from("message_jobs")
+    .select("id, appointment_id, agenda_reminder_rule_id")
+    .eq("provider_message_id", repliedToWamid)
+    .maybeSingle();
+  if (!job?.appointment_id || !job.agenda_reminder_rule_id) return;
+
+  const { data: rule } = await supabaseAdmin
+    .from("agenda_reminder_rules")
+    .select("confirm_button_text")
+    .eq("id", job.agenda_reminder_rule_id)
+    .maybeSingle();
+  const expected = (rule?.confirm_button_text || "").trim().toLowerCase();
+  if (!expected || buttonText.trim().toLowerCase() !== expected) {
+    // Clicou em outro botão do mesmo modelo (ex: "Cancelar") — não é o
+    // de confirmar, não faz nada automaticamente por enquanto.
+    return;
+  }
+
+  const { error } = await supabaseAdmin
+    .from("appointments")
+    .update({ status: "confirmed" })
+    .eq("id", job.appointment_id);
+  if (error) {
+    console.error("[whatsapp.webhook] falha ao confirmar agendamento via botão:", error.message);
+  } else {
+    console.info("[whatsapp.webhook] agendamento confirmado via botão:", job.appointment_id);
+  }
 }
 
 async function logWebhookCall(kind: string, statusCode: number, headers: Record<string, string>, body: unknown, note?: string) {

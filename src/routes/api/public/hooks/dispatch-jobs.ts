@@ -280,9 +280,12 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
                 .update({
                   status: "sent",
                   sent_at: new Date().toISOString(),
-                  last_error: result.provider_message_id
-                    ? `provider_id:${result.provider_message_id}`
-                    : null,
+                  // Antes isso ficava só espremido dentro de last_error
+                  // como texto de debug — agora tem coluna própria de
+                  // verdade, usada pra casar a resposta de um botão de
+                  // confirmação (Agenda) de volta com este envio.
+                  provider_message_id: result.provider_message_id ?? null,
+                  last_error: null,
                 })
                 .eq("id", job.id);
               totalSent++;

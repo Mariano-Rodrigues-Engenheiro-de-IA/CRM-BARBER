@@ -31,6 +31,7 @@ import { Route as ApiPublicAiMoveLeadRouteImport } from './routes/api/public/ai/
 import { Route as ApiPublicAiSetAccessRouteImport } from './routes/api/public/ai/set-access'
 import { Route as ApiPublicAiUpdateSummaryRouteImport } from './routes/api/public/ai/update-summary'
 import { Route as ApiPublicBookingSlugRouteImport } from './routes/api/public/booking.$slug'
+import { Route as ApiPublicExtensionAgendaReminderRulesRouteImport } from './routes/api/public/extension/agenda-reminder-rules'
 import { Route as ApiPublicExtensionAgendaSettingsRouteImport } from './routes/api/public/extension/agenda-settings'
 import { Route as ApiPublicExtensionAgenteIaAccessLinkRouteImport } from './routes/api/public/extension/agente-ia-access-link'
 import { Route as ApiPublicExtensionAgenteIaSettingsRouteImport } from './routes/api/public/extension/agente-ia-settings'
@@ -42,6 +43,7 @@ import { Route as ApiPublicExtensionCustomerDealRouteImport } from './routes/api
 import { Route as ApiPublicExtensionCustomerProfileRouteImport } from './routes/api/public/extension/customer-profile'
 import { Route as ApiPublicExtensionCustomersRouteImport } from './routes/api/public/extension/customers'
 import { Route as ApiPublicExtensionFunnelCardsRouteImport } from './routes/api/public/extension/funnel-cards'
+import { Route as ApiPublicExtensionFunnelFollowupRulesRouteImport } from './routes/api/public/extension/funnel-followup-rules'
 import { Route as ApiPublicExtensionFunnelsRouteImport } from './routes/api/public/extension/funnels'
 import { Route as ApiPublicExtensionLeadNotesRouteImport } from './routes/api/public/extension/lead-notes'
 import { Route as ApiPublicExtensionLeadScheduleRouteImport } from './routes/api/public/extension/lead-schedule'
@@ -57,15 +59,19 @@ import { Route as ApiPublicExtensionShopRouteImport } from './routes/api/public/
 import { Route as ApiPublicExtensionTimeBlocksRouteImport } from './routes/api/public/extension/time-blocks'
 import { Route as ApiPublicExtensionTrainingModulesRouteImport } from './routes/api/public/extension/training-modules'
 import { Route as ApiPublicHooksDispatchJobsRouteImport } from './routes/api/public/hooks/dispatch-jobs'
+import { Route as ApiPublicHooksEvaluateAgendaRemindersRouteImport } from './routes/api/public/hooks/evaluate-agenda-reminders'
+import { Route as ApiPublicHooksEvaluateFollowupsRouteImport } from './routes/api/public/hooks/evaluate-followups'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicWhatsappSignupCallbackRouteImport } from './routes/api/public/whatsapp.signup-callback'
 import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp.webhook'
 import { Route as ApiPublicAiProductsSearchRouteImport } from './routes/api/public/ai/products.search'
+import { Route as ApiPublicExtensionAgendaReminderRulesIdRouteImport } from './routes/api/public/extension/agenda-reminder-rules.$id'
 import { Route as ApiPublicExtensionAppointmentsIdRouteImport } from './routes/api/public/extension/appointments.$id'
 import { Route as ApiPublicExtensionCampaignsIdRouteImport } from './routes/api/public/extension/campaigns.$id'
 import { Route as ApiPublicExtensionCustomersIdRouteImport } from './routes/api/public/extension/customers.$id'
 import { Route as ApiPublicExtensionCustomersImportRouteImport } from './routes/api/public/extension/customers.import'
 import { Route as ApiPublicExtensionFunnelCardsScheduleRouteImport } from './routes/api/public/extension/funnel-cards.schedule'
+import { Route as ApiPublicExtensionFunnelFollowupRulesIdRouteImport } from './routes/api/public/extension/funnel-followup-rules.$id'
 import { Route as ApiPublicExtensionFunnelsIdRouteImport } from './routes/api/public/extension/funnels.$id'
 import { Route as ApiPublicExtensionJobsIdRouteImport } from './routes/api/public/extension/jobs.$id'
 import { Route as ApiPublicExtensionJobsNextRouteImport } from './routes/api/public/extension/jobs.next'
@@ -201,6 +207,12 @@ const ApiPublicBookingSlugRoute = ApiPublicBookingSlugRouteImport.update({
   path: '/api/public/booking/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicExtensionAgendaReminderRulesRoute =
+  ApiPublicExtensionAgendaReminderRulesRouteImport.update({
+    id: '/api/public/extension/agenda-reminder-rules',
+    path: '/api/public/extension/agenda-reminder-rules',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicExtensionAgendaSettingsRoute =
   ApiPublicExtensionAgendaSettingsRouteImport.update({
     id: '/api/public/extension/agenda-settings',
@@ -265,6 +277,12 @@ const ApiPublicExtensionFunnelCardsRoute =
   ApiPublicExtensionFunnelCardsRouteImport.update({
     id: '/api/public/extension/funnel-cards',
     path: '/api/public/extension/funnel-cards',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionFunnelFollowupRulesRoute =
+  ApiPublicExtensionFunnelFollowupRulesRouteImport.update({
+    id: '/api/public/extension/funnel-followup-rules',
+    path: '/api/public/extension/funnel-followup-rules',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicExtensionFunnelsRoute =
@@ -354,6 +372,18 @@ const ApiPublicHooksDispatchJobsRoute =
     path: '/api/public/hooks/dispatch-jobs',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksEvaluateAgendaRemindersRoute =
+  ApiPublicHooksEvaluateAgendaRemindersRouteImport.update({
+    id: '/api/public/hooks/evaluate-agenda-reminders',
+    path: '/api/public/hooks/evaluate-agenda-reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksEvaluateFollowupsRoute =
+  ApiPublicHooksEvaluateFollowupsRouteImport.update({
+    id: '/api/public/hooks/evaluate-followups',
+    path: '/api/public/hooks/evaluate-followups',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -377,6 +407,12 @@ const ApiPublicAiProductsSearchRoute =
     id: '/api/public/ai/products/search',
     path: '/api/public/ai/products/search',
     getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionAgendaReminderRulesIdRoute =
+  ApiPublicExtensionAgendaReminderRulesIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicExtensionAgendaReminderRulesRoute,
   } as any)
 const ApiPublicExtensionAppointmentsIdRoute =
   ApiPublicExtensionAppointmentsIdRouteImport.update({
@@ -407,6 +443,12 @@ const ApiPublicExtensionFunnelCardsScheduleRoute =
     id: '/schedule',
     path: '/schedule',
     getParentRoute: () => ApiPublicExtensionFunnelCardsRoute,
+  } as any)
+const ApiPublicExtensionFunnelFollowupRulesIdRoute =
+  ApiPublicExtensionFunnelFollowupRulesIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicExtensionFunnelFollowupRulesRoute,
   } as any)
 const ApiPublicExtensionFunnelsIdRoute =
   ApiPublicExtensionFunnelsIdRouteImport.update({
@@ -564,6 +606,7 @@ export interface FileRoutesByFullPath {
   '/api/public/ai/set-access': typeof ApiPublicAiSetAccessRoute
   '/api/public/ai/update-summary': typeof ApiPublicAiUpdateSummaryRoute
   '/api/public/booking/$slug': typeof ApiPublicBookingSlugRoute
+  '/api/public/extension/agenda-reminder-rules': typeof ApiPublicExtensionAgendaReminderRulesRouteWithChildren
   '/api/public/extension/agenda-settings': typeof ApiPublicExtensionAgendaSettingsRoute
   '/api/public/extension/agente-ia-access-link': typeof ApiPublicExtensionAgenteIaAccessLinkRoute
   '/api/public/extension/agente-ia-settings': typeof ApiPublicExtensionAgenteIaSettingsRoute
@@ -575,6 +618,7 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/customer-profile': typeof ApiPublicExtensionCustomerProfileRoute
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
+  '/api/public/extension/funnel-followup-rules': typeof ApiPublicExtensionFunnelFollowupRulesRouteWithChildren
   '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRouteWithChildren
   '/api/public/extension/lead-notes': typeof ApiPublicExtensionLeadNotesRouteWithChildren
   '/api/public/extension/lead-schedule': typeof ApiPublicExtensionLeadScheduleRouteWithChildren
@@ -590,15 +634,19 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/time-blocks': typeof ApiPublicExtensionTimeBlocksRouteWithChildren
   '/api/public/extension/training-modules': typeof ApiPublicExtensionTrainingModulesRoute
   '/api/public/hooks/dispatch-jobs': typeof ApiPublicHooksDispatchJobsRoute
+  '/api/public/hooks/evaluate-agenda-reminders': typeof ApiPublicHooksEvaluateAgendaRemindersRoute
+  '/api/public/hooks/evaluate-followups': typeof ApiPublicHooksEvaluateFollowupsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
   '/api/public/ai/products/search': typeof ApiPublicAiProductsSearchRoute
+  '/api/public/extension/agenda-reminder-rules/$id': typeof ApiPublicExtensionAgendaReminderRulesIdRoute
   '/api/public/extension/appointments/$id': typeof ApiPublicExtensionAppointmentsIdRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
   '/api/public/extension/funnel-cards/schedule': typeof ApiPublicExtensionFunnelCardsScheduleRoute
+  '/api/public/extension/funnel-followup-rules/$id': typeof ApiPublicExtensionFunnelFollowupRulesIdRoute
   '/api/public/extension/funnels/$id': typeof ApiPublicExtensionFunnelsIdRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
@@ -645,6 +693,7 @@ export interface FileRoutesByTo {
   '/api/public/ai/set-access': typeof ApiPublicAiSetAccessRoute
   '/api/public/ai/update-summary': typeof ApiPublicAiUpdateSummaryRoute
   '/api/public/booking/$slug': typeof ApiPublicBookingSlugRoute
+  '/api/public/extension/agenda-reminder-rules': typeof ApiPublicExtensionAgendaReminderRulesRouteWithChildren
   '/api/public/extension/agenda-settings': typeof ApiPublicExtensionAgendaSettingsRoute
   '/api/public/extension/agente-ia-access-link': typeof ApiPublicExtensionAgenteIaAccessLinkRoute
   '/api/public/extension/agente-ia-settings': typeof ApiPublicExtensionAgenteIaSettingsRoute
@@ -656,6 +705,7 @@ export interface FileRoutesByTo {
   '/api/public/extension/customer-profile': typeof ApiPublicExtensionCustomerProfileRoute
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
+  '/api/public/extension/funnel-followup-rules': typeof ApiPublicExtensionFunnelFollowupRulesRouteWithChildren
   '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRouteWithChildren
   '/api/public/extension/lead-notes': typeof ApiPublicExtensionLeadNotesRouteWithChildren
   '/api/public/extension/lead-schedule': typeof ApiPublicExtensionLeadScheduleRouteWithChildren
@@ -671,15 +721,19 @@ export interface FileRoutesByTo {
   '/api/public/extension/time-blocks': typeof ApiPublicExtensionTimeBlocksRouteWithChildren
   '/api/public/extension/training-modules': typeof ApiPublicExtensionTrainingModulesRoute
   '/api/public/hooks/dispatch-jobs': typeof ApiPublicHooksDispatchJobsRoute
+  '/api/public/hooks/evaluate-agenda-reminders': typeof ApiPublicHooksEvaluateAgendaRemindersRoute
+  '/api/public/hooks/evaluate-followups': typeof ApiPublicHooksEvaluateFollowupsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
   '/api/public/ai/products/search': typeof ApiPublicAiProductsSearchRoute
+  '/api/public/extension/agenda-reminder-rules/$id': typeof ApiPublicExtensionAgendaReminderRulesIdRoute
   '/api/public/extension/appointments/$id': typeof ApiPublicExtensionAppointmentsIdRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
   '/api/public/extension/funnel-cards/schedule': typeof ApiPublicExtensionFunnelCardsScheduleRoute
+  '/api/public/extension/funnel-followup-rules/$id': typeof ApiPublicExtensionFunnelFollowupRulesIdRoute
   '/api/public/extension/funnels/$id': typeof ApiPublicExtensionFunnelsIdRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
@@ -727,6 +781,7 @@ export interface FileRoutesById {
   '/api/public/ai/set-access': typeof ApiPublicAiSetAccessRoute
   '/api/public/ai/update-summary': typeof ApiPublicAiUpdateSummaryRoute
   '/api/public/booking/$slug': typeof ApiPublicBookingSlugRoute
+  '/api/public/extension/agenda-reminder-rules': typeof ApiPublicExtensionAgendaReminderRulesRouteWithChildren
   '/api/public/extension/agenda-settings': typeof ApiPublicExtensionAgendaSettingsRoute
   '/api/public/extension/agente-ia-access-link': typeof ApiPublicExtensionAgenteIaAccessLinkRoute
   '/api/public/extension/agente-ia-settings': typeof ApiPublicExtensionAgenteIaSettingsRoute
@@ -738,6 +793,7 @@ export interface FileRoutesById {
   '/api/public/extension/customer-profile': typeof ApiPublicExtensionCustomerProfileRoute
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
+  '/api/public/extension/funnel-followup-rules': typeof ApiPublicExtensionFunnelFollowupRulesRouteWithChildren
   '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRouteWithChildren
   '/api/public/extension/lead-notes': typeof ApiPublicExtensionLeadNotesRouteWithChildren
   '/api/public/extension/lead-schedule': typeof ApiPublicExtensionLeadScheduleRouteWithChildren
@@ -753,15 +809,19 @@ export interface FileRoutesById {
   '/api/public/extension/time-blocks': typeof ApiPublicExtensionTimeBlocksRouteWithChildren
   '/api/public/extension/training-modules': typeof ApiPublicExtensionTrainingModulesRoute
   '/api/public/hooks/dispatch-jobs': typeof ApiPublicHooksDispatchJobsRoute
+  '/api/public/hooks/evaluate-agenda-reminders': typeof ApiPublicHooksEvaluateAgendaRemindersRoute
+  '/api/public/hooks/evaluate-followups': typeof ApiPublicHooksEvaluateFollowupsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
   '/api/public/ai/products/search': typeof ApiPublicAiProductsSearchRoute
+  '/api/public/extension/agenda-reminder-rules/$id': typeof ApiPublicExtensionAgendaReminderRulesIdRoute
   '/api/public/extension/appointments/$id': typeof ApiPublicExtensionAppointmentsIdRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
   '/api/public/extension/funnel-cards/schedule': typeof ApiPublicExtensionFunnelCardsScheduleRoute
+  '/api/public/extension/funnel-followup-rules/$id': typeof ApiPublicExtensionFunnelFollowupRulesIdRoute
   '/api/public/extension/funnels/$id': typeof ApiPublicExtensionFunnelsIdRoute
   '/api/public/extension/jobs/$id': typeof ApiPublicExtensionJobsIdRoute
   '/api/public/extension/jobs/next': typeof ApiPublicExtensionJobsNextRoute
@@ -810,6 +870,7 @@ export interface FileRouteTypes {
     | '/api/public/ai/set-access'
     | '/api/public/ai/update-summary'
     | '/api/public/booking/$slug'
+    | '/api/public/extension/agenda-reminder-rules'
     | '/api/public/extension/agenda-settings'
     | '/api/public/extension/agente-ia-access-link'
     | '/api/public/extension/agente-ia-settings'
@@ -821,6 +882,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/customer-profile'
     | '/api/public/extension/customers'
     | '/api/public/extension/funnel-cards'
+    | '/api/public/extension/funnel-followup-rules'
     | '/api/public/extension/funnels'
     | '/api/public/extension/lead-notes'
     | '/api/public/extension/lead-schedule'
@@ -836,15 +898,19 @@ export interface FileRouteTypes {
     | '/api/public/extension/time-blocks'
     | '/api/public/extension/training-modules'
     | '/api/public/hooks/dispatch-jobs'
+    | '/api/public/hooks/evaluate-agenda-reminders'
+    | '/api/public/hooks/evaluate-followups'
     | '/api/public/payments/webhook'
     | '/api/public/whatsapp/signup-callback'
     | '/api/public/whatsapp/webhook'
     | '/api/public/ai/products/search'
+    | '/api/public/extension/agenda-reminder-rules/$id'
     | '/api/public/extension/appointments/$id'
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
     | '/api/public/extension/funnel-cards/schedule'
+    | '/api/public/extension/funnel-followup-rules/$id'
     | '/api/public/extension/funnels/$id'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
@@ -891,6 +957,7 @@ export interface FileRouteTypes {
     | '/api/public/ai/set-access'
     | '/api/public/ai/update-summary'
     | '/api/public/booking/$slug'
+    | '/api/public/extension/agenda-reminder-rules'
     | '/api/public/extension/agenda-settings'
     | '/api/public/extension/agente-ia-access-link'
     | '/api/public/extension/agente-ia-settings'
@@ -902,6 +969,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/customer-profile'
     | '/api/public/extension/customers'
     | '/api/public/extension/funnel-cards'
+    | '/api/public/extension/funnel-followup-rules'
     | '/api/public/extension/funnels'
     | '/api/public/extension/lead-notes'
     | '/api/public/extension/lead-schedule'
@@ -917,15 +985,19 @@ export interface FileRouteTypes {
     | '/api/public/extension/time-blocks'
     | '/api/public/extension/training-modules'
     | '/api/public/hooks/dispatch-jobs'
+    | '/api/public/hooks/evaluate-agenda-reminders'
+    | '/api/public/hooks/evaluate-followups'
     | '/api/public/payments/webhook'
     | '/api/public/whatsapp/signup-callback'
     | '/api/public/whatsapp/webhook'
     | '/api/public/ai/products/search'
+    | '/api/public/extension/agenda-reminder-rules/$id'
     | '/api/public/extension/appointments/$id'
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
     | '/api/public/extension/funnel-cards/schedule'
+    | '/api/public/extension/funnel-followup-rules/$id'
     | '/api/public/extension/funnels/$id'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
@@ -972,6 +1044,7 @@ export interface FileRouteTypes {
     | '/api/public/ai/set-access'
     | '/api/public/ai/update-summary'
     | '/api/public/booking/$slug'
+    | '/api/public/extension/agenda-reminder-rules'
     | '/api/public/extension/agenda-settings'
     | '/api/public/extension/agente-ia-access-link'
     | '/api/public/extension/agente-ia-settings'
@@ -983,6 +1056,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/customer-profile'
     | '/api/public/extension/customers'
     | '/api/public/extension/funnel-cards'
+    | '/api/public/extension/funnel-followup-rules'
     | '/api/public/extension/funnels'
     | '/api/public/extension/lead-notes'
     | '/api/public/extension/lead-schedule'
@@ -998,15 +1072,19 @@ export interface FileRouteTypes {
     | '/api/public/extension/time-blocks'
     | '/api/public/extension/training-modules'
     | '/api/public/hooks/dispatch-jobs'
+    | '/api/public/hooks/evaluate-agenda-reminders'
+    | '/api/public/hooks/evaluate-followups'
     | '/api/public/payments/webhook'
     | '/api/public/whatsapp/signup-callback'
     | '/api/public/whatsapp/webhook'
     | '/api/public/ai/products/search'
+    | '/api/public/extension/agenda-reminder-rules/$id'
     | '/api/public/extension/appointments/$id'
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
     | '/api/public/extension/funnel-cards/schedule'
+    | '/api/public/extension/funnel-followup-rules/$id'
     | '/api/public/extension/funnels/$id'
     | '/api/public/extension/jobs/$id'
     | '/api/public/extension/jobs/next'
@@ -1053,6 +1131,7 @@ export interface RootRouteChildren {
   ApiPublicAiSetAccessRoute: typeof ApiPublicAiSetAccessRoute
   ApiPublicAiUpdateSummaryRoute: typeof ApiPublicAiUpdateSummaryRoute
   ApiPublicBookingSlugRoute: typeof ApiPublicBookingSlugRoute
+  ApiPublicExtensionAgendaReminderRulesRoute: typeof ApiPublicExtensionAgendaReminderRulesRouteWithChildren
   ApiPublicExtensionAgendaSettingsRoute: typeof ApiPublicExtensionAgendaSettingsRoute
   ApiPublicExtensionAgenteIaAccessLinkRoute: typeof ApiPublicExtensionAgenteIaAccessLinkRoute
   ApiPublicExtensionAgenteIaSettingsRoute: typeof ApiPublicExtensionAgenteIaSettingsRoute
@@ -1064,6 +1143,7 @@ export interface RootRouteChildren {
   ApiPublicExtensionCustomerProfileRoute: typeof ApiPublicExtensionCustomerProfileRoute
   ApiPublicExtensionCustomersRoute: typeof ApiPublicExtensionCustomersRouteWithChildren
   ApiPublicExtensionFunnelCardsRoute: typeof ApiPublicExtensionFunnelCardsRouteWithChildren
+  ApiPublicExtensionFunnelFollowupRulesRoute: typeof ApiPublicExtensionFunnelFollowupRulesRouteWithChildren
   ApiPublicExtensionFunnelsRoute: typeof ApiPublicExtensionFunnelsRouteWithChildren
   ApiPublicExtensionLeadNotesRoute: typeof ApiPublicExtensionLeadNotesRouteWithChildren
   ApiPublicExtensionLeadScheduleRoute: typeof ApiPublicExtensionLeadScheduleRouteWithChildren
@@ -1079,6 +1159,8 @@ export interface RootRouteChildren {
   ApiPublicExtensionTimeBlocksRoute: typeof ApiPublicExtensionTimeBlocksRouteWithChildren
   ApiPublicExtensionTrainingModulesRoute: typeof ApiPublicExtensionTrainingModulesRoute
   ApiPublicHooksDispatchJobsRoute: typeof ApiPublicHooksDispatchJobsRoute
+  ApiPublicHooksEvaluateAgendaRemindersRoute: typeof ApiPublicHooksEvaluateAgendaRemindersRoute
+  ApiPublicHooksEvaluateFollowupsRoute: typeof ApiPublicHooksEvaluateFollowupsRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiPublicWhatsappSignupCallbackRoute: typeof ApiPublicWhatsappSignupCallbackRoute
   ApiPublicWhatsappWebhookRoute: typeof ApiPublicWhatsappWebhookRoute
@@ -1252,6 +1334,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicBookingSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/extension/agenda-reminder-rules': {
+      id: '/api/public/extension/agenda-reminder-rules'
+      path: '/api/public/extension/agenda-reminder-rules'
+      fullPath: '/api/public/extension/agenda-reminder-rules'
+      preLoaderRoute: typeof ApiPublicExtensionAgendaReminderRulesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/extension/agenda-settings': {
       id: '/api/public/extension/agenda-settings'
       path: '/api/public/extension/agenda-settings'
@@ -1327,6 +1416,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/extension/funnel-cards'
       fullPath: '/api/public/extension/funnel-cards'
       preLoaderRoute: typeof ApiPublicExtensionFunnelCardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/funnel-followup-rules': {
+      id: '/api/public/extension/funnel-followup-rules'
+      path: '/api/public/extension/funnel-followup-rules'
+      fullPath: '/api/public/extension/funnel-followup-rules'
+      preLoaderRoute: typeof ApiPublicExtensionFunnelFollowupRulesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/extension/funnels': {
@@ -1434,6 +1530,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksDispatchJobsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/evaluate-agenda-reminders': {
+      id: '/api/public/hooks/evaluate-agenda-reminders'
+      path: '/api/public/hooks/evaluate-agenda-reminders'
+      fullPath: '/api/public/hooks/evaluate-agenda-reminders'
+      preLoaderRoute: typeof ApiPublicHooksEvaluateAgendaRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/evaluate-followups': {
+      id: '/api/public/hooks/evaluate-followups'
+      path: '/api/public/hooks/evaluate-followups'
+      fullPath: '/api/public/hooks/evaluate-followups'
+      preLoaderRoute: typeof ApiPublicHooksEvaluateFollowupsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -1461,6 +1571,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/public/ai/products/search'
       preLoaderRoute: typeof ApiPublicAiProductsSearchRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/agenda-reminder-rules/$id': {
+      id: '/api/public/extension/agenda-reminder-rules/$id'
+      path: '/$id'
+      fullPath: '/api/public/extension/agenda-reminder-rules/$id'
+      preLoaderRoute: typeof ApiPublicExtensionAgendaReminderRulesIdRouteImport
+      parentRoute: typeof ApiPublicExtensionAgendaReminderRulesRoute
     }
     '/api/public/extension/appointments/$id': {
       id: '/api/public/extension/appointments/$id'
@@ -1496,6 +1613,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/public/extension/funnel-cards/schedule'
       preLoaderRoute: typeof ApiPublicExtensionFunnelCardsScheduleRouteImport
       parentRoute: typeof ApiPublicExtensionFunnelCardsRoute
+    }
+    '/api/public/extension/funnel-followup-rules/$id': {
+      id: '/api/public/extension/funnel-followup-rules/$id'
+      path: '/$id'
+      fullPath: '/api/public/extension/funnel-followup-rules/$id'
+      preLoaderRoute: typeof ApiPublicExtensionFunnelFollowupRulesIdRouteImport
+      parentRoute: typeof ApiPublicExtensionFunnelFollowupRulesRoute
     }
     '/api/public/extension/funnels/$id': {
       id: '/api/public/extension/funnels/$id'
@@ -1665,6 +1789,21 @@ const AssinarRouteChildren: AssinarRouteChildren = {
 const AssinarRouteWithChildren =
   AssinarRoute._addFileChildren(AssinarRouteChildren)
 
+interface ApiPublicExtensionAgendaReminderRulesRouteChildren {
+  ApiPublicExtensionAgendaReminderRulesIdRoute: typeof ApiPublicExtensionAgendaReminderRulesIdRoute
+}
+
+const ApiPublicExtensionAgendaReminderRulesRouteChildren: ApiPublicExtensionAgendaReminderRulesRouteChildren =
+  {
+    ApiPublicExtensionAgendaReminderRulesIdRoute:
+      ApiPublicExtensionAgendaReminderRulesIdRoute,
+  }
+
+const ApiPublicExtensionAgendaReminderRulesRouteWithChildren =
+  ApiPublicExtensionAgendaReminderRulesRoute._addFileChildren(
+    ApiPublicExtensionAgendaReminderRulesRouteChildren,
+  )
+
 interface ApiPublicExtensionAppointmentsRouteChildren {
   ApiPublicExtensionAppointmentsIdRoute: typeof ApiPublicExtensionAppointmentsIdRoute
 }
@@ -1724,6 +1863,21 @@ const ApiPublicExtensionFunnelCardsRouteChildren: ApiPublicExtensionFunnelCardsR
 const ApiPublicExtensionFunnelCardsRouteWithChildren =
   ApiPublicExtensionFunnelCardsRoute._addFileChildren(
     ApiPublicExtensionFunnelCardsRouteChildren,
+  )
+
+interface ApiPublicExtensionFunnelFollowupRulesRouteChildren {
+  ApiPublicExtensionFunnelFollowupRulesIdRoute: typeof ApiPublicExtensionFunnelFollowupRulesIdRoute
+}
+
+const ApiPublicExtensionFunnelFollowupRulesRouteChildren: ApiPublicExtensionFunnelFollowupRulesRouteChildren =
+  {
+    ApiPublicExtensionFunnelFollowupRulesIdRoute:
+      ApiPublicExtensionFunnelFollowupRulesIdRoute,
+  }
+
+const ApiPublicExtensionFunnelFollowupRulesRouteWithChildren =
+  ApiPublicExtensionFunnelFollowupRulesRoute._addFileChildren(
+    ApiPublicExtensionFunnelFollowupRulesRouteChildren,
   )
 
 interface ApiPublicExtensionFunnelsRouteChildren {
@@ -1896,6 +2050,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicAiSetAccessRoute: ApiPublicAiSetAccessRoute,
   ApiPublicAiUpdateSummaryRoute: ApiPublicAiUpdateSummaryRoute,
   ApiPublicBookingSlugRoute: ApiPublicBookingSlugRoute,
+  ApiPublicExtensionAgendaReminderRulesRoute:
+    ApiPublicExtensionAgendaReminderRulesRouteWithChildren,
   ApiPublicExtensionAgendaSettingsRoute: ApiPublicExtensionAgendaSettingsRoute,
   ApiPublicExtensionAgenteIaAccessLinkRoute:
     ApiPublicExtensionAgenteIaAccessLinkRoute,
@@ -1914,6 +2070,8 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicExtensionCustomersRouteWithChildren,
   ApiPublicExtensionFunnelCardsRoute:
     ApiPublicExtensionFunnelCardsRouteWithChildren,
+  ApiPublicExtensionFunnelFollowupRulesRoute:
+    ApiPublicExtensionFunnelFollowupRulesRouteWithChildren,
   ApiPublicExtensionFunnelsRoute: ApiPublicExtensionFunnelsRouteWithChildren,
   ApiPublicExtensionLeadNotesRoute:
     ApiPublicExtensionLeadNotesRouteWithChildren,
@@ -1936,6 +2094,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicExtensionTrainingModulesRoute:
     ApiPublicExtensionTrainingModulesRoute,
   ApiPublicHooksDispatchJobsRoute: ApiPublicHooksDispatchJobsRoute,
+  ApiPublicHooksEvaluateAgendaRemindersRoute:
+    ApiPublicHooksEvaluateAgendaRemindersRoute,
+  ApiPublicHooksEvaluateFollowupsRoute: ApiPublicHooksEvaluateFollowupsRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiPublicWhatsappSignupCallbackRoute: ApiPublicWhatsappSignupCallbackRoute,
   ApiPublicWhatsappWebhookRoute: ApiPublicWhatsappWebhookRoute,
