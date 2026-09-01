@@ -201,6 +201,7 @@
       renderTopbar();
       renderDrawer();
       updateFunnelBadge();
+      updateFollowupBadge();
     }
   }
 
@@ -241,6 +242,7 @@
     robot: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8.5" width="18" height="12.5" rx="2.5"/><path d="M12 8.5V4"/><circle cx="12" cy="2.5" r="1.6"/><circle cx="8.5" cy="14.5" r="1.2"/><circle cx="15.5" cy="14.5" r="1.2"/><path d="M1 12.5v4M23 12.5v4"/></svg>`,
     cap: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M23 9 12 3 1 9l11 6 11-6Z"/><path d="M5 11.5v5c0 1.8 3.1 3.5 7 3.5s7-1.7 7-3.5v-5"/><path d="M23 9v7"/></svg>`,
     link: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="2.5" width="11" height="19" rx="2.2"/><path d="M10.5 18.2h3"/></svg>`,
+    clock: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>`,
   };
 
   const GEAR_SVG = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
@@ -1192,6 +1194,7 @@
         await loadFunnels();
         renderTopbar();
         updateFunnelBadge();
+        updateFollowupBadge();
       });
     }
     paint();
@@ -1644,6 +1647,7 @@
   const SCHEDULE_BTN_ID = "crm-chat-schedule";
   const PROFILE_BTN_ID = "crm-chat-profile";
   const SAVE_CONTACT_BTN_ID = "crm-chat-save-contact";
+  const FOLLOWUP_BTN_ID = "crm-chat-followup";
   const BOLT_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>`;
   const PROFILE_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="18" height="17" rx="3.2"/><circle cx="12" cy="10" r="3"/><path d="M6.5 17.2c.9-2.3 3-3.7 5.5-3.7s4.6 1.4 5.5 3.7"/></svg>`;
   // Pessoa com "+" — aparece só quando o contato ainda não está salvo na
@@ -2294,11 +2298,13 @@
     const hasSchedule = document.getElementById(SCHEDULE_BTN_ID);
     const hasProfile = document.getElementById(PROFILE_BTN_ID);
     const hasSaveContact = document.getElementById(SAVE_CONTACT_BTN_ID);
+    const hasFollowup = document.getElementById(FOLLOWUP_BTN_ID);
     if (
-      hasCrm && hasBolt && hasNotes && hasSchedule && hasProfile && hasSaveContact &&
-      header.contains(hasCrm) && header.contains(hasBolt) && header.contains(hasNotes) && header.contains(hasSchedule) && header.contains(hasProfile) && header.contains(hasSaveContact)
+      hasCrm && hasBolt && hasNotes && hasSchedule && hasProfile && hasSaveContact && hasFollowup &&
+      header.contains(hasCrm) && header.contains(hasBolt) && header.contains(hasNotes) && header.contains(hasSchedule) && header.contains(hasProfile) && header.contains(hasSaveContact) && header.contains(hasFollowup)
     ) {
       updateFunnelBadge();
+      updateFollowupBadge();
       return;
     }
     hasCrm?.remove();
@@ -2307,6 +2313,7 @@
     hasSchedule?.remove();
     hasProfile?.remove();
     hasSaveContact?.remove();
+    hasFollowup?.remove();
 
     const btn = document.createElement("button");
     btn.id = CHAT_BTN_ID;
@@ -2403,9 +2410,27 @@
       void saveActiveContact(saveContactBtn);
     });
 
+    const followupBtn = document.createElement("button");
+    followupBtn.id = FOLLOWUP_BTN_ID;
+    followupBtn.type = "button";
+    followupBtn.className = "crm-chat-btn crm-chat-btn-icon";
+    followupBtn.style.display = "none"; // só aparece se esse contato estiver numa etapa com follow-up
+    followupBtn.setAttribute("data-label", "Follow-up");
+    followupBtn.innerHTML = ICONS.clock;
+    followupBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (document.querySelector(".crm-followup-pop")) {
+        document.querySelector(".crm-followup-pop")?.remove();
+        return;
+      }
+      openFollowupStatusPopover(followupBtn);
+    });
+
     const slot = headerActionsSlot(header);
     if (slot === header) {
       header.appendChild(btn);
+      header.appendChild(followupBtn);
       header.appendChild(notesBtn);
       header.appendChild(scheduleBtn);
       header.appendChild(profileBtn);
@@ -2413,13 +2438,15 @@
       header.appendChild(boltBtn);
     } else {
       slot.insertAdjacentElement("beforebegin", btn);
-      btn.insertAdjacentElement("afterend", notesBtn);
+      btn.insertAdjacentElement("afterend", followupBtn);
+      followupBtn.insertAdjacentElement("afterend", notesBtn);
       notesBtn.insertAdjacentElement("afterend", scheduleBtn);
       scheduleBtn.insertAdjacentElement("afterend", profileBtn);
       profileBtn.insertAdjacentElement("afterend", saveContactBtn);
       saveContactBtn.insertAdjacentElement("afterend", boltBtn);
     }
     updateFunnelBadge();
+    updateFollowupBadge();
     // Dispara na hora, sem esperar o ciclo de 1.5s — é aqui que detecta
     // que a conversa mudou de verdade (cabeçalho recriado), então é o
     // ponto certo pra já checar se o novo contato está salvo.
@@ -2466,6 +2493,96 @@
     const btn = document.getElementById(CHAT_BTN_ID);
     if (!btn) return;
     btn.classList.toggle("crm-chat-btn-active", activeChatInMainFunnel());
+  }
+
+  /** Todos os cards (em qualquer funil) do contato aberto agora que têm
+   * follow-up configurado na etapa em que estão — um contato pode
+   * aparecer em mais de um funil ao mesmo tempo. */
+  function activeChatFollowupEntries() {
+    const waId = activeChatIdFromDom();
+    if (!waId) return [];
+    const out = [];
+    for (const f of funnels) {
+      if (f.mode === "label") continue;
+      for (const c of f.cards || []) {
+        if (c.wa_id === waId && c.followup) {
+          const stage = (f.stages || []).find((s) => s.id === c.stage_id);
+          out.push({ funnelName: f.name, stageName: stage?.name || "", followup: c.followup });
+        }
+      }
+    }
+    return out;
+  }
+
+  /** Reloginho de follow-up no cabeçalho da conversa — só aparece quando
+   * esse contato está numa etapa com follow-up configurado. Pulsa
+   * (destaque) quando a próxima mensagem já passou da hora prevista
+   * (está sendo processada pelo avaliador automático agora). */
+  function updateFollowupBadge() {
+    const btn = document.getElementById(FOLLOWUP_BTN_ID);
+    if (!btn) return;
+    const entries = activeChatFollowupEntries();
+    if (!entries.length) {
+      btn.style.display = "none";
+      return;
+    }
+    btn.style.display = "";
+    const pending = entries.filter((e) => !e.followup.all_sent);
+    const isOverdue = pending.some(
+      (e) => e.followup.next_due_at && new Date(e.followup.next_due_at).getTime() <= Date.now(),
+    );
+    btn.classList.toggle("crm-chat-btn-active", pending.length > 0);
+    btn.classList.toggle("crm-followup-btn-overdue", isOverdue);
+  }
+
+  function humanizeFollowupDue(dueAtIso) {
+    if (!dueAtIso) return "";
+    const diffMs = new Date(dueAtIso).getTime() - Date.now();
+    if (diffMs <= 0) return "processando agora";
+    const min = Math.round(diffMs / 60000);
+    if (min < 60) return `em ${min}min`;
+    const hours = Math.round(min / 60);
+    if (hours < 24) return `em ${hours}h`;
+    return `em ${Math.round(hours / 24)}d`;
+  }
+
+  /** Popup leve com o relatório de follow-up do contato aberto — quantas
+   * mensagens da sequência já foram enviadas, quando vem a próxima. */
+  function openFollowupStatusPopover(anchor) {
+    document.querySelectorAll(".crm-menu, .crm-lite-pop, .crm-fn-pop, .crm-followup-pop").forEach((el) => el.remove());
+    const pop = document.createElement("div");
+    pop.className = "crm-lite-pop crm-followup-pop";
+    const rect = anchor.getBoundingClientRect();
+    pop.style.top = `${rect.bottom + 8}px`;
+    pop.style.left = `${Math.min(Math.max(8, rect.left), window.innerWidth - 280)}px`;
+
+    const entries = activeChatFollowupEntries();
+    pop.innerHTML = `
+      <p class="crm-lite-pop-title">Follow-up</p>
+      ${entries
+        .map(
+          (e) => `
+        <div class="crm-followup-pop-entry">
+          <p class="crm-followup-pop-funnel">${escapeHtml(e.funnelName)} · ${escapeHtml(e.stageName)}</p>
+          <p class="crm-followup-pop-count">${e.followup.sent_count}/${e.followup.total_steps} enviada${e.followup.total_steps === 1 ? "" : "s"}</p>
+          <p class="crm-followup-pop-next">${
+            e.followup.all_sent ? "Sequência concluída." : `Próxima: ${humanizeFollowupDue(e.followup.next_due_at)}`
+          }</p>
+        </div>
+      `,
+        )
+        .join('<div class="crm-followup-pop-divider"></div>')}
+    `;
+    document.body.appendChild(pop);
+    animatePopIn(pop);
+    const close = () => {
+      pop.remove();
+      document.removeEventListener("mousedown", onDoc, true);
+    };
+    function onDoc(ev) {
+      if (!pop.contains(ev.target) && ev.target !== anchor) close();
+    }
+    setTimeout(() => document.addEventListener("mousedown", onDoc, true), 0);
   }
 
   /** Mostra o ícone de "salvar contato" só quando a conversa aberta ainda
@@ -2675,6 +2792,7 @@
           crmToast(`Removido de ${funnel.name}`, "ok", anchor);
           membership[funnelId] = null;
           updateFunnelBadge();
+          updateFollowupBadge();
           renderRows();
           void loadFunnels();
         } else {
@@ -2704,6 +2822,7 @@
         crmToast(`Adicionado em ${funnel.name} · ${stage.name}`, "ok", anchor);
         membership[funnelId] = { cardId: r.card?.id || current?.cardId, stageId: stage.id };
         updateFunnelBadge();
+        updateFollowupBadge();
         renderRows();
         void loadFunnels();
       } else {
@@ -3811,6 +3930,7 @@
     }
     await loadFunnels();
     updateFunnelBadge();
+    updateFollowupBadge();
   }
 
   // ── Atalho "/palavra" na caixa de mensagem do WhatsApp ──────────────────

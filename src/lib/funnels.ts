@@ -117,6 +117,17 @@ export type FunnelCard = {
   profile_picture_url?: string | null;
   /** Mensagens não lidas nessa conversa, pro selo no botão de WhatsApp. */
   unread_count?: number;
+  stage_entered_at?: string;
+  /** Status do follow-up dessa etapa pra ESTE card — null quando a etapa
+   * não tem follow-up configurado (ou está pausado). Vem pronto do
+   * backend (GET /funnels), sem precisar de chamada extra. */
+  followup?: {
+    total_steps: number;
+    sent_count: number;
+    all_sent: boolean;
+    next_due_at: string | null;
+    last_sent_at: string | null;
+  } | null;
 };
 
 export type Funnel = {

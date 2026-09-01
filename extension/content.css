@@ -504,6 +504,22 @@ html body.crm-shell.crm-qr-open #app {
    sem escurecer a tela. */
 .crm-lite-pop { width: 240px; padding: 12px; }
 .crm-lite-pop-title { margin: 0 0 8px; font-size: 12px; font-weight: 700; color: var(--z-text); }
+/* Reloginho de follow-up no cabeçalho da conversa — pulsa quando a
+   próxima mensagem já passou da hora prevista. Usa box-shadow (não
+   ::before) porque ::before já é a bolinha de "ativo" logo acima, e
+   ::after já é o tooltip — os dois pseudo-elementos do botão já estão
+   ocupados. */
+.crm-followup-btn-overdue { color: #d97706; animation: crm-followup-pulse 1.6s ease-in-out infinite; }
+@keyframes crm-followup-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.35); }
+  50% { box-shadow: 0 0 0 5px rgba(217, 119, 6, 0.12); }
+}
+.crm-followup-pop { width: 240px; padding: 12px; max-height: 60vh; overflow-y: auto; }
+.crm-followup-pop-entry { padding: 2px 0; }
+.crm-followup-pop-funnel { margin: 0 0 2px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--z-text-dim); }
+.crm-followup-pop-count { margin: 0; font-size: 13px; font-weight: 600; color: var(--z-text); }
+.crm-followup-pop-next { margin: 2px 0 0; font-size: 12px; color: var(--z-text-dim); }
+.crm-followup-pop-divider { height: 1px; background: var(--z-line-soft); margin: 8px 0; }
 .crm-lite-pop-input {
   width: 100%; box-sizing: border-box; border: 1px solid var(--z-line); border-radius: 8px;
   background: var(--z-bar); color: var(--z-text); font-family: var(--z-font); font-size: 13px; padding: 8px 10px;

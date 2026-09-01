@@ -1026,7 +1026,9 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                               {card.title}
                             </p>
                           </div>
-                          {active.mode !== "label" && (
+                          <div className="flex shrink-0 items-center gap-1">
+                            {card.followup && <FollowupBadge followup={card.followup} cardTitle={card.title} />}
+                            {active.mode !== "label" && (
                             <button
                               onClick={() => removeCard(card)}
                               title="Remover lead"
@@ -1039,7 +1041,8 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
                                 <path d="M10 11v6M14 11v6" />
                               </svg>
                             </button>
-                          )}
+                            )}
+                          </div>
                         </div>
                         {card.notes && (
                           <span className="mt-1 inline-block rounded bg-neutral-200 px-1.5 py-0.5 text-[10px] text-neutral-700">
@@ -1350,6 +1353,77 @@ function FunnelPicker({
 }
 
 /** Selo de mensagens não lidas, sobreposto no canto do botão de WhatsApp. */
+/** Countdown curto e legível pro badge de follow-up — "em 2h", "em 5min",
+ * "agora" (já passou da hora, esperando a próxima rodada do avaliador). */
+function humanizeDue(dueAtIso: string | null): string {
+  if (!dueAtIso) return "";
+  const diffMs = new Date(dueAtIso).getTime() - Date.now();
+  if (diffMs <= 0) return "agora";
+  const min = Math.round(diffMs / 60_000);
+  if (min < 60) return `em ${min}min`;
+  const hours = Math.round(min / 60);
+  if (hours < 24) return `em ${hours}h`;
+  const days = Math.round(hours / 24);
+  return `em ${days}d`;
+}
+
+/** Reloginho de follow-up no card — mostra de cara se esse lead ainda vai
+ * receber alguma mensagem da sequência (e quando) ou se já recebeu tudo.
+ * Clicar abre um relatório rápido com os detalhes. */
+function FollowupBadge({ followup, cardTitle }: { followup: NonNullable<FunnelCard["followup"]>; cardTitle: string }) {
+  const [open, setOpen] = useState(false);
+  const isOverdue = !followup.all_sent && followup.next_due_at && new Date(followup.next_due_at).getTime() <= Date.now();
+  const colorClass = followup.all_sent
+    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+    : isOverdue
+      ? "bg-amber-50 text-amber-700 border-amber-300 animate-pulse"
+      : "bg-neutral-100 text-neutral-600 border-neutral-200";
+
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        title="Status do follow-up"
+        className={`flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium transition hover:brightness-95 ${colorClass}`}
+      >
+        <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7v5l3 3" />
+        </svg>
+        {followup.sent_count}/{followup.total_steps}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
+          <div
+            className="absolute left-0 top-full z-50 mt-1 w-56 rounded-xl border border-neutral-200 bg-white p-3 text-left shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="mb-1 truncate text-xs font-semibold text-neutral-900">{cardTitle}</p>
+            <p className="text-xs text-neutral-600">
+              {followup.sent_count} de {followup.total_steps} mensagem{followup.total_steps === 1 ? "" : "s"} da sequência
+              enviada{followup.sent_count === 1 ? "" : "s"}.
+            </p>
+            {followup.all_sent ? (
+              <p className="mt-1.5 text-xs font-medium text-emerald-700">Sequência concluída.</p>
+            ) : (
+              <p className="mt-1.5 text-xs font-medium text-neutral-700">
+                Próxima mensagem: {isOverdue ? "processando agora" : humanizeDue(followup.next_due_at)}
+              </p>
+            )}
+            {followup.last_sent_at && (
+              <p className="mt-1 text-[11px] text-neutral-400">
+                Última enviada {new Date(followup.last_sent_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+              </p>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function UnreadBadge({ count }: { count: number }) {
   if (!count || count <= 0) return null;
   return (

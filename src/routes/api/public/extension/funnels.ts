@@ -37,7 +37,7 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
         let cards: { data: any[] | null; error: { message: string } | null } = await supabaseAdmin
           .from("funnel_cards")
           .select(
-            "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids, profile_picture_url, unread_count)",
+            "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, stage_entered_at, wa_contacts(wa_id, label_ids, profile_picture_url, unread_count)",
           )
           .eq("barbershop_id", shop)
           .order("sort_order", { ascending: true });
@@ -48,7 +48,7 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
           cards = await supabaseAdmin
             .from("funnel_cards")
             .select(
-              "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids, profile_picture_url)",
+              "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, stage_entered_at, wa_contacts(wa_id, label_ids, profile_picture_url)",
             )
             .eq("barbershop_id", shop)
             .order("sort_order", { ascending: true });
@@ -57,7 +57,7 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
           cards = await supabaseAdmin
             .from("funnel_cards")
             .select(
-              "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, wa_contacts(wa_id, label_ids)",
+              "id, funnel_id, stage_id, title, phone, value_cents, notes, sort_order, customer_id, wa_contact_id, stage_entered_at, wa_contacts(wa_id, label_ids)",
             )
             .eq("barbershop_id", shop)
             .order("sort_order", { ascending: true });
@@ -81,10 +81,64 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
           wa_contacts: undefined,
         }));
 
+        // Status de follow-up por card — pro reloginho no kanban e pro
+        // indicador dentro da conversa na extensão saberem, sem chamada
+        // extra, se esse lead vai receber (e quando) ou já recebeu tudo.
+        const { data: followupRules } = await supabaseAdmin
+          .from("funnel_followup_rules")
+          .select("id, funnel_id, stage_id, active, funnel_followup_steps(id, delay_minutes, sort_order)")
+          .eq("barbershop_id", shop)
+          .eq("active", true);
+        const ruleByStage = new Map(
+          (followupRules ?? []).map((r) => [`${r.funnel_id}:${r.stage_id}`, r]),
+        );
+        const cardIds = flatCards.map((c: any) => c.id);
+        const { data: sentLog } = cardIds.length
+          ? await supabaseAdmin
+              .from("funnel_followup_sent_log")
+              .select("card_id, step_id, sent_at")
+              .in("card_id", cardIds)
+          : { data: [] as { card_id: string; step_id: string; sent_at: string }[] };
+        const sentByCard = new Map<string, Map<string, string>>();
+        for (const log of sentLog ?? []) {
+          if (!sentByCard.has(log.card_id)) sentByCard.set(log.card_id, new Map());
+          sentByCard.get(log.card_id)!.set(log.step_id, log.sent_at);
+        }
+
+        const flatCardsWithFollowup = flatCards.map((c: any) => {
+          const rule = ruleByStage.get(`${c.funnel_id}:${c.stage_id}`) as
+            | { funnel_followup_steps: Array<{ id: string; delay_minutes: number; sort_order: number }> }
+            | undefined;
+          const steps = (rule?.funnel_followup_steps ?? []).slice().sort((a, b) => a.sort_order - b.sort_order);
+          if (!steps.length) return { ...c, followup: null };
+          const sentMap = sentByCard.get(c.id) ?? new Map<string, string>();
+          const sentSteps = steps.filter((s) => sentMap.has(s.id));
+          const nextStep = steps.find((s) => !sentMap.has(s.id));
+          const enteredAt = c.stage_entered_at ? new Date(c.stage_entered_at).getTime() : null;
+          const nextDueAt =
+            nextStep && enteredAt ? new Date(enteredAt + nextStep.delay_minutes * 60_000).toISOString() : null;
+          const lastSentAt = sentSteps.length
+            ? sentSteps
+                .map((s) => sentMap.get(s.id) as string)
+                .sort()
+                .at(-1)!
+            : null;
+          return {
+            ...c,
+            followup: {
+              total_steps: steps.length,
+              sent_count: sentSteps.length,
+              all_sent: !nextStep,
+              next_due_at: nextDueAt,
+              last_sent_at: lastSentAt,
+            },
+          };
+        });
+
         const result = (funnels.data ?? []).map((f) => ({
           ...f,
           stages: (stages.data ?? []).filter((s) => s.funnel_id === f.id),
-          cards: flatCards.filter((c) => c.funnel_id === f.id),
+          cards: flatCardsWithFollowup.filter((c: any) => c.funnel_id === f.id),
         }));
         return jsonResponse(request, { ok: true, funnels: result });
       },
