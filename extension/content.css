@@ -400,19 +400,24 @@ html body.crm-shell.crm-qr-open #app {
 }
 .crm-pill-premium:hover { background: var(--z-accent-strong); color: var(--z-on-accent); }
 
-/* "Minha conta" — mesma família visual do aviso de plano, cor neutra
-   escura de propósito (não é uma urgência tipo "assinatura vencida",
-   é só acesso à própria conta) pra não competir com o pill de Premium
-   quando os dois aparecem juntos. */
+/* "Minha conta" — cor de marca (mesmo azul usado em todo o resto da
+   extensão), sempre empurrado pro canto direito de vez (margin-left:
+   auto, não um valor fixo) — funciona tanto com o pill de Premium do
+   lado (quando não é assinante) quanto sozinho, sem ficar "colado" nas
+   abas do funil. */
 .crm-pill-account {
-  margin-left: 8px;
+  margin-left: auto;
   border-color: transparent;
-  background: var(--z-text);
-  color: #fff;
+  background: var(--z-accent);
+  color: var(--z-on-accent);
   font-weight: 700;
 }
 .crm-pill-account:hover { background: var(--z-accent-strong); }
 .crm-pill-account svg { width: 14px; height: 14px; }
+/* Quando o pill de Premium também aparece (conta grátis), os dois ficam
+   agrupados no canto — só precisa de um respiro pequeno entre eles, não
+   de outro empurrão (o de Premium já empurrou o grupo inteiro). */
+.crm-pill-premium + .crm-pill-account { margin-left: 8px; }
 
 /* Botão CRM dentro do cabeçalho da conversa (ações sem sair do WhatsApp). */
 .crm-chat-btn {
