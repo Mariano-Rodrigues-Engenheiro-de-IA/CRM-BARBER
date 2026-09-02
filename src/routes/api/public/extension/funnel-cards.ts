@@ -244,6 +244,20 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
             .maybeSingle();
           stageReallyChanged = !!current && current.stage_id !== rest.stage_id;
         }
+        // Mover um lead entre etapas é Premium — reordenar dentro da
+        // mesma coluna (stageReallyChanged = false) continua liberado no
+        // plano grátis, só a troca de etapa de verdade é bloqueada.
+        if (stageReallyChanged) {
+          const { getBillingStatus } = await import("@/lib/billing.server");
+          const billing = await getBillingStatus(supabaseAdmin, auth.token.barbershop_id);
+          if (!billing.premium) {
+            return jsonResponse(
+              request,
+              { ok: false, error: "Mover leads entre etapas faz parte do plano Premium." },
+              { status: 402 },
+            );
+          }
+        }
         const patch: {
           stage_id?: string;
           stage_entered_at?: string;

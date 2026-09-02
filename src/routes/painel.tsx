@@ -394,34 +394,6 @@ function PremiumSoftLock({
   );
 }
 
-function FunnelsLockedPreview({ onUpgrade }: { onUpgrade: () => void }) {
-  const sampleColumns = [
-    { name: "Novos leads", cards: ["Ana Silva", "Carlos Souza"] },
-    { name: "Em conversa", cards: ["Beatriz Lima", "João Pedro", "Marina Costa"] },
-    { name: "Agendado", cards: ["Rafael Alves"] },
-    { name: "Fechado", cards: ["Camila Rocha", "Pedro Santos"] },
-  ];
-  return (
-    <PremiumSoftLock active onUpgrade={onUpgrade}>
-      <div className="flex gap-3 overflow-hidden px-1 pt-3">
-        {sampleColumns.map((col) => (
-          <div key={col.name} className="w-64 shrink-0 rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
-            <p className="mb-3 text-xs font-bold uppercase tracking-wide text-neutral-500">{col.name}</p>
-            <div className="space-y-2">
-              {col.cards.map((name) => (
-                <div key={name} className="rounded-xl border border-neutral-200 bg-white p-3 shadow-sm">
-                  <p className="text-sm font-medium text-neutral-800">{name}</p>
-                  <div className="mt-2 h-2 w-2/3 rounded-full bg-neutral-200" />
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </PremiumSoftLock>
-  );
-}
-
 function SectionHeader({
   title,
   subtitle,
@@ -585,6 +557,7 @@ function Painel() {
     }
   });
   const [billing, setBilling] = useState<BillingStatus | null>(null);
+  const [showFunnelMovePopup, setShowFunnelMovePopup] = useState(false);
   const [brand, setBrand] = useState<Brand>({});
 
 
@@ -1063,15 +1036,22 @@ function Painel() {
               </div>
             </header>
             <main className="px-4 py-3">
-              {billing && !billing.premium ? (
-                <FunnelsLockedPreview onUpgrade={openCheckout} />
-              ) : (
-                <FunnelsView
-                  api={(path: string, opts?: RequestInit) => api(token, path, opts)}
-                  headerHost={funisHeaderEl}
-                />
-              )}
+              <FunnelsView
+                api={(path: string, opts?: RequestInit) => api(token, path, opts)}
+                headerHost={funisHeaderEl}
+                premiumLocked={!!billing && !billing.premium}
+                onBlockedMove={() => setShowFunnelMovePopup(true)}
+              />
             </main>
+            {showFunnelMovePopup && (
+              <PremiumInlinePopup
+                onClose={() => setShowFunnelMovePopup(false)}
+                onUpgrade={() => {
+                  setShowFunnelMovePopup(false);
+                  openCheckout();
+                }}
+              />
+            )}
           </>
         )}
 

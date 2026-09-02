@@ -161,20 +161,6 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
         }
         const shop = auth.token.barbershop_id;
 
-        // Criar funil é 100% Premium — sem limite numérico como
-        // contatos/disparo, é bloqueado de vez no plano grátis (reforça
-        // no servidor o que a tela já esconde, pra ninguém burlar
-        // chamando a API direto).
-        const { getBillingStatus } = await import("@/lib/billing.server");
-        const billing = await getBillingStatus(supabaseAdmin, shop);
-        if (!billing.premium) {
-          return jsonResponse(
-            request,
-            { ok: false, error: "Funis de vendas fazem parte do plano Premium." },
-            { status: 402 },
-          );
-        }
-
         // Evita duplicar funis padrão (mode: tab ou label)
         if (parsed.data.mode === "tab" || parsed.data.mode === "label") {
           const { data: existing } = await supabaseAdmin

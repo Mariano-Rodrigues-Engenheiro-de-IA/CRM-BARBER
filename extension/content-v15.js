@@ -1840,7 +1840,14 @@
         chrome.runtime
           .sendMessage({ type: "api", path: `/api/public/extension/lead-notes?${contactQuery}` })
           .then((r) => {
-            if (r?.ok && dialog.isConnected) renderList(r.notes || []);
+            if (r?.ok) {
+              // Atualiza o cache também — é ele que alimenta o selinho no
+              // ícone, senão o número só mudaria na próxima troca de
+              // conversa, não na hora que a nota é salva.
+              notesPrefetch = { key: contactQuery, chat, notes: r.notes || [] };
+              updateNotesBadge();
+              if (dialog.isConnected) renderList(r.notes || []);
+            }
           })
           .catch(() => null);
         return;
@@ -1849,7 +1856,10 @@
       const r = await chrome.runtime
         .sendMessage({ type: "api", path: `/api/public/extension/lead-notes?${contactQuery}` })
         .catch(() => null);
-      renderList(r?.ok ? r.notes || [] : []);
+      const notes = r?.ok ? r.notes || [] : [];
+      notesPrefetch = { key: contactQuery, chat, notes };
+      updateNotesBadge();
+      renderList(notes);
     }
 
     dialog.addEventListener("click", async (e) => {
@@ -2133,7 +2143,14 @@
         chrome.runtime
           .sendMessage({ type: "api", path: `/api/public/extension/lead-schedule?phone=${encodeURIComponent(chat.phone)}` })
           .then((r) => {
-            if (r?.ok && dialog.isConnected) renderList(r.jobs || []);
+            if (r?.ok) {
+              // Atualiza o cache também — é ele que alimenta o selinho no
+              // ícone, senão o número só mudaria na próxima troca de
+              // conversa, não na hora que o agendamento é criado.
+              schedulePrefetch = { key: chat.phone, chat, jobs: r.jobs || [] };
+              updateScheduleBadge();
+              if (dialog.isConnected) renderList(r.jobs || []);
+            }
           })
           .catch(() => null);
         return;
@@ -2142,7 +2159,10 @@
       const r = await chrome.runtime
         .sendMessage({ type: "api", path: `/api/public/extension/lead-schedule?phone=${encodeURIComponent(chat.phone)}` })
         .catch(() => null);
-      renderList(r?.ok ? r.jobs || [] : []);
+      const jobs = r?.ok ? r.jobs || [] : [];
+      schedulePrefetch = { key: chat.phone, chat, jobs };
+      updateScheduleBadge();
+      renderList(jobs);
     }
 
     dialog.addEventListener("click", async (e) => {
@@ -2512,11 +2532,10 @@
     const waId = dom?.wa_id || null;
     const phone = dom?.phone || null;
     if (!waId && !phone) return false;
-    return funnels.some(
-      (f) =>
-        f.mode !== "label" &&
-        (f.cards || []).some((c) => (waId && c.wa_id === waId) || (phone && c.phone === phone)),
-    );
+    // Antes ignorava funis do tipo "label" (baseados em etiqueta do
+    // WhatsApp) — só contava manual/aba. Agora conta qualquer tipo: se o
+    // lead está em algum funil, mostra a bolinha, ponto.
+    return funnels.some((f) => (f.cards || []).some((c) => (waId && c.wa_id === waId) || (phone && c.phone === phone)));
   }
 
   /** Bolinha no ícone do funil — indica de cara que o lead já está no

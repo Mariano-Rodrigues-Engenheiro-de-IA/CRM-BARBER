@@ -35,7 +35,20 @@ let funnelsCache: { funnels: Funnel[]; labels: WaLabel[]; contacts: WaContact[] 
 /** Trava global para evitar que múltiplos componentes (ou remounts) criem funis padrão ao mesmo tempo. */
 let isEnsuringDefaults = false;
 
-export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTMLElement | null }) {
+export function FunnelsView({
+  api,
+  headerHost,
+  premiumLocked,
+  onBlockedMove,
+}: {
+  api: ApiFn;
+  headerHost?: HTMLElement | null;
+  /** Conta grátis: os leads e funis existentes aparecem normal (nada de
+   * prévia falsa), só a ação de MOVER um lead entre etapas/funis é
+   * bloqueada — dispara onBlockedMove em vez de mover de verdade. */
+  premiumLocked?: boolean;
+  onBlockedMove?: () => void;
+}) {
   const [funnels, setFunnels] = useState<Funnel[]>(() => funnelsCache?.funnels ?? []);
   const [labels, setLabels] = useState<WaLabel[]>(() => funnelsCache?.labels ?? []);
   const [contacts, setContacts] = useState<WaContact[]>(() => funnelsCache?.contacts ?? []);
@@ -292,6 +305,10 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
 
   async function moveCard(card: FunnelCard, stageId: string) {
     if (card.stage_id === stageId) return;
+    if (premiumLocked) {
+      onBlockedMove?.();
+      return;
+    }
     setFunnels((list) =>
       list.map((f) =>
         f.id !== card.funnel_id
@@ -314,6 +331,10 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
    * sort_order de todos os cards afetados na coluna de destino. */
   async function moveCardToPosition(card: FunnelCard, stageId: string, targetIndex: number) {
     if (!active) return;
+    if (premiumLocked) {
+      onBlockedMove?.();
+      return;
+    }
     const funnelId = card.funnel_id;
     const destCardsBefore = active.cards
       .filter((c) => c.stage_id === stageId && c.id !== card.id)
@@ -375,6 +396,10 @@ export function FunnelsView({ api, headerHost }: { api: ApiFn; headerHost?: HTML
    */
   async function bulkMoveLeads(sourceFunnelId: string, sourceStageId: string, targetStageId: string) {
     if (!active) return;
+    if (premiumLocked) {
+      onBlockedMove?.();
+      return;
+    }
     const sourceFunnel = funnels.find((f) => f.id === sourceFunnelId);
     const cardsToMove = (sourceFunnel?.cards ?? []).filter((c) => c.stage_id === sourceStageId);
     if (!cardsToMove.length) return;
