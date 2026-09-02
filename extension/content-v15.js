@@ -202,6 +202,8 @@
       renderDrawer();
       updateFunnelBadge();
       updateFollowupBadge();
+      updateNotesBadge();
+      updateScheduleBadge();
     }
   }
 
@@ -1206,6 +1208,8 @@
         renderTopbar();
         updateFunnelBadge();
         updateFollowupBadge();
+        updateNotesBadge();
+        updateScheduleBadge();
       });
     }
     paint();
@@ -2323,6 +2327,8 @@
     ) {
       updateFunnelBadge();
       updateFollowupBadge();
+      updateNotesBadge();
+      updateScheduleBadge();
       return;
     }
     hasCrm?.remove();
@@ -2465,6 +2471,8 @@
     }
     updateFunnelBadge();
     updateFollowupBadge();
+    updateNotesBadge();
+    updateScheduleBadge();
     // Dispara na hora, sem esperar o ciclo de 1.5s — é aqui que detecta
     // que a conversa mudou de verdade (cabeçalho recriado), então é o
     // ponto certo pra já checar se o novo contato está salvo.
@@ -2578,6 +2586,64 @@
       btn.appendChild(countEl);
     }
     countEl.textContent = `${totalSent}/${totalSteps}`;
+  }
+
+  /** Selinho numérico genérico — reaproveitado pelos ícones de Notas e
+   * Agendamento. Some sozinho quando a contagem é zero (o ícone continua
+   * lá, só sem número — "ganha vida" só quando tem algo de verdade). */
+  function setChatBtnCount(btn, count) {
+    let el = btn.querySelector(".crm-chat-count-badge");
+    if (!count || count <= 0) {
+      el?.remove();
+      return;
+    }
+    if (!el) {
+      el = document.createElement("span");
+      el.className = "crm-chat-count-badge";
+      btn.appendChild(el);
+    }
+    el.textContent = count > 9 ? "9+" : String(count);
+  }
+
+  /** Numerozinho de anotações no ícone — usa o mesmo cache de prefetch
+   * que já existia (só pro hover antes); se ainda não tem cache pra essa
+   * conversa, dispara a busca e atualiza sozinho na próxima rodada. */
+  function updateNotesBadge() {
+    const btn = document.getElementById(NOTES_BTN_ID);
+    if (!btn) return;
+    const dom = activeChatFromDom();
+    const phone = dom?.phone || null;
+    if (!phone) {
+      setChatBtnCount(btn, 0);
+      return;
+    }
+    if (notesPrefetch?.chat?.phone === phone) {
+      setChatBtnCount(btn, notesPrefetch.notes.length);
+    } else {
+      setChatBtnCount(btn, 0);
+      void prefetchNotes();
+    }
+  }
+
+  /** Numerozinho de mensagens agendadas de verdade (não conta follow-up
+   * nem lembretes automáticos — já filtrados no backend). Só as
+   * "pending" (ainda vão acontecer); enviadas/falhadas já são passado. */
+  function updateScheduleBadge() {
+    const btn = document.getElementById(SCHEDULE_BTN_ID);
+    if (!btn) return;
+    const dom = activeChatFromDom();
+    const phone = dom?.phone || null;
+    if (!phone) {
+      setChatBtnCount(btn, 0);
+      return;
+    }
+    if (schedulePrefetch?.key === phone) {
+      const pending = schedulePrefetch.jobs.filter((j) => j.status === "pending").length;
+      setChatBtnCount(btn, pending);
+    } else {
+      setChatBtnCount(btn, 0);
+      void prefetchSchedule();
+    }
   }
 
   function humanizeFollowupDue(dueAtIso) {
@@ -2996,6 +3062,8 @@
           membership[funnelId] = null;
           updateFunnelBadge();
           updateFollowupBadge();
+          updateNotesBadge();
+          updateScheduleBadge();
           renderRows();
           void loadFunnels();
         } else {
@@ -3026,6 +3094,8 @@
         membership[funnelId] = { cardId: r.card?.id || current?.cardId, stageId: stage.id };
         updateFunnelBadge();
         updateFollowupBadge();
+        updateNotesBadge();
+        updateScheduleBadge();
         renderRows();
         void loadFunnels();
       } else {
@@ -4134,6 +4204,8 @@
     await loadFunnels();
     updateFunnelBadge();
     updateFollowupBadge();
+    updateNotesBadge();
+    updateScheduleBadge();
   }
 
   // ── Atalho "/palavra" na caixa de mensagem do WhatsApp ──────────────────

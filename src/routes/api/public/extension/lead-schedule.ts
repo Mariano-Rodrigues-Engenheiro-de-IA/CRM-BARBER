@@ -47,10 +47,14 @@ export const Route = createFileRoute("/api/public/extension/lead-schedule")({
           .select("id, rendered_body, message_actions, scheduled_for, status, sent_at, last_error")
           .eq("barbershop_id", shop)
           .eq("phone", phone)
-          // Só o que foi criado por aqui (agendamento pelo ícone da
-          // conversa) — disparos de campanha do CRM usam campaign_id e não
-          // devem aparecer misturados nessa lista.
+          // Só o que foi criado por aqui (agendamento manual pelo ícone da
+          // conversa) — disparos de campanha (campaign_id), follow-up
+          // automático (funnel_followup_step_id) e lembretes/confirmações
+          // da Agenda (agenda_reminder_rule_id) são coisas totalmente
+          // diferentes e não devem aparecer misturados nessa lista.
           .is("campaign_id", null)
+          .is("funnel_followup_step_id", null)
+          .is("agenda_reminder_rule_id", null)
           .in("status", ["pending", "sent", "failed"])
           .order("scheduled_for", { ascending: true })
           .limit(50);
