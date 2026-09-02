@@ -204,6 +204,23 @@
   animation: ai-ticker 88s linear infinite;
 }
 
+/* Entrada suave do modal de upgrade Premium — fundo escurece e o cartão
+   sobe/cresce levemente ao abrir, em vez de aparecer seco. */
+@keyframes premium-modal-in {
+  from { opacity: 0; transform: scale(0.96) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.animate-premium-modal-in {
+  animation: premium-modal-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes premium-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-premium-overlay-in {
+  animation: premium-overlay-in 0.15s ease-out;
+}
+
 /* Scrollbars finas e discretas para o Kanban (leads e funis) — trilho
    quase invisível, indicador fino que só fica mais visível no hover,
    sem competir visualmente com os cards. Cobre Chrome/Safari/Edge
