@@ -2688,6 +2688,11 @@
             ? `<div class="crm-account-row"><span class="crm-account-label">Vencimento</span><span>${formatDueDate(billing.current_period_end)}</span></div>`
             : ""
         }
+        ${
+          billing.status !== "courtesy"
+            ? `<button type="button" class="crm-lite-pop-confirm crm-account-manage-btn" data-account-manage>Gerenciar assinatura</button>`
+            : ""
+        }
         <div class="crm-account-row">
           <span class="crm-account-label">E-mail</span>
           <span class="crm-account-value-readonly">${escapeHtml(account.owner_email || "—")}</span>
@@ -2699,6 +2704,24 @@
         <button type="button" class="crm-lite-pop-confirm" data-account-save>Salvar telefone</button>
         <p class="crm-account-hint" data-account-msg></p>
       `;
+      pop.querySelector("[data-account-manage]")?.addEventListener("click", async () => {
+        const btn = pop.querySelector("[data-account-manage]");
+        const msg = pop.querySelector("[data-account-msg]");
+        btn.disabled = true;
+        const originalText = btn.textContent;
+        btn.textContent = "Abrindo…";
+        const r = await chrome.runtime
+          .sendMessage({ type: "api", path: "/api/public/extension/billing-portal", opts: { method: "POST" } })
+          .catch(() => null);
+        btn.disabled = false;
+        btn.textContent = originalText;
+        if (r?.ok && r.url) {
+          window.open(r.url, "_blank", "noopener,noreferrer");
+        } else if (msg) {
+          msg.textContent = r?.error || "Não consegui abrir a gestão da assinatura.";
+          msg.classList.add("crm-account-hint-error");
+        }
+      });
       pop.querySelector("[data-account-save]")?.addEventListener("click", async () => {
         const input = pop.querySelector("[data-account-phone]");
         const msg = pop.querySelector("[data-account-msg]");

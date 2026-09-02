@@ -559,6 +559,8 @@ html body.crm-shell.crm-qr-open #app {
 .crm-account-phone-field .crm-lite-pop-input { width: 100%; }
 .crm-account-hint { margin: 6px 0 0; font-size: 11.5px; color: var(--z-text-dim); min-height: 14px; }
 .crm-account-hint-error { color: #dc2626; }
+.crm-account-manage-btn { margin: 4px 0 10px; background: var(--z-surface-2); color: var(--z-text); }
+.crm-account-manage-btn:hover { background: var(--z-line-soft); }
 .crm-lite-pop-input {
   width: 100%; box-sizing: border-box; border: 1px solid var(--z-line); border-radius: 8px;
   background: var(--z-bar); color: var(--z-text); font-family: var(--z-font); font-size: 13px; padding: 8px 10px;
