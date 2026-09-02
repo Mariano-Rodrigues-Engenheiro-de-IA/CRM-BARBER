@@ -53,6 +53,17 @@ export const Route = createFileRoute("/api/public/extension/agenda-reminder-rule
             { status: 400 },
           );
         }
+
+        const { getBillingStatus } = await import("@/lib/billing.server");
+        const billing = await getBillingStatus(supabaseAdmin, auth.token.barbershop_id);
+        if (!billing.premium) {
+          return jsonResponse(
+            request,
+            { ok: false, error: "Lembretes e confirmações fazem parte do plano Premium." },
+            { status: 402 },
+          );
+        }
+
         const { data, error } = await supabaseAdmin
           .from("agenda_reminder_rules")
           .insert({

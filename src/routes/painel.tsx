@@ -245,12 +245,24 @@ function nudgeExtensionPoll() {
 type Section = "agenda" | "agente-ia" | "treinamento" | "configuracoes" | "assinantes" | "funis" | "follow-up" | "disparo" | "equipe" | "conexao" | "templates";
 
 /** Seções bloqueadas no plano grátis — clicar nelas sem ser Premium abre
- * o modal de upgrade em vez de navegar. Só "equipe" por enquanto; fácil
- * de adicionar mais aqui depois (o resto do sistema já está pronto). */
+ * o modal de upgrade em vez de navegar. */
 const PREMIUM_GATED_SECTIONS: Partial<Record<Section, { label: string; description: string }>> = {
   equipe: {
     label: "Ranking de vendas",
     description: "Lançamento de vendas por profissional, ranking da equipe, ranking de clientes e histórico de consumo fazem parte do plano pago.",
+  },
+  "follow-up": {
+    label: "Follow-up",
+    description: "Sequências automáticas de mensagem por etapa do funil fazem parte do plano pago.",
+  },
+};
+/** Igual PREMIUM_GATED_SECTIONS, mas pra sub-abas dentro de uma seção que
+ * continua acessível (ex: Agenda em si é grátis, só a sub-aba de
+ * Lembretes/Confirmações é premium). */
+const PREMIUM_GATED_AGENDA_TABS: Partial<Record<AgendaTab, { label: string; description: string }>> = {
+  lembretes: {
+    label: "Lembretes / Confirmações",
+    description: "Mensagens automáticas de lembrete e confirmação de agendamento fazem parte do plano pago.",
   },
 };
 /** Sub-abas da sanfona de Assinaturas. */
@@ -361,6 +373,54 @@ function IconBolt() {
  * WhatsApp): cartão branco, selo colorido no topo, título em duas cores,
  * caixa de destaque do que está sendo desbloqueado, botão principal
  * cheio com seta, e "Agora não" discreto pra fechar sem constranger. */
+/** Prévia "trancada" dos Funis — a aba abre normalmente (diferente de
+ * Equipe/Follow-up, que já bloqueiam no clique do menu), mas mostra uma
+ * amostra visual de como funciona (esmaecida, sem interação nenhuma) em
+ * vez do kanban de verdade. Qualquer clique abre o modal de upgrade. */
+function FunnelsLockedPreview({ onUnlock }: { onUnlock: () => void }) {
+  const sampleColumns = [
+    { name: "Novos leads", cards: ["Ana Silva", "Carlos Souza"] },
+    { name: "Em conversa", cards: ["Beatriz Lima", "João Pedro", "Marina Costa"] },
+    { name: "Agendado", cards: ["Rafael Alves"] },
+    { name: "Fechado", cards: ["Camila Rocha", "Pedro Santos"] },
+  ];
+  return (
+    <div className="relative min-h-[420px] px-1 pt-3">
+      <div className="pointer-events-none flex gap-3 overflow-hidden opacity-50 blur-[1.5px]">
+        {sampleColumns.map((col) => (
+          <div key={col.name} className="w-64 shrink-0 rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
+            <p className="mb-3 text-xs font-bold uppercase tracking-wide text-neutral-500">{col.name}</p>
+            <div className="space-y-2">
+              {col.cards.map((name) => (
+                <div key={name} className="rounded-xl border border-neutral-200 bg-white p-3 shadow-sm">
+                  <p className="text-sm font-medium text-neutral-800">{name}</p>
+                  <div className="mt-2 h-2 w-2/3 rounded-full bg-neutral-200" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <button
+        onClick={onUnlock}
+        className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-2xl bg-white/60 p-6 text-center backdrop-blur-[1px] transition hover:bg-white/70"
+      >
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-600 text-white shadow-lg shadow-teal-600/30">
+          <IconLock />
+        </div>
+        <p className="text-base font-bold text-neutral-900">Organize seus leads em funis de vendas</p>
+        <p className="max-w-xs text-sm text-neutral-500">
+          Crie colunas personalizadas, arraste leads entre etapas e nunca mais perca uma venda de vista.
+        </p>
+        <span className="mt-1 flex items-center gap-2 rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-teal-600/30">
+          Criar meu primeiro funil
+          <IconArrowRight />
+        </span>
+      </button>
+    </div>
+  );
+}
+
 function PremiumUpgradeModal({
   featureLabel,
   featureDescription,
@@ -681,8 +741,16 @@ function Painel() {
     const gate = PREMIUM_GATED_SECTIONS[section];
     if (gate && billing && !billing.premium) {
       setPremiumModalFeature(gate);
+      return;
     }
-  }, [section, billing]);
+    if (section === "agenda") {
+      const agendaGate = PREMIUM_GATED_AGENDA_TABS[agendaTab];
+      if (agendaGate && billing && !billing.premium) {
+        setPremiumModalFeature(agendaGate);
+        setAgendaTab("agenda"); // volta pra sub-aba livre, não deixa preso numa tela vazia
+      }
+    }
+  }, [section, agendaTab, billing]);
 
 
   // Refresh silencioso ao voltar pra seção assinantes — sem "Carregando..." piscando entre abas.
@@ -881,6 +949,17 @@ function Painel() {
                         <button
                           key={sub.key}
                           onClick={() => {
+                            // Sub-aba premium (ex: Lembretes/Confirmações
+                            // dentro de Agenda) — Agenda em si continua
+                            // acessível, só essa sub-aba específica abre
+                            // o modal em vez de navegar.
+                            if (n.key === "agenda") {
+                              const agendaGate = PREMIUM_GATED_AGENDA_TABS[sub.key as AgendaTab];
+                              if (agendaGate && billing && !billing.premium) {
+                                setPremiumModalFeature(agendaGate);
+                                return;
+                              }
+                            }
                             setSection(n.key);
                             if (n.key === "assinantes") setAssinTab(sub.key as AssinTab);
                             else if (n.key === "configuracoes") setConfigTab(sub.key as ConfigTab);
@@ -944,6 +1023,10 @@ function Painel() {
             <main className="px-4 py-4">
               {agendaTab === "agenda" ? (
                 <AgendaView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+              ) : billing && !billing.premium ? (
+                <div className="mx-auto max-w-md py-16 text-center">
+                  <p className="text-sm text-neutral-400">Esse recurso é exclusivo do plano Premium.</p>
+                </div>
               ) : (
                 <AgendaRemindersView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
               )}
@@ -1099,10 +1182,21 @@ function Painel() {
               </div>
             </header>
             <main className="px-4 py-3">
-              <FunnelsView
-                api={(path: string, opts?: RequestInit) => api(token, path, opts)}
-                headerHost={funisHeaderEl}
-              />
+              {billing && !billing.premium ? (
+                <FunnelsLockedPreview
+                  onUnlock={() =>
+                    setPremiumModalFeature({
+                      label: "Funis de Vendas",
+                      description: "Organizar leads em colunas, arrastar entre etapas e acompanhar o funil de vendas fazem parte do plano pago.",
+                    })
+                  }
+                />
+              ) : (
+                <FunnelsView
+                  api={(path: string, opts?: RequestInit) => api(token, path, opts)}
+                  headerHost={funisHeaderEl}
+                />
+              )}
             </main>
           </>
         )}
@@ -1111,7 +1205,13 @@ function Painel() {
           <>
             <SectionHeader icon={<IconClock />} title="Follow-up" />
             <main className="px-4 py-4">
-              <FollowupView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+              {billing && !billing.premium ? (
+                <div className="mx-auto max-w-md py-16 text-center">
+                  <p className="text-sm text-neutral-400">Esse recurso é exclusivo do plano Premium.</p>
+                </div>
+              ) : (
+                <FollowupView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+              )}
             </main>
           </>
         )}

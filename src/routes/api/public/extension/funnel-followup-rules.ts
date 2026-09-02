@@ -66,6 +66,12 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
         }
         const shop = auth.token.barbershop_id;
 
+        const { getBillingStatus } = await import("@/lib/billing.server");
+        const billing = await getBillingStatus(supabaseAdmin, shop);
+        if (!billing.premium) {
+          return jsonResponse(request, { ok: false, error: "Follow-up faz parte do plano Premium." }, { status: 402 });
+        }
+
         // Upsert manual por (funnel_id, stage_id) — se já existe uma regra
         // pra essa etapa, edita ela (substitui os passos) em vez de criar
         // duplicada (o índice único no banco pegaria isso, mas fazer a
