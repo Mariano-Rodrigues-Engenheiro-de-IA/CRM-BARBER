@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Trash2, Clock, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Clock, ChevronRight, FileText, X } from "lucide-react";
 import { useConfirm } from "@/components/confirm-dialog";
 import type { Funnel } from "@/lib/funnels";
 
@@ -59,6 +59,7 @@ export function FollowupView({ api }: { api: Api }) {
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
   const [isMetaProvider, setIsMetaProvider] = useState(false);
   const [editingStageId, setEditingStageId] = useState<string | null>(null);
+  const [showReport, setShowReport] = useState(false);
 
   useEffect(() => {
     api("/api/public/extension/funnels").then((r) => {
@@ -112,6 +113,11 @@ export function FollowupView({ api }: { api: Api }) {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-end">
+        <Button variant="outline" size="sm" onClick={() => setShowReport(true)} className="gap-1.5">
+          <FileText className="h-3.5 w-3.5" /> Relatório completo
+        </Button>
+      </div>
       {!funnels ? (
         <p className="text-sm text-neutral-500">Carregando…</p>
       ) : funnels.length === 0 ? (
@@ -189,6 +195,76 @@ export function FollowupView({ api }: { api: Api }) {
           }}
         />
       )}
+
+      {showReport && <FollowupReportModal api={api} onClose={() => setShowReport(false)} />}
+    </div>
+  );
+}
+
+function FollowupReportModal({ api, onClose }: { api: Api; onClose: () => void }) {
+  const [entries, setEntries] = useState<
+    Array<{ id: string; card_title: string; phone: string; funnel_name: string; stage_name: string; sent_at: string }> | null
+  >(null);
+
+  useEffect(() => {
+    api("/api/public/extension/funnel-followup-report").then((r) => {
+      if (r?.ok) setEntries((r.entries as typeof entries) || []);
+      else setEntries([]);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div
+        className="max-h-[85vh] w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-4">
+          <div>
+            <h3 className="text-base font-semibold text-neutral-900">Relatório de follow-up</h3>
+            <p className="text-xs text-neutral-500">Todas as mensagens já enviadas pela sequência, mais recentes primeiro.</p>
+          </div>
+          <button onClick={onClose} className="rounded-md p-1 text-neutral-400 hover:bg-neutral-100">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="max-h-[70vh] overflow-y-auto">
+          {entries === null ? (
+            <p className="p-5 text-sm text-neutral-500">Carregando…</p>
+          ) : entries.length === 0 ? (
+            <p className="p-5 text-sm text-neutral-500">Nenhuma mensagem de follow-up enviada ainda.</p>
+          ) : (
+            <table className="w-full text-left text-sm">
+              <thead className="sticky top-0 bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
+                <tr>
+                  <th className="px-5 py-2 font-medium">Lead</th>
+                  <th className="px-3 py-2 font-medium">Funil / etapa</th>
+                  <th className="px-3 py-2 font-medium">Enviado em</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100">
+                {entries.map((e) => (
+                  <tr key={e.id}>
+                    <td className="px-5 py-2.5">
+                      <p className="font-medium text-neutral-900">{e.card_title || "Sem nome"}</p>
+                      <p className="text-xs text-neutral-500">{e.phone}</p>
+                    </td>
+                    <td className="px-3 py-2.5 text-neutral-700">
+                      {e.funnel_name}
+                      <br />
+                      <span className="text-xs text-neutral-500">{e.stage_name}</span>
+                    </td>
+                    <td className="px-3 py-2.5 whitespace-nowrap text-neutral-700">
+                      {new Date(e.sent_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

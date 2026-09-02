@@ -2533,6 +2533,19 @@
     );
     btn.classList.toggle("crm-chat-btn-active", pending.length > 0);
     btn.classList.toggle("crm-followup-btn-overdue", isOverdue);
+
+    // Selinho numérico "enviados/total" — antes o ícone só trocava de
+    // cor, sem dizer quantas mensagens já foram; agora mostra de cara,
+    // igual o selo de não lidas do WhatsApp.
+    const totalSent = entries.reduce((sum, e) => sum + e.followup.sent_count, 0);
+    const totalSteps = entries.reduce((sum, e) => sum + e.followup.total_steps, 0);
+    let countEl = btn.querySelector(".crm-followup-count");
+    if (!countEl) {
+      countEl = document.createElement("span");
+      countEl.className = "crm-followup-count";
+      btn.appendChild(countEl);
+    }
+    countEl.textContent = `${totalSent}/${totalSteps}`;
   }
 
   function humanizeFollowupDue(dueAtIso) {

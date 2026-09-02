@@ -8,6 +8,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { Clock } from "lucide-react";
 import {
   formatBRL,
   type Funnel,
@@ -1399,23 +1400,24 @@ function FollowupBadge({ followup, cardTitle }: { followup: NonNullable<FunnelCa
       <button
         ref={btnRef}
         type="button"
+        draggable={false}
+        onMouseDown={(e) => e.stopPropagation()}
+        onDragStart={(e) => e.preventDefault()}
         onClick={toggleOpen}
         title="Status do follow-up"
         className={`flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium transition hover:brightness-95 ${colorClass}`}
       >
-        <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="9" />
-          <path d="M12 7v5l3 3" />
-        </svg>
+        <Clock className="h-2.5 w-2.5" />
         {followup.sent_count}/{followup.total_steps}
       </button>
-      {open && pos && (
+      {open && pos && createPortal(
+        // Portal pro <body> de propósito, não só position: fixed — o
+        // card inteiro é draggable, e um popup vivendo dentro dele (mesmo
+        // com fixed) ainda faz parte da mesma árvore de drag do
+        // navegador, causando aquele tremor ao clicar (o navegador tenta
+        // iniciar um arraste do card ao mesmo tempo que abre o popup).
+        // Um portal de verdade tira o popup dessa árvore.
         <>
-          {/* position: fixed (não absolute) de propósito — a lista de
-              cards da coluna tem overflow-y-auto, e um popup absolute
-              preso ali dentro fica cortado/espremido pela rolagem da
-              coluna. Fixed escapa disso, ancorado nas coordenadas reais
-              do botão na tela. */}
           <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
           <div
             className="fixed z-50 w-56 rounded-xl border border-neutral-200 bg-white p-3 text-left shadow-lg"
@@ -1440,7 +1442,8 @@ function FollowupBadge({ followup, cardTitle }: { followup: NonNullable<FunnelCa
               </p>
             )}
           </div>
-        </>
+        </>,
+        document.body,
       )}
     </div>
   );

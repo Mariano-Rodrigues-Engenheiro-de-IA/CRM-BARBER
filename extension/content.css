@@ -514,6 +514,28 @@ html body.crm-shell.crm-qr-open #app {
   0%, 100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.35); }
   50% { box-shadow: 0 0 0 5px rgba(217, 119, 6, 0.12); }
 }
+/* Selinho "enviados/total" no ícone do relógio — mesma ideia do selo de
+   não lidas, só que quadrado/pill em vez de bolinha, pra caber o texto. */
+.crm-followup-count {
+  position: absolute;
+  bottom: 2px;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--z-accent);
+  color: var(--z-on-accent);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  border: 1.5px solid #fff;
+  pointer-events: none;
+}
+.crm-followup-btn-overdue .crm-followup-count { background: #d97706; }
 .crm-followup-pop { width: 240px; padding: 12px; max-height: 60vh; overflow-y: auto; }
 .crm-followup-pop-entry { padding: 2px 0; }
 .crm-followup-pop-funnel { margin: 0 0 2px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--z-text-dim); }

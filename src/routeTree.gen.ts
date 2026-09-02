@@ -43,6 +43,7 @@ import { Route as ApiPublicExtensionCustomerDealRouteImport } from './routes/api
 import { Route as ApiPublicExtensionCustomerProfileRouteImport } from './routes/api/public/extension/customer-profile'
 import { Route as ApiPublicExtensionCustomersRouteImport } from './routes/api/public/extension/customers'
 import { Route as ApiPublicExtensionFunnelCardsRouteImport } from './routes/api/public/extension/funnel-cards'
+import { Route as ApiPublicExtensionFunnelFollowupReportRouteImport } from './routes/api/public/extension/funnel-followup-report'
 import { Route as ApiPublicExtensionFunnelFollowupRulesRouteImport } from './routes/api/public/extension/funnel-followup-rules'
 import { Route as ApiPublicExtensionFunnelsRouteImport } from './routes/api/public/extension/funnels'
 import { Route as ApiPublicExtensionLeadNotesRouteImport } from './routes/api/public/extension/lead-notes'
@@ -277,6 +278,12 @@ const ApiPublicExtensionFunnelCardsRoute =
   ApiPublicExtensionFunnelCardsRouteImport.update({
     id: '/api/public/extension/funnel-cards',
     path: '/api/public/extension/funnel-cards',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionFunnelFollowupReportRoute =
+  ApiPublicExtensionFunnelFollowupReportRouteImport.update({
+    id: '/api/public/extension/funnel-followup-report',
+    path: '/api/public/extension/funnel-followup-report',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicExtensionFunnelFollowupRulesRoute =
@@ -618,6 +625,7 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/customer-profile': typeof ApiPublicExtensionCustomerProfileRoute
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
+  '/api/public/extension/funnel-followup-report': typeof ApiPublicExtensionFunnelFollowupReportRoute
   '/api/public/extension/funnel-followup-rules': typeof ApiPublicExtensionFunnelFollowupRulesRouteWithChildren
   '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRouteWithChildren
   '/api/public/extension/lead-notes': typeof ApiPublicExtensionLeadNotesRouteWithChildren
@@ -705,6 +713,7 @@ export interface FileRoutesByTo {
   '/api/public/extension/customer-profile': typeof ApiPublicExtensionCustomerProfileRoute
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
+  '/api/public/extension/funnel-followup-report': typeof ApiPublicExtensionFunnelFollowupReportRoute
   '/api/public/extension/funnel-followup-rules': typeof ApiPublicExtensionFunnelFollowupRulesRouteWithChildren
   '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRouteWithChildren
   '/api/public/extension/lead-notes': typeof ApiPublicExtensionLeadNotesRouteWithChildren
@@ -793,6 +802,7 @@ export interface FileRoutesById {
   '/api/public/extension/customer-profile': typeof ApiPublicExtensionCustomerProfileRoute
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
+  '/api/public/extension/funnel-followup-report': typeof ApiPublicExtensionFunnelFollowupReportRoute
   '/api/public/extension/funnel-followup-rules': typeof ApiPublicExtensionFunnelFollowupRulesRouteWithChildren
   '/api/public/extension/funnels': typeof ApiPublicExtensionFunnelsRouteWithChildren
   '/api/public/extension/lead-notes': typeof ApiPublicExtensionLeadNotesRouteWithChildren
@@ -882,6 +892,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/customer-profile'
     | '/api/public/extension/customers'
     | '/api/public/extension/funnel-cards'
+    | '/api/public/extension/funnel-followup-report'
     | '/api/public/extension/funnel-followup-rules'
     | '/api/public/extension/funnels'
     | '/api/public/extension/lead-notes'
@@ -969,6 +980,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/customer-profile'
     | '/api/public/extension/customers'
     | '/api/public/extension/funnel-cards'
+    | '/api/public/extension/funnel-followup-report'
     | '/api/public/extension/funnel-followup-rules'
     | '/api/public/extension/funnels'
     | '/api/public/extension/lead-notes'
@@ -1056,6 +1068,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/customer-profile'
     | '/api/public/extension/customers'
     | '/api/public/extension/funnel-cards'
+    | '/api/public/extension/funnel-followup-report'
     | '/api/public/extension/funnel-followup-rules'
     | '/api/public/extension/funnels'
     | '/api/public/extension/lead-notes'
@@ -1143,6 +1156,7 @@ export interface RootRouteChildren {
   ApiPublicExtensionCustomerProfileRoute: typeof ApiPublicExtensionCustomerProfileRoute
   ApiPublicExtensionCustomersRoute: typeof ApiPublicExtensionCustomersRouteWithChildren
   ApiPublicExtensionFunnelCardsRoute: typeof ApiPublicExtensionFunnelCardsRouteWithChildren
+  ApiPublicExtensionFunnelFollowupReportRoute: typeof ApiPublicExtensionFunnelFollowupReportRoute
   ApiPublicExtensionFunnelFollowupRulesRoute: typeof ApiPublicExtensionFunnelFollowupRulesRouteWithChildren
   ApiPublicExtensionFunnelsRoute: typeof ApiPublicExtensionFunnelsRouteWithChildren
   ApiPublicExtensionLeadNotesRoute: typeof ApiPublicExtensionLeadNotesRouteWithChildren
@@ -1416,6 +1430,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/extension/funnel-cards'
       fullPath: '/api/public/extension/funnel-cards'
       preLoaderRoute: typeof ApiPublicExtensionFunnelCardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/funnel-followup-report': {
+      id: '/api/public/extension/funnel-followup-report'
+      path: '/api/public/extension/funnel-followup-report'
+      fullPath: '/api/public/extension/funnel-followup-report'
+      preLoaderRoute: typeof ApiPublicExtensionFunnelFollowupReportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/extension/funnel-followup-rules': {
@@ -2070,6 +2091,8 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicExtensionCustomersRouteWithChildren,
   ApiPublicExtensionFunnelCardsRoute:
     ApiPublicExtensionFunnelCardsRouteWithChildren,
+  ApiPublicExtensionFunnelFollowupReportRoute:
+    ApiPublicExtensionFunnelFollowupReportRoute,
   ApiPublicExtensionFunnelFollowupRulesRoute:
     ApiPublicExtensionFunnelFollowupRulesRouteWithChildren,
   ApiPublicExtensionFunnelsRoute: ApiPublicExtensionFunnelsRouteWithChildren,

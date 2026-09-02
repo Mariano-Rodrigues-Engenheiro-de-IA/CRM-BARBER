@@ -31,7 +31,7 @@ export const Route = createFileRoute("/instalar")({
 function downloadZip() {
   const version = Date.now();
   const urls = [
-    `/zaylo-crm-v0.37.0.zip?v=${version}`,
+    `/zaylo-crm-v0.37.1.zip?v=${version}`,
     `/crm-assinaturas-extension.zip?v=${version}`,
   ];
   urls
@@ -49,7 +49,7 @@ function downloadZip() {
     .then((blob) => {
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = "zaylo-crm-v0.37.0.zip";
+      a.download = "zaylo-crm-v0.37.1.zip";
       a.click();
       URL.revokeObjectURL(a.href);
     })
