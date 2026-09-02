@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Zaylo — Tudo que você precisa em um só lugar",
-  "version": "0.39.2",
+  "version": "0.39.3",
   "description": "CRM completo que te ajuda a vender mais!",
   "permissions": ["storage", "activeTab", "tabs", "scripting", "alarms"],
   "host_permissions": [

@@ -2776,6 +2776,12 @@
           return;
         }
         render(r.account, r.billing);
+        // O aviso "COMPRAR PREMIUM" da barra do topo usa uma cópia
+        // separada do status da assinatura, carregada só uma vez no
+        // início — abrir "Minha conta" (que sempre busca fresquinho) é
+        // um bom momento pra também atualizar essa cópia, evitando o
+        // aviso do topo ficar desatualizado depois de mudar de plano.
+        void loadBilling();
       })
       .catch(() => {
         pop.innerHTML = `<p class="crm-lite-pop-title">Minha conta</p><p class="crm-qrp-empty" style="padding:6px 0">Não consegui carregar.</p>`;
