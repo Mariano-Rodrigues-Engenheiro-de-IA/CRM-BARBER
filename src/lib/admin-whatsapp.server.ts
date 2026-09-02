@@ -31,6 +31,11 @@ export const providerSchema = z.object({
   provider: z.enum(["uazapi", "meta"]),
 });
 
+export const claimPendingSchema = z.object({
+  pending_id: z.string().uuid(),
+  barbershop_id: z.string().uuid(),
+});
+
 export type AdminShopRow = {
   barbershop_id: string;
   name: string;
@@ -334,4 +339,76 @@ export async function testCredentials(
         : "Não foi possível confirmar agora — a Meta respondeu com erro temporário.";
 
   return { ok: s.status === "connected" && (!send || send.ok), status: s.status, phone: s.phone ?? null, message, send };
+}
+
+export type PendingMetaConnectionRow = {
+  id: string;
+  waba_id: string;
+  phone_number_id: string;
+  phone: string | null;
+  meta_business_id: string | null;
+  created_at: string;
+};
+
+/** Conexões vindas do link de Integração Zero que ainda não foram
+ * atribuídas a nenhuma barbearia — a Meta não manda nenhum identificador
+ * de qual conta iniciou esse vínculo, então fica pendente de revisão
+ * manual (pelo telefone/nome que aparece) até um admin reivindicar. */
+export async function listPendingMetaConnections(supabaseAdmin: Admin): Promise<PendingMetaConnectionRow[]> {
+  const { data, error } = await supabaseAdmin
+    .from("pending_meta_connections")
+    .select("id, waba_id, phone_number_id, phone, meta_business_id, created_at")
+    .is("claimed_barbershop_id", null)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+/** Move uma conexão pendente pra virar a conexão de verdade de uma
+ * barbearia específica — mesmo formato de payload que o admin salvar
+ * credenciais manualmente já grava em whatsapp_instances. */
+export async function claimPendingMetaConnection(
+  supabaseAdmin: Admin,
+  input: z.infer<typeof claimPendingSchema>,
+): Promise<{ ok: true }> {
+  const { data: pending, error: fetchErr } = await supabaseAdmin
+    .from("pending_meta_connections")
+    .select("id, waba_id, phone_number_id, phone, meta_access_token, meta_business_id, claimed_barbershop_id")
+    .eq("id", input.pending_id)
+    .maybeSingle();
+  if (fetchErr) throw new Error(fetchErr.message);
+  if (!pending) throw new Error("Conexão pendente não encontrada.");
+  if (pending.claimed_barbershop_id) throw new Error("Essa conexão já foi reivindicada antes.");
+
+  const payload = {
+    barbershop_id: input.barbershop_id,
+    provider: "meta" as const,
+    instance_id: pending.phone_number_id,
+    instance_token: pending.meta_access_token,
+    status: "connected" as const,
+    phone: pending.phone,
+    waba_id: pending.waba_id,
+    phone_number_id: pending.phone_number_id,
+    meta_access_token: pending.meta_access_token,
+    meta_business_id: pending.meta_business_id,
+    last_error: null,
+    last_synced_at: new Date().toISOString(),
+  };
+  const { data: existing } = await supabaseAdmin
+    .from("whatsapp_instances")
+    .select("id")
+    .eq("barbershop_id", input.barbershop_id)
+    .maybeSingle();
+  const { error: writeErr } = existing
+    ? await supabaseAdmin.from("whatsapp_instances").update(payload).eq("id", existing.id)
+    : await supabaseAdmin.from("whatsapp_instances").insert(payload);
+  if (writeErr) throw new Error(writeErr.message);
+
+  const { error: claimErr } = await supabaseAdmin
+    .from("pending_meta_connections")
+    .update({ claimed_barbershop_id: input.barbershop_id, claimed_at: new Date().toISOString() })
+    .eq("id", pending.id);
+  if (claimErr) throw new Error(claimErr.message);
+
+  return { ok: true };
 }

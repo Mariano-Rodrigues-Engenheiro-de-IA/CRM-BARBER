@@ -11,12 +11,15 @@ import {
   adminSaveMetaCredentials,
   adminSetWhatsAppProvider,
   adminTestMetaConnection,
+  adminListPendingMetaConnections,
+  adminClaimPendingMetaConnection,
 } from "@/lib/admin-whatsapp.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCachedFetch } from "@/lib/api-cache";
 
 type Row = Awaited<ReturnType<typeof adminListShops>>[number];
+type PendingRow = Awaited<ReturnType<typeof adminListPendingMetaConnections>>[number];
 
 export function AdminWhatsAppPanel() {
   const listShops = useServerFn(adminListShops);
@@ -24,6 +27,8 @@ export function AdminWhatsAppPanel() {
   const testConn = useServerFn(adminTestMetaConnection);
   const registerNum = useServerFn(adminRegisterMetaNumber);
   const setProvider = useServerFn(adminSetWhatsAppProvider);
+  const listPending = useServerFn(adminListPendingMetaConnections);
+  const claimPending = useServerFn(adminClaimPendingMetaConnection);
 
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string>("");
@@ -34,6 +39,8 @@ export function AdminWhatsAppPanel() {
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState<"save" | "test" | "register" | "provider" | null>(null);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [claimTarget, setClaimTarget] = useState<Record<string, string>>({});
+  const [claimingId, setClaimingId] = useState<string | null>(null);
 
   const { data: rows, refetch: reload } = useCachedFetch<Row[]>("admin-whatsapp-shops", async () => {
     try {
@@ -43,6 +50,29 @@ export function AdminWhatsAppPanel() {
       return [];
     }
   });
+
+  const { data: pending, refetch: reloadPending } = useCachedFetch<PendingRow[]>("admin-pending-meta-connections", async () => {
+    try {
+      return await listPending();
+    } catch {
+      return [];
+    }
+  });
+
+  async function handleClaim(pendingId: string) {
+    const barbershopId = claimTarget[pendingId];
+    if (!barbershopId) return;
+    setClaimingId(pendingId);
+    try {
+      await claimPending({ data: { pending_id: pendingId, barbershop_id: barbershopId } });
+      await reloadPending();
+      await reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setClaimingId(null);
+    }
+  }
 
   // Seleciona a primeira loja automaticamente assim que a lista chega —
   // só na ausência de seleção, pra não sobrescrever escolha do usuário.
@@ -145,6 +175,48 @@ export function AdminWhatsAppPanel() {
 
         {error && (
           <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">{error}</div>
+        )}
+
+        {!!pending?.length && (
+          <section className="rounded-2xl border border-amber-300 bg-amber-50 p-6 shadow-sm">
+            <h2 className="text-base font-semibold text-amber-900">
+              Conexões pendentes de atribuir ({pending.length})
+            </h2>
+            <p className="mt-1 text-sm text-amber-800">
+              Vieram do link de Integração Zero, a Meta não diz qual barbearia iniciou o vínculo, então
+              confira pelo telefone/nome abaixo e escolhe a barbearia certa antes de reivindicar.
+            </p>
+            <div className="mt-4 space-y-3">
+              {pending.map((p) => (
+                <div key={p.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-white p-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-neutral-900">{p.phone || "(sem telefone ainda)"}</p>
+                    <p className="text-xs text-neutral-500">
+                      waba {p.waba_id} · recebido {new Date(p.created_at).toLocaleString("pt-BR")}
+                    </p>
+                  </div>
+                  <select
+                    className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+                    value={claimTarget[p.id] || ""}
+                    onChange={(e) => setClaimTarget((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                  >
+                    <option value="">Escolha a barbearia…</option>
+                    {(rows ?? []).map((r) => (
+                      <option key={r.barbershop_id} value={r.barbershop_id}>
+                        {r.name}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    disabled={!claimTarget[p.id] || claimingId === p.id}
+                    onClick={() => void handleClaim(p.id)}
+                  >
+                    {claimingId === p.id ? "Reivindicando…" : "Reivindicar"}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
         <section className="rounded-2xl bg-white p-6 shadow-sm">

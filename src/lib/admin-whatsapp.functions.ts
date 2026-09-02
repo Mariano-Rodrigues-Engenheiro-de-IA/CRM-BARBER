@@ -2,7 +2,7 @@
 // Rotas/funções fora de /api/public ficam atrás da autenticação do site.
 
 import { createServerFn } from "@tanstack/react-start";
-import { providerSchema, registerSchema, saveSchema, testSchema } from "./admin-whatsapp.server";
+import { providerSchema, registerSchema, saveSchema, testSchema, claimPendingSchema } from "./admin-whatsapp.server";
 
 export const adminListShops = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -46,4 +46,18 @@ export const adminSetWhatsAppProvider = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { setProviderMode } = await import("./admin-whatsapp.server");
     return setProviderMode(supabaseAdmin, data);
+  });
+
+export const adminListPendingMetaConnections = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { listPendingMetaConnections } = await import("./admin-whatsapp.server");
+  return listPendingMetaConnections(supabaseAdmin);
+});
+
+export const adminClaimPendingMetaConnection = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => claimPendingSchema.parse(data))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { claimPendingMetaConnection } = await import("./admin-whatsapp.server");
+    return claimPendingMetaConnection(supabaseAdmin, data);
   });

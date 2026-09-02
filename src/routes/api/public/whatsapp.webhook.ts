@@ -60,11 +60,10 @@ async function handleAccountUpdate(change: Json) {
 
   if ((event !== "PARTNER_APP_INSTALLED" && event !== "PARTNER_ADDED") || !wabaId) return;
 
-  const adminBarbershopId = process.env.ADMIN_BARBERSHOP_ID;
   const systemToken = process.env.META_SYSTEM_USER_TOKEN;
-  if (!adminBarbershopId || !systemToken) {
+  if (!systemToken) {
     console.warn(
-      `[whatsapp.webhook] ${event} recebido, mas ADMIN_BARBERSHOP_ID ou META_SYSTEM_USER_TOKEN não configurados — conexão não foi salva automaticamente.`,
+      `[whatsapp.webhook] ${event} recebido, mas META_SYSTEM_USER_TOKEN não configurado — conexão não foi salva.`,
     );
     return;
   }
@@ -94,30 +93,27 @@ async function handleAccountUpdate(change: Json) {
     }).catch((e) => console.warn("[whatsapp.webhook] falha ao assinar webhooks da WABA:", e));
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // A Meta não manda NENHUM jeito de saber qual barbearia iniciou esse
+    // vínculo (o link de Integração Zero não carrega state customizado)
+    // — não dá pra saber automaticamente. Guarda como PENDENTE; um admin
+    // confere manualmente (pelo telefone/nome) e reivindica pra
+    // barbearia certa em /admin/whatsapp-pendentes. Antes isso "chutava"
+    // direto pra conta admin — funcionava só enquanto era só o Mariano
+    // testando, mas contaminava a conta admin de verdade assim que um
+    // cliente de verdade usasse esse caminho (foi o que aconteceu com o
+    // Isaque Bihain).
     const payload = {
-      barbershop_id: adminBarbershopId,
-      provider: "meta",
-      instance_id: phoneNumberId,
-      instance_token: systemToken,
-      status: "connected",
-      phone,
       waba_id: wabaId,
       phone_number_id: phoneNumberId,
+      phone,
       meta_access_token: systemToken,
       meta_business_id: ownerBusinessId,
-      last_error: null,
-      last_synced_at: new Date().toISOString(),
     };
-    const { data: existing } = await supabaseAdmin
-      .from("whatsapp_instances")
-      .select("id")
-      .eq("barbershop_id", adminBarbershopId)
-      .maybeSingle();
-    const { error } = existing
-      ? await supabaseAdmin.from("whatsapp_instances").update(payload).eq("id", existing.id)
-      : await supabaseAdmin.from("whatsapp_instances").insert(payload);
+    const { error } = await supabaseAdmin
+      .from("pending_meta_connections")
+      .upsert(payload, { onConflict: "waba_id" });
     if (error) throw new Error(error.message);
-    console.info(`[whatsapp.webhook] Conexão via Integração Zero salva: waba=${wabaId} phone=${phone}`);
+    console.info(`[whatsapp.webhook] Conexão via Integração Zero PENDENTE de atribuir: waba=${wabaId} phone=${phone}`);
   } catch (e) {
     console.error(`[whatsapp.webhook] falha ao processar ${event}:`, e instanceof Error ? e.message : e);
   }

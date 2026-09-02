@@ -539,6 +539,53 @@ export type Database = {
           },
         ]
       }
+      pending_meta_connections: {
+        Row: {
+          claimed_at: string | null
+          claimed_barbershop_id: string | null
+          created_at: string
+          id: string
+          meta_access_token: string
+          meta_business_id: string | null
+          phone: string | null
+          phone_number_id: string
+          updated_at: string
+          waba_id: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          claimed_barbershop_id?: string | null
+          created_at?: string
+          id?: string
+          meta_access_token: string
+          meta_business_id?: string | null
+          phone?: string | null
+          phone_number_id: string
+          updated_at?: string
+          waba_id: string
+        }
+        Update: {
+          claimed_at?: string | null
+          claimed_barbershop_id?: string | null
+          created_at?: string
+          id?: string
+          meta_access_token?: string
+          meta_business_id?: string | null
+          phone?: string | null
+          phone_number_id?: string
+          updated_at?: string
+          waba_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_meta_connections_claimed_barbershop_id_fkey"
+            columns: ["claimed_barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
           audience_filter: Json
