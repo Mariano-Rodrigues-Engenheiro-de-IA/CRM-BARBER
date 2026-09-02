@@ -2,23 +2,17 @@
 // funcionalidades ainda não liberadas pra clientes finais (ex: gestão de
 // modelos de mensagem), sem precisar de um sistema de "roles" completo
 // ainda. Compara o barbershop_id do token autenticado contra a lista em
-// ADMIN_BARBERSHOP_ID (aceita mais de um id, separados por vírgula).
+// ADMIN_BARBERSHOP_ID (aceita mais de um id, separados por vírgula) —
+// única fonte de verdade, a pedido do Mariano (antes tinha uma lista
+// fixa aqui no código também; foi removida de propósito, pra dar pra
+// trocar quem é admin só mexendo na variável no Lovable, sem precisar
+// de deploy novo).
 //
 // Isso é deliberadamente simples/temporário — quando a funcionalidade for
 // liberada pra clientes, essa checagem deve ser removida ou substituída
 // por um sistema de permissões de verdade.
 
-// Admins liberados diretamente no código (além dos que vierem por env).
-const HARDCODED_ADMIN_BARBERSHOP_IDS = [
-  "7348c9b5-b825-4e33-8705-3a41bca8d852", // Viver Bem Estética
-  "3c1d0a88-be18-4e33-8bb5-ea7bd800ac3a",
-  // "3d9dc380-9341-4d4d-8874-e32e2643ae36", -- REMOVIDO TEMPORARIAMENTE
-  // (a pedido do Mariano, pra testar como conta comum) — volta a
-  // adicionar quando ele avisar que terminou o teste.
-];
-
 export function isAdminBarbershop(barbershop_id: string): boolean {
-  if (HARDCODED_ADMIN_BARBERSHOP_IDS.includes(barbershop_id)) return true;
   const adminIds = process.env.ADMIN_BARBERSHOP_ID;
   if (!adminIds) return false;
   return adminIds
