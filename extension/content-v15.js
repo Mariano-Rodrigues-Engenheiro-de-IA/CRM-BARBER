@@ -2482,9 +2482,15 @@
    * um "principal") — o popover do ícone já cobre todos, então o
    * indicador precisa bater com isso. */
   function activeChatInMainFunnel() {
-    const waId = activeChatIdFromDom();
-    if (!waId) return false;
-    return funnels.some((f) => f.mode !== "label" && (f.cards || []).some((c) => c.wa_id === waId));
+    const dom = activeChatFromDom();
+    const waId = dom?.wa_id || null;
+    const phone = dom?.phone || null;
+    if (!waId && !phone) return false;
+    return funnels.some(
+      (f) =>
+        f.mode !== "label" &&
+        (f.cards || []).some((c) => (waId && c.wa_id === waId) || (phone && c.phone === phone)),
+    );
   }
 
   /** Bolinha no ícone do funil — indica de cara que o lead já está no
@@ -2499,13 +2505,21 @@
    * follow-up configurado na etapa em que estão — um contato pode
    * aparecer em mais de um funil ao mesmo tempo. */
   function activeChatFollowupEntries() {
-    const waId = activeChatIdFromDom();
-    if (!waId) return [];
+    // wa_id é o mais confiável (contato sincronizado do WhatsApp), mas
+    // cards criados/adicionados só com telefone (sem sincronizar ainda)
+    // não têm wa_id — sem esse fallback por telefone, o reloginho nunca
+    // aparecia pra esses leads, mesmo aparecendo certinho no kanban do
+    // site (que não depende de wa_id pra montar o card).
+    const dom = activeChatFromDom();
+    const waId = dom?.wa_id || null;
+    const phone = dom?.phone || null;
+    if (!waId && !phone) return [];
     const out = [];
     for (const f of funnels) {
       if (f.mode === "label") continue;
       for (const c of f.cards || []) {
-        if (c.wa_id === waId && c.followup) {
+        const matches = (waId && c.wa_id === waId) || (phone && c.phone === phone);
+        if (matches && c.followup) {
           const stage = (f.stages || []).find((s) => s.id === c.stage_id);
           out.push({ funnelName: f.name, stageName: stage?.name || "", followup: c.followup });
         }
