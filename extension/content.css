@@ -390,29 +390,51 @@ html body.crm-shell.crm-qr-open #app {
 }
 .crm-modal-input:focus { border-color: var(--z-accent); }
 
-/* Aviso de plano: vive no topo do WhatsApp, não dentro do painel. */
+/* Aviso de plano: vive no topo do WhatsApp, não dentro do painel. Mesmo
+   teal do modal de upgrade no site (consistência entre as duas telas) —
+   gradiente + sombra colorida + leve "respiração" (pulso), chama atenção
+   de verdade, não é só mais um botão parado igual aos outros da barra. */
 .crm-pill-premium {
   margin-left: auto;
-  border-color: var(--z-accent);
-  background: var(--z-accent);
-  color: var(--z-on-accent);
-  font-weight: 700;
+  border: 0;
+  background: linear-gradient(135deg, #14b8a6, #0d9488);
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 2px 10px rgba(13, 148, 136, 0.4);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  animation: crm-premium-breathe 2.8s ease-in-out infinite;
 }
-.crm-pill-premium:hover { background: var(--z-accent-strong); color: var(--z-on-accent); }
+.crm-pill-premium:hover {
+  background: linear-gradient(135deg, #2dd4bf, #14b8a6);
+  color: #fff;
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.55);
+  animation-play-state: paused;
+}
+@keyframes crm-premium-breathe {
+  0%, 100% { box-shadow: 0 2px 10px rgba(13, 148, 136, 0.4); }
+  50% { box-shadow: 0 2px 16px rgba(13, 148, 136, 0.65); }
+}
 
-/* "Minha conta" — cor de marca (mesmo azul usado em todo o resto da
-   extensão), sempre empurrado pro canto direito de vez (margin-left:
-   auto, não um valor fixo) — funciona tanto com o pill de Premium do
-   lado (quando não é assinante) quanto sozinho, sem ficar "colado" nas
-   abas do funil. */
+/* "Minha conta" — gradiente na cor de marca, com sombra e leve
+   elevação no hover, mesmo espírito vivo do pill de Premium mas sem o
+   pulso (não é uma urgência, é só um atalho). Sempre empurrado pro
+   canto direito de vez (margin-left: auto, não um valor fixo). */
 .crm-pill-account {
   margin-left: auto;
-  border-color: transparent;
-  background: var(--z-accent);
+  border: 0;
+  background: linear-gradient(135deg, #5b7fd4, var(--z-accent));
   color: var(--z-on-accent);
-  font-weight: 700;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(61, 95, 168, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
-.crm-pill-account:hover { background: var(--z-accent-strong); }
+.crm-pill-account:hover {
+  background: linear-gradient(135deg, var(--z-accent), var(--z-accent-strong));
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 4px 14px rgba(61, 95, 168, 0.5);
+}
+.crm-pill-account:active { transform: translateY(0) scale(0.98); }
 .crm-pill-account svg { width: 14px; height: 14px; }
 /* Quando o pill de Premium também aparece (conta grátis), os dois ficam
    agrupados no canto — só precisa de um respiro pequeno entre eles, não
@@ -563,7 +585,7 @@ html body.crm-shell.crm-qr-open #app {
 .crm-followup-pop-divider { height: 1px; background: var(--z-line-soft); margin: 8px 0; }
 
 /* Popup "Minha conta" */
-.crm-account-pop { width: 260px; padding: 12px; }
+.crm-account-pop { width: 260px; max-width: calc(100vw - 16px); padding: 12px; }
 .crm-account-shop { margin: -4px 0 8px; font-size: 12px; font-weight: 600; color: var(--z-text); }
 .crm-account-row {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;

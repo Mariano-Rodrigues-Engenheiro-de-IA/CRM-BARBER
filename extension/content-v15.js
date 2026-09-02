@@ -2640,9 +2640,12 @@
     const pop = document.createElement("div");
     pop.className = "crm-lite-pop crm-account-pop";
     const rect = anchor.getBoundingClientRect();
-    const popWidth = 260;
+    // Ancorado pela DIREITA (não pela esquerda com uma largura chutada)
+    // — a largura real do popup não precisa ser adivinhada nem bater
+    // com nenhum número mágico, então nunca sai cortado pra fora da
+    // tela, não importa o tamanho da janela.
     pop.style.top = `${rect.bottom + 8}px`;
-    pop.style.left = `${Math.min(Math.max(8, rect.left - popWidth + rect.width), window.innerWidth - popWidth - 8)}px`;
+    pop.style.right = `${Math.max(8, window.innerWidth - rect.right)}px`;
     pop.innerHTML = `<p class="crm-lite-pop-title">Minha conta</p><p class="crm-qrp-empty" style="padding:6px 0">Carregando…</p>`;
     document.body.appendChild(pop);
     animatePopIn(pop);
