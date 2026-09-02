@@ -400,6 +400,20 @@ html body.crm-shell.crm-qr-open #app {
 }
 .crm-pill-premium:hover { background: var(--z-accent-strong); color: var(--z-on-accent); }
 
+/* "Minha conta" — mesma família visual do aviso de plano, cor neutra
+   escura de propósito (não é uma urgência tipo "assinatura vencida",
+   é só acesso à própria conta) pra não competir com o pill de Premium
+   quando os dois aparecem juntos. */
+.crm-pill-account {
+  margin-left: 8px;
+  border-color: transparent;
+  background: var(--z-text);
+  color: #fff;
+  font-weight: 700;
+}
+.crm-pill-account:hover { background: var(--z-accent-strong); }
+.crm-pill-account svg { width: 14px; height: 14px; }
+
 /* Botão CRM dentro do cabeçalho da conversa (ações sem sair do WhatsApp). */
 .crm-chat-btn {
   display: inline-flex;
@@ -554,46 +568,39 @@ html body.crm-shell.crm-qr-open #app {
 .crm-account-status-ok { font-weight: 700; color: #16a34a; }
 .crm-account-status-free { font-weight: 700; color: #d97706; }
 .crm-account-value-readonly { color: var(--z-text-dim); }
-.crm-account-phone-field { display: block; margin-top: 8px; }
-.crm-account-phone-field .crm-account-label { display: block; margin-bottom: 3px; font-size: 11px; }
-.crm-account-phone-field .crm-lite-pop-input { width: 100%; }
+.crm-account-divider { height: 1px; background: var(--z-line-soft); margin: 8px 0; }
+
+/* Edição discreta de telefone — nada de formulário grande sempre
+   visível: por padrão é só texto com um lápis bem pequeno e apagado,
+   que só fica nítido no hover. Clicar troca a linha por um campo
+   compacto com dois iconezinhos (salvar/cancelar), sem sair do lugar. */
+.crm-account-row-editable { cursor: pointer; border-radius: 6px; margin: 0 -6px; padding: 4px 6px; transition: background-color 0.12s ease; }
+.crm-account-row-editable:hover { background: var(--z-surface-2); }
+.crm-account-value-editable { display: inline-flex; align-items: center; gap: 5px; color: var(--z-text-dim); }
+.crm-account-pencil { opacity: 0.35; transition: opacity 0.12s ease; }
+.crm-account-row-editable:hover .crm-account-pencil { opacity: 0.85; }
+.crm-account-row-editing { align-items: center; }
+.crm-account-edit-inline { display: flex; align-items: center; gap: 4px; }
+.crm-account-edit-input {
+  width: 130px; height: 26px; padding: 0 8px; border-radius: 7px;
+  border: 1px solid var(--z-accent); background: var(--z-surface);
+  color: var(--z-text); font-size: 12px; font-family: inherit;
+}
+.crm-account-edit-input:focus { outline: none; }
+.crm-account-edit-save, .crm-account-edit-cancel {
+  display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border: 0; border-radius: 6px;
+  font-size: 11px; line-height: 1; cursor: pointer;
+}
+.crm-account-edit-save { background: var(--z-accent); color: var(--z-on-accent); }
+.crm-account-edit-save:hover { background: var(--z-accent-strong); }
+.crm-account-edit-cancel { background: transparent; color: var(--z-text-dim); }
+.crm-account-edit-cancel:hover { background: var(--z-surface-2); color: var(--z-text); }
 .crm-account-hint { margin: 6px 0 0; font-size: 11.5px; color: var(--z-text-dim); min-height: 14px; }
 .crm-account-hint-error { color: #dc2626; }
 .crm-account-manage-btn { margin: 4px 0 10px; background: var(--z-surface-2); color: var(--z-text); }
 .crm-account-manage-btn:hover { background: var(--z-line-soft); }
 
-/* Botão "Minha conta" no cabeçalho da conversa — de propósito NÃO é só
-   mais um ícone cinza igual aos outros da fileira: fundo colorido cheio
-   e texto ao lado, pra ficar claro que é uma ação de destaque (acessar a
-   própria assinatura), não uma ação sobre o lead da conversa aberta. */
-.crm-account-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: 10px;
-  padding: 7px 13px 7px 11px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--z-accent);
-  color: #fff;
-  font-family: inherit;
-  font-size: 12.5px;
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background-color 0.15s ease, transform 0.1s ease;
-}
-.crm-account-btn:hover { background: var(--z-accent-strong); }
-.crm-account-btn:active { transform: scale(0.96); }
-.crm-account-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
-.crm-account-btn-text { white-space: nowrap; }
-/* Em janelas estreitas some o texto e fica só o ícone, senão empurra os
-   outros botões da fileira pra fora da tela. */
-@media (max-width: 900px) {
-  .crm-account-btn { padding: 7px; border-radius: 50%; }
-  .crm-account-btn-text { display: none; }
-}
 .crm-lite-pop-input {
   width: 100%; box-sizing: border-box; border: 1px solid var(--z-line); border-radius: 8px;
   background: var(--z-bar); color: var(--z-text); font-family: var(--z-font); font-size: 13px; padding: 8px 10px;

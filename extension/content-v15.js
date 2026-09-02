@@ -325,6 +325,16 @@
         return;
       }
 
+      const accountBtn = e.target.closest("[data-open-account]");
+      if (accountBtn) {
+        e.stopPropagation();
+        if (document.querySelector(".crm-account-pop")) {
+          document.querySelector(".crm-account-pop")?.remove();
+          return;
+        }
+        return openAccountPopover(accountBtn);
+      }
+
       const addBtn = e.target.closest(".crm-pill-add-icon");
       if (addBtn) {
         if (document.querySelector(".crm-lite-pop")) {
@@ -1307,7 +1317,14 @@
 
     topbarRef.innerHTML = `${filter}<span class="crm-topbar-divider"></span>${
       pills || `<span class="crm-topbar-hint">Nenhuma etapa nesse funil ainda.</span>`
-    }<span class="crm-topbar-divider"></span><button class="crm-pill-add-icon" title="Adicionar nova etapa"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10.5V19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v1.5"/><path d="M17 13v6M14 16h6"/></svg></button>${premiumPill()}`;
+    }<span class="crm-topbar-divider"></span><button class="crm-pill-add-icon" title="Adicionar nova etapa"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10.5V19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v1.5"/><path d="M17 13v6M14 16h6"/></svg></button>${premiumPill()}${accountPill()}`;
+  }
+
+  /** Botão "Minha conta" — fixo na barra do topo, ao lado do aviso de
+   * plano, ao invés de dentro do cabeçalho da conversa (que muda toda
+   * hora e fica escondido no meio de outros ícones). */
+  function accountPill() {
+    return `<button class="crm-pill crm-pill-account" data-open-account title="Minha conta">${ICONS.account} Minha conta</button>`;
   }
 
   /** Aviso de plano vive aqui (no WhatsApp), não mais dentro do painel do CRM. */
@@ -1649,7 +1666,6 @@
   const PROFILE_BTN_ID = "crm-chat-profile";
   const SAVE_CONTACT_BTN_ID = "crm-chat-save-contact";
   const FOLLOWUP_BTN_ID = "crm-chat-followup";
-  const ACCOUNT_BTN_ID = "crm-chat-account";
   const BOLT_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>`;
   const PROFILE_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="18" height="17" rx="3.2"/><circle cx="12" cy="10" r="3"/><path d="M6.5 17.2c.9-2.3 3-3.7 5.5-3.7s4.6 1.4 5.5 3.7"/></svg>`;
   // Pessoa com "+" — aparece só quando o contato ainda não está salvo na
@@ -2301,10 +2317,9 @@
     const hasProfile = document.getElementById(PROFILE_BTN_ID);
     const hasSaveContact = document.getElementById(SAVE_CONTACT_BTN_ID);
     const hasFollowup = document.getElementById(FOLLOWUP_BTN_ID);
-    const hasAccount = document.getElementById(ACCOUNT_BTN_ID);
     if (
-      hasCrm && hasBolt && hasNotes && hasSchedule && hasProfile && hasSaveContact && hasFollowup && hasAccount &&
-      header.contains(hasCrm) && header.contains(hasBolt) && header.contains(hasNotes) && header.contains(hasSchedule) && header.contains(hasProfile) && header.contains(hasSaveContact) && header.contains(hasFollowup) && header.contains(hasAccount)
+      hasCrm && hasBolt && hasNotes && hasSchedule && hasProfile && hasSaveContact && hasFollowup &&
+      header.contains(hasCrm) && header.contains(hasBolt) && header.contains(hasNotes) && header.contains(hasSchedule) && header.contains(hasProfile) && header.contains(hasSaveContact) && header.contains(hasFollowup)
     ) {
       updateFunnelBadge();
       updateFollowupBadge();
@@ -2317,7 +2332,6 @@
     hasProfile?.remove();
     hasSaveContact?.remove();
     hasFollowup?.remove();
-    hasAccount?.remove();
 
     const btn = document.createElement("button");
     btn.id = CHAT_BTN_ID;
@@ -2431,28 +2445,6 @@
       openFollowupStatusPopover(followupBtn);
     });
 
-    // Botão da própria conta (assinatura/contato) — fica por último de
-    // propósito, no canto mais à direita da fileira, separado dos
-    // botões que agem sobre O LEAD (esse aqui é sobre a conta de quem
-    // está usando o CRM). Botão de verdade (ícone + texto, fundo
-    // colorido) — não só mais um ícone cinza igual aos outros, pra ficar
-    // claro que é uma ação diferente, de destaque.
-    const accountBtn = document.createElement("button");
-    accountBtn.id = ACCOUNT_BTN_ID;
-    accountBtn.type = "button";
-    accountBtn.className = "crm-account-btn";
-    accountBtn.setAttribute("data-label", "Minha conta");
-    accountBtn.innerHTML = `${ICONS.account}<span class="crm-account-btn-text">Minha conta</span>`;
-    accountBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (document.querySelector(".crm-account-pop")) {
-        document.querySelector(".crm-account-pop")?.remove();
-        return;
-      }
-      openAccountPopover(accountBtn);
-    });
-
     const slot = headerActionsSlot(header);
     if (slot === header) {
       header.appendChild(btn);
@@ -2462,7 +2454,6 @@
       header.appendChild(profileBtn);
       header.appendChild(saveContactBtn);
       header.appendChild(boltBtn);
-      header.appendChild(accountBtn);
     } else {
       slot.insertAdjacentElement("beforebegin", btn);
       btn.insertAdjacentElement("afterend", followupBtn);
@@ -2471,7 +2462,6 @@
       scheduleBtn.insertAdjacentElement("afterend", profileBtn);
       profileBtn.insertAdjacentElement("afterend", saveContactBtn);
       saveContactBtn.insertAdjacentElement("afterend", boltBtn);
-      boltBtn.insertAdjacentElement("afterend", accountBtn);
     }
     updateFunnelBadge();
     updateFollowupBadge();
@@ -2671,6 +2661,8 @@
       return new Date(iso).toLocaleDateString("pt-BR");
     }
 
+    let editingPhone = false;
+
     function render(account, billing) {
       const statusLabel = billing.premium
         ? billing.status === "courtesy"
@@ -2678,6 +2670,22 @@
           : "Ativa"
         : "Plano grátis";
       const statusClass = billing.premium ? "crm-account-status-ok" : "crm-account-status-free";
+      const phoneRow = editingPhone
+        ? `<div class="crm-account-row crm-account-row-editing">
+            <span class="crm-account-label">Telefone</span>
+            <div class="crm-account-edit-inline">
+              <input type="text" class="crm-account-edit-input" data-account-phone value="${escapeHtml(account.owner_phone || "")}" placeholder="Ex: 61999998888" />
+              <button type="button" class="crm-account-edit-save" data-account-save title="Salvar">✓</button>
+              <button type="button" class="crm-account-edit-cancel" data-account-cancel title="Cancelar">✕</button>
+            </div>
+          </div>`
+        : `<div class="crm-account-row crm-account-row-editable" data-account-edit-phone>
+            <span class="crm-account-label">Telefone</span>
+            <span class="crm-account-value-editable">
+              ${escapeHtml(account.owner_phone || "—")}
+              <svg class="crm-account-pencil" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            </span>
+          </div>`;
       pop.innerHTML = `
         <p class="crm-lite-pop-title">Minha conta</p>
         ${account.shop_name ? `<p class="crm-account-shop">${escapeHtml(account.shop_name)}</p>` : ""}
@@ -2695,17 +2703,23 @@
             ? `<button type="button" class="crm-lite-pop-confirm crm-account-manage-btn" data-account-manage>Gerenciar assinatura</button>`
             : ""
         }
+        <div class="crm-account-divider"></div>
         <div class="crm-account-row">
           <span class="crm-account-label">E-mail</span>
           <span class="crm-account-value-readonly">${escapeHtml(account.owner_email || "—")}</span>
         </div>
-        <label class="crm-account-phone-field">
-          <span class="crm-account-label">Telefone</span>
-          <input type="text" class="crm-lite-pop-input" data-account-phone value="${escapeHtml(account.owner_phone || "")}" placeholder="Ex: 61999998888" />
-        </label>
-        <button type="button" class="crm-lite-pop-confirm" data-account-save>Salvar telefone</button>
+        ${phoneRow}
         <p class="crm-account-hint" data-account-msg></p>
       `;
+      pop.querySelector("[data-account-edit-phone]")?.addEventListener("click", () => {
+        editingPhone = true;
+        render(account, billing);
+        pop.querySelector("[data-account-phone]")?.focus();
+      });
+      pop.querySelector("[data-account-cancel]")?.addEventListener("click", () => {
+        editingPhone = false;
+        render(account, billing);
+      });
       pop.querySelector("[data-account-manage]")?.addEventListener("click", async () => {
         const btn = pop.querySelector("[data-account-manage]");
         const msg = pop.querySelector("[data-account-msg]");
@@ -2731,7 +2745,6 @@
         if (!value) return;
         const btn = pop.querySelector("[data-account-save]");
         btn.disabled = true;
-        btn.textContent = "Salvando…";
         const r = await chrome.runtime
           .sendMessage({
             type: "api",
@@ -2740,7 +2753,11 @@
           })
           .catch(() => null);
         btn.disabled = false;
-        btn.textContent = "Salvar telefone";
+        if (r?.ok) {
+          account.owner_phone = value;
+          editingPhone = false;
+          render(account, billing);
+        }
         if (msg) {
           msg.textContent = r?.ok ? "Telefone atualizado." : r?.error || "Não consegui salvar.";
           msg.classList.toggle("crm-account-hint-error", !r?.ok);
