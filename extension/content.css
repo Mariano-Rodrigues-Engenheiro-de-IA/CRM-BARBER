@@ -561,6 +561,39 @@ html body.crm-shell.crm-qr-open #app {
 .crm-account-hint-error { color: #dc2626; }
 .crm-account-manage-btn { margin: 4px 0 10px; background: var(--z-surface-2); color: var(--z-text); }
 .crm-account-manage-btn:hover { background: var(--z-line-soft); }
+
+/* Botão "Minha conta" no cabeçalho da conversa — de propósito NÃO é só
+   mais um ícone cinza igual aos outros da fileira: fundo colorido cheio
+   e texto ao lado, pra ficar claro que é uma ação de destaque (acessar a
+   própria assinatura), não uma ação sobre o lead da conversa aberta. */
+.crm-account-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 10px;
+  padding: 7px 13px 7px 11px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--z-accent);
+  color: #fff;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+.crm-account-btn:hover { background: var(--z-accent-strong); }
+.crm-account-btn:active { transform: scale(0.96); }
+.crm-account-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+.crm-account-btn-text { white-space: nowrap; }
+/* Em janelas estreitas some o texto e fica só o ícone, senão empurra os
+   outros botões da fileira pra fora da tela. */
+@media (max-width: 900px) {
+  .crm-account-btn { padding: 7px; border-radius: 50%; }
+  .crm-account-btn-text { display: none; }
+}
 .crm-lite-pop-input {
   width: 100%; box-sizing: border-box; border: 1px solid var(--z-line); border-radius: 8px;
   background: var(--z-bar); color: var(--z-text); font-family: var(--z-font); font-size: 13px; padding: 8px 10px;

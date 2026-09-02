@@ -2432,15 +2432,17 @@
     });
 
     // Botão da própria conta (assinatura/contato) — fica por último de
-    // propósito, no canto mais à direita da fileira de ícones, separado
-    // dos botões que agem sobre O LEAD (esse aqui é sobre a conta de
-    // quem está usando o CRM).
+    // propósito, no canto mais à direita da fileira, separado dos
+    // botões que agem sobre O LEAD (esse aqui é sobre a conta de quem
+    // está usando o CRM). Botão de verdade (ícone + texto, fundo
+    // colorido) — não só mais um ícone cinza igual aos outros, pra ficar
+    // claro que é uma ação diferente, de destaque.
     const accountBtn = document.createElement("button");
     accountBtn.id = ACCOUNT_BTN_ID;
     accountBtn.type = "button";
-    accountBtn.className = "crm-chat-btn crm-chat-btn-icon";
+    accountBtn.className = "crm-account-btn";
     accountBtn.setAttribute("data-label", "Minha conta");
-    accountBtn.innerHTML = ICONS.account;
+    accountBtn.innerHTML = `${ICONS.account}<span class="crm-account-btn-text">Minha conta</span>`;
     accountBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
