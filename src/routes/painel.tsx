@@ -328,15 +328,6 @@ function IconLock() {
     </svg>
   );
 }
-/** Seta pra direita — no botão principal do modal de upgrade. */
-function IconArrowRight() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 12h14" />
-      <path d="M13 6l6 6-6 6" />
-    </svg>
-  );
-}
 
 /** Prévia "trancada" dos Funis — a aba abre normalmente (só as ações
  * dentro é que ficam bloqueadas), mostrando uma amostra visual de como
@@ -404,7 +395,6 @@ function PremiumSoftLock({
 }
 
 function FunnelsLockedPreview({ onUpgrade }: { onUpgrade: () => void }) {
-  const [showPopup, setShowPopup] = useState(false);
   const sampleColumns = [
     { name: "Novos leads", cards: ["Ana Silva", "Carlos Souza"] },
     { name: "Em conversa", cards: ["Beatriz Lima", "João Pedro", "Marina Costa"] },
@@ -412,8 +402,8 @@ function FunnelsLockedPreview({ onUpgrade }: { onUpgrade: () => void }) {
     { name: "Fechado", cards: ["Camila Rocha", "Pedro Santos"] },
   ];
   return (
-    <div className="relative min-h-[420px] px-1 pt-3">
-      <div className="pointer-events-none flex gap-3 overflow-hidden opacity-50 blur-[1.5px]">
+    <PremiumSoftLock active onUpgrade={onUpgrade}>
+      <div className="flex gap-3 overflow-hidden px-1 pt-3">
         {sampleColumns.map((col) => (
           <div key={col.name} className="w-64 shrink-0 rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
             <p className="mb-3 text-xs font-bold uppercase tracking-wide text-neutral-500">{col.name}</p>
@@ -428,32 +418,7 @@ function FunnelsLockedPreview({ onUpgrade }: { onUpgrade: () => void }) {
           </div>
         ))}
       </div>
-      <button
-        onClick={() => setShowPopup(true)}
-        className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-2xl bg-white/60 p-6 text-center backdrop-blur-[1px] transition hover:bg-white/70"
-      >
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-600 text-white shadow-lg shadow-teal-600/30">
-          <IconLock />
-        </div>
-        <p className="text-base font-bold text-neutral-900">Organize seus leads em funis de vendas</p>
-        <p className="max-w-xs text-sm text-neutral-500">
-          Crie colunas personalizadas, arraste leads entre etapas e nunca mais perca uma venda de vista.
-        </p>
-        <span className="mt-1 flex items-center gap-2 rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-teal-600/30">
-          Criar meu primeiro funil
-          <IconArrowRight />
-        </span>
-      </button>
-      {showPopup && (
-        <PremiumInlinePopup
-          onClose={() => setShowPopup(false)}
-          onUpgrade={() => {
-            setShowPopup(false);
-            onUpgrade();
-          }}
-        />
-      )}
-    </div>
+    </PremiumSoftLock>
   );
 }
 
@@ -721,9 +686,12 @@ function Painel() {
   /** Abre o checkout do Premium em nova aba, já identificando a barbearia. */
   function openCheckout() {
     const params = new URLSearchParams({ plano: "premium" });
+    // Manda os dois quando disponíveis (não só um OU outro) — mais chance
+    // de a página /assinar reconhecer a conta na hora e pular a etapa de
+    // formulário, direto pro checkout.
     const raw = localStorage.getItem(TOKEN_KEY);
     if (raw && raw.startsWith("ext_")) params.set("token", raw);
-    else if (shop?.id) params.set("shop", shop.id);
+    if (shop?.id) params.set("shop", shop.id);
     window.open(`/assinar?${params.toString()}`, "_blank", "noopener");
   }
 
