@@ -31,6 +31,7 @@ import { Route as ApiPublicAiMoveLeadRouteImport } from './routes/api/public/ai/
 import { Route as ApiPublicAiSetAccessRouteImport } from './routes/api/public/ai/set-access'
 import { Route as ApiPublicAiUpdateSummaryRouteImport } from './routes/api/public/ai/update-summary'
 import { Route as ApiPublicBookingSlugRouteImport } from './routes/api/public/booking.$slug'
+import { Route as ApiPublicExtensionAccountInfoRouteImport } from './routes/api/public/extension/account-info'
 import { Route as ApiPublicExtensionAgendaReminderRulesRouteImport } from './routes/api/public/extension/agenda-reminder-rules'
 import { Route as ApiPublicExtensionAgendaSettingsRouteImport } from './routes/api/public/extension/agenda-settings'
 import { Route as ApiPublicExtensionAgenteIaAccessLinkRouteImport } from './routes/api/public/extension/agente-ia-access-link'
@@ -208,6 +209,12 @@ const ApiPublicBookingSlugRoute = ApiPublicBookingSlugRouteImport.update({
   path: '/api/public/booking/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicExtensionAccountInfoRoute =
+  ApiPublicExtensionAccountInfoRouteImport.update({
+    id: '/api/public/extension/account-info',
+    path: '/api/public/extension/account-info',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicExtensionAgendaReminderRulesRoute =
   ApiPublicExtensionAgendaReminderRulesRouteImport.update({
     id: '/api/public/extension/agenda-reminder-rules',
@@ -613,6 +620,7 @@ export interface FileRoutesByFullPath {
   '/api/public/ai/set-access': typeof ApiPublicAiSetAccessRoute
   '/api/public/ai/update-summary': typeof ApiPublicAiUpdateSummaryRoute
   '/api/public/booking/$slug': typeof ApiPublicBookingSlugRoute
+  '/api/public/extension/account-info': typeof ApiPublicExtensionAccountInfoRoute
   '/api/public/extension/agenda-reminder-rules': typeof ApiPublicExtensionAgendaReminderRulesRouteWithChildren
   '/api/public/extension/agenda-settings': typeof ApiPublicExtensionAgendaSettingsRoute
   '/api/public/extension/agente-ia-access-link': typeof ApiPublicExtensionAgenteIaAccessLinkRoute
@@ -701,6 +709,7 @@ export interface FileRoutesByTo {
   '/api/public/ai/set-access': typeof ApiPublicAiSetAccessRoute
   '/api/public/ai/update-summary': typeof ApiPublicAiUpdateSummaryRoute
   '/api/public/booking/$slug': typeof ApiPublicBookingSlugRoute
+  '/api/public/extension/account-info': typeof ApiPublicExtensionAccountInfoRoute
   '/api/public/extension/agenda-reminder-rules': typeof ApiPublicExtensionAgendaReminderRulesRouteWithChildren
   '/api/public/extension/agenda-settings': typeof ApiPublicExtensionAgendaSettingsRoute
   '/api/public/extension/agente-ia-access-link': typeof ApiPublicExtensionAgenteIaAccessLinkRoute
@@ -790,6 +799,7 @@ export interface FileRoutesById {
   '/api/public/ai/set-access': typeof ApiPublicAiSetAccessRoute
   '/api/public/ai/update-summary': typeof ApiPublicAiUpdateSummaryRoute
   '/api/public/booking/$slug': typeof ApiPublicBookingSlugRoute
+  '/api/public/extension/account-info': typeof ApiPublicExtensionAccountInfoRoute
   '/api/public/extension/agenda-reminder-rules': typeof ApiPublicExtensionAgendaReminderRulesRouteWithChildren
   '/api/public/extension/agenda-settings': typeof ApiPublicExtensionAgendaSettingsRoute
   '/api/public/extension/agente-ia-access-link': typeof ApiPublicExtensionAgenteIaAccessLinkRoute
@@ -880,6 +890,7 @@ export interface FileRouteTypes {
     | '/api/public/ai/set-access'
     | '/api/public/ai/update-summary'
     | '/api/public/booking/$slug'
+    | '/api/public/extension/account-info'
     | '/api/public/extension/agenda-reminder-rules'
     | '/api/public/extension/agenda-settings'
     | '/api/public/extension/agente-ia-access-link'
@@ -968,6 +979,7 @@ export interface FileRouteTypes {
     | '/api/public/ai/set-access'
     | '/api/public/ai/update-summary'
     | '/api/public/booking/$slug'
+    | '/api/public/extension/account-info'
     | '/api/public/extension/agenda-reminder-rules'
     | '/api/public/extension/agenda-settings'
     | '/api/public/extension/agente-ia-access-link'
@@ -1056,6 +1068,7 @@ export interface FileRouteTypes {
     | '/api/public/ai/set-access'
     | '/api/public/ai/update-summary'
     | '/api/public/booking/$slug'
+    | '/api/public/extension/account-info'
     | '/api/public/extension/agenda-reminder-rules'
     | '/api/public/extension/agenda-settings'
     | '/api/public/extension/agente-ia-access-link'
@@ -1144,6 +1157,7 @@ export interface RootRouteChildren {
   ApiPublicAiSetAccessRoute: typeof ApiPublicAiSetAccessRoute
   ApiPublicAiUpdateSummaryRoute: typeof ApiPublicAiUpdateSummaryRoute
   ApiPublicBookingSlugRoute: typeof ApiPublicBookingSlugRoute
+  ApiPublicExtensionAccountInfoRoute: typeof ApiPublicExtensionAccountInfoRoute
   ApiPublicExtensionAgendaReminderRulesRoute: typeof ApiPublicExtensionAgendaReminderRulesRouteWithChildren
   ApiPublicExtensionAgendaSettingsRoute: typeof ApiPublicExtensionAgendaSettingsRoute
   ApiPublicExtensionAgenteIaAccessLinkRoute: typeof ApiPublicExtensionAgenteIaAccessLinkRoute
@@ -1346,6 +1360,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/booking/$slug'
       fullPath: '/api/public/booking/$slug'
       preLoaderRoute: typeof ApiPublicBookingSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/account-info': {
+      id: '/api/public/extension/account-info'
+      path: '/api/public/extension/account-info'
+      fullPath: '/api/public/extension/account-info'
+      preLoaderRoute: typeof ApiPublicExtensionAccountInfoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/extension/agenda-reminder-rules': {
@@ -2071,6 +2092,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicAiSetAccessRoute: ApiPublicAiSetAccessRoute,
   ApiPublicAiUpdateSummaryRoute: ApiPublicAiUpdateSummaryRoute,
   ApiPublicBookingSlugRoute: ApiPublicBookingSlugRoute,
+  ApiPublicExtensionAccountInfoRoute: ApiPublicExtensionAccountInfoRoute,
   ApiPublicExtensionAgendaReminderRulesRoute:
     ApiPublicExtensionAgendaReminderRulesRouteWithChildren,
   ApiPublicExtensionAgendaSettingsRoute: ApiPublicExtensionAgendaSettingsRoute,

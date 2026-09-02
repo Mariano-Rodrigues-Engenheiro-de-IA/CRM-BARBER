@@ -243,6 +243,7 @@
     cap: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M23 9 12 3 1 9l11 6 11-6Z"/><path d="M5 11.5v5c0 1.8 3.1 3.5 7 3.5s7-1.7 7-3.5v-5"/><path d="M23 9v7"/></svg>`,
     link: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="2.5" width="11" height="19" rx="2.2"/><path d="M10.5 18.2h3"/></svg>`,
     clock: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>`,
+    account: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-3.9 3.6-7 8-7s8 3.1 8 7"/></svg>`,
   };
 
   const GEAR_SVG = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
@@ -1648,6 +1649,7 @@
   const PROFILE_BTN_ID = "crm-chat-profile";
   const SAVE_CONTACT_BTN_ID = "crm-chat-save-contact";
   const FOLLOWUP_BTN_ID = "crm-chat-followup";
+  const ACCOUNT_BTN_ID = "crm-chat-account";
   const BOLT_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>`;
   const PROFILE_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="18" height="17" rx="3.2"/><circle cx="12" cy="10" r="3"/><path d="M6.5 17.2c.9-2.3 3-3.7 5.5-3.7s4.6 1.4 5.5 3.7"/></svg>`;
   // Pessoa com "+" — aparece só quando o contato ainda não está salvo na
@@ -2299,9 +2301,10 @@
     const hasProfile = document.getElementById(PROFILE_BTN_ID);
     const hasSaveContact = document.getElementById(SAVE_CONTACT_BTN_ID);
     const hasFollowup = document.getElementById(FOLLOWUP_BTN_ID);
+    const hasAccount = document.getElementById(ACCOUNT_BTN_ID);
     if (
-      hasCrm && hasBolt && hasNotes && hasSchedule && hasProfile && hasSaveContact && hasFollowup &&
-      header.contains(hasCrm) && header.contains(hasBolt) && header.contains(hasNotes) && header.contains(hasSchedule) && header.contains(hasProfile) && header.contains(hasSaveContact) && header.contains(hasFollowup)
+      hasCrm && hasBolt && hasNotes && hasSchedule && hasProfile && hasSaveContact && hasFollowup && hasAccount &&
+      header.contains(hasCrm) && header.contains(hasBolt) && header.contains(hasNotes) && header.contains(hasSchedule) && header.contains(hasProfile) && header.contains(hasSaveContact) && header.contains(hasFollowup) && header.contains(hasAccount)
     ) {
       updateFunnelBadge();
       updateFollowupBadge();
@@ -2314,6 +2317,7 @@
     hasProfile?.remove();
     hasSaveContact?.remove();
     hasFollowup?.remove();
+    hasAccount?.remove();
 
     const btn = document.createElement("button");
     btn.id = CHAT_BTN_ID;
@@ -2427,6 +2431,26 @@
       openFollowupStatusPopover(followupBtn);
     });
 
+    // Botão da própria conta (assinatura/contato) — fica por último de
+    // propósito, no canto mais à direita da fileira de ícones, separado
+    // dos botões que agem sobre O LEAD (esse aqui é sobre a conta de
+    // quem está usando o CRM).
+    const accountBtn = document.createElement("button");
+    accountBtn.id = ACCOUNT_BTN_ID;
+    accountBtn.type = "button";
+    accountBtn.className = "crm-chat-btn crm-chat-btn-icon";
+    accountBtn.setAttribute("data-label", "Minha conta");
+    accountBtn.innerHTML = ICONS.account;
+    accountBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (document.querySelector(".crm-account-pop")) {
+        document.querySelector(".crm-account-pop")?.remove();
+        return;
+      }
+      openAccountPopover(accountBtn);
+    });
+
     const slot = headerActionsSlot(header);
     if (slot === header) {
       header.appendChild(btn);
@@ -2436,6 +2460,7 @@
       header.appendChild(profileBtn);
       header.appendChild(saveContactBtn);
       header.appendChild(boltBtn);
+      header.appendChild(accountBtn);
     } else {
       slot.insertAdjacentElement("beforebegin", btn);
       btn.insertAdjacentElement("afterend", followupBtn);
@@ -2444,6 +2469,7 @@
       scheduleBtn.insertAdjacentElement("afterend", profileBtn);
       profileBtn.insertAdjacentElement("afterend", saveContactBtn);
       saveContactBtn.insertAdjacentElement("afterend", boltBtn);
+      boltBtn.insertAdjacentElement("afterend", accountBtn);
     }
     updateFunnelBadge();
     updateFollowupBadge();
@@ -2610,6 +2636,105 @@
       if (!pop.contains(ev.target) && ev.target !== anchor) close();
     }
     setTimeout(() => document.addEventListener("mousedown", onDoc, true), 0);
+  }
+
+  /** Popup "Minha conta" — status da assinatura, e-mail e telefone de
+   * contato (editável, pro dono corrigir se digitou errado no
+   * cadastro). Sobre a conta de quem está usando o CRM, não sobre o
+   * lead da conversa aberta — por isso fica sempre visível, sem
+   * depender de qual conversa está aberta. */
+  function openAccountPopover(anchor) {
+    document.querySelectorAll(".crm-menu, .crm-lite-pop, .crm-fn-pop, .crm-account-pop").forEach((el) => el.remove());
+    const pop = document.createElement("div");
+    pop.className = "crm-lite-pop crm-account-pop";
+    const rect = anchor.getBoundingClientRect();
+    const popWidth = 260;
+    pop.style.top = `${rect.bottom + 8}px`;
+    pop.style.left = `${Math.min(Math.max(8, rect.left - popWidth + rect.width), window.innerWidth - popWidth - 8)}px`;
+    pop.innerHTML = `<p class="crm-lite-pop-title">Minha conta</p><p class="crm-qrp-empty" style="padding:6px 0">Carregando…</p>`;
+    document.body.appendChild(pop);
+    animatePopIn(pop);
+
+    const close = () => {
+      pop.remove();
+      document.removeEventListener("mousedown", onDoc, true);
+    };
+    function onDoc(ev) {
+      if (!pop.contains(ev.target) && ev.target !== anchor) close();
+    }
+    setTimeout(() => document.addEventListener("mousedown", onDoc, true), 0);
+
+    function formatDueDate(iso) {
+      if (!iso) return "";
+      return new Date(iso).toLocaleDateString("pt-BR");
+    }
+
+    function render(account, billing) {
+      const statusLabel = billing.premium
+        ? billing.status === "courtesy"
+          ? "Cortesia (sem cobrança)"
+          : "Ativa"
+        : "Plano grátis";
+      const statusClass = billing.premium ? "crm-account-status-ok" : "crm-account-status-free";
+      pop.innerHTML = `
+        <p class="crm-lite-pop-title">Minha conta</p>
+        ${account.shop_name ? `<p class="crm-account-shop">${escapeHtml(account.shop_name)}</p>` : ""}
+        <div class="crm-account-row">
+          <span class="crm-account-label">Status</span>
+          <span class="${statusClass}">${statusLabel}</span>
+        </div>
+        ${
+          billing.premium && billing.current_period_end
+            ? `<div class="crm-account-row"><span class="crm-account-label">Vencimento</span><span>${formatDueDate(billing.current_period_end)}</span></div>`
+            : ""
+        }
+        <div class="crm-account-row">
+          <span class="crm-account-label">E-mail</span>
+          <span class="crm-account-value-readonly">${escapeHtml(account.owner_email || "—")}</span>
+        </div>
+        <label class="crm-account-phone-field">
+          <span class="crm-account-label">Telefone</span>
+          <input type="text" class="crm-lite-pop-input" data-account-phone value="${escapeHtml(account.owner_phone || "")}" placeholder="Ex: 61999998888" />
+        </label>
+        <button type="button" class="crm-lite-pop-confirm" data-account-save>Salvar telefone</button>
+        <p class="crm-account-hint" data-account-msg></p>
+      `;
+      pop.querySelector("[data-account-save]")?.addEventListener("click", async () => {
+        const input = pop.querySelector("[data-account-phone]");
+        const msg = pop.querySelector("[data-account-msg]");
+        const value = (input?.value || "").trim();
+        if (!value) return;
+        const btn = pop.querySelector("[data-account-save]");
+        btn.disabled = true;
+        btn.textContent = "Salvando…";
+        const r = await chrome.runtime
+          .sendMessage({
+            type: "api",
+            path: "/api/public/extension/account-info",
+            opts: { method: "PATCH", body: JSON.stringify({ owner_phone: value }) },
+          })
+          .catch(() => null);
+        btn.disabled = false;
+        btn.textContent = "Salvar telefone";
+        if (msg) {
+          msg.textContent = r?.ok ? "Telefone atualizado." : r?.error || "Não consegui salvar.";
+          msg.classList.toggle("crm-account-hint-error", !r?.ok);
+        }
+      });
+    }
+
+    chrome.runtime
+      .sendMessage({ type: "api", path: "/api/public/extension/account-info" })
+      .then((r) => {
+        if (!r?.ok) {
+          pop.innerHTML = `<p class="crm-lite-pop-title">Minha conta</p><p class="crm-qrp-empty" style="padding:6px 0">${escapeHtml(r?.error || "Não consegui carregar.")}</p>`;
+          return;
+        }
+        render(r.account, r.billing);
+      })
+      .catch(() => {
+        pop.innerHTML = `<p class="crm-lite-pop-title">Minha conta</p><p class="crm-qrp-empty" style="padding:6px 0">Não consegui carregar.</p>`;
+      });
   }
 
   /** Mostra o ícone de "salvar contato" só quando a conversa aberta ainda
