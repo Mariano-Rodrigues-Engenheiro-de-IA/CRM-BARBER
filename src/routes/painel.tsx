@@ -15,7 +15,7 @@ import { DispatchCenter } from "@/components/dispatch-view";
 import { sendWaAction, isRealPhone, openWhatsappChat, applyFunnelActions } from "@/lib/wa-actions";
 
 import { sendableActions, type QuickReply } from "@/lib/quick-replies";
-import { PREMIUM_PRICE_LABEL, type BillingStatus } from "@/lib/billing";
+import { type BillingStatus } from "@/lib/billing";
 
 import { useConfirm } from "@/components/confirm-dialog";
 import { AgendaView } from "@/components/agenda-view";
@@ -244,27 +244,6 @@ function nudgeExtensionPoll() {
 
 type Section = "agenda" | "agente-ia" | "treinamento" | "configuracoes" | "assinantes" | "funis" | "follow-up" | "disparo" | "equipe" | "conexao" | "templates";
 
-/** Seções bloqueadas no plano grátis — clicar nelas sem ser Premium abre
- * o modal de upgrade em vez de navegar. */
-const PREMIUM_GATED_SECTIONS: Partial<Record<Section, { label: string; description: string }>> = {
-  equipe: {
-    label: "Ranking de vendas",
-    description: "Lançamento de vendas por profissional, ranking da equipe, ranking de clientes e histórico de consumo fazem parte do plano pago.",
-  },
-  "follow-up": {
-    label: "Follow-up",
-    description: "Sequências automáticas de mensagem por etapa do funil fazem parte do plano pago.",
-  },
-};
-/** Igual PREMIUM_GATED_SECTIONS, mas pra sub-abas dentro de uma seção que
- * continua acessível (ex: Agenda em si é grátis, só a sub-aba de
- * Lembretes/Confirmações é premium). */
-const PREMIUM_GATED_AGENDA_TABS: Partial<Record<AgendaTab, { label: string; description: string }>> = {
-  lembretes: {
-    label: "Lembretes / Confirmações",
-    description: "Mensagens automáticas de lembrete e confirmação de agendamento fazem parte do plano pago.",
-  },
-};
 /** Sub-abas da sanfona de Assinaturas. */
 type AssinTab = "visao" | "assinantes";
 /** Sub-abas da sanfona de Configurações. */
@@ -358,26 +337,74 @@ function IconArrowRight() {
     </svg>
   );
 }
-/** Raio pequeno — no destaque do que o Premium libera, dentro do modal. */
-function IconBolt() {
+
+/** Prévia "trancada" dos Funis — a aba abre normalmente (só as ações
+ * dentro é que ficam bloqueadas), mostrando uma amostra visual de como
+ * funciona (esmaecida, sem interação nenhuma) em vez do kanban de
+ * verdade. Qualquer clique abre o aviso discreto (PremiumInlinePopup). */
+/** Aviso pequeno e discreto — dispara quando a pessoa tenta USAR algo
+ * premium (criar, salvar), não quando só entra na aba. Texto mínimo, sem
+ * explicar o "porquê" — só avisa e dá o caminho, pra não travar a
+ * experiência de quem só está espiando. */
+function PremiumInlinePopup({ onClose, onUpgrade }: { onClose: () => void; onUpgrade: () => void }) {
   return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" />
-    </svg>
+    <div
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/10 p-4 sm:items-center"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-[280px] rounded-2xl bg-white p-4 text-center shadow-xl animate-premium-modal-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-600 text-white shadow-md shadow-teal-600/25">
+          <IconLock />
+        </div>
+        <p className="mt-2.5 text-[13px] text-neutral-600">Para usar esse recurso, compre a versão Premium.</p>
+        <button
+          onClick={onUpgrade}
+          className="mt-3 w-full rounded-xl bg-teal-600 py-2.5 text-xs font-extrabold uppercase tracking-wide text-white transition hover:bg-teal-700"
+        >
+          Comprar Premium
+        </button>
+      </div>
+    </div>
   );
 }
 
-/** Modal de upgrade pra Premium — dispara sempre que o usuário tenta
- * acessar uma função bloqueada no plano grátis. Visual baseado numa
- * referência que o Mariano mandou (o "Assinatura vencida" do próprio
- * WhatsApp): cartão branco, selo colorido no topo, título em duas cores,
- * caixa de destaque do que está sendo desbloqueado, botão principal
- * cheio com seta, e "Agora não" discreto pra fechar sem constranger. */
-/** Prévia "trancada" dos Funis — a aba abre normalmente (diferente de
- * Equipe/Follow-up, que já bloqueiam no clique do menu), mas mostra uma
- * amostra visual de como funciona (esmaecida, sem interação nenhuma) em
- * vez do kanban de verdade. Qualquer clique abre o modal de upgrade. */
-function FunnelsLockedPreview({ onUnlock }: { onUnlock: () => void }) {
+/** Deixa a tela real visível (não interativa) por baixo, e captura
+ * QUALQUER clique pra mostrar o aviso discreto em vez da ação de
+ * verdade acontecer — assim a pessoa vê a tela inteira (o "gostinho"),
+ * só não consegue criar/salvar nada sem assinar. */
+function PremiumSoftLock({
+  active,
+  onUpgrade,
+  children,
+}: {
+  active: boolean;
+  onUpgrade: () => void;
+  children: React.ReactNode;
+}) {
+  const [showPopup, setShowPopup] = useState(false);
+  if (!active) return <>{children}</>;
+  return (
+    <div className="relative">
+      <div className="pointer-events-none select-none">{children}</div>
+      <div className="absolute inset-0 z-10 cursor-pointer" onClick={() => setShowPopup(true)} />
+      {showPopup && (
+        <PremiumInlinePopup
+          onClose={() => setShowPopup(false)}
+          onUpgrade={() => {
+            setShowPopup(false);
+            onUpgrade();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function FunnelsLockedPreview({ onUpgrade }: { onUpgrade: () => void }) {
+  const [showPopup, setShowPopup] = useState(false);
   const sampleColumns = [
     { name: "Novos leads", cards: ["Ana Silva", "Carlos Souza"] },
     { name: "Em conversa", cards: ["Beatriz Lima", "João Pedro", "Marina Costa"] },
@@ -402,7 +429,7 @@ function FunnelsLockedPreview({ onUnlock }: { onUnlock: () => void }) {
         ))}
       </div>
       <button
-        onClick={onUnlock}
+        onClick={() => setShowPopup(true)}
         className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-2xl bg-white/60 p-6 text-center backdrop-blur-[1px] transition hover:bg-white/70"
       >
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-600 text-white shadow-lg shadow-teal-600/30">
@@ -417,82 +444,15 @@ function FunnelsLockedPreview({ onUnlock }: { onUnlock: () => void }) {
           <IconArrowRight />
         </span>
       </button>
-    </div>
-  );
-}
-
-function PremiumUpgradeModal({
-  featureLabel,
-  featureDescription,
-  priceLabel,
-  onUpgrade,
-  onClose,
-}: {
-  featureLabel: string;
-  featureDescription: string;
-  priceLabel: string;
-  onUpgrade: () => void;
-  onClose: () => void;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4 backdrop-blur-[2px] animate-premium-overlay-in"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl animate-premium-modal-in"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex justify-end">
-          <button
-            onClick={onClose}
-            className="-mr-1 -mt-1 rounded-full p-1.5 text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-600"
-            aria-label="Fechar"
-          >
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="-mt-2 flex justify-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-600 text-white shadow-lg shadow-teal-600/30">
-            <IconLock />
-          </div>
-        </div>
-
-        <h2 className="mt-4 text-center text-[19px] font-extrabold leading-tight text-neutral-900">
-          Recurso <span className="text-teal-600">Premium</span>
-        </h2>
-        <p className="mx-auto mt-2 max-w-[280px] text-center text-[13px] leading-relaxed text-neutral-500">
-          {featureDescription}
-        </p>
-
-        <div className="mt-5 flex items-center gap-3 rounded-2xl bg-teal-50 p-3.5">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-600 text-white">
-            <IconBolt />
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-[13px] font-bold text-neutral-900">{featureLabel}</p>
-            <p className="text-[11px] text-neutral-500">Liberado no plano Premium</p>
-          </div>
-        </div>
-
-        <button
-          onClick={onUpgrade}
-          className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-600 py-3.5 text-[13px] font-bold uppercase tracking-wide text-white transition hover:bg-teal-700 active:scale-[0.99]"
-        >
-          Assinar Premium · {priceLabel}
-          <IconArrowRight />
-        </button>
-
-        <button
-          onClick={onClose}
-          className="mt-3 w-full text-center text-[12px] font-medium text-neutral-400 transition hover:text-neutral-600"
-        >
-          Agora não
-        </button>
-      </div>
+      {showPopup && (
+        <PremiumInlinePopup
+          onClose={() => setShowPopup(false)}
+          onUpgrade={() => {
+            setShowPopup(false);
+            onUpgrade();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -660,7 +620,6 @@ function Painel() {
     }
   });
   const [billing, setBilling] = useState<BillingStatus | null>(null);
-  const [premiumModalFeature, setPremiumModalFeature] = useState<{ label: string; description: string } | null>(null);
   const [brand, setBrand] = useState<Brand>({});
 
 
@@ -733,24 +692,6 @@ function Painel() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
-
-  // Cobre quem cai direto numa seção bloqueada por link/favorito (não
-  // passou pelo clique no menu, onde já intercepta antes de navegar) —
-  // abre o modal de upgrade assim que souber que a conta não é Premium.
-  useEffect(() => {
-    const gate = PREMIUM_GATED_SECTIONS[section];
-    if (gate && billing && !billing.premium) {
-      setPremiumModalFeature(gate);
-      return;
-    }
-    if (section === "agenda") {
-      const agendaGate = PREMIUM_GATED_AGENDA_TABS[agendaTab];
-      if (agendaGate && billing && !billing.premium) {
-        setPremiumModalFeature(agendaGate);
-        setAgendaTab("agenda"); // volta pra sub-aba livre, não deixa preso numa tela vazia
-      }
-    }
-  }, [section, agendaTab, billing]);
 
 
   // Refresh silencioso ao voltar pra seção assinantes — sem "Carregando..." piscando entre abas.
@@ -896,14 +837,6 @@ function Painel() {
               <div key={n.key} className="group relative">
                 <button
                   onClick={() => {
-                    // Função premium bloqueada: abre o modal de upgrade
-                    // em vez de navegar pra seção (nem chega a trocar de
-                    // tela, fica exatamente onde a pessoa estava).
-                    const gate = PREMIUM_GATED_SECTIONS[n.key];
-                    if (gate && billing && !billing.premium) {
-                      setPremiumModalFeature(gate);
-                      return;
-                    }
                     // Menu recolhido: clicar num ícone expande o menu, pra o
                     // usuário enxergar as sub-abas da seção.
                     const wasCollapsed = sidebarCollapsed;
@@ -949,17 +882,6 @@ function Painel() {
                         <button
                           key={sub.key}
                           onClick={() => {
-                            // Sub-aba premium (ex: Lembretes/Confirmações
-                            // dentro de Agenda) — Agenda em si continua
-                            // acessível, só essa sub-aba específica abre
-                            // o modal em vez de navegar.
-                            if (n.key === "agenda") {
-                              const agendaGate = PREMIUM_GATED_AGENDA_TABS[sub.key as AgendaTab];
-                              if (agendaGate && billing && !billing.premium) {
-                                setPremiumModalFeature(agendaGate);
-                                return;
-                              }
-                            }
                             setSection(n.key);
                             if (n.key === "assinantes") setAssinTab(sub.key as AssinTab);
                             else if (n.key === "configuracoes") setConfigTab(sub.key as ConfigTab);
@@ -993,14 +915,7 @@ function Painel() {
           {NAV_TOP.map((n) => (
             <button
               key={n.key}
-              onClick={() => {
-                const gate = PREMIUM_GATED_SECTIONS[n.key];
-                if (gate && billing && !billing.premium) {
-                  setPremiumModalFeature(gate);
-                  return;
-                }
-                setSection(n.key);
-              }}
+              onClick={() => setSection(n.key)}
               className={
                 "rounded-md px-2.5 py-1 text-[11px] font-medium " +
                 (section === n.key ? "bg-brand text-white" : "text-sidebar-foreground/70")
@@ -1023,12 +938,10 @@ function Painel() {
             <main className="px-4 py-4">
               {agendaTab === "agenda" ? (
                 <AgendaView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
-              ) : billing && !billing.premium ? (
-                <div className="mx-auto max-w-md py-16 text-center">
-                  <p className="text-sm text-neutral-400">Esse recurso é exclusivo do plano Premium.</p>
-                </div>
               ) : (
-                <AgendaRemindersView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+                <PremiumSoftLock active={!!billing && !billing.premium} onUpgrade={openCheckout}>
+                  <AgendaRemindersView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+                </PremiumSoftLock>
               )}
             </main>
           </>
@@ -1183,14 +1096,7 @@ function Painel() {
             </header>
             <main className="px-4 py-3">
               {billing && !billing.premium ? (
-                <FunnelsLockedPreview
-                  onUnlock={() =>
-                    setPremiumModalFeature({
-                      label: "Funis de Vendas",
-                      description: "Organizar leads em colunas, arrastar entre etapas e acompanhar o funil de vendas fazem parte do plano pago.",
-                    })
-                  }
-                />
+                <FunnelsLockedPreview onUpgrade={openCheckout} />
               ) : (
                 <FunnelsView
                   api={(path: string, opts?: RequestInit) => api(token, path, opts)}
@@ -1205,13 +1111,9 @@ function Painel() {
           <>
             <SectionHeader icon={<IconClock />} title="Follow-up" />
             <main className="px-4 py-4">
-              {billing && !billing.premium ? (
-                <div className="mx-auto max-w-md py-16 text-center">
-                  <p className="text-sm text-neutral-400">Esse recurso é exclusivo do plano Premium.</p>
-                </div>
-              ) : (
+              <PremiumSoftLock active={!!billing && !billing.premium} onUpgrade={openCheckout}>
                 <FollowupView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
-              )}
+              </PremiumSoftLock>
             </main>
           </>
         )}
@@ -1221,14 +1123,10 @@ function Painel() {
             <SectionHeader
               icon={<IconRankingBars />}
               title="Ranking de vendas"
-              right={billing?.premium !== false ? <div ref={setEquipeHeaderEl} className="flex shrink-0 items-center gap-2" /> : undefined}
+              right={<div ref={setEquipeHeaderEl} className="flex shrink-0 items-center gap-2" />}
             />
             <main className="px-4 py-4">
-              {billing && !billing.premium ? (
-                <div className="mx-auto max-w-md py-16 text-center">
-                  <p className="text-sm text-neutral-400">Esse recurso é exclusivo do plano Premium.</p>
-                </div>
-              ) : (
+              <PremiumSoftLock active={!!billing && !billing.premium} onUpgrade={openCheckout}>
                 <TeamView
                   shopId={shop?.id ?? "default"}
                   headerHost={equipeHeaderEl}
@@ -1239,7 +1137,7 @@ function Painel() {
                     setConfigTab(tab);
                   }}
                 />
-              )}
+              </PremiumSoftLock>
             </main>
           </>
         )}
@@ -1263,19 +1161,6 @@ function Painel() {
         )}
 
       </div>
-
-      {premiumModalFeature && (
-        <PremiumUpgradeModal
-          featureLabel={premiumModalFeature.label}
-          featureDescription={premiumModalFeature.description}
-          priceLabel={PREMIUM_PRICE_LABEL}
-          onUpgrade={() => {
-            setPremiumModalFeature(null);
-            openCheckout();
-          }}
-          onClose={() => setPremiumModalFeature(null)}
-        />
-      )}
     </div>
   );
 }

@@ -213,13 +213,6 @@
 .animate-premium-modal-in {
   animation: premium-modal-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
-@keyframes premium-overlay-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-.animate-premium-overlay-in {
-  animation: premium-overlay-in 0.15s ease-out;
-}
 
 /* Scrollbars finas e discretas para o Kanban (leads e funis) — trilho
    quase invisível, indicador fino que só fica mais visível no hover,
