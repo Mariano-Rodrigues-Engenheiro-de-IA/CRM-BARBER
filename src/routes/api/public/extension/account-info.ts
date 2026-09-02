@@ -37,6 +37,18 @@ export const Route = createFileRoute("/api/public/extension/account-info")({
         const { getBillingStatus } = await import("@/lib/billing.server");
         const billing = await getBillingStatus(supabaseAdmin, shop);
 
+        // Só oferece "Gerenciar assinatura" quando existe um cliente de
+        // verdade na Stripe por trás (id começando com "cus_") — cortesia
+        // e assinaturas dadas manualmente não têm o que gerenciar lá.
+        const { data: subRow } = await supabaseAdmin
+          .from("shop_subscriptions")
+          .select("stripe_customer_id")
+          .eq("barbershop_id", shop)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const canManageBilling = !!subRow?.stripe_customer_id?.startsWith("cus_");
+
         return jsonResponse(request, {
           ok: true,
           account: {
@@ -49,6 +61,7 @@ export const Route = createFileRoute("/api/public/extension/account-info")({
             premium: billing.premium,
             status: billing.status,
             current_period_end: billing.current_period_end,
+            can_manage: canManageBilling,
           },
         });
       },

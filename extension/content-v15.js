@@ -2689,7 +2689,7 @@
             : ""
         }
         ${
-          billing.status !== "courtesy"
+          billing.can_manage
             ? `<button type="button" class="crm-lite-pop-confirm crm-account-manage-btn" data-account-manage>Gerenciar assinatura</button>`
             : ""
         }

@@ -36,6 +36,19 @@ export const Route = createFileRoute("/api/public/extension/billing-portal")({
             { status: 404 },
           );
         }
+        // IDs de cliente de verdade da Stripe sempre começam com "cus_" —
+        // assinaturas dadas manualmente (cortesia, sem passar pela
+        // Stripe) usam um id fictício tipo "manual_comp_..." só pra
+        // preencher a coluna, e a Stripe rejeita isso com um erro técnico
+        // feio ("No such customer"). Detecta esse caso ANTES de tentar,
+        // com uma mensagem que faz sentido pra quem está usando.
+        if (!sub.stripe_customer_id.startsWith("cus_")) {
+          return jsonResponse(
+            request,
+            { ok: false, error: "Essa assinatura foi liberada manualmente (cortesia) e não tem cobrança na Stripe — não há nada pra gerenciar aqui." },
+            { status: 422 },
+          );
+        }
 
         try {
           const { createStripeClient } = await import("@/lib/stripe.server");
