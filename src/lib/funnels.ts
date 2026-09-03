@@ -128,6 +128,12 @@ export type FunnelCard = {
     next_due_at: string | null;
     last_sent_at: string | null;
   } | null;
+  /** Quantidade de anotações desse lead — pro selinho no ícone do card,
+   * sem precisar abrir o detalhe pra saber se tem algo escrito. */
+  notes_count?: number;
+  /** Quantidade de mensagens agendadas ainda pendentes (não conta
+   * follow-up nem lembretes automáticos, só o que foi criado manual). */
+  schedule_count?: number;
 };
 
 export type Funnel = {

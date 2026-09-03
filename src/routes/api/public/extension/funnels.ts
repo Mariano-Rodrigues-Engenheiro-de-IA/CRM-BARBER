@@ -105,12 +105,33 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
           sentByCard.get(log.card_id)!.set(log.step_id, log.sent_at);
         }
 
+        // Contagem de anotações e mensagens agendadas por card — pro
+        // selinho nos ícones do kanban, sem precisar abrir o card pra
+        // saber se tem algo. Busca tudo de uma vez (não card por card) e
+        // conta na memória, mesmo padrão já usado pro follow-up acima.
+        const { data: notesRows } = await supabaseAdmin
+          .from("lead_notes")
+          .select("wa_contact_id, phone")
+          .eq("barbershop_id", shop);
+        const { data: scheduleRows } = await supabaseAdmin
+          .from("message_jobs")
+          .select("phone")
+          .eq("barbershop_id", shop)
+          .eq("status", "pending")
+          .is("campaign_id", null)
+          .is("funnel_followup_step_id", null)
+          .is("agenda_reminder_rule_id", null);
+
         const flatCardsWithFollowup = flatCards.map((c: any) => {
           const rule = ruleByStage.get(`${c.funnel_id}:${c.stage_id}`) as
             | { funnel_followup_steps: Array<{ id: string; delay_minutes: number; sort_order: number }> }
             | undefined;
           const steps = (rule?.funnel_followup_steps ?? []).slice().sort((a, b) => a.sort_order - b.sort_order);
-          if (!steps.length) return { ...c, followup: null };
+          const notesCount = (notesRows ?? []).filter(
+            (n) => (c.wa_contact_id && n.wa_contact_id === c.wa_contact_id) || (c.phone && n.phone === c.phone),
+          ).length;
+          const scheduleCount = (scheduleRows ?? []).filter((j) => c.phone && j.phone === c.phone).length;
+          if (!steps.length) return { ...c, followup: null, notes_count: notesCount, schedule_count: scheduleCount };
           const sentMap = sentByCard.get(c.id) ?? new Map<string, string>();
           const sentSteps = steps.filter((s) => sentMap.has(s.id));
           const nextStep = steps.find((s) => !sentMap.has(s.id));
@@ -125,6 +146,8 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
             : null;
           return {
             ...c,
+            notes_count: notesCount,
+            schedule_count: scheduleCount,
             followup: {
               total_steps: steps.length,
               sent_count: sentSteps.length,

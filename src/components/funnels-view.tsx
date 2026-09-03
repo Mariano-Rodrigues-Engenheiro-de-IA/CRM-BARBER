@@ -1090,26 +1090,32 @@ export function FunnelsView({
                             </CardAction>
                             <UnreadBadge count={card.unread_count ?? 0} />
                           </div>
-                          <CardAction
-                            title="Anotações"
-                            colorClass="text-sky-600 hover:bg-sky-50"
-                            onClick={() => {
-                              setDetailTab("notes");
-                              setDetail(card);
-                            }}
-                          >
-                            <IconNote />
-                          </CardAction>
-                          <CardAction
-                            title="Mensagem agendada / disparo"
-                            colorClass="text-orange-600 hover:bg-orange-50"
-                            onClick={() => {
-                              setDetailTab("schedule");
-                              setDetail(card);
-                            }}
-                          >
-                            <IconClock />
-                          </CardAction>
+                          <div className="relative inline-block">
+                            <CardAction
+                              title="Anotações"
+                              colorClass="text-sky-600 hover:bg-sky-50"
+                              onClick={() => {
+                                setDetailTab("notes");
+                                setDetail(card);
+                              }}
+                            >
+                              <IconNote />
+                            </CardAction>
+                            <UnreadBadge count={card.notes_count ?? 0} />
+                          </div>
+                          <div className="relative inline-block">
+                            <CardAction
+                              title="Mensagem agendada / disparo"
+                              colorClass="text-orange-600 hover:bg-orange-50"
+                              onClick={() => {
+                                setDetailTab("schedule");
+                                setDetail(card);
+                              }}
+                            >
+                              <IconClock />
+                            </CardAction>
+                            <UnreadBadge count={card.schedule_count ?? 0} />
+                          </div>
                           <CardAction
                             title="Perfil e valor do cliente"
                             colorClass="text-violet-600 hover:bg-violet-50"
