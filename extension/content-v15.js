@@ -2532,10 +2532,10 @@
   /** true se a conversa aberta agora tem card em QUALQUER funil (não só
    * um "principal") — o popover do ícone já cobre todos, então o
    * indicador precisa bater com isso. */
-  function activeChatInMainFunnel() {
-    const dom = activeChatFromDom();
-    const waId = dom?.wa_id || null;
-    const phone = dom?.phone || null;
+  async function activeChatInMainFunnel() {
+    const chat = await activeChat();
+    const waId = chat?.wa_id || null;
+    const phone = chat?.phone || null;
     if (!waId && !phone) return false;
     // Antes ignorava funis do tipo "label" (baseados em etiqueta do
     // WhatsApp) — só contava manual/aba. Agora conta qualquer tipo: se o
@@ -2544,25 +2544,32 @@
   }
 
   /** Bolinha no ícone do funil — indica de cara que o lead já está no
-   * Funil principal, sem precisar abrir nada. */
-  function updateFunnelBadge() {
+   * Funil principal, sem precisar abrir nada. Usa activeChat() (não
+   * activeChatFromDom()) pelo mesmo motivo do updateNotesBadge: a versão
+   * só-DOM só acha telefone/wa_id de contato ainda não salvo — pra
+   * maioria (já salvo, aparece só o nome) ela falhava e a bolinha nunca
+   * aparecia. */
+  async function updateFunnelBadge() {
     const btn = document.getElementById(CHAT_BTN_ID);
     if (!btn) return;
-    btn.classList.toggle("crm-chat-btn-active", activeChatInMainFunnel());
+    const active = await activeChatInMainFunnel();
+    btn.classList.toggle("crm-chat-btn-active", active);
   }
 
   /** Todos os cards (em qualquer funil) do contato aberto agora que têm
    * follow-up configurado na etapa em que estão — um contato pode
    * aparecer em mais de um funil ao mesmo tempo. */
-  function activeChatFollowupEntries() {
+  async function activeChatFollowupEntries() {
     // wa_id é o mais confiável (contato sincronizado do WhatsApp), mas
     // cards criados/adicionados só com telefone (sem sincronizar ainda)
     // não têm wa_id — sem esse fallback por telefone, o reloginho nunca
     // aparecia pra esses leads, mesmo aparecendo certinho no kanban do
-    // site (que não depende de wa_id pra montar o card).
-    const dom = activeChatFromDom();
-    const waId = dom?.wa_id || null;
-    const phone = dom?.phone || null;
+    // site (que não depende de wa_id pra montar o card). Usa activeChat()
+    // (não activeChatFromDom()) pelo mesmo motivo da bolinha do funil: a
+    // versão só-DOM falha em achar telefone/wa_id pra contato já salvo.
+    const chat = await activeChat();
+    const waId = chat?.wa_id || null;
+    const phone = chat?.phone || null;
     if (!waId && !phone) return [];
     const out = [];
     for (const f of funnels) {
@@ -2582,10 +2589,10 @@
    * esse contato está numa etapa com follow-up configurado. Pulsa
    * (destaque) quando a próxima mensagem já passou da hora prevista
    * (está sendo processada pelo avaliador automático agora). */
-  function updateFollowupBadge() {
+  async function updateFollowupBadge() {
     const btn = document.getElementById(FOLLOWUP_BTN_ID);
     if (!btn) return;
-    const entries = activeChatFollowupEntries();
+    const entries = await activeChatFollowupEntries();
     if (!entries.length) {
       btn.style.display = "none";
       return;
@@ -2708,7 +2715,7 @@
 
   /** Popup leve com o relatório de follow-up do contato aberto — quantas
    * mensagens da sequência já foram enviadas, quando vem a próxima. */
-  function openFollowupStatusPopover(anchor) {
+  async function openFollowupStatusPopover(anchor) {
     document.querySelectorAll(".crm-menu, .crm-lite-pop, .crm-fn-pop, .crm-followup-pop").forEach((el) => el.remove());
     const pop = document.createElement("div");
     pop.className = "crm-lite-pop crm-followup-pop";
@@ -2716,7 +2723,7 @@
     pop.style.top = `${rect.bottom + 8}px`;
     pop.style.left = `${Math.min(Math.max(8, rect.left), window.innerWidth - 280)}px`;
 
-    const entries = activeChatFollowupEntries();
+    const entries = await activeChatFollowupEntries();
     pop.innerHTML = `
       <p class="crm-lite-pop-title">Follow-up</p>
       ${entries
