@@ -50,13 +50,18 @@ function graphUrl(path: string): string {
  *    de desconectar). Sem tratar isso, o CRM continuava mostrando
  *    "conectado" pra sempre, mesmo com a Meta já tendo cortado o
  *    vínculo do lado dela. https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/onboarding-business-app-users/ */
-async function handleAccountUpdate(change: Json) {
+async function handleAccountUpdate(change: Json, entryWabaId: string | null) {
   console.info("[whatsapp.webhook] account_update recebido:", JSON.stringify(change).slice(0, 2000));
 
   const value = change.value as Json | undefined;
   const event = typeof value?.event === "string" ? value.event : null;
   const wabaInfo = value?.waba_info as Json | undefined;
-  const wabaId = typeof wabaInfo?.waba_id === "string" ? (wabaInfo.waba_id as string) : null;
+  // PARTNER_APP_INSTALLED manda o waba_id dentro de waba_info; é bem
+  // provável que PARTNER_REMOVED não tenha esse waba_info (padrão comum
+  // nos outros webhooks account_update da Meta, que só trazem o id no
+  // nível do entry) — por isso o código nunca achava o waba_id nesse
+  // caso e pulava o evento inteiro. entryWabaId cobre esse caso.
+  const wabaId = (typeof wabaInfo?.waba_id === "string" ? (wabaInfo.waba_id as string) : null) ?? entryWabaId;
   const ownerBusinessId = typeof wabaInfo?.owner_business_id === "string" ? (wabaInfo.owner_business_id as string) : null;
 
   if (event === "PARTNER_REMOVED" && wabaId) {
@@ -67,6 +72,13 @@ async function handleAccountUpdate(change: Json) {
       .eq("waba_id", wabaId);
     if (error) console.error("[whatsapp.webhook] falha ao marcar desconectado após PARTNER_REMOVED:", error.message);
     else console.info(`[whatsapp.webhook] waba ${wabaId} desconectada pelo cliente (PARTNER_REMOVED) — CRM atualizado.`);
+    return;
+  }
+  if (event === "PARTNER_REMOVED" && !wabaId) {
+    // Se isso aparecer nos logs, quer dizer que nem o entry.id ajudou —
+    // precisa olhar o payload completo (log acima) pra achar onde a
+    // Meta escondeu o id da WABA nesse caso específico.
+    console.error("[whatsapp.webhook] PARTNER_REMOVED recebido, mas não achei o waba_id em lugar nenhum do payload.");
     return;
   }
 
@@ -354,7 +366,7 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
               const field = change.field;
               fields.push(typeof field === "string" ? field : String(field));
               if (field === "account_update") {
-                await handleAccountUpdate(change);
+                await handleAccountUpdate(change, typeof entry.id === "string" ? entry.id : null);
               } else if (field === "messages") {
                 await handleMessagesChange(change);
               } else {
