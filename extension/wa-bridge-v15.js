@@ -467,15 +467,17 @@
       console.info("[CRM][diagnostico-cor] paleta:", JSON.stringify(palette));
     } catch (e) {
       const msg = e?.message || String(e);
-      // "Etiquetas" é um recurso exclusivo do WhatsApp Business — em conta
-      // pessoal, o WhatsApp recusa até a primeira chamada. Não adianta
-      // tentar as outras fontes abaixo (também vão falhar/vir vazias); sai
-      // cedo com lista vazia em vez de gerar mais ruído no console.
-      if (/not a business version/i.test(msg)) {
-        console.info("[CRM] Conta pessoal (não Business) — sem etiquetas do WhatsApp disponíveis.");
-        return [];
-      }
-      console.warn("[CRM] paleta de cores de etiqueta indisponível:", msg);
+      // Antes, "not a business version" aqui fazia o código desistir de
+      // TUDO (return [] direto, sem nem tentar as 4 fontes de etiqueta
+      // abaixo) — errado: essa mensagem vem de UMA função específica (a
+      // paleta de cores), não é uma confirmação confiável de "conta
+      // pessoal, sem etiquetas". Em conta Business de verdade, essa
+      // chamada específica pode falhar por outros motivos (timing,
+      // versão da API) enquanto as etiquetas em si existem normalmente.
+      // Só loga e segue pras fontes de baixo — sem paleta, a cor de
+      // cada etiqueta fica sem resolver (fallback pra cinza), mas pelo
+      // menos a lista de etiquetas não se perde.
+      console.warn("[CRM] paleta de cores de etiqueta indisponível (segue tentando etiquetas mesmo assim):", msg);
     }
     function colorFromIndex(idx) {
       if (palette == null || idx == null) return null;
@@ -492,7 +494,13 @@
     for (const [sourceIdx, get] of sources.entries()) {
       let list;
       try {
-        list = get();
+        // await funciona igual pra valor síncrono e assíncrono — cobre
+        // as duas fontes de uma vez. Sem isso, getAllLabels() (que É
+        // assíncrona de verdade, confirmado na lib) devolvia uma Promise
+        // em vez do array, Array.isArray(list) dava falso na hora, e o
+        // código pulava pra próxima fonte sem nunca usar o resultado
+        // certo — mesmo em conta Business de verdade, com etiquetas.
+        list = await get();
       } catch {
         continue;
       }
