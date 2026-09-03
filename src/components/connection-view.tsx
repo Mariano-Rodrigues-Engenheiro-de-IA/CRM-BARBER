@@ -112,7 +112,6 @@ export function ConnectionView({ api }: { api: Api }) {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmAction, setConfirmAction] = useState<"connect" | "disconnect" | "switch_provider" | null>(null);
-  const [showSwitcher, setShowSwitcher] = useState(false);
   const [pendingProvider, setPendingProvider] = useState<"uazapi" | "meta" | null>(null);
   const [authMode, setAuthMode] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -405,7 +404,6 @@ export function ConnectionView({ api }: { api: Api }) {
       actionRef.current = null;
       operationSeqRef.current += 1;
       setBusy(false);
-      setShowSwitcher(false);
       // Trocar o modo sozinho não conecta nada — dispara a ação de conectar
       // correspondente na sequência, pra ficar tudo em um clique só.
       if (provider === "meta") {
@@ -449,19 +447,15 @@ export function ConnectionView({ api }: { api: Api }) {
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[10px] font-semibold tracking-[0.22em] text-neutral-500">CONEXÃO WHATSAPP</p>
-            {!(status === "connected" && !showSwitcher) && (
+            {status !== "connected" && (
               <h2 className="mt-1 text-xl font-semibold text-neutral-950">
-                {status === "connected" && "Conectado"}
                 {status === "connecting" && "Aguardando pareamento…"}
                 {status === "disconnected" && "Desconectado"}
                 {status === "hibernated" && "Hibernado"}
               </h2>
             )}
-            {conn?.phone && status === "connected" && showSwitcher && (
-              <p className="mt-1 text-sm text-neutral-500">Número: {conn.phone}</p>
-            )}
           </div>
-          {!(status === "connected" && !showSwitcher) && <StatusPill status={status} />}
+          {status !== "connected" && <StatusPill status={status} />}
         </div>
 
         {(err || (status === "connecting" && conn?.last_error)) && (
@@ -470,8 +464,8 @@ export function ConnectionView({ api }: { api: Api }) {
           </div>
         )}
 
-        {/* CONECTADO: resumo único, sem as duas opções lado a lado */}
-        {status === "connected" && !showSwitcher && (
+        {/* CONECTADO: resumo único */}
+        {status === "connected" && (
           <div className="mt-5 rounded-2xl border border-green-200 bg-green-50/50 p-5">
             <div className="flex items-center gap-3">
               <WhatsAppGlyph className="h-10 w-10 shrink-0 text-white" bg={activeBg} />
@@ -483,11 +477,12 @@ export function ConnectionView({ api }: { api: Api }) {
                 Conectado
               </span>
             </div>
-            <div className="mt-4 flex gap-3">
+            <div className="mt-4">
               {isMetaConnection ? (
                 <p className="text-xs text-neutral-500">
-                  Para desconectar, use o WhatsApp Business no seu celular: Configurações, Conta,
-                  Plataforma do WhatsApp Business.
+                  Para desconectar ou trocar de conexão, use o WhatsApp Business no seu celular:
+                  Configurações, Conta, Plataforma do WhatsApp Business. Depois de desconectar por
+                  lá, volte aqui para escolher a nova conexão.
                 </p>
               ) : (
                 <button
@@ -499,14 +494,6 @@ export function ConnectionView({ api }: { api: Api }) {
                   Desconectar
                 </button>
               )}
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => setShowSwitcher(true)}
-                className="rounded-xl px-4 py-2 text-sm font-semibold text-brand hover:bg-brand/5"
-              >
-                Trocar de modo de conexão
-              </button>
             </div>
           </div>
         )}
@@ -554,20 +541,11 @@ export function ConnectionView({ api }: { api: Api }) {
         )}
 
         {/* ESCOLHER: as duas opções lado a lado — só quando ainda não há
-            conexão nenhuma, ou quando o usuário pediu pra trocar de modo. */}
-        {(status === "disconnected" || status === "hibernated" || showSwitcher) && (
+            conexão nenhuma (desconectado ou hibernado). */}
+        {(status === "disconnected" || status === "hibernated") && (
         <div className="mt-5">
           <div className="flex items-center justify-between">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">Modo de conexão</p>
-            {showSwitcher && (
-              <button
-                type="button"
-                onClick={() => setShowSwitcher(false)}
-                className="text-xs font-medium text-neutral-500 hover:text-neutral-700"
-              >
-                Cancelar
-              </button>
-            )}
           </div>
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
             {/* API Oficial */}
@@ -603,18 +581,11 @@ export function ConnectionView({ api }: { api: Api }) {
 
               <button
                 type="button"
-                disabled={busy || (isMetaConnection && status === "connected")}
-                onClick={() => {
-                  if (isMetaConnection && status === "connected") return;
-                  requestSwitchProvider("meta");
-                }}
-                className={`mt-5 w-full rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                  isMetaConnection && status === "connected"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-brand text-white hover:bg-brand-strong"
-                }`}
+                disabled={busy}
+                onClick={() => requestSwitchProvider("meta")}
+                className="mt-5 w-full rounded-xl bg-brand px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-strong"
               >
-                {isMetaConnection && status === "connected" ? "Conectado" : "Conectar API"}
+                Conectar API
               </button>
             </div>
 
@@ -644,18 +615,10 @@ export function ConnectionView({ api }: { api: Api }) {
               <button
                 type="button"
                 disabled={busy}
-                onClick={() =>
-                  !isMetaConnection && status === "connected"
-                    ? setConfirmAction("disconnect")
-                    : requestSwitchProvider("uazapi")
-                }
-                className={`mt-5 w-full rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                  !isMetaConnection && status === "connected"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-brand text-white hover:bg-brand-strong"
-                }`}
+                onClick={() => requestSwitchProvider("uazapi")}
+                className="mt-5 w-full rounded-xl bg-brand px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-strong"
               >
-                {!isMetaConnection && status === "connected" ? "Conectado" : "Conectar API"}
+                Conectar API
               </button>
             </div>
           </div>
