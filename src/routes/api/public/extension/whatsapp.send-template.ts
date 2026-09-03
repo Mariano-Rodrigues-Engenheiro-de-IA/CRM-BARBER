@@ -11,7 +11,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { jsonResponse, preflight } from "@/lib/extension-cors";
 import { authenticateExtension } from "@/lib/extension-auth";
-import { isAdminBarbershop } from "@/lib/admin-guard.server";
 
 export const Route = createFileRoute("/api/public/extension/whatsapp/send-template")({
   server: {
@@ -24,8 +23,10 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/send-templa
         if (!auth.ok) {
           return jsonResponse(request, { ok: false, error: auth.error }, { status: auth.status });
         }
-        if (!isAdminBarbershop(auth.token.barbershop_id)) {
-          return jsonResponse(request, { ok: false, error: "Recurso ainda não disponível." }, { status: 403 });
+        const { getBillingStatus } = await import("@/lib/billing.server");
+        const billing = await getBillingStatus(supabaseAdmin, auth.token.barbershop_id);
+        if (!billing.premium) {
+          return jsonResponse(request, { ok: false, error: "Gerenciar modelos faz parte do plano Premium." }, { status: 402 });
         }
 
         const body = await request.json().catch(() => null);

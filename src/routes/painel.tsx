@@ -558,6 +558,7 @@ function Painel() {
   });
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [showFunnelMovePopup, setShowFunnelMovePopup] = useState(false);
+  const [showTemplateCreatePopup, setShowTemplateCreatePopup] = useState(false);
   const [brand, setBrand] = useState<Brand>({});
 
 
@@ -695,7 +696,7 @@ function Painel() {
       ],
     },
     { key: "equipe", label: "Ranking de vendas", icon: <IconRankingBars /> },
-    ...(isAdmin && isMetaProvider ? [{ key: "templates" as Section, label: "Modelos", icon: <IconNote /> }] : []),
+    ...(isMetaProvider ? [{ key: "templates" as Section, label: "Modelos", icon: <IconNote /> }] : []),
 
     { key: "conexao", label: "Conexão", icon: <IconPlug /> },
     { key: "agente-ia", label: "Agente de IA", icon: <IconRobot /> },
@@ -1100,11 +1101,24 @@ function Painel() {
           </>
         )}
 
-        {section === "templates" && token && isAdmin && isMetaProvider && (
+        {section === "templates" && token && isMetaProvider && (
           <>
             <main className="max-w-6xl px-4 py-4">
-              <TemplatesView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+              <TemplatesView
+                api={(path: string, opts?: RequestInit) => api(token, path, opts)}
+                premiumLocked={!!billing && !billing.premium}
+                onBlockedCreate={() => setShowTemplateCreatePopup(true)}
+              />
             </main>
+            {showTemplateCreatePopup && (
+              <PremiumInlinePopup
+                onClose={() => setShowTemplateCreatePopup(false)}
+                onUpgrade={() => {
+                  setShowTemplateCreatePopup(false);
+                  openCheckout();
+                }}
+              />
+            )}
           </>
         )}
 

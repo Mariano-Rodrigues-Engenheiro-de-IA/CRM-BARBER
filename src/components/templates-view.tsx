@@ -1,6 +1,7 @@
-// Gestão de modelos de mensagem (message templates) — só admin, por
-// enquanto. Cria e lista templates direto pela API da Meta, sem precisar
-// entrar no Gerenciador do WhatsApp.
+// Gestão de modelos de mensagem (message templates) — ver os modelos
+// existentes é liberado pra todo mundo; criar um novo exige Premium.
+// Cria e lista templates direto pela API da Meta, sem precisar entrar no
+// Gerenciador do WhatsApp.
 
 import { useEffect, useRef, useState } from "react";
 import { useCachedFetch } from "@/lib/api-cache";
@@ -87,7 +88,17 @@ const CATEGORY_LABEL: Record<string, string> = {
   AUTHENTICATION: "Autenticação",
 };
 
-export function TemplatesView({ api }: { api: ApiFn }) {
+export function TemplatesView({
+  api,
+  premiumLocked,
+  onBlockedCreate,
+}: {
+  api: ApiFn;
+  /** Conta grátis: pode ver os modelos existentes normal, só CRIAR um
+   * modelo novo é bloqueado — dispara onBlockedCreate em vez de salvar. */
+  premiumLocked?: boolean;
+  onBlockedCreate?: () => void;
+}) {
   const { confirm, dialog: confirmDialog } = useConfirm();
   const { data: templates, loading, refetch } = useCachedFetch<Template[]>("templates", async () => {
     const res = await api("/api/public/extension/whatsapp/templates");
@@ -270,6 +281,10 @@ export function TemplatesView({ api }: { api: ApiFn }) {
 
   async function createTemplate() {
     if (!name.trim() || !bodyText.trim()) return;
+    if (!editingId && premiumLocked) {
+      onBlockedCreate?.();
+      return;
+    }
     if ((templateType === "image" || templateType === "video" || templateType === "document") && !mediaFile && !editingId) {
       setErr("Escolha um arquivo.");
       return;

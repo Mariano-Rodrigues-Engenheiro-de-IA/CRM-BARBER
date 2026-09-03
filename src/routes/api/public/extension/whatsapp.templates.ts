@@ -5,13 +5,12 @@
 // gerenciar tudo pelo painel, sem precisar entrar no Gerenciador do
 // WhatsApp da própria Meta.
 //
-// Restrito ao administrador (ADMIN_BARBERSHOP_ID) por enquanto — ainda
-// não é uma funcionalidade liberada pra clientes finais.
+// Restrito: ver a lista é liberado pra todo mundo, mas criar/editar/
+// excluir um modelo exige assinatura Premium.
 
 import { createFileRoute } from "@tanstack/react-router";
 import { jsonResponse, preflight } from "@/lib/extension-cors";
 import { authenticateExtension } from "@/lib/extension-auth";
-import { isAdminBarbershop } from "@/lib/admin-guard.server";
 
 async function loadInstance(supabaseAdmin: any, barbershop_id: string) {
   const { data: instance } = await supabaseAdmin
@@ -33,9 +32,8 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/templates")
         if (!auth.ok) {
           return jsonResponse(request, { ok: false, error: auth.error }, { status: auth.status });
         }
-        if (!isAdminBarbershop(auth.token.barbershop_id)) {
-          return jsonResponse(request, { ok: false, error: "Recurso ainda não disponível." }, { status: 403 });
-        }
+        // Ver os modelos existentes é liberado pra todo mundo — só criar
+        // um novo (abaixo) exige Premium.
 
         const instance = await loadInstance(supabaseAdmin, auth.token.barbershop_id);
         if (!instance || instance.provider !== "meta" || !instance.waba_id) {
@@ -71,8 +69,10 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/templates")
         if (!auth.ok) {
           return jsonResponse(request, { ok: false, error: auth.error }, { status: auth.status });
         }
-        if (!isAdminBarbershop(auth.token.barbershop_id)) {
-          return jsonResponse(request, { ok: false, error: "Recurso ainda não disponível." }, { status: 403 });
+        const { getBillingStatus } = await import("@/lib/billing.server");
+        const billing = await getBillingStatus(supabaseAdmin, auth.token.barbershop_id);
+        if (!billing.premium) {
+          return jsonResponse(request, { ok: false, error: "Criar modelos faz parte do plano Premium." }, { status: 402 });
         }
 
         const body = await request.json().catch(() => null);
@@ -305,8 +305,10 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/templates")
         if (!auth.ok) {
           return jsonResponse(request, { ok: false, error: auth.error }, { status: auth.status });
         }
-        if (!isAdminBarbershop(auth.token.barbershop_id)) {
-          return jsonResponse(request, { ok: false, error: "Recurso ainda não disponível." }, { status: 403 });
+        const { getBillingStatus } = await import("@/lib/billing.server");
+        const billing = await getBillingStatus(supabaseAdmin, auth.token.barbershop_id);
+        if (!billing.premium) {
+          return jsonResponse(request, { ok: false, error: "Gerenciar modelos faz parte do plano Premium." }, { status: 402 });
         }
         const url = new URL(request.url);
         const name = url.searchParams.get("name");
