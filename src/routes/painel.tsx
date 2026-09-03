@@ -223,6 +223,10 @@ async function api(token: string, path: string, opts: RequestInit = {}) {
   }
   const res = await fetch(path, {
     ...opts,
+    // Reforço do lado do navegador — o servidor já manda Cache-Control:
+    // no-store, mas isso garante que nem o próprio fetch tenta usar uma
+    // resposta guardada localmente antes de perguntar pro servidor.
+    cache: "no-store",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,

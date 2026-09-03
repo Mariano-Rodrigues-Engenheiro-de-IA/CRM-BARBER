@@ -47,6 +47,12 @@ export function jsonResponse(
     status: init.status ?? 200,
     headers: {
       "Content-Type": "application/json",
+      // Sem isso, um GET (como /whatsapp/status) pode ficar cacheado pelo
+      // navegador ou por um CDN no meio do caminho — a pessoa dá F5 e
+      // continua vendo o estado antigo, mesmo com o banco já correto,
+      // até o cache expirar sozinho. Nenhuma resposta dessas rotas deve
+      // ser cacheada; são sempre estado atual, nunca conteúdo estático.
+      "Cache-Control": "no-store",
       ...corsHeaders(request),
     },
   });
