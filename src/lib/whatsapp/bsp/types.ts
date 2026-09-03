@@ -171,4 +171,13 @@ export interface BspAdapter {
     phone_number_id: string;
     pin: string;
   }): Promise<{ ok: boolean; error?: string }>;
+
+  /** Remove a inscrição do nosso app nos webhooks/mensagens dessa WABA —
+   * o jeito correto de desconectar do lado da Meta. Sem isso, desconectar
+   * só no nosso banco não avisa a Meta: o número continua aparecendo
+   * conectado (app "Zaylo" na lista de plataformas) no celular do
+   * cliente, mesmo com o CRM mostrando desconectado. */
+  unsubscribeApp?(input: { access_token: string; waba_id: string }): Promise<
+    { ok: true } | { ok: false; error: string }
+  >;
 }

@@ -39,16 +39,17 @@ function graphUrl(path: string): string {
   return `https://graph.facebook.com/${version}/${path}`;
 }
 
-/** Processa um evento account_update. O nome do evento que a Meta manda de
- * verdade quando alguém termina a Integração Zero (hosted embedded signup)
- * é PARTNER_APP_INSTALLED — não PARTNER_ADDED como a documentação mais
- * antiga sugeria (confirmado direto pelo payload real recebido). Aceita os
- * dois nomes por segurança, caso a Meta mude de novo ou varie por versão.
- * Esse evento só traz o waba_id, sem nenhum "state" dizendo de qual
- * barbearia é. Por enquanto (só o Mariano testando, ainda não liberado pra
- * clientes) associamos direto à conta admin — quando for liberar pra
- * clientes de verdade, isso precisa de uma forma de identificar a
- * barbearia certa (ex: um link por barbearia, ou confirmação manual). */
+/** Processa um evento account_update. Cobre dois casos:
+ *  - PARTNER_APP_INSTALLED (nome real que a Meta manda pra "conectou";
+ *    a doc mais antiga sugeria PARTNER_ADDED, aceita os dois por
+ *    segurança) — conexão nova via Integração Zero. Esse evento só traz
+ *    o waba_id, sem nenhum "state" dizendo de qual barbearia é, então
+ *    fica pendente pra um admin reivindicar em /admin (WhatsApp/Meta).
+ *  - PARTNER_REMOVED — o cliente desconectou pelo próprio celular
+ *    (Configurações > Conta > Plataforma do WhatsApp Business > opção
+ *    de desconectar). Sem tratar isso, o CRM continuava mostrando
+ *    "conectado" pra sempre, mesmo com a Meta já tendo cortado o
+ *    vínculo do lado dela. https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/onboarding-business-app-users/ */
 async function handleAccountUpdate(change: Json) {
   console.info("[whatsapp.webhook] account_update recebido:", JSON.stringify(change).slice(0, 2000));
 
@@ -57,6 +58,17 @@ async function handleAccountUpdate(change: Json) {
   const wabaInfo = value?.waba_info as Json | undefined;
   const wabaId = typeof wabaInfo?.waba_id === "string" ? (wabaInfo.waba_id as string) : null;
   const ownerBusinessId = typeof wabaInfo?.owner_business_id === "string" ? (wabaInfo.owner_business_id as string) : null;
+
+  if (event === "PARTNER_REMOVED" && wabaId) {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("whatsapp_instances")
+      .update({ status: "disconnected", last_synced_at: new Date().toISOString() })
+      .eq("waba_id", wabaId);
+    if (error) console.error("[whatsapp.webhook] falha ao marcar desconectado após PARTNER_REMOVED:", error.message);
+    else console.info(`[whatsapp.webhook] waba ${wabaId} desconectada pelo cliente (PARTNER_REMOVED) — CRM atualizado.`);
+    return;
+  }
 
   if ((event !== "PARTNER_APP_INSTALLED" && event !== "PARTNER_ADDED") || !wabaId) return;
 
@@ -69,6 +81,7 @@ async function handleAccountUpdate(change: Json) {
   }
 
   try {
+
     // Mesma proteção contra corrida que o fluxo interativo já tem: a
     // Meta pode disparar esse webhook um instante antes de terminar de
     // propagar o número — tenta de novo por até ~10s antes de desistir.

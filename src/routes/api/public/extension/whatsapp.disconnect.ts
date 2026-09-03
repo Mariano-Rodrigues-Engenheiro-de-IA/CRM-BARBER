@@ -21,7 +21,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/disconnect"
 
         const { data: inst } = await supabaseAdmin
           .from("whatsapp_instances")
-          .select("id, instance_id, instance_token, provider, shared_with_ai")
+          .select("id, instance_id, instance_token, provider, shared_with_ai, waba_id")
           .eq("barbershop_id", auth.token.barbershop_id)
           .maybeSingle();
 
@@ -49,6 +49,7 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/disconnect"
               instance_id: inst.instance_id ?? inst.instance_token,
               instance_token: inst.instance_token,
               shared_with_ai: inst.shared_with_ai ?? false,
+              waba_id: inst.waba_id ?? undefined,
             });
           } catch (err) {
             console.warn("[whatsapp/disconnect] provider retornou erro (ignorado)", err);

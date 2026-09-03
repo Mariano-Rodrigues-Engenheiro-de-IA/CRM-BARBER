@@ -191,6 +191,10 @@ export interface WhatsAppProvider {
     /** Quando true, essa instância é compartilhada com a IA — desconectar
      * não deve derrubar a sessão real de WhatsApp, só pausar o uso local. */
     shared_with_ai?: boolean;
+    /** Só usado pelo provider "meta" — sem isso não tem como avisar a
+     * Meta de verdade (o número continuaria aparecendo conectado no
+     * celular do cliente mesmo desconectando por aqui). */
+    waba_id?: string;
   }): Promise<void>;
 
   /**

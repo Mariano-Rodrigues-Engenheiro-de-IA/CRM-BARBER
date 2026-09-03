@@ -369,6 +369,22 @@ export const cloudAdapter: BspAdapter = {
     }
   },
 
+  async unsubscribeApp({ access_token, waba_id }) {
+    try {
+      const res = await fetch(graphUrl(`${waba_id}/subscribed_apps`), {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${access_token}` },
+      });
+      const json = (await res.json().catch(() => ({}))) as Json;
+      if (!res.ok) {
+        return { ok: false, error: extractErrorMessage(json, res.status) };
+      }
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  },
+
   async sendText({ access_token, phone_number_id, to, text }): Promise<SendResult> {
     if (!phone_number_id) {
       return { ok: false, error: "phone_number_id ausente na instância", retryable: false };

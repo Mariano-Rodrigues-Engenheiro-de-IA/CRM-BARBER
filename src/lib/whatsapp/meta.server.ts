@@ -154,10 +154,21 @@ export const metaProvider: WhatsAppProvider = {
     return bsp.deleteTemplate({ access_token: instance_token, waba_id, name });
   },
 
-  async disconnect(): Promise<void> {
-    // Na API oficial não existe "desconectar sessão": o número segue na WABA.
-    // Paramos de disparar zerando o status local (feito pela rota) e o
-    // desvínculo definitivo acontece no hub do BSP pelo próprio cliente.
+  async disconnect({ instance_token, waba_id }): Promise<void> {
+    // Sem isso, desconectar só zerava o status local: a Meta nunca ficava
+    // sabendo, e o número continuava aparecendo conectado (app "Zaylo" na
+    // lista de plataformas) no celular do cliente, mesmo com o CRM
+    // mostrando desconectado. Remove nossa inscrição na WABA de verdade.
+    if (!instance_token || !waba_id) return;
+    const bsp = getBspAdapter();
+    if (!bsp.unsubscribeApp) return;
+    const result = await bsp.unsubscribeApp({ access_token: instance_token, waba_id }).catch((err) => ({
+      ok: false as const,
+      error: err instanceof Error ? err.message : String(err),
+    }));
+    if (!result.ok) {
+      console.warn("[meta.disconnect] falha ao remover inscrição na WABA (ignorado):", result.error);
+    }
   },
 
   async handleSignupCallback({ code, barbershop_id, state, extra }) {
