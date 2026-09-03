@@ -72,7 +72,12 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/status")({
         // (que continua ativa do lado da IA) — sincronizar de volta
         // reverteria a pausa sozinho, sem o usuário pedir. Por isso o
         // "respeita local" é permanente nesse caso, não só por 30s.
-        const disconnectCooldownMs = inst.shared_with_ai ? Infinity : 30000;
+        // Mesma lógica pro provider "meta": desconectar por aqui já REMOVE
+        // nossa inscrição na WABA de verdade (DELETE /subscribed_apps) —
+        // não tem "sessão" pra ressincronizar depois, e tentar mesmo assim
+        // só gera erro de permissão sem sentido (a gente mesmo cortou o
+        // próprio acesso de propósito).
+        const disconnectCooldownMs = inst.shared_with_ai || inst.provider === "meta" ? Infinity : 30000;
         const shouldRespectLocalDisconnect = inst.status === "disconnected" && ageMs < disconnectCooldownMs;
         const shouldSync = !shouldRespectLocalDisconnect && (forceSync || ageMs > staleMs);
 
