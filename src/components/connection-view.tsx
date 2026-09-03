@@ -574,9 +574,9 @@ export function ConnectionView({ api }: { api: Api }) {
               </p>
 
               <ul className="mt-4 space-y-2">
-                <BenefitItem>Estabilidade direta com a Meta</BenefitItem>
-                <BenefitItem>Mensagens em massa, modelos e botões interativos</BenefitItem>
-                <BenefitItem>Operação independente de celular</BenefitItem>
+                <BenefitItem>Conexão oficial com a Meta</BenefitItem>
+                <BenefitItem>Disparos em massa</BenefitItem>
+                <BenefitItem>Funciona no celular e no computador ao mesmo tempo</BenefitItem>
               </ul>
 
               <button
@@ -607,9 +607,9 @@ export function ConnectionView({ api }: { api: Api }) {
               </p>
 
               <ul className="mt-4 space-y-2">
-                <BulletItem>Vinculado ao celular</BulletItem>
-                <BulletItem>Ativação imediata</BulletItem>
-                <BulletItem>Conexão via QR Code</BulletItem>
+                <BulletItem>Conexão rápida</BulletItem>
+                <BulletItem>Disparos moderados</BulletItem>
+                <BulletItem>Sem vínculo direto com a Meta</BulletItem>
               </ul>
 
               <button
