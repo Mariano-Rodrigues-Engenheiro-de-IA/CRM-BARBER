@@ -484,14 +484,21 @@ export function ConnectionView({ api }: { api: Api }) {
               </span>
             </div>
             <div className="mt-4 flex gap-3">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => setConfirmAction("disconnect")}
-                className="rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
-              >
-                Desconectar
-              </button>
+              {isMetaConnection ? (
+                <p className="text-xs text-neutral-500">
+                  Para desconectar, use o WhatsApp Business no seu celular: Configurações, Conta,
+                  Plataforma do WhatsApp Business.
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setConfirmAction("disconnect")}
+                  className="rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
+                >
+                  Desconectar
+                </button>
+              )}
               <button
                 type="button"
                 disabled={busy}
@@ -596,12 +603,11 @@ export function ConnectionView({ api }: { api: Api }) {
 
               <button
                 type="button"
-                disabled={busy}
-                onClick={() =>
-                  isMetaConnection && status === "connected"
-                    ? setConfirmAction("disconnect")
-                    : requestSwitchProvider("meta")
-                }
+                disabled={busy || (isMetaConnection && status === "connected")}
+                onClick={() => {
+                  if (isMetaConnection && status === "connected") return;
+                  requestSwitchProvider("meta");
+                }}
                 className={`mt-5 w-full rounded-xl px-4 py-3 text-sm font-semibold transition ${
                   isMetaConnection && status === "connected"
                     ? "bg-green-100 text-green-800"
