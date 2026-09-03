@@ -2632,15 +2632,20 @@
   /** Numerozinho de anotações no ícone — usa o mesmo cache de prefetch
    * que já existia (só pro hover antes); se ainda não tem cache pra essa
    * conversa, dispara a busca e atualiza sozinho na próxima rodada.
-   * Compara por id interno OU telefone (o que tiver disponível) — antes
-   * comparava só telefone, e ficava sem mostrar nada pros contatos onde o
-   * telefone não aparece de cara no cabeçalho da conversa. */
-  function updateNotesBadge() {
+   * Usa activeChat() (a versão "de verdade", que pergunta pra ponte
+   * quando precisa) em vez de activeChatFromDom() — a versão só-DOM
+   * lê o telefone escaneando o TEXTO do cabeçalho, que só aparece pra
+   * contatos ainda não salvos; pra maioria (contato salvo, aparece só o
+   * nome) ela nunca achava o telefone, e o selinho ficava sempre em
+   * zero. activeChat() é assíncrona, mas resolve na hora pra contato já
+   * em cache — só busca de verdade (com um pequeno atraso) na primeira
+   * vez que abre essa conversa. */
+  async function updateNotesBadge() {
     const btn = document.getElementById(NOTES_BTN_ID);
     if (!btn) return;
-    const dom = activeChatFromDom();
-    const contactDbId = dom?.contact_db_id || null;
-    const phone = dom?.phone || null;
+    const chat = await activeChat();
+    const contactDbId = chat?.contact_db_id || null;
+    const phone = chat?.phone || null;
     if (!contactDbId && !phone) {
       setChatBtnCount(btn, 0);
       return;
@@ -2652,21 +2657,26 @@
       setChatBtnCount(btn, notesPrefetch.notes.length);
     } else {
       setChatBtnCount(btn, 0);
-      void prefetchNotes();
+      await prefetchNotes();
+      // A conversa pode ter mudado durante a busca — só aplica o
+      // resultado se o botão ainda for da mesma conversa.
+      const stillSame = document.getElementById(NOTES_BTN_ID) === btn;
+      if (stillSame) updateNotesBadge();
     }
   }
 
   /** Numerozinho de mensagens agendadas de verdade (não conta follow-up
    * nem lembretes automáticos — já filtrados no backend). Só as
    * "pending" (ainda vão acontecer); enviadas/falhadas já são passado.
-   * Mesma correção do updateNotesBadge: compara por id interno OU
-   * telefone, não só telefone. */
-  function updateScheduleBadge() {
+   * Mesma correção do updateNotesBadge: usa activeChat() em vez de
+   * activeChatFromDom(), pelo mesmo motivo (telefone não aparece no
+   * texto do cabeçalho pra contatos já salvos, que são a maioria). */
+  async function updateScheduleBadge() {
     const btn = document.getElementById(SCHEDULE_BTN_ID);
     if (!btn) return;
-    const dom = activeChatFromDom();
-    const contactDbId = dom?.contact_db_id || null;
-    const phone = dom?.phone || null;
+    const chat = await activeChat();
+    const contactDbId = chat?.contact_db_id || null;
+    const phone = chat?.phone || null;
     if (!contactDbId && !phone) {
       setChatBtnCount(btn, 0);
       return;
@@ -2679,7 +2689,9 @@
       setChatBtnCount(btn, pending);
     } else {
       setChatBtnCount(btn, 0);
-      void prefetchSchedule();
+      await prefetchSchedule();
+      const stillSame = document.getElementById(SCHEDULE_BTN_ID) === btn;
+      if (stillSame) updateScheduleBadge();
     }
   }
 
