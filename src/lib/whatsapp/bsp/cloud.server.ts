@@ -257,11 +257,24 @@ export const cloudAdapter: BspAdapter = {
     const wabaId = wabaFromScopes(debug);
     if (!wabaId) throw new Error("Nenhuma conta WhatsApp Business foi autorizada no Cadastro Incorporado.");
 
-    const phones = await graphJson(
-      `${graphUrl(`${wabaId}/phone_numbers?fields=id,display_phone_number,verified_name,platform_type,code_verification_status`)}&access_token=${encodeURIComponent(accessToken)}`,
-    );
-    const first = (Array.isArray(phones.data) ? (phones.data[0] as Json | undefined) : undefined) ?? {};
-    const phoneNumberId = str(first.id);
+    // A Meta às vezes ainda não terminou de propagar o número (escolher
+    // telefone, pagamento, escanear QR code pra Coexistência) no exato
+    // instante em que o pop-up fecha — checar uma vez só, na hora, dava
+    // "ainda não tem número disponível" mesmo com tudo certo do lado
+    // deles, só porque chegamos cedo demais. Tenta de novo por até ~10s
+    // antes de desistir de verdade.
+    let phoneNumberId: string | null = null;
+    let phoneListRaw: Json = { data: [] };
+    for (let attempt = 0; attempt < 5; attempt++) {
+      phoneListRaw = await graphJson(
+        `${graphUrl(`${wabaId}/phone_numbers?fields=id,display_phone_number,verified_name,platform_type,code_verification_status`)}&access_token=${encodeURIComponent(accessToken)}`,
+      );
+      const candidate = (Array.isArray(phoneListRaw.data) ? (phoneListRaw.data[0] as Json | undefined) : undefined) ?? {};
+      phoneNumberId = str(candidate.id);
+      if (phoneNumberId) break;
+      if (attempt < 4) await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+    const first = (Array.isArray(phoneListRaw.data) ? (phoneListRaw.data[0] as Json | undefined) : undefined) ?? {};
     if (!phoneNumberId) throw new Error("A WABA autorizada ainda não tem número de telefone disponível.");
 
     // Assina o app nos webhooks da WABA (status de mensagem, respostas etc.).

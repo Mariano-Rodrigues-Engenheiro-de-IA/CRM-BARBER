@@ -190,7 +190,18 @@ export function AdminWhatsAppPanel() {
               {pending.map((p) => (
                 <div key={p.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-white p-3">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-neutral-900">{p.phone || "(sem telefone ainda)"}</p>
+                    <p className="text-sm font-medium text-neutral-900">
+                      {p.phone || "(sem telefone ainda)"}
+                      {p.is_coexistence ? (
+                        <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                          Coexistência
+                        </span>
+                      ) : (
+                        <span className="ml-2 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold text-neutral-600">
+                          Migração completa
+                        </span>
+                      )}
+                    </p>
                     <p className="text-xs text-neutral-500">
                       waba {p.waba_id} · recebido {new Date(p.created_at).toLocaleString("pt-BR")}
                     </p>

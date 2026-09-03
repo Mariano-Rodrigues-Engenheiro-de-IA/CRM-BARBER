@@ -545,6 +545,7 @@ export type Database = {
           claimed_barbershop_id: string | null
           created_at: string
           id: string
+          is_coexistence: boolean
           meta_access_token: string
           meta_business_id: string | null
           phone: string | null
@@ -557,6 +558,7 @@ export type Database = {
           claimed_barbershop_id?: string | null
           created_at?: string
           id?: string
+          is_coexistence?: boolean
           meta_access_token: string
           meta_business_id?: string | null
           phone?: string | null
@@ -569,6 +571,7 @@ export type Database = {
           claimed_barbershop_id?: string | null
           created_at?: string
           id?: string
+          is_coexistence?: boolean
           meta_access_token?: string
           meta_business_id?: string | null
           phone?: string | null

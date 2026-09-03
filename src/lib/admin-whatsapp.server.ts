@@ -347,6 +347,7 @@ export type PendingMetaConnectionRow = {
   phone_number_id: string;
   phone: string | null;
   meta_business_id: string | null;
+  is_coexistence: boolean;
   created_at: string;
 };
 
@@ -357,7 +358,7 @@ export type PendingMetaConnectionRow = {
 export async function listPendingMetaConnections(supabaseAdmin: Admin): Promise<PendingMetaConnectionRow[]> {
   const { data, error } = await supabaseAdmin
     .from("pending_meta_connections")
-    .select("id, waba_id, phone_number_id, phone, meta_business_id, created_at")
+    .select("id, waba_id, phone_number_id, phone, meta_business_id, is_coexistence, created_at")
     .is("claimed_barbershop_id", null)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
@@ -373,7 +374,7 @@ export async function claimPendingMetaConnection(
 ): Promise<{ ok: true }> {
   const { data: pending, error: fetchErr } = await supabaseAdmin
     .from("pending_meta_connections")
-    .select("id, waba_id, phone_number_id, phone, meta_access_token, meta_business_id, claimed_barbershop_id")
+    .select("id, waba_id, phone_number_id, phone, meta_access_token, meta_business_id, is_coexistence, claimed_barbershop_id")
     .eq("id", input.pending_id)
     .maybeSingle();
   if (fetchErr) throw new Error(fetchErr.message);
@@ -391,6 +392,7 @@ export async function claimPendingMetaConnection(
     phone_number_id: pending.phone_number_id,
     meta_access_token: pending.meta_access_token,
     meta_business_id: pending.meta_business_id,
+    is_coexistence: pending.is_coexistence,
     last_error: null,
     last_synced_at: new Date().toISOString(),
   };

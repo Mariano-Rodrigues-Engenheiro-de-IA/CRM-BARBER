@@ -69,17 +69,33 @@ async function handleAccountUpdate(change: Json) {
   }
 
   try {
-    const phonesRes = await fetch(
-      `${graphUrl(`${wabaId}/phone_numbers?fields=id,display_phone_number`)}&access_token=${encodeURIComponent(systemToken)}`,
-    );
-    const phonesJson = (await phonesRes.json()) as Json;
-    if (!phonesRes.ok) {
-      const errMsg = (phonesJson.error as Json | undefined)?.message;
-      throw new Error(typeof errMsg === "string" ? errMsg : `HTTP ${phonesRes.status}`);
+    // Mesma proteção contra corrida que o fluxo interativo já tem: a
+    // Meta pode disparar esse webhook um instante antes de terminar de
+    // propagar o número — tenta de novo por até ~10s antes de desistir.
+    let phonesJson: Json = { data: [] };
+    let phoneNumberId: string | null = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const phonesRes = await fetch(
+        `${graphUrl(`${wabaId}/phone_numbers?fields=id,display_phone_number,platform_type`)}&access_token=${encodeURIComponent(systemToken)}`,
+      );
+      phonesJson = (await phonesRes.json()) as Json;
+      if (!phonesRes.ok) {
+        const errMsg = (phonesJson.error as Json | undefined)?.message;
+        throw new Error(typeof errMsg === "string" ? errMsg : `HTTP ${phonesRes.status}`);
+      }
+      const candidate = (Array.isArray(phonesJson.data) ? (phonesJson.data[0] as Json | undefined) : undefined) ?? {};
+      phoneNumberId = typeof candidate.id === "string" ? candidate.id : null;
+      if (phoneNumberId) break;
+      if (attempt < 4) await new Promise((resolve) => setTimeout(resolve, 2000));
     }
     const first = (Array.isArray(phonesJson.data) ? (phonesJson.data[0] as Json | undefined) : undefined) ?? {};
-    const phoneNumberId = typeof first.id === "string" ? first.id : null;
     const phone = typeof first.display_phone_number === "string" ? first.display_phone_number : null;
+    // "SMB_APP" = o número ficou em modo Coexistência (o dono continua
+    // usando o app do celular normalmente, junto com a API) — faltava
+    // pedir esse campo aqui; o fluxo interativo (cloud.server.ts) já
+    // pedia certo, só esse caminho (Integração Zero) esquecia.
+    const platform = (typeof first.platform_type === "string" ? first.platform_type : "").toUpperCase();
+    const isCoexistence = platform === "SMB_APP";
     if (!phoneNumberId) {
       console.warn(`[whatsapp.webhook] WABA ${wabaId} ainda sem número de telefone disponível.`);
       return;
@@ -108,6 +124,7 @@ async function handleAccountUpdate(change: Json) {
       phone,
       meta_access_token: systemToken,
       meta_business_id: ownerBusinessId,
+      is_coexistence: isCoexistence,
     };
     const { error } = await supabaseAdmin
       .from("pending_meta_connections")
