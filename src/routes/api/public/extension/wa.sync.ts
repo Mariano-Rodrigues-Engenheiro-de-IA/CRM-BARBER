@@ -68,46 +68,63 @@ export const Route = createFileRoute("/api/public/extension/wa/sync")({
         }
 
         if (parsed.data.contacts.length) {
-          // Lotes de 500 para não estourar o limite do PostgREST.
-          for (let i = 0; i < parsed.data.contacts.length; i += 500) {
-            const chunk = parsed.data.contacts.slice(i, i + 500).map((c) => ({
-              barbershop_id: shop,
-              wa_id: c.wa_id,
-              // Nunca gravar ID interno (@lid) como telefone: só E.164 plausível.
-              phone: normalizePhone(c.phone),
-              name: c.name ?? null,
-              is_group: !!c.is_group,
-              label_ids: c.label_ids ?? [],
-              last_message_at: c.last_message_at ?? null,
-              profile_picture_url: c.profile_picture_url ?? null,
-              unread_count: c.unread_count ?? 0,
-              synced_at: now,
-            }));
-            let { error } = await supabaseAdmin
-              .from("wa_contacts")
-              .upsert(chunk, { onConflict: "barbershop_id,wa_id" });
+          // PostgREST exige que todas as linhas de um upsert em lote tenham
+          // as MESMAS colunas — não dá pra misturar, numa mesma chamada,
+          // contatos com profile_picture_url e contatos sem esse campo.
+          // Por isso separa em dois grupos ANTES de montar os lotes: quem
+          // veio com o campo (foto resolvida ou checada e vazia) e quem
+          // veio sem (não foi verificado dessa vez — não pode sobrescrever
+          // o que já está salvo com null).
+          const withPhotoField = parsed.data.contacts.filter((c) => c.profile_picture_url !== undefined);
+          const withoutPhotoField = parsed.data.contacts.filter((c) => c.profile_picture_url === undefined);
 
-            // Se colunas novas não existirem ainda (migration pendente),
-            // tenta de novo sem elas em vez de falhar a sincronização toda.
-            if (error?.message?.includes("profile_picture_url")) {
-              const safeChunk = chunk.map(({ profile_picture_url, ...rest }) => rest);
-              const retry = await supabaseAdmin
+          async function upsertContacts(list: typeof withPhotoField, includePhoto: boolean) {
+            // Lotes de 500 para não estourar o limite do PostgREST.
+            for (let i = 0; i < list.length; i += 500) {
+              const chunk = list.slice(i, i + 500).map((c) => ({
+                barbershop_id: shop,
+                wa_id: c.wa_id,
+                // Nunca gravar ID interno (@lid) como telefone: só E.164 plausível.
+                phone: normalizePhone(c.phone),
+                name: c.name ?? null,
+                is_group: !!c.is_group,
+                label_ids: c.label_ids ?? [],
+                last_message_at: c.last_message_at ?? null,
+                ...(includePhoto ? { profile_picture_url: c.profile_picture_url ?? null } : {}),
+                unread_count: c.unread_count ?? 0,
+                synced_at: now,
+              }));
+              let { error } = await supabaseAdmin
                 .from("wa_contacts")
-                .upsert(safeChunk, { onConflict: "barbershop_id,wa_id" });
-              error = retry.error;
-            }
-            if (error?.message?.includes("unread_count")) {
-              const safeChunk = chunk.map(({ unread_count, ...rest }) => rest);
-              const retry = await supabaseAdmin
-                .from("wa_contacts")
-                .upsert(safeChunk, { onConflict: "barbershop_id,wa_id" });
-              error = retry.error;
-            }
+                .upsert(chunk, { onConflict: "barbershop_id,wa_id" });
 
-            if (error) {
-              return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
+              // Se colunas novas não existirem ainda (migration pendente),
+              // tenta de novo sem elas em vez de falhar a sincronização toda.
+              if (error?.message?.includes("profile_picture_url")) {
+                const safeChunk = chunk.map(({ profile_picture_url, ...rest }) => rest);
+                const retry = await supabaseAdmin
+                  .from("wa_contacts")
+                  .upsert(safeChunk, { onConflict: "barbershop_id,wa_id" });
+                error = retry.error;
+              }
+              if (error?.message?.includes("unread_count")) {
+                const safeChunk = chunk.map(({ unread_count, ...rest }) => rest);
+                const retry = await supabaseAdmin
+                  .from("wa_contacts")
+                  .upsert(safeChunk, { onConflict: "barbershop_id,wa_id" });
+                error = retry.error;
+              }
+
+              if (error) return error.message;
             }
+            return null;
           }
+
+          const err1 = await upsertContacts(withPhotoField, true);
+          if (err1) return jsonResponse(request, { ok: false, error: err1 }, { status: 500 });
+          const err2 = await upsertContacts(withoutPhotoField, false);
+          if (err2) return jsonResponse(request, { ok: false, error: err2 }, { status: 500 });
+
           // A coleta é um snapshot, não um acumulador. Contatos ausentes no
           // snapshot concluído deixam de compor Inbox/Listas imediatamente.
           const { error: staleError } = await supabaseAdmin

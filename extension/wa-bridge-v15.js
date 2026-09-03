@@ -676,8 +676,20 @@
       console.warn("[CRM] membros de lista indisponíveis:", e?.message || e);
     }
 
-    // Otimização: Busca fotos de perfil em paralelo para os top 300 contatos
+    // Otimização: busca fotos de perfil em paralelo só pros top 300
+    // contatos (evita sobrecarregar/travar em contas com muitos
+    // contatos). Pros de fora dessa lista, o campo fica OMITIDO (não
+    // "null") de propósito — antes mandava null pra todo mundo fora do
+    // top 300, e isso APAGAVA a foto que já estava salva no banco de
+    // quem não foi checado dessa vez (contatos já organizados num funil,
+    // sem mensagem recente, ficavam de fora do top 300 e perdiam a foto
+    // a cada sincronização). Omitido = "não sei, não mexe no que já tem
+    // salvo" — bem diferente de null = "conferi e não tem foto mesmo".
     const topContacts = contacts.filter(c => !c.is_group).slice(0, 300);
+    const topSet = new Set(topContacts);
+    for (const c of contacts) {
+      if (!topSet.has(c)) delete c.profile_picture_url;
+    }
     const BATCH_SIZE = 20;
     let fotoOk = 0;
     let fotoErro = 0;
