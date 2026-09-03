@@ -1101,7 +1101,7 @@ export function FunnelsView({
                             >
                               <IconNote />
                             </CardAction>
-                            <UnreadBadge count={card.notes_count ?? 0} />
+                            <NotesBadge count={card.notes_count ?? 0} />
                           </div>
                           <div className="relative inline-block">
                             <CardAction
@@ -1114,7 +1114,7 @@ export function FunnelsView({
                             >
                               <IconClock />
                             </CardAction>
-                            <UnreadBadge count={card.schedule_count ?? 0} />
+                            <UnreadBadge count={card.schedule_count ?? 0} colorClass="bg-blue-600" />
                           </div>
                           <CardAction
                             title="Perfil e valor do cliente"
@@ -1480,11 +1480,29 @@ function FollowupBadge({ followup, cardTitle }: { followup: NonNullable<FunnelCa
   );
 }
 
-function UnreadBadge({ count }: { count: number }) {
+function UnreadBadge({ count, colorClass = "bg-emerald-600" }: { count: number; colorClass?: string }) {
   if (!count || count <= 0) return null;
   return (
-    <span className="absolute -bottom-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
+    <span
+      className={`absolute -bottom-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white ${colorClass}`}
+    >
       {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
+/** Selinho de "tem anotação" — um lápis pequeno, sem número (não importa
+ * quantas, só se tem alguma). Formato e proporção calcados no
+ * UnreadBadge (mesmo tamanho de círculo, mesmo anel branco), pra ficar
+ * visualmente da mesma família, só trocando o conteúdo. */
+function NotesBadge({ count }: { count: number }) {
+  if (!count || count <= 0) return null;
+  return (
+    <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-sky-600 text-white ring-2 ring-white">
+      <svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 20h9" />
+        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+      </svg>
     </span>
   );
 }
