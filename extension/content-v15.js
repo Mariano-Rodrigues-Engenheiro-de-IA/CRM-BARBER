@@ -18,6 +18,36 @@
   document.body?.classList.remove("crm-assinaturas-docked", "crm-assinaturas-docked-collapsed");
   console.info(`[CRM ct v${CRM_VERSION}] carregado`, location.href);
 
+  // Fica true assim que detectamos que a extensão foi atualizada/recarregada
+  // enquanto essa aba do WhatsApp ainda estava aberta — chrome.runtime.sendMessage
+  // passa a lançar erro na hora (não é uma rejeição normal de promise, é um
+  // throw síncrono) pra QUALQUER chamada depois disso, e vai continuar assim
+  // até a página recarregar. Sem essa guarda, cada tentativa (e o código
+  // tenta em várias rotinas, em intervalos curtos) gerava um erro não
+  // tratado no console — em contas com muita atividade, isso virava uma
+  // enxurrada de milhares de linhas idênticas.
+  let extensionContextLost = false;
+
+  /** Chama chrome.runtime.sendMessage com segurança — nunca lança (nem
+   * síncrono nem por rejeição), e para de tentar sozinho assim que
+   * detecta que a extensão foi recarregada. */
+  async function safeSendMessage(msg) {
+    if (extensionContextLost || !chrome.runtime?.id) {
+      extensionContextLost = true;
+      return null;
+    }
+    try {
+      return await chrome.runtime.sendMessage(msg);
+    } catch (e) {
+      const text = e?.message || String(e);
+      if (/context invalidated/i.test(text)) {
+        extensionContextLost = true;
+        console.warn("[CRM] Extensão foi atualizada — recarregue a página do WhatsApp pra voltar a funcionar.");
+      }
+      return null;
+    }
+  }
+
 
   // Injetar wa-js + bridge no MAIN world, mas SÓ depois que o WhatsApp
   // registrar seus módulos internos (workaround upstream issue #3419:
@@ -169,11 +199,11 @@
       const data = await askBridgeCollect();
       if (!data) return;
       waData = data;
-      await chrome.runtime.sendMessage({
+      await safeSendMessage({
         type: "api",
         path: "/api/public/extension/wa/sync",
         opts: { method: "POST", body: JSON.stringify(data) },
-      }).catch(() => null);
+      });
       console.info(`[CRM ct] sincronizado: ${data.labels.length} etiqueta(s), ${data.contacts.length} conversa(s)`);
     } finally {
       syncing = false;
@@ -303,7 +333,7 @@
           confirmLabel: "Desvincular",
         });
         if (!ok) return;
-        await chrome.runtime.sendMessage({ type: "unpair" });
+        await safeSendMessage({ type: "unpair" });
         refresh();
       }
     });
@@ -1365,7 +1395,7 @@
         renderTopbar();
         return;
       }
-      const res = await chrome.runtime.sendMessage({ type: "pair", phone }).catch(() => null);
+      const res = await safeSendMessage({ type: "pair", phone });
       if (res?.ok) {
         pairHint = null;
         stopPairRetry();
@@ -1392,7 +1422,7 @@
   }
 
   async function refresh() {
-    const r = await chrome.runtime.sendMessage({ type: "get_status" }).catch(() => null);
+    const r = await safeSendMessage({ type: "get_status" });
     status = r || { paired: false };
 
     if (!status.paired) {
@@ -1425,7 +1455,7 @@
 
   function startPollHeartbeat() {
     if (pollHeartbeat) return;
-    const tick = () => chrome.runtime.sendMessage({ type: "poll_now" }).catch(() => null);
+    const tick = () => safeSendMessage({ type: "poll_now" });
     tick();
     pollHeartbeat = setInterval(tick, 10000);
   }
@@ -3253,8 +3283,8 @@
 
     const cached = (waData.contacts || []).find((c) => chat.wa_id && c.wa_id === chat.wa_id);
     const [profileRes, dealRes, photo, savedInfo] = await Promise.all([
-      chrome.runtime.sendMessage({ type: "api", path: `/api/public/extension/customer-profile?${contactQuery}` }).catch(() => null),
-      chrome.runtime.sendMessage({ type: "api", path: `/api/public/extension/customer-deal?${contactQuery}` }).catch(() => null),
+      safeSendMessage({ type: "api", path: `/api/public/extension/customer-profile?${contactQuery}` }),
+      safeSendMessage({ type: "api", path: `/api/public/extension/customer-deal?${contactQuery}` }),
       cached?.profile_picture_url
         ? Promise.resolve(cached.profile_picture_url)
         : chat.wa_id
@@ -3393,16 +3423,16 @@
       }
 
       const [r1, r2] = await Promise.all([
-        chrome.runtime.sendMessage({
+        safeSendMessage({
           type: "api",
           path: "/api/public/extension/customer-profile",
           opts: { method: "PATCH", body: JSON.stringify({ wa_contact_id: chat.contact_db_id || null, phone: chat.phone || null, ...profileFields }) },
-        }).catch(() => null),
-        chrome.runtime.sendMessage({
+        }),
+        safeSendMessage({
           type: "api",
           path: "/api/public/extension/customer-deal",
           opts: { method: "PATCH", body: JSON.stringify({ wa_contact_id: chat.contact_db_id || null, phone: chat.phone || null, ...dealFields }) },
-        }).catch(() => null),
+        }),
       ]);
 
       saveBtn.textContent = "Salvar";
@@ -4097,7 +4127,7 @@
         });
         const path = editingId ? `/api/public/extension/quick-replies/${editingId}` : "/api/public/extension/quick-replies";
         const method = editingId ? "PATCH" : "POST";
-        const r = await chrome.runtime.sendMessage({ type: "api", path, opts: { method, body } }).catch(() => null);
+        const r = await safeSendMessage({ type: "api", path, opts: { method, body } });
         if (r?.ok) {
           crmToast(editingId ? "Resposta atualizada" : "Resposta criada");
           await loadQuickReplies();
