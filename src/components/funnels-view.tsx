@@ -733,7 +733,7 @@ export function FunnelsView({
                         columnSnapshot.current = null;
                       }}
 
-                      className="select-none cursor-grab outline-none rounded-xl border border-neutral-300 bg-white p-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-neutral-400 hover:shadow-md active:cursor-grabbing"
+                      className="select-none cursor-move outline-none rounded-xl border border-neutral-300 bg-white p-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-neutral-400 hover:shadow-md active:cursor-move"
                     >
                       <div className="flex items-center gap-2 min-w-0 mb-1">
                         {c.profile_picture_url ? (
@@ -930,7 +930,7 @@ export function FunnelsView({
                     }}
                     onDragEnd={() => { draggedStageId.current = null; setStageDropIndicator(null); }}
                     title="Arrastar para reordenar"
-                    className="flex select-none cursor-grab items-center justify-between gap-2 active:cursor-grabbing"
+                    className="flex select-none cursor-move items-center justify-between gap-2 active:cursor-move"
                   >
                     <div className="flex min-w-0 items-center gap-1">
                       <StageTitle
@@ -1030,7 +1030,7 @@ export function FunnelsView({
                           }}
 
                           className={
-                            "select-none cursor-grab outline-none rounded-xl border border-neutral-300 bg-white p-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-neutral-400 hover:shadow-md active:cursor-grabbing " +
+                            "select-none cursor-move outline-none rounded-xl border border-neutral-300 bg-white p-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-neutral-400 hover:shadow-md active:cursor-move " +
                             (draggingCardId === card.id ? "opacity-80 ring-2 ring-brand" : "")
                           }
                         >
