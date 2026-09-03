@@ -385,7 +385,13 @@ export function TemplatesView({
         </div>
         {!showNew && (
           <button
-            onClick={() => setShowNew(true)}
+            onClick={() => {
+              if (premiumLocked) {
+                onBlockedCreate?.();
+                return;
+              }
+              setShowNew(true);
+            }}
             className="rounded-lg bg-brand px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-white hover:bg-brand-strong"
           >
             Novo modelo
