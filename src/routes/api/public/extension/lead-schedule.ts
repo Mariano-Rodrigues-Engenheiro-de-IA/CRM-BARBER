@@ -39,7 +39,19 @@ export const Route = createFileRoute("/api/public/extension/lead-schedule")({
         }
         const shop = auth.token.barbershop_id;
         const url = new URL(request.url);
-        const phone = url.searchParams.get("phone")?.replace(/\D/g, "");
+        const waContactId = url.searchParams.get("wa_contact_id");
+        let phone = url.searchParams.get("phone")?.replace(/\D/g, "");
+        // Telefone nem sempre está disponível na hora (contato sem número
+        // visível no cabeçalho da conversa, por exemplo) — resolve pelo id
+        // interno nesse caso, igual o /lead-notes já fazia.
+        if (!phone && waContactId) {
+          const { data: contact } = await supabaseAdmin
+            .from("wa_contacts")
+            .select("phone")
+            .eq("id", waContactId)
+            .maybeSingle();
+          phone = contact?.phone ?? undefined;
+        }
         if (!phone) return jsonResponse(request, { ok: true, jobs: [] });
 
         const { data, error } = await supabaseAdmin

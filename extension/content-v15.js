@@ -1728,11 +1728,15 @@
 
   async function prefetchSchedule() {
     const chat = await activeChat();
-    if (!chat?.phone) return;
+    // Segue o mesmo padrão de prefetchNotes: telefone quando dá, id
+    // interno como reforço/alternativa (contato sem telefone visível no
+    // cabeçalho da conversa, por exemplo).
+    const contactQuery = contactIdentityQuery(chat?.contact_db_id, chat?.phone);
+    if (!contactQuery) return;
     const r = await chrome.runtime
-      .sendMessage({ type: "api", path: `/api/public/extension/lead-schedule?phone=${encodeURIComponent(chat.phone)}` })
+      .sendMessage({ type: "api", path: `/api/public/extension/lead-schedule?${contactQuery}` })
       .catch(() => null);
-    schedulePrefetch = { key: chat.phone, chat, jobs: r?.ok ? r.jobs || [] : [] };
+    schedulePrefetch = { key: contactQuery, chat, jobs: r?.ok ? r.jobs || [] : [] };
   }
 
   async function openNotesDialog() {
@@ -2133,21 +2137,22 @@
     }
 
     async function loadList() {
-      if (!chat?.phone) {
-        dialog.innerHTML = `${head("Mensagens agendadas")}<div class="crm-dialog-body"><p class="crm-fn-pop-empty">Esse contato não tem telefone identificado.</p></div>`;
+      const contactQuery = contactIdentityQuery(chat?.contact_db_id, chat?.phone);
+      if (!contactQuery) {
+        dialog.innerHTML = `${head("Mensagens agendadas")}<div class="crm-dialog-body"><p class="crm-fn-pop-empty">Não consegui identificar essa conversa.</p></div>`;
         return;
       }
       // Já pré-carregado no hover do ícone — mostra na hora, sem "Carregando".
-      if (schedulePrefetch && schedulePrefetch.key === chat.phone) {
+      if (schedulePrefetch && schedulePrefetch.key === contactQuery) {
         renderList(schedulePrefetch.jobs);
         chrome.runtime
-          .sendMessage({ type: "api", path: `/api/public/extension/lead-schedule?phone=${encodeURIComponent(chat.phone)}` })
+          .sendMessage({ type: "api", path: `/api/public/extension/lead-schedule?${contactQuery}` })
           .then((r) => {
             if (r?.ok) {
               // Atualiza o cache também — é ele que alimenta o selinho no
               // ícone, senão o número só mudaria na próxima troca de
               // conversa, não na hora que o agendamento é criado.
-              schedulePrefetch = { key: chat.phone, chat, jobs: r.jobs || [] };
+              schedulePrefetch = { key: contactQuery, chat, jobs: r.jobs || [] };
               updateScheduleBadge();
               if (dialog.isConnected) renderList(r.jobs || []);
             }
@@ -2157,10 +2162,10 @@
       }
       dialog.innerHTML = `${head("Mensagens agendadas")}<div class="crm-dialog-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
       const r = await chrome.runtime
-        .sendMessage({ type: "api", path: `/api/public/extension/lead-schedule?phone=${encodeURIComponent(chat.phone)}` })
+        .sendMessage({ type: "api", path: `/api/public/extension/lead-schedule?${contactQuery}` })
         .catch(() => null);
       const jobs = r?.ok ? r.jobs || [] : [];
-      schedulePrefetch = { key: chat.phone, chat, jobs };
+      schedulePrefetch = { key: contactQuery, chat, jobs };
       updateScheduleBadge();
       renderList(jobs);
     }
@@ -2626,17 +2631,24 @@
 
   /** Numerozinho de anotações no ícone — usa o mesmo cache de prefetch
    * que já existia (só pro hover antes); se ainda não tem cache pra essa
-   * conversa, dispara a busca e atualiza sozinho na próxima rodada. */
+   * conversa, dispara a busca e atualiza sozinho na próxima rodada.
+   * Compara por id interno OU telefone (o que tiver disponível) — antes
+   * comparava só telefone, e ficava sem mostrar nada pros contatos onde o
+   * telefone não aparece de cara no cabeçalho da conversa. */
   function updateNotesBadge() {
     const btn = document.getElementById(NOTES_BTN_ID);
     if (!btn) return;
     const dom = activeChatFromDom();
+    const contactDbId = dom?.contact_db_id || null;
     const phone = dom?.phone || null;
-    if (!phone) {
+    if (!contactDbId && !phone) {
       setChatBtnCount(btn, 0);
       return;
     }
-    if (notesPrefetch?.chat?.phone === phone) {
+    const matches =
+      notesPrefetch &&
+      ((contactDbId && notesPrefetch.chat?.contact_db_id === contactDbId) || (phone && notesPrefetch.chat?.phone === phone));
+    if (matches) {
       setChatBtnCount(btn, notesPrefetch.notes.length);
     } else {
       setChatBtnCount(btn, 0);
@@ -2646,17 +2658,23 @@
 
   /** Numerozinho de mensagens agendadas de verdade (não conta follow-up
    * nem lembretes automáticos — já filtrados no backend). Só as
-   * "pending" (ainda vão acontecer); enviadas/falhadas já são passado. */
+   * "pending" (ainda vão acontecer); enviadas/falhadas já são passado.
+   * Mesma correção do updateNotesBadge: compara por id interno OU
+   * telefone, não só telefone. */
   function updateScheduleBadge() {
     const btn = document.getElementById(SCHEDULE_BTN_ID);
     if (!btn) return;
     const dom = activeChatFromDom();
+    const contactDbId = dom?.contact_db_id || null;
     const phone = dom?.phone || null;
-    if (!phone) {
+    if (!contactDbId && !phone) {
       setChatBtnCount(btn, 0);
       return;
     }
-    if (schedulePrefetch?.key === phone) {
+    const matches =
+      schedulePrefetch &&
+      ((contactDbId && schedulePrefetch.chat?.contact_db_id === contactDbId) || (phone && schedulePrefetch.chat?.phone === phone));
+    if (matches) {
       const pending = schedulePrefetch.jobs.filter((j) => j.status === "pending").length;
       setChatBtnCount(btn, pending);
     } else {
