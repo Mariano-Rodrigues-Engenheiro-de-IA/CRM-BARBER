@@ -262,6 +262,48 @@ function DentalChartInner({
     };
   }, [clinicName, clinicLogo]);
 
+  // Vigia separado e permanente (não desliga sozinho) — a biblioteca só
+  // cria o painel de "Configurações" (ícone de engrenagem) quando
+  // alguém clica nele, minutos depois da tela abrir, quando o vigia
+  // principal já desligou. Aba "Periograma" ali dentro (periodontia de
+  // especialista, pedido do Mariano de esconder) só aparece nesse
+  // momento tardio. Leve de propósito: só reage a filhos NOVOS direto
+  // no <body> (como a biblioteca monta esses painéis), sem vasculhar a
+  // página inteira a cada mutação.
+  useEffect(() => {
+    function hidePeriogramaTab(root: ParentNode) {
+      const walker = document.createTreeWalker(root as Node, NodeFilter.SHOW_ELEMENT);
+      let node = walker.nextNode();
+      while (node) {
+        const el = node as HTMLElement;
+        if (el.children.length === 0 && el.textContent?.trim() === "Periograma" && !el.hasAttribute("data-crm-periograma-hidden")) {
+          const clickable = el.closest("button, [role='tab'], [role='button']") ?? el;
+          (clickable as HTMLElement).style.display = "none";
+          el.setAttribute("data-crm-periograma-hidden", "1");
+        }
+        node = walker.nextNode();
+      }
+    }
+
+    const bodyObserver = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        m.addedNodes.forEach((n) => {
+          if (n.nodeType !== Node.ELEMENT_NODE) return;
+          hidePeriogramaTab(n as Element);
+          // A biblioteca às vezes anexa o painel vazio primeiro e só
+          // preenche o conteúdo um instante depois — uma segunda
+          // checagem rápida cobre esse caso, sem precisar vigiar a
+          // página inteira o tempo todo (subtree:true no body seria
+          // caro — reagiria a QUALQUER mudança em QUALQUER aba do
+          // sistema, não só no odontograma).
+          setTimeout(() => hidePeriogramaTab(n as Element), 200);
+        });
+      }
+    });
+    bodyObserver.observe(document.body, { childList: true });
+    return () => bodyObserver.disconnect();
+  }, []);
+
   async function handleSave() {
     setSaving(true);
     setErr(null);
