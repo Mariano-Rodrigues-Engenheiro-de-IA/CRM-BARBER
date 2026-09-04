@@ -3052,23 +3052,36 @@
     if (r) {
       crmToast("Contato salvo!", "ok", anchor);
       void updateSaveContactButton();
+      // Guarda o nome no próprio botão pra quem chamou (o handler de
+      // clique) conseguir atualizar o campo de nome na tela sem
+      // precisar recarregar o painel inteiro.
+      if (anchor) anchor.__crmSavedName = name.trim();
       // Também cria (ou reaproveita, se já existir por telefone) um
       // cliente de verdade no nosso banco — mesmo cadastro usado pela
       // Agenda e pelo Odontograma/Pacientes. Sem isso, salvar aqui só
       // mexia no WhatsApp do celular, sem nenhum efeito no resto do
       // sistema — pedido explícito do Mariano pra unificar os três
       // jeitos de cadastrar (WhatsApp, Agenda, Pacientes) no mesmo lugar.
-      const phone = String(chat.wa_id).split("@")[0];
-      const existing = await safeSendMessage({
-        type: "api",
-        path: `/api/public/extension/customers?phone=${encodeURIComponent(phone)}`,
-      }).catch(() => null);
-      if (!existing?.ok || !existing.customers?.length) {
-        await safeSendMessage({
+      //
+      // IMPORTANTE: usa chat.phone, não chat.wa_id. Achado de bug real:
+      // wa_id às vezes não é baseado no telefone (identificador tipo
+      // "@lid" do WhatsApp, sem relação com o número), usar ele como
+      // telefone criava cliente com um número que não existe, some da
+      // Agenda (que depende de telefone de verdade) mesmo aparecendo
+      // certo no Odontograma/Pacientes.
+      if (chat.phone) {
+        const phone = String(chat.phone).replace(/\D/g, "");
+        const existing = await safeSendMessage({
           type: "api",
-          path: "/api/public/extension/customers",
-          opts: { method: "POST", body: JSON.stringify({ name: name.trim(), phone }) },
+          path: `/api/public/extension/customers?phone=${encodeURIComponent(phone)}`,
         }).catch(() => null);
+        if (!existing?.ok || !existing.customers?.length) {
+          await safeSendMessage({
+            type: "api",
+            path: "/api/public/extension/customers",
+            opts: { method: "POST", body: JSON.stringify({ name: name.trim(), phone }) },
+          }).catch(() => null);
+        }
       }
       return true;
     } else {
@@ -3435,7 +3448,16 @@
           // Só some o botão se salvou de verdade — cancelar (clicar fora,
           // Esc, ou deixar o nome vazio) devolve false, e o botão continua
           // ali pra tentar de novo.
-          if (saved && activePanelKind === "profile") saveContactBtn.remove();
+          if (saved && activePanelKind === "profile") {
+            saveContactBtn.remove();
+            // Atualiza o campo de nome na hora, sem esperar um recarregamento
+            // completo do painel. Achado de bug real: o campo ficava vazio
+            // mesmo depois de salvar, porque nada aqui atualizava ele.
+            if (typeof saveContactBtn.__crmSavedName === "string") {
+              const nameInput = panel.querySelector('.crm-cp-name-input');
+              if (nameInput && !nameInput.value.trim()) nameInput.value = saveContactBtn.__crmSavedName;
+            }
+          }
         });
         return;
       }

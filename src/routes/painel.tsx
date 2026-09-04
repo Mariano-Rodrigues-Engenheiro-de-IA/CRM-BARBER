@@ -513,7 +513,7 @@ function Painel() {
   const initialSection: Section = (() => {
     if (typeof window === "undefined") return "assinantes";
     const s = new URLSearchParams(window.location.search).get("section");
-    if (s === "agenda" || s === "agente-ia" || s === "treinamento" || s === "configuracoes" || s === "equipe" || s === "conexao" || s === "funis" || s === "follow-up" || s === "disparo" || s === "templates") return s;
+    if (s === "agenda" || s === "agente-ia" || s === "treinamento" || s === "configuracoes" || s === "equipe" || s === "conexao" || s === "funis" || s === "follow-up" || s === "disparo" || s === "templates" || s === "pacientes") return s;
     return "assinantes";
   })();
   const [section, setSection] = useState<Section>(initialSection);
