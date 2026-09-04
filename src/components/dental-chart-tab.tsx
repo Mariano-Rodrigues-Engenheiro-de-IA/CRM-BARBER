@@ -263,26 +263,17 @@ function DentalChartInner({
   }, [clinicName, clinicLogo]);
 
   // Aba "Periograma" (periodontia de especialista, pedido de esconder)
-  // fica DENTRO do próprio container, não no body como eu tinha
-  // suposto — confirmado com o HTML real, tem até ID fixo
-  // (odon-settings-tab-periodontalChart), bem mais confiável que
-  // buscar por texto. Só aparece quando alguém abre o painel de
-  // Configurações (ícone de engrenagem), então escuta cliques dentro
-  // do odontograma e checa logo depois.
+  // tem ID fixo (odon-settings-tab-periodontalChart), confirmado no
+  // HTML real. Reagir por clique/observer ainda deixava ela piscar na
+  // tela por um instante antes de sumir — o jeito certo é uma regra de
+  // CSS, que já nasce escondendo, sem depender de reagir a nada depois
+  // que já apareceu. Injeta uma vez só, vale pra qualquer paciente.
   useEffect(() => {
-    const container = chartWrapRef.current;
-    if (!container) return;
-    function hidePeriograma() {
-      const tab = container?.querySelector("#odon-settings-tab-periodontalChart") as HTMLElement | null;
-      if (tab && tab.style.display !== "none") tab.style.display = "none";
-    }
-    function onClick() {
-      hidePeriograma();
-      setTimeout(hidePeriograma, 300);
-      setTimeout(hidePeriograma, 800);
-    }
-    container.addEventListener("click", onClick);
-    return () => container.removeEventListener("click", onClick);
+    if (document.getElementById("crm-hide-periograma-style")) return;
+    const style = document.createElement("style");
+    style.id = "crm-hide-periograma-style";
+    style.textContent = "#odon-settings-tab-periodontalChart { display: none !important; }";
+    document.head.appendChild(style);
   }, []);
 
   async function handleSave() {
