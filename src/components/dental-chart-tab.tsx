@@ -115,9 +115,27 @@ function DentalChartInner({
     const titleText = "React Advanced Odontogram";
     const titleReplacement = clinicName?.trim() || "Odontograma";
     const subtitlePrefix = "Em português. Usando a numeração FDI";
+    let observer: MutationObserver | null = null;
+
+    // Título e barra de ferramentas só precisam ser achados/trocados
+    // UMA vez — depois disso, não tem mais nada pra esses dois vigiar.
+    // Sem essa checagem, o observer continuava disparando (e varrendo a
+    // tela inteira de novo) a cada clique num dente ou qualquer
+    // interação — foi isso que deixou o sistema lento depois dessas
+    // trocas, é bastante trabalho repetido à toa.
+    function isFullyPatched() {
+      return (
+        !!container?.querySelector('[data-crm-title="1"]') &&
+        !!container?.querySelector('[data-crm-toolbar-patched="1"]')
+      );
+    }
 
     function patch() {
       if (!container) return;
+      if (isFullyPatched()) {
+        observer?.disconnect();
+        return;
+      }
       let titleEl: HTMLElement | null = container.querySelector('[data-crm-title="1"]');
       const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT);
       let node = walker.nextNode();
@@ -133,7 +151,6 @@ function DentalChartInner({
         }
         node = walker.nextNode();
       }
-      console.info("[CRM odontograma] título encontrado/marcado?", !!titleEl, "clinicLogo veio preenchido?", !!clinicLogo);
 
       // Logo: procura só dentro do PAI do título (não o container
       // inteiro) — assim não confunde com os ícones da barra de
@@ -152,18 +169,11 @@ function DentalChartInner({
           img.style.objectFit = "contain";
           img.style.borderRadius = "6px";
           logoSvg.parentElement?.insertBefore(img, logoSvg);
-          console.info("[CRM odontograma] logo trocada com sucesso");
         }
-      } else if (!clinicLogo) {
-        console.info("[CRM odontograma] sem logo configurada nesse navegador (clinicLogo vazio). Não tenta trocar.");
       }
 
-      // Barra de ferramentas: em vez de tentar achar pela posição/grupo
-      // de botões vizinhos (não deu certo — a estrutura real não tem
-      // os 6 juntos num pai só, testado e confirmado), busca cada
-      // botão pelo texto exato do rótulo dele (title ou aria-label),
-      // que é o mesmo texto em português confirmado dentro do próprio
-      // código da biblioteca ("Idioma", "Modo escuro", "Importar").
+      // Barra de ferramentas: busca cada botão pelo texto exato do
+      // rótulo dele (title ou aria-label) — confirmado funcionando.
       if (!container.querySelector('[data-crm-toolbar-patched="1"]')) {
         const iconButtons = Array.from(container.querySelectorAll("button")).filter((b) => b.querySelector("svg"));
         const labelsToHide = ["Idioma", "Modo escuro", "Importar"];
@@ -175,36 +185,20 @@ function DentalChartInner({
             hiddenCount++;
           }
         }
-        console.info(
-          "[CRM odontograma] botões com ícone encontrados:",
-          iconButtons.length,
-          ". Escondidos pelo rótulo (Idioma/Modo escuro/Importar):",
-          hiddenCount,
-        );
-        // Diagnóstico de reforço: se nada foi escondido pelo rótulo, é
-        // porque o atributo não é title/aria-label — lista o que cada
-        // botão realmente tem, pra eu conseguir mirar certo na próxima.
-        if (hiddenCount === 0) {
-          console.info(
-            "[CRM odontograma] nenhum bateu por rótulo. Detalhe de cada botão encontrado:",
-            iconButtons.map((b, i) => ({
-              indice: i,
-              title: b.getAttribute("title"),
-              ariaLabel: b.getAttribute("aria-label"),
-              texto: b.textContent?.trim().slice(0, 30),
-              html: b.outerHTML.slice(0, 150),
-            })),
-          );
-        } else {
+        if (hiddenCount > 0) {
           container.querySelector("button")?.setAttribute("data-crm-toolbar-patched", "1");
         }
       }
+
+      if (isFullyPatched()) observer?.disconnect();
     }
 
     patch();
-    const observer = new MutationObserver(patch);
-    observer.observe(container, { childList: true, subtree: true, characterData: true });
-    return () => observer.disconnect();
+    if (!isFullyPatched()) {
+      observer = new MutationObserver(patch);
+      observer.observe(container, { childList: true, subtree: true, characterData: true });
+    }
+    return () => observer?.disconnect();
   }, [clinicName, clinicLogo]);
 
   async function handleSave() {
