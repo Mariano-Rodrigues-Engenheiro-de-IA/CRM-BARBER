@@ -981,7 +981,12 @@ function Painel() {
               {configTab === "servicos" && <ServicesTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
               {configTab === "produtos" && <ProductsTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
               {configTab === "profissionais" && <ProfessionalsTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
-              {configTab === "clientes" && <CustomersTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
+              {configTab === "clientes" && (
+                <CustomersTab
+                  api={(path: string, opts?: RequestInit) => api(token, path, opts)}
+                  businessType={businessType}
+                />
+              )}
               {configTab === "gerais" && <GeneralSettingsTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
               {configTab === "conta" && <AccountTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
             </main>

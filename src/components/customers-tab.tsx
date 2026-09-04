@@ -24,8 +24,9 @@ const SYSTEM_FIELDS = [
  * de planilha (.xlsx/.xls/.csv) com mapeamento de colunas — mesmo padrão
  * usado por sistemas profissionais como Trinks (upload → mapear colunas →
  * conferir → confirmar). */
-export function CustomersTab({ api }: { api: Api }) {
+export function CustomersTab({ api, businessType }: { api: Api; businessType?: string }) {
   const [mode, setMode] = useState<"list" | "individual" | "bulk">("list");
+  const noun = businessType === "odontologia" ? "paciente" : "cliente";
 
   return (
     <div className="space-y-4">
@@ -37,7 +38,7 @@ export function CustomersTab({ api }: { api: Api }) {
             (mode === "list" ? "bg-brand text-white" : "border border-neutral-300 text-neutral-600")
           }
         >
-          Ver clientes
+          Ver {noun}s
         </button>
         <button
           onClick={() => setMode("individual")}
@@ -59,9 +60,9 @@ export function CustomersTab({ api }: { api: Api }) {
         </button>
       </div>
 
-      {mode === "list" && <CustomerListView api={api} />}
-      {mode === "individual" && <IndividualForm api={api} />}
-      {mode === "bulk" && <SpreadsheetImportWizard api={api} />}
+      {mode === "list" && <CustomerListView api={api} businessType={businessType} />}
+      {mode === "individual" && <IndividualForm api={api} businessType={businessType} />}
+      {mode === "bulk" && <SpreadsheetImportWizard api={api} businessType={businessType} />}
     </div>
   );
 }
@@ -80,7 +81,8 @@ type Customer = {
 
 /** Listagem de clientes já cadastrados — busca por nome/telefone, edição
  * via dialog. */
-function CustomerListView({ api }: { api: Api }) {
+function CustomerListView({ api, businessType }: { api: Api; businessType?: string }) {
+  const noun = businessType === "odontologia" ? "paciente" : "cliente";
   const [customers, setCustomers] = useState<Customer[] | null>(null);
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Customer | null>(null);
@@ -125,8 +127,8 @@ function CustomerListView({ api }: { api: Api }) {
     if (ids.length === 0) return;
     const msg =
       ids.length === 1
-        ? "Excluir esse cliente?"
-        : `Excluir ${ids.length} cliente(s) selecionado(s)?`;
+        ? `Excluir esse ${noun}?`
+        : `Excluir ${ids.length} ${noun}(s) selecionado(s)?`;
     if (!confirm(msg)) return;
     setDeleting(true);
     try {
@@ -134,8 +136,8 @@ function CustomerListView({ api }: { api: Api }) {
         ids.map((id) => api(`/api/public/extension/customers/${id}`, { method: "DELETE" }).catch(() => null)),
       );
       const failed = results.filter((r) => !r?.ok).length;
-      if (failed > 0) toast.error(`${failed} cliente(s) não puderam ser excluídos.`);
-      else toast.success(ids.length === 1 ? "Cliente excluído" : `${ids.length} clientes excluídos`);
+      if (failed > 0) toast.error(`${failed} ${noun}(s) não puderam ser excluídos.`);
+      else toast.success(ids.length === 1 ? `${noun[0].toUpperCase()}${noun.slice(1)} excluído` : `${ids.length} ${noun}s excluídos`);
       setSelected(new Set());
       await load();
     } finally {
@@ -199,7 +201,7 @@ function CustomerListView({ api }: { api: Api }) {
         <p className="text-sm text-neutral-500">Carregando...</p>
       ) : filtered.length === 0 ? (
         <p className="rounded-lg border border-dashed border-neutral-300 p-6 text-center text-sm text-neutral-400">
-          {customers.length === 0 ? "Nenhum cliente cadastrado ainda." : "Nenhum cliente encontrado com essa busca."}
+          {customers.length === 0 ? `Nenhum ${noun} cadastrado ainda.` : `Nenhum ${noun} encontrado com essa busca.`}
         </p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
@@ -257,7 +259,7 @@ function CustomerListView({ api }: { api: Api }) {
           </table>
           <div className="flex items-center justify-between border-t border-neutral-100 px-3 py-2 text-[11px] text-neutral-400">
             <span>
-              {filtered.length} cliente(s){search ? ` (de ${customers.length} no total)` : ""} · página {currentPage} de{" "}
+              {filtered.length} {noun}(s){search ? ` (de ${customers.length} no total)` : ""} · página {currentPage} de{" "}
               {totalPages}
             </span>
             <div className="flex gap-1">
@@ -282,6 +284,7 @@ function CustomerListView({ api }: { api: Api }) {
         customer={editing}
         onOpenChange={(v) => !v && setEditing(null)}
         api={api}
+        businessType={businessType}
         onSaved={async () => {
           setEditing(null);
           await load();
@@ -295,13 +298,16 @@ function CustomerEditDialog({
   customer,
   onOpenChange,
   api,
+  businessType,
   onSaved,
 }: {
   customer: Customer | null;
   onOpenChange: (v: boolean) => void;
   api: Api;
+  businessType?: string;
   onSaved: () => void;
 }) {
+  const noun = businessType === "odontologia" ? "paciente" : "cliente";
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -337,7 +343,7 @@ function CustomerEditDialog({
         }),
       });
       if (!r?.ok) throw new Error(r?.error || "Erro ao salvar");
-      toast.success("Cliente atualizado");
+      toast.success(`${noun[0].toUpperCase()}${noun.slice(1)} atualizado`);
       onSaved();
     } catch (e: any) {
       toast.error(e?.message || "Erro ao salvar");
@@ -350,7 +356,7 @@ function CustomerEditDialog({
     <Dialog open={!!customer} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Editar cliente</DialogTitle>
+          <DialogTitle>Editar {noun}</DialogTitle>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2 space-y-1.5">
@@ -391,7 +397,8 @@ function CustomerEditDialog({
   );
 }
 
-function IndividualForm({ api }: { api: Api }) {
+function IndividualForm({ api, businessType }: { api: Api; businessType?: string }) {
+  const noun = businessType === "odontologia" ? "paciente" : "cliente";
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -416,7 +423,7 @@ function IndividualForm({ api }: { api: Api }) {
         }),
       });
       if (!r?.ok) throw new Error(r?.error || "Erro ao cadastrar");
-      toast.success("Cliente cadastrado");
+      toast.success(`${noun[0].toUpperCase()}${noun.slice(1)} cadastrado`);
       setName("");
       setPhone("");
       setEmail("");
@@ -424,7 +431,7 @@ function IndividualForm({ api }: { api: Api }) {
       setAddress("");
       setNotes("");
     } catch (e: any) {
-      toast.error(e?.message || "Erro ao cadastrar cliente");
+      toast.error(e?.message || `Erro ao cadastrar ${noun}`);
     } finally {
       setSaving(false);
     }
@@ -435,7 +442,7 @@ function IndividualForm({ api }: { api: Api }) {
       <div className="grid grid-cols-2 gap-3">
         <div className="col-span-2 space-y-1.5">
           <Label>Nome completo</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do cliente" />
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={`Nome do ${noun}`} />
         </div>
         <div className="space-y-1.5">
           <Label>Telefone (com DDD)</Label>
@@ -443,7 +450,7 @@ function IndividualForm({ api }: { api: Api }) {
         </div>
         <div className="space-y-1.5">
           <Label>E-mail (opcional)</Label>
-          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="cliente@email.com" />
+          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={`${noun}@email.com`} />
         </div>
         <div className="space-y-1.5">
           <Label>Data de nascimento (opcional)</Label>
@@ -459,7 +466,7 @@ function IndividualForm({ api }: { api: Api }) {
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
       </div>
       <Button onClick={handleSave} disabled={!name.trim() || !phone.trim() || saving}>
-        {saving ? "Salvando..." : "Cadastrar cliente"}
+        {saving ? "Salvando..." : `Cadastrar ${noun}`}
       </Button>
     </div>
   );
@@ -469,7 +476,8 @@ type SheetRow = Record<string, any>;
 
 /** Wizard de importação por planilha: 1) upload  2) mapear colunas
  * 3) conferir e confirmar — mesmo fluxo usado por sistemas como Trinks. */
-function SpreadsheetImportWizard({ api }: { api: Api }) {
+function SpreadsheetImportWizard({ api, businessType }: { api: Api; businessType?: string }) {
+  const noun = businessType === "odontologia" ? "paciente" : "cliente";
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [fileName, setFileName] = useState("");
   const [headers, setHeaders] = useState<string[]>([]);
@@ -587,7 +595,7 @@ function SpreadsheetImportWizard({ api }: { api: Api }) {
       {step === 1 && (
         <div className="rounded-lg border-2 border-dashed border-neutral-300 p-8 text-center">
           <p className="mb-3 text-sm text-neutral-500">
-            Envie um arquivo <strong>.xlsx</strong>, <strong>.xls</strong> ou <strong>.csv</strong> com seus clientes.
+            Envie um arquivo <strong>.xlsx</strong>, <strong>.xls</strong> ou <strong>.csv</strong> com seus {noun}s.
             pode exportar direto do Excel ou Google Planilhas.
           </p>
           <input
@@ -674,7 +682,7 @@ function SpreadsheetImportWizard({ api }: { api: Api }) {
               Cancelar
             </Button>
             <Button onClick={handleImport} disabled={!canProceed || importing}>
-              {importing ? "Importando..." : `Importar ${rows.length} cliente(s)`}
+              {importing ? "Importando..." : `Importar ${rows.length} ${noun}(s)`}
             </Button>
           </div>
         </div>
