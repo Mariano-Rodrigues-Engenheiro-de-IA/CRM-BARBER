@@ -884,7 +884,7 @@ function Painel() {
 
 
       {/* Content */}
-      <div className="flex-1 min-w-0 h-full overflow-y-auto">
+      <div className="flex-1 min-w-0 h-full overflow-x-auto overflow-y-auto">
         {section === "agenda" && token && (
           <>
             <SectionHeader icon={<IconCalendar />} title="Agenda" subtitle={agendaTab === "lembretes" ? "Lembretes / Confirmações" : undefined} />
