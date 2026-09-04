@@ -3455,7 +3455,12 @@
             // mesmo depois de salvar, porque nada aqui atualizava ele.
             if (typeof saveContactBtn.__crmSavedName === "string") {
               const nameInput = panel.querySelector('.crm-cp-name-input');
-              if (nameInput && !nameInput.value.trim()) nameInput.value = saveContactBtn.__crmSavedName;
+              // Sempre sobrescreve, não só quando estava vazio — achado
+              // do bug real: antes de salvar, esse campo mostra o
+              // TELEFONE no lugar do nome (contato ainda não tem nome),
+              // então nunca estava "vazio" de verdade, e a correção
+              // anterior nunca disparava.
+              if (nameInput) nameInput.value = saveContactBtn.__crmSavedName;
             }
           }
         });

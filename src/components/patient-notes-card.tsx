@@ -10,10 +10,15 @@ export function PatientNotesCard({
   api,
   customerId,
   initialNotes,
+  bare,
 }: {
   api: ApiFn;
   customerId: string;
   initialNotes: string | null;
+  /** Quando usado dentro de um modal que já tem título/borda próprios
+   * (o popup de Observações), não repete título nem moldura — só o
+   * conteúdo. */
+  bare?: boolean;
 }) {
   const [notes, setNotes] = useState(initialNotes ?? "");
   const [editing, setEditing] = useState(false);
@@ -40,9 +45,9 @@ export function PatientNotesCard({
   }
 
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-4 print:hidden">
+    <div className={bare ? "" : "rounded-xl border border-neutral-200 bg-white p-4 print:hidden"}>
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Observações do paciente</h3>
+        {!bare && <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Observações do paciente</h3>}
         {!editing && (
           <button
             type="button"
@@ -50,7 +55,7 @@ export function PatientNotesCard({
               setDraft(notes);
               setEditing(true);
             }}
-            className="flex items-center gap-1.5 rounded-lg border border-neutral-300 px-2.5 py-1 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
+            className={`flex items-center gap-1.5 rounded-lg border border-neutral-300 px-2.5 py-1 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 ${bare ? "ml-auto" : ""}`}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />

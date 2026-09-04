@@ -46,6 +46,7 @@ export function PatientsView({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [listOpen, setListOpen] = useState(true);
   const [budgetOpen, setBudgetOpen] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
   const [newFormOpen, setNewFormOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
@@ -123,6 +124,19 @@ export function PatientsView({
             <circle cx="12" cy="12" r="9" />
             <path d="M12 7v10" />
             <path d="M9.5 9.5c0-1.1 1.1-2 2.5-2s2.5.7 2.5 1.8-1.1 1.6-2.5 1.9c-1.5.3-2.5.8-2.5 1.9S10.9 15 12.3 15s2.5-.7 2.5-1.8" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          onClick={() => setNotesOpen(true)}
+          title="Observações do paciente"
+          className="flex shrink-0 items-center justify-center rounded-full p-1.5 text-neutral-500 hover:bg-neutral-100"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M4 4h11l5 5v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" />
+            <path d="M15 4v5h5" />
+            <path d="M8 13h6" />
+            <path d="M8 17h4" />
           </svg>
         </button>
       </div>
@@ -211,8 +225,6 @@ export function PatientsView({
             </div>
           ) : (
             <div className="space-y-4">
-              <PatientNotesCard api={api} customerId={selected.id} initialNotes={selected.notes ?? null} />
-
               <div className="rounded-xl border border-neutral-200 bg-white p-4 print:hidden">
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Odontograma</h3>
                 <Suspense fallback={<p className="text-sm text-neutral-400">Carregando...</p>}>
@@ -234,15 +246,31 @@ export function PatientsView({
           <DentalBudgetTab api={api} customerId={selected.id} />
         </BudgetModal>
       )}
+
+      {notesOpen && selected && (
+        <Modal title={`Observações de ${selected.name}`} onClose={() => setNotesOpen(false)} maxWidth="max-w-md">
+          <PatientNotesCard api={api} customerId={selected.id} initialNotes={selected.notes ?? null} bare />
+        </Modal>
+      )}
     </>
   );
 }
 
-/** Modal largo, de propósito — o orçamento tem duas colunas lado a
- * lado (plano de tratamento + pagamentos), não cabe no modal estreito
- * padrão do resto do sistema. Mesmo visual (fundo claro, cantos
- * arredondados, entrada suave), só mais espaçoso. */
-function BudgetModal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+/** Modal compartilhado — largura ajustável porque o de orçamento
+ * precisa de espaço (duas colunas lado a lado) e o de observações não
+ * (só um campo de texto, ficaria esquisito tão largo). Mesmo visual
+ * nos dois (fundo claro, cantos arredondados, entrada suave). */
+function Modal({
+  title,
+  onClose,
+  children,
+  maxWidth = "max-w-5xl",
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+  maxWidth?: string;
+}) {
   return (
     <div
       className="print:static print:block fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/20 p-5"
@@ -250,7 +278,7 @@ function BudgetModal({ title, onClose, children }: { title: string; onClose: () 
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="print:shadow-none print:max-w-none print:w-full my-8 w-full max-w-5xl rounded-2xl bg-white shadow-2xl">
+      <div className={`print:shadow-none print:max-w-none print:w-full my-8 w-full ${maxWidth} rounded-2xl bg-white shadow-2xl`}>
         <div className="flex items-center gap-2.5 border-b border-neutral-100 px-5 py-4 print:border-none">
           <h3 className="flex-1 truncate text-base font-bold text-neutral-900">{title}</h3>
           <button
@@ -264,5 +292,13 @@ function BudgetModal({ title, onClose, children }: { title: string; onClose: () 
         <div className="px-5 py-4">{children}</div>
       </div>
     </div>
+  );
+}
+
+function BudgetModal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <Modal title={title} onClose={onClose}>
+      {children}
+    </Modal>
   );
 }
