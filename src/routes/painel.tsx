@@ -885,7 +885,10 @@ function Painel() {
             <SectionHeader icon={<IconCalendar />} title="Agenda" subtitle={agendaTab === "lembretes" ? "Lembretes / Confirmações" : undefined} />
             <main className="px-4 py-4">
               {agendaTab === "agenda" ? (
-                <AgendaView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+                <AgendaView
+                  api={(path: string, opts?: RequestInit) => api(token, path, opts)}
+                  businessType={businessType}
+                />
               ) : (
                 <PremiumSoftLock active={!!billing && !billing.premium} onUpgrade={openCheckout}>
                   <AgendaRemindersView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
@@ -1048,7 +1051,6 @@ function Painel() {
                 headerHost={funisHeaderEl}
                 premiumLocked={!!billing && !billing.premium}
                 onBlockedMove={() => setShowFunnelMovePopup(true)}
-                businessType={businessType}
               />
             </main>
             {showFunnelMovePopup && (

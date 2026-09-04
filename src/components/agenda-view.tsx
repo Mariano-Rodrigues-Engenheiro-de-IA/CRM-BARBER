@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Suspense, lazy } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,12 @@ import { User, Phone, Scissors, Clock, CircleCheck, StickyNote, DollarSign, User
 import { type AgendaSettings } from "@/components/agenda-settings-dialog";
 import { type Professional, type Service, ProfessionalAvatar } from "@/components/professionals-services-dialog";
 import { useConfirm } from "@/components/confirm-dialog";
+
+// Carregado sob demanda: a biblioteca do odontograma é pesada e só
+// interessa pras contas de odontologia.
+const DentalChartTab = lazy(() =>
+  import("@/components/dental-chart-tab").then((m) => ({ default: m.DentalChartTab })),
+);
 
 type Api = (path: string, opts?: RequestInit) => Promise<any>;
 
@@ -85,7 +91,7 @@ function minutesToTime(mins: number) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
-export function AgendaView({ api }: { api: Api }) {
+export function AgendaView({ api, businessType }: { api: Api; businessType?: string }) {
   const { confirm, dialog } = useConfirm();
   const [day, setDay] = useState(() => new Date());
   const [settings, setSettings] = useState<AgendaSettings | null>(staticCache?.settings ?? null);
@@ -488,6 +494,7 @@ export function AgendaView({ api }: { api: Api }) {
         onSave={handleSave}
         onCancelAppointment={editing ? () => handleCancel(editing) : undefined}
         onStatusChange={editing ? (s) => handleStatusChange(editing, s) : undefined}
+        businessType={businessType}
       />
 
 
@@ -545,6 +552,7 @@ function AppointmentFormDialog({
   onSave,
   onCancelAppointment,
   onStatusChange,
+  businessType,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -568,9 +576,11 @@ function AppointmentFormDialog({
   }) => void;
   onCancelAppointment?: () => void;
   onStatusChange?: (status: AppointmentStatus) => void;
+  businessType?: string;
 }) {
 
   const [customerId, setCustomerId] = useState<string>("none");
+  const [showChart, setShowChart] = useState(false);
   const [professionalId, setProfessionalId] = useState<string>("none");
   const [serviceId, setServiceId] = useState<string>("none");
   const [date, setDate] = useState(() => ymd(new Date()));
@@ -582,6 +592,7 @@ function AppointmentFormDialog({
   useEffect(() => {
     if (open) {
       setCustomerId(editing?.customer_id ?? "none");
+      setShowChart(false);
       setProfessionalId(editing?.professional_id ?? prefill?.professionalId ?? "none");
       setServiceId(editing?.service_id ?? "none");
       setDate(editing ? ymd(new Date(editing.scheduled_at)) : ymd(day));
@@ -618,6 +629,23 @@ function AppointmentFormDialog({
             <Label>Cliente</Label>
             <CustomerPicker customers={customers} value={customerId} onChange={setCustomerId} api={api} />
           </div>
+
+          {businessType === "odontologia" && customerId !== "none" && (
+            <div className="space-y-1.5">
+              <button
+                type="button"
+                onClick={() => setShowChart((v) => !v)}
+                className="text-xs font-semibold text-brand hover:underline"
+              >
+                {showChart ? "Fechar odontograma" : "Ver odontograma"}
+              </button>
+              {showChart && (
+                <Suspense fallback={<p className="text-sm text-neutral-400">Carregando...</p>}>
+                  <DentalChartTab api={api} customerId={customerId} />
+                </Suspense>
+              )}
+            </div>
+          )}
 
           {services.length > 0 && (
             <div className="space-y-1.5">

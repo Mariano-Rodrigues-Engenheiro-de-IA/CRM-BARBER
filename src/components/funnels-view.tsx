@@ -6,7 +6,7 @@
 // Os cards seguem o mesmo padrão dos kanbans de assinaturas:
 // anotações, mensagem agendada e disparo/abrir conversa no WhatsApp.
 
-import { useEffect, useMemo, useRef, useState, Suspense, lazy, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Clock } from "lucide-react";
 import {
@@ -27,13 +27,6 @@ import { sendableActions, type QuickReply } from "@/lib/quick-replies";
 
 type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
 
-// Carregado sob demanda: a biblioteca do odontograma é pesada (>1MB) e só
-// interessa pras contas de odontologia — sem isso, toda barbearia baixaria
-// esse peso extra só de abrir a aba Funis, mesmo nunca usando a função.
-const DentalChartTab = lazy(() =>
-  import("@/components/dental-chart-tab").then((m) => ({ default: m.DentalChartTab })),
-);
-
 const inputCls =
   "w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-brand";
 
@@ -47,7 +40,6 @@ export function FunnelsView({
   headerHost,
   premiumLocked,
   onBlockedMove,
-  businessType,
 }: {
   api: ApiFn;
   headerHost?: HTMLElement | null;
@@ -56,9 +48,6 @@ export function FunnelsView({
    * bloqueada — dispara onBlockedMove em vez de mover de verdade. */
   premiumLocked?: boolean;
   onBlockedMove?: () => void;
-  /** Nicho da conta ("barbearia", "odontologia"...) — controla se a aba
-   * Odontograma aparece no detalhe do card. */
-  businessType?: string;
 }) {
   const [funnels, setFunnels] = useState<Funnel[]>(() => funnelsCache?.funnels ?? []);
   const [labels, setLabels] = useState<WaLabel[]>(() => funnelsCache?.labels ?? []);
@@ -72,7 +61,7 @@ export function FunnelsView({
   const [detail, setDetail] = useState<FunnelCard | null>(null);
   const [bulkMoveTarget, setBulkMoveTarget] = useState<{ stageId: string; stageName: string } | null>(null);
   const [bulkMoving, setBulkMoving] = useState(false);
-  const [detailTab, setDetailTab] = useState<"notes" | "schedule" | "profile" | "odontograma">("notes");
+  const [detailTab, setDetailTab] = useState<"notes" | "schedule" | "profile">("notes");
   const [inboxQuery, setInboxQuery] = useState("");
   const [renamingStage, setRenamingStage] = useState<string | null>(null);
   const [stageSearch, setStageSearch] = useState<Record<string, string>>({});
@@ -1137,18 +1126,6 @@ export function FunnelsView({
                           >
                             <IconProfile />
                           </CardAction>
-                          {businessType === "odontologia" && (
-                            <CardAction
-                              title="Odontograma"
-                              colorClass="text-teal-600 hover:bg-teal-50"
-                              onClick={() => {
-                                setDetailTab("odontograma");
-                                setDetail(card);
-                              }}
-                            >
-                              <IconTooth />
-                            </CardAction>
-                          )}
                           {dealValueByKey.get(card.wa_contact_id || card.phone || "") ? (
                             <span className="ml-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
                               {formatBRL(dealValueByKey.get(card.wa_contact_id || card.phone || "") || 0)}
@@ -1191,7 +1168,6 @@ export function FunnelsView({
           api={api}
           card={detail}
           initialTab={detailTab}
-          businessType={businessType}
           onClose={() => {
             setDetail(null);
             void reload();
@@ -1590,11 +1566,6 @@ const IconProfile = () => (
     <path d="M6.5 17.2c.9-2.3 3-3.7 5.5-3.7s4.6 1.4 5.5 3.7" />
   </svg>
 );
-const IconTooth = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <path d="M12 3c-2 0-3.2 1.1-4.5 1.1S5.2 3.3 4 4.2C2.5 5.3 2 7.4 2.4 9.8c.4 2.4 1.6 5.7 2.4 7.6.6 1.4 1 2.6 2 2.6.9 0 1.1-1.2 1.4-2.8.3-1.6.6-3.4 1.8-3.4s1.5 1.8 1.8 3.4c.3 1.6.5 2.8 1.4 2.8 1 0 1.4-1.2 2-2.6.8-1.9 2-5.2 2.4-7.6.4-2.4-.1-4.5-1.6-5.6-1.2-.9-2.2-.1-3.5-.1S14 3 12 3Z" />
-  </svg>
-);
 const IconDeal = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
     <rect x="2" y="6" width="20" height="12" rx="2.5" />
@@ -1812,14 +1783,12 @@ function CardDrawer({
   api,
   card,
   initialTab,
-  businessType,
   onClose,
   onDealSaved,
 }: {
   api: ApiFn;
   card: FunnelCard;
-  initialTab: "notes" | "schedule" | "profile" | "odontograma";
-  businessType?: string;
+  initialTab: "notes" | "schedule" | "profile";
   onClose: () => void;
   onDealSaved?: () => void;
 }) {
@@ -2582,21 +2551,6 @@ function CardDrawer({
                   {cpBusy ? "Salvando..." : "Salvar"}
                 </button>
               </>
-            )}
-          </div>
-        )}
-
-        {tab === "odontograma" && (
-          <div>
-            {card.customer_id ? (
-              <Suspense fallback={<p className="text-sm text-neutral-400">Carregando...</p>}>
-                <DentalChartTab api={api} customerId={card.customer_id} />
-              </Suspense>
-            ) : (
-              <p className="text-sm text-neutral-500">
-                Esse lead ainda não tem um cadastro de cliente vinculado — abra o Perfil e salve os dados dele
-                primeiro.
-              </p>
             )}
           </div>
         )}
