@@ -127,7 +127,10 @@ function DentalChartInner({
     function isFullyPatched() {
       return (
         !!container?.querySelector('[data-crm-title="1"]') &&
-        !!container?.querySelector('[data-crm-toolbar-patched="1"]')
+        !!container?.querySelector('[data-crm-toolbar-patched="1"]') &&
+        // Se não tem logo pra trocar, essa parte não conta — só exige
+        // que a logo já tenha sido trocada quando tem uma configurada.
+        (!clinicLogo || !!container?.querySelector('[data-crm-logo-img="1"]'))
       );
     }
 
@@ -156,6 +159,12 @@ function DentalChartInner({
       // Logo: procura só dentro do PAI do título (não o container
       // inteiro) — assim não confunde com os ícones da barra de
       // ferramentas, que ficam numa parte separada da tela.
+      console.info(
+        "[CRM odontograma] clinicLogo recebido nessa passagem:",
+        clinicLogo ? `preenchido (${clinicLogo.slice(0, 40)}...)` : "vazio/undefined",
+        ". título já achado?",
+        !!titleEl,
+      );
       if (clinicLogo && titleEl && !container.querySelector('[data-crm-logo-img="1"]')) {
         const scope = titleEl.parentElement?.parentElement ?? titleEl.parentElement;
         const logoSvg = scope?.querySelector("svg");
@@ -170,6 +179,7 @@ function DentalChartInner({
           img.style.objectFit = "contain";
           img.style.borderRadius = "6px";
           logoSvg.parentElement?.insertBefore(img, logoSvg);
+          console.info("[CRM odontograma] logo trocada com sucesso.");
         }
       }
 
