@@ -116,6 +116,7 @@ function DentalChartInner({
     const titleReplacement = clinicName?.trim() || "Odontograma";
     const subtitlePrefix = "Em português. Usando a numeração FDI";
     let observer: MutationObserver | null = null;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
     // Título e barra de ferramentas só precisam ser achados/trocados
     // UMA vez — depois disso, não tem mais nada pra esses dois vigiar.
@@ -193,12 +194,33 @@ function DentalChartInner({
       if (isFullyPatched()) observer?.disconnect();
     }
 
+    // Atraso proposital: durante o carregamento, a biblioteca dispara
+    // várias mutações seguidas em rajada (montando a tela toda) — sem
+    // esse agrupamento, cada uma delas disparava uma varredura completa
+    // na hora, multiplicando o trabalho bem na parte mais pesada (a
+    // abertura do odontograma). Agrupa tudo numa só, 150ms depois da
+    // última mutação da rajada.
+    function scheduleDebouncedPatch() {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(patch, 150);
+    }
+
     patch();
     if (!isFullyPatched()) {
-      observer = new MutationObserver(patch);
+      observer = new MutationObserver(scheduleDebouncedPatch);
       observer.observe(container, { childList: true, subtree: true, characterData: true });
     }
-    return () => observer?.disconnect();
+    // Rede de segurança final: desliga sozinho depois de 10s, não
+    // importa o que aconteceu — título/barra de ferramentas devem
+    // aparecer bem mais rápido que isso normalmente; se por algum
+    // motivo nunca forem encontrados, é melhor desistir de vigiar do
+    // que ficar rodando pra sempre e pesando o resto da navegação.
+    const giveUpTimer = setTimeout(() => observer?.disconnect(), 10_000);
+    return () => {
+      observer?.disconnect();
+      if (debounceTimer) clearTimeout(debounceTimer);
+      clearTimeout(giveUpTimer);
+    };
   }, [clinicName, clinicLogo]);
 
   async function handleSave() {
