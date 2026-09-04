@@ -128,6 +128,7 @@ function DentalChartInner({
       return (
         !!container?.querySelector('[data-crm-title="1"]') &&
         !!container?.querySelector('[data-crm-toolbar-patched="1"]') &&
+        !!container?.querySelector('[data-crm-perio-hidden="1"]') &&
         // Se não tem logo pra trocar, essa parte não conta — só exige
         // que a logo já tenha sido trocada quando tem uma configurada.
         (!clinicLogo || !!container?.querySelector('[data-crm-logo-img="1"]'))
@@ -183,6 +184,27 @@ function DentalChartInner({
         }
         if (hiddenCount > 0) {
           container.querySelector("button")?.setAttribute("data-crm-toolbar-patched", "1");
+        }
+      }
+
+      // Aba "Estado periodontal": ficha de especialista periodontista
+      // (sondagem em 6 pontos, sangramento, mobilidade...), fora do
+      // escopo de clínica geral — pedido do Mariano depois de achar
+      // essa tela confusa e não pertencente ao dia a dia da clínica.
+      // Busca pelo texto exato do botão/aba, some com ele.
+      if (!container.querySelector('[data-crm-perio-hidden="1"]')) {
+        const perioText = "Estado periodontal";
+        const walker2 = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT);
+        let node2 = walker2.nextNode();
+        while (node2) {
+          const el = node2 as HTMLElement;
+          if (el.children.length === 0 && el.textContent?.trim() === perioText) {
+            const clickable = el.closest("button, [role='tab'], [role='button']") ?? el;
+            (clickable as HTMLElement).style.display = "none";
+            (clickable as HTMLElement).setAttribute("data-crm-perio-hidden", "1");
+            break;
+          }
+          node2 = walker2.nextNode();
         }
       }
 
