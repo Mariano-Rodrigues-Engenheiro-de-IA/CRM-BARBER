@@ -561,6 +561,7 @@ function Painel() {
     }
   });
   const [billing, setBilling] = useState<BillingStatus | null>(null);
+  const [businessType, setBusinessType] = useState<string>("barbearia");
   const [showFunnelMovePopup, setShowFunnelMovePopup] = useState(false);
   const [showTemplateCreatePopup, setShowTemplateCreatePopup] = useState(false);
   const [brand, setBrand] = useState<Brand>({});
@@ -632,6 +633,7 @@ function Painel() {
     });
     api(token, "/api/public/extension/billing").then((r) => {
       if (r?.ok && r.billing) setBilling(r.billing as BillingStatus);
+      if (r?.ok && typeof r.business_type === "string") setBusinessType(r.business_type);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
@@ -1046,6 +1048,7 @@ function Painel() {
                 headerHost={funisHeaderEl}
                 premiumLocked={!!billing && !billing.premium}
                 onBlockedMove={() => setShowFunnelMovePopup(true)}
+                businessType={businessType}
               />
             </main>
             {showFunnelMovePopup && (

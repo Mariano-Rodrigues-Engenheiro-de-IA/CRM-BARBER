@@ -44,6 +44,7 @@ import { Route as ApiPublicExtensionCampaignsRouteImport } from './routes/api/pu
 import { Route as ApiPublicExtensionCustomerDealRouteImport } from './routes/api/public/extension/customer-deal'
 import { Route as ApiPublicExtensionCustomerProfileRouteImport } from './routes/api/public/extension/customer-profile'
 import { Route as ApiPublicExtensionCustomersRouteImport } from './routes/api/public/extension/customers'
+import { Route as ApiPublicExtensionDentalChartRouteImport } from './routes/api/public/extension/dental-chart'
 import { Route as ApiPublicExtensionFunnelCardsRouteImport } from './routes/api/public/extension/funnel-cards'
 import { Route as ApiPublicExtensionFunnelFollowupReportRouteImport } from './routes/api/public/extension/funnel-followup-report'
 import { Route as ApiPublicExtensionFunnelFollowupRulesRouteImport } from './routes/api/public/extension/funnel-followup-rules'
@@ -286,6 +287,12 @@ const ApiPublicExtensionCustomersRoute =
   ApiPublicExtensionCustomersRouteImport.update({
     id: '/api/public/extension/customers',
     path: '/api/public/extension/customers',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionDentalChartRoute =
+  ApiPublicExtensionDentalChartRouteImport.update({
+    id: '/api/public/extension/dental-chart',
+    path: '/api/public/extension/dental-chart',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicExtensionFunnelCardsRoute =
@@ -640,6 +647,7 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/customer-deal': typeof ApiPublicExtensionCustomerDealRoute
   '/api/public/extension/customer-profile': typeof ApiPublicExtensionCustomerProfileRoute
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
+  '/api/public/extension/dental-chart': typeof ApiPublicExtensionDentalChartRoute
   '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   '/api/public/extension/funnel-followup-report': typeof ApiPublicExtensionFunnelFollowupReportRoute
   '/api/public/extension/funnel-followup-rules': typeof ApiPublicExtensionFunnelFollowupRulesRouteWithChildren
@@ -730,6 +738,7 @@ export interface FileRoutesByTo {
   '/api/public/extension/customer-deal': typeof ApiPublicExtensionCustomerDealRoute
   '/api/public/extension/customer-profile': typeof ApiPublicExtensionCustomerProfileRoute
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
+  '/api/public/extension/dental-chart': typeof ApiPublicExtensionDentalChartRoute
   '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   '/api/public/extension/funnel-followup-report': typeof ApiPublicExtensionFunnelFollowupReportRoute
   '/api/public/extension/funnel-followup-rules': typeof ApiPublicExtensionFunnelFollowupRulesRouteWithChildren
@@ -821,6 +830,7 @@ export interface FileRoutesById {
   '/api/public/extension/customer-deal': typeof ApiPublicExtensionCustomerDealRoute
   '/api/public/extension/customer-profile': typeof ApiPublicExtensionCustomerProfileRoute
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
+  '/api/public/extension/dental-chart': typeof ApiPublicExtensionDentalChartRoute
   '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   '/api/public/extension/funnel-followup-report': typeof ApiPublicExtensionFunnelFollowupReportRoute
   '/api/public/extension/funnel-followup-rules': typeof ApiPublicExtensionFunnelFollowupRulesRouteWithChildren
@@ -913,6 +923,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/customer-deal'
     | '/api/public/extension/customer-profile'
     | '/api/public/extension/customers'
+    | '/api/public/extension/dental-chart'
     | '/api/public/extension/funnel-cards'
     | '/api/public/extension/funnel-followup-report'
     | '/api/public/extension/funnel-followup-rules'
@@ -1003,6 +1014,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/customer-deal'
     | '/api/public/extension/customer-profile'
     | '/api/public/extension/customers'
+    | '/api/public/extension/dental-chart'
     | '/api/public/extension/funnel-cards'
     | '/api/public/extension/funnel-followup-report'
     | '/api/public/extension/funnel-followup-rules'
@@ -1093,6 +1105,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/customer-deal'
     | '/api/public/extension/customer-profile'
     | '/api/public/extension/customers'
+    | '/api/public/extension/dental-chart'
     | '/api/public/extension/funnel-cards'
     | '/api/public/extension/funnel-followup-report'
     | '/api/public/extension/funnel-followup-rules'
@@ -1183,6 +1196,7 @@ export interface RootRouteChildren {
   ApiPublicExtensionCustomerDealRoute: typeof ApiPublicExtensionCustomerDealRoute
   ApiPublicExtensionCustomerProfileRoute: typeof ApiPublicExtensionCustomerProfileRoute
   ApiPublicExtensionCustomersRoute: typeof ApiPublicExtensionCustomersRouteWithChildren
+  ApiPublicExtensionDentalChartRoute: typeof ApiPublicExtensionDentalChartRoute
   ApiPublicExtensionFunnelCardsRoute: typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   ApiPublicExtensionFunnelFollowupReportRoute: typeof ApiPublicExtensionFunnelFollowupReportRoute
   ApiPublicExtensionFunnelFollowupRulesRoute: typeof ApiPublicExtensionFunnelFollowupRulesRouteWithChildren
@@ -1465,6 +1479,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/extension/customers'
       fullPath: '/api/public/extension/customers'
       preLoaderRoute: typeof ApiPublicExtensionCustomersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/dental-chart': {
+      id: '/api/public/extension/dental-chart'
+      path: '/api/public/extension/dental-chart'
+      fullPath: '/api/public/extension/dental-chart'
+      preLoaderRoute: typeof ApiPublicExtensionDentalChartRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/extension/funnel-cards': {
@@ -2133,6 +2154,7 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicExtensionCustomerProfileRoute,
   ApiPublicExtensionCustomersRoute:
     ApiPublicExtensionCustomersRouteWithChildren,
+  ApiPublicExtensionDentalChartRoute: ApiPublicExtensionDentalChartRoute,
   ApiPublicExtensionFunnelCardsRoute:
     ApiPublicExtensionFunnelCardsRouteWithChildren,
   ApiPublicExtensionFunnelFollowupReportRoute:

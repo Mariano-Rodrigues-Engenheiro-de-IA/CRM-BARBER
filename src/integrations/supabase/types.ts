@@ -811,6 +811,45 @@ export type Database = {
           },
         ]
       }
+      dental_charts: {
+        Row: {
+          barbershop_id: string
+          chart_data: Json
+          customer_id: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          barbershop_id: string
+          chart_data?: Json
+          customer_id: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          barbershop_id?: string
+          chart_data?: Json
+          customer_id?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dental_charts_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dental_charts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           address: string | null

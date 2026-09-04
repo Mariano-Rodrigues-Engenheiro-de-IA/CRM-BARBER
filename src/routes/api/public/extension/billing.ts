@@ -18,9 +18,18 @@ export const Route = createFileRoute("/api/public/extension/billing")({
         }
         const { getBillingStatus } = await import("@/lib/billing.server");
         const billing = await getBillingStatus(supabaseAdmin, auth.token.barbershop_id);
+        // Nicho da conta (barbearia, odontologia...) — aproveitando essa
+        // rota, que já é buscada uma vez no carregamento do painel, em vez
+        // de criar outra chamada só pra isso.
+        const { data: shop } = await supabaseAdmin
+          .from("barbershops")
+          .select("business_type")
+          .eq("id", auth.token.barbershop_id)
+          .maybeSingle();
         return jsonResponse(request, {
           ok: true,
           barbershop_id: auth.token.barbershop_id,
+          business_type: shop?.business_type ?? "barbearia",
           billing,
         });
       },
