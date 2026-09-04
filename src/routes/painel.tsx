@@ -871,7 +871,7 @@ function Painel() {
       </aside>
 
       {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-sidebar-border bg-sidebar text-sidebar-foreground px-4 py-3">
+      <div className="print:hidden md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-sidebar-border bg-sidebar text-sidebar-foreground px-4 py-3">
         <img src="/brand/zaylo-logo.png" alt="CRM Zaylo" className="h-7 w-auto object-contain" />
         <div className="flex gap-1 rounded-lg bg-sidebar-accent/40 p-1">
           {NAV_TOP.map((n) => (

@@ -43,6 +43,7 @@ export function PatientsView({
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [listOpen, setListOpen] = useState(true);
+  const [budgetOpen, setBudgetOpen] = useState(false);
 
   const active = customers.filter((c) => !c.archived_at);
   const q = query.trim().toLowerCase();
@@ -65,9 +66,9 @@ export function PatientsView({
 
   // Cabeçalho da seção (compartilhado com o resto do painel, mesmo
   // truque de portal que Funis já usa): quando tem paciente selecionado
-  // e a lista está fechada, mostra "Trocar paciente" + nome ali em
-  // cima, economizando a linha que tinha dentro do conteúdo — pedido
-  // explícito do Mariano, "some uma das abas".
+  // e a lista está fechada, mostra "Trocar paciente" + nome + o ícone
+  // de orçamento ali em cima, economizando a linha que tinha dentro do
+  // conteúdo — pedido explícito do Mariano, "some uma das abas".
   const header =
     selected && !listOpen ? (
       <div className="flex items-center gap-3">
@@ -83,6 +84,18 @@ export function PatientsView({
           Trocar paciente
         </button>
         <span className="truncate text-sm font-semibold text-neutral-950">{selected.name}</span>
+        <button
+          type="button"
+          onClick={() => setBudgetOpen(true)}
+          title="Histórico e orçamento"
+          className="flex shrink-0 items-center justify-center rounded-full p-1.5 text-emerald-600 hover:bg-emerald-50"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v10" />
+            <path d="M9.5 9.5c0-1.1 1.1-2 2.5-2s2.5.7 2.5 1.8-1.1 1.6-2.5 1.9c-1.5.3-2.5.8-2.5 1.9S10.9 15 12.3 15s2.5-.7 2.5-1.8" />
+          </svg>
+        </button>
       </div>
     ) : (
       <h1 className="truncate text-[15px] font-semibold text-neutral-900">Pacientes</h1>
@@ -92,7 +105,7 @@ export function PatientsView({
     <>
       {headerHost ? createPortal(header, headerHost) : null}
 
-      <div className={listOpen ? "flex gap-4 print:block" : "print:block"}>
+      <div className={(listOpen ? "flex gap-4 " : "") + "print:hidden"}>
         {listOpen && (
           <div className="w-72 shrink-0 space-y-3 print:hidden">
             <input
@@ -143,17 +156,45 @@ export function PatientsView({
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Anexos</h3>
                 <DentalAttachmentsTab api={api} customerId={selected.id} />
               </div>
-
-              <div className="rounded-xl border border-neutral-200 bg-white p-4">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 print:text-black">
-                  Histórico e orçamento de {selected.name}
-                </h3>
-                <DentalBudgetTab api={api} customerId={selected.id} />
-              </div>
             </div>
           )}
         </div>
       </div>
+
+      {budgetOpen && selected && (
+        <BudgetModal title={`Histórico e orçamento de ${selected.name}`} onClose={() => setBudgetOpen(false)}>
+          <DentalBudgetTab api={api} customerId={selected.id} />
+        </BudgetModal>
+      )}
     </>
+  );
+}
+
+/** Modal largo, de propósito — o orçamento tem duas colunas lado a
+ * lado (plano de tratamento + pagamentos), não cabe no modal estreito
+ * padrão do resto do sistema. Mesmo visual (fundo claro, cantos
+ * arredondados, entrada suave), só mais espaçoso. */
+function BudgetModal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div
+      className="print:static print:block fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/20 p-5"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="print:shadow-none print:max-w-none print:w-full my-8 w-full max-w-5xl rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center gap-2.5 border-b border-neutral-100 px-5 py-4 print:border-none">
+          <h3 className="flex-1 truncate text-base font-bold text-neutral-900">{title}</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="print:hidden flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-neutral-400 transition-colors hover:bg-neutral-100"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="px-5 py-4">{children}</div>
+      </div>
+    </div>
   );
 }
