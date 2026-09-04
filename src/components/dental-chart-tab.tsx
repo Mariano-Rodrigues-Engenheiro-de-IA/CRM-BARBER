@@ -105,9 +105,10 @@ function DentalChartInner({
 
   // Troca pontual: título "React Advanced Odontogram" vira o nome da
   // clínica, ícone da biblioteca vira a logo da clínica (se tiver uma
-  // configurada), e o subtítulo de configuração ("Em português. Usando
-  // a numeração FDI...") some. Só mexe nesses três pontos específicos,
-  // por texto/posição exata — nada de classe ou estrutura genérica.
+  // configurada), subtítulo de configuração some, e 3 dos 6 botõezinhos
+  // da barra de ferramentas (idioma, modo escuro, importar) somem —
+  // mantém tour, configurações e exportar. Só mexe nesses pontos
+  // específicos, por texto/posição exata — nada de classe genérica.
   useEffect(() => {
     const container = chartWrapRef.current;
     if (!container) return;
@@ -132,16 +133,15 @@ function DentalChartInner({
         }
         node = walker.nextNode();
       }
-      // Logo: o primeiro <svg> do container, antes do título no
-      // documento — o cabeçalho vem primeiro que qualquer desenho de
-      // dente, então é um jeito seguro de achar só o ícone da marca.
-      // Só tenta se ainda não trocou (idempotente) — sem essa guarda,
-      // uma passagem seguinte do observer podia achar outro <svg>
-      // qualquer (um dente de verdade) e escondê-lo por engano.
+
+      // Logo: procura só dentro do PAI do título (não o container
+      // inteiro) — assim não confunde com os ícones da barra de
+      // ferramentas, que ficam numa parte separada da tela.
       if (clinicLogo && titleEl && !container.querySelector('[data-crm-logo-img="1"]')) {
-        const firstSvg = container.querySelector("svg");
-        if (firstSvg && firstSvg.compareDocumentPosition(titleEl) & Node.DOCUMENT_POSITION_FOLLOWING) {
-          firstSvg.style.display = "none";
+        const scope = titleEl.parentElement?.parentElement ?? titleEl.parentElement;
+        const logoSvg = scope?.querySelector("svg");
+        if (logoSvg) {
+          logoSvg.style.display = "none";
           const img = document.createElement("img");
           img.src = clinicLogo;
           img.setAttribute("data-crm-logo-img", "1");
@@ -149,7 +149,43 @@ function DentalChartInner({
           img.style.height = "28px";
           img.style.objectFit = "contain";
           img.style.borderRadius = "6px";
-          firstSvg.parentElement?.insertBefore(img, firstSvg);
+          logoSvg.parentElement?.insertBefore(img, logoSvg);
+        }
+      }
+
+      // Barra de ferramentas: fileira de botõezinhos com um <svg> cada
+      // (tour, idioma, modo escuro, configurações, exportar, importar,
+      // nessa ordem, confirmado pelo print do Mariano). Some com o 2º
+      // (idioma), 3º (modo escuro) e 6º (importar) — mantém o resto.
+      if (!container.querySelector('[data-crm-toolbar-patched="1"]')) {
+        const iconButtons = Array.from(container.querySelectorAll("button")).filter(
+          (b) => b.querySelector("svg") && b.children.length === 1,
+        );
+        // Agrupa por proximidade: pega a maior sequência de botões-ícone
+        // que são irmãos diretos (mesmo pai) — essa é a barra de
+        // ferramentas de verdade, não um botão-ícone avulso em outro
+        // canto da tela.
+        const byParent = new Map<Element, HTMLButtonElement[]>();
+        for (const b of iconButtons) {
+          if (!b.parentElement) continue;
+          const list = byParent.get(b.parentElement) ?? [];
+          list.push(b);
+          byParent.set(b.parentElement, list);
+        }
+        let toolbar: HTMLButtonElement[] | null = null;
+        for (const list of byParent.values()) {
+          // Restrito a 5-8 — a barra de ferramentas tem 6 botões (visto
+          // no print). Sem esse teto, um grupo bem maior (os próprios
+          // dentes do desenho, se também forem <button> com um <svg>
+          // dentro) podia "ganhar" por ser o maior grupo, e a gente
+          // acabava escondendo dente de verdade em vez do botãozinho.
+          if (list.length >= 5 && list.length <= 8) toolbar = list;
+        }
+        if (toolbar && toolbar.length >= 6) {
+          toolbar[1].style.display = "none"; // idioma
+          toolbar[2].style.display = "none"; // modo escuro
+          toolbar[5].style.display = "none"; // importar
+          toolbar[0].setAttribute("data-crm-toolbar-patched", "1");
         }
       }
     }
