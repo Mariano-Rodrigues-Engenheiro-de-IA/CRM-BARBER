@@ -18,6 +18,7 @@ const signupSchema = z.object({
   name: z.string().trim().min(1).max(120),
   email: z.string().trim().email().max(255),
   phone: z.string().trim().min(8).max(20),
+  business_type: z.enum(["barbearia", "odontologia"]).default("barbearia"),
 });
 
 function normalizePhone(input: string): string {
@@ -138,6 +139,7 @@ export const Route = createFileRoute("/api/public/signup")({
             owner_name: name,
             owner_email: email,
             owner_phone: phone,
+            business_type: parsed.data.business_type,
           })
           .select("id")
           .single();

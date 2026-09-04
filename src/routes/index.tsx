@@ -33,6 +33,7 @@ const formSchema = z.object({
   name: z.string().trim().min(1, "Informe seu nome").max(120),
   email: z.string().trim().email("E-mail inválido").max(255),
   phone: z.string().trim().min(8, "Telefone inválido").max(20),
+  business_type: z.enum(["barbearia", "odontologia"]),
 });
 
 const DORES = [
@@ -121,7 +122,7 @@ const FAQ = [
 
 function Landing() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: "", email: "", phone: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", business_type: "barbearia" as "barbearia" | "odontologia" });
   const [loading, setLoading] = useState(false);
 
   function scrollToForm() {
@@ -327,6 +328,20 @@ function Landing() {
             Preencha seus dados para liberar a instalação da extensão. Leva menos de um minuto.
           </p>
           <form onSubmit={onSubmit} className="mt-6 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="business_type">Tipo de negócio</Label>
+              <select
+                id="business_type"
+                value={form.business_type}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, business_type: e.target.value as "barbearia" | "odontologia" }))
+                }
+                className="flex h-10 w-full rounded-md border border-white/20 bg-[#0a1120] px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="barbearia">Barbearia / negócio de serviços</option>
+                <option value="odontologia">Clínica odontológica</option>
+              </select>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="name">Nome</Label>
               <Input
