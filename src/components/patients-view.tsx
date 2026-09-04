@@ -130,13 +130,14 @@ export function PatientsView({
           type="button"
           onClick={() => setNotesOpen(true)}
           title="Observações do paciente"
-          className="flex shrink-0 items-center justify-center rounded-full p-1.5 text-neutral-500 hover:bg-neutral-100"
+          className="flex shrink-0 items-center justify-center rounded-full p-1.5 text-blue-600 hover:bg-blue-50"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M4 4h11l5 5v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" />
-            <path d="M15 4v5h5" />
-            <path d="M8 13h6" />
-            <path d="M8 17h4" />
+            <path d="M6 3h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
+            <path d="M15 3v5h5" />
+            <path d="M8 12.5h5" />
+            <path d="M8 16h3.5" />
+            <path d="M15.5 15.5 19 12l1.5 1.5-3.5 3.5H15.5v-1.5Z" fill="currentColor" stroke="none" />
           </svg>
         </button>
       </div>

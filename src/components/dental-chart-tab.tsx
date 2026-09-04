@@ -129,7 +129,7 @@ function DentalChartInner({
         !!container?.querySelector('[data-crm-title="1"]') &&
         !!container?.querySelector('[data-crm-toolbar-patched="1"]') &&
         !!container?.querySelector('[data-crm-perio-hidden="1"]') &&
-        !!container?.querySelector('[data-crm-odontograma-tab-hidden="1"]') &&
+        !!container?.querySelector('[data-crm-odontograma-tab-fixed="1"]') &&
         // Se não tem logo pra trocar, essa parte não conta — só exige
         // que a logo já tenha sido trocada quando tem uma configurada.
         (!clinicLogo || !!container?.querySelector('[data-crm-logo-img="1"]'))
@@ -209,23 +209,22 @@ function DentalChartInner({
         }
       }
 
-      // Botão "Odontograma": era a outra metade do mesmo par de abas
-      // (Odontograma | Estado periodontal). Escondendo a periodontal,
-      // sobrou um alternador com uma opção só — inútil, só ocupando
-      // espaço. Mesma técnica: busca o texto exato, esconde.
-      if (!container.querySelector('[data-crm-odontograma-tab-hidden="1"]')) {
-        const odontoText = "Odontograma";
+      // Aba "Odontogram" (a outra metade do par com "Estado
+      // periodontal"): a biblioteca deixou essa palavra sem traduzir
+      // pro português — falta o "a" final (mostra "Odontogram", não
+      // "Odontograma"). Pedido do Mariano: não precisa esconder, só
+      // corrigir a palavra. Deixa ali como um marcador colorido, sem
+      // função de trocar de aba nenhuma (só tem odontograma mesmo).
+      if (!container.querySelector('[data-crm-odontograma-tab-fixed="1"]')) {
+        const wrongText = "Odontogram";
         const walker3 = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT);
         let node3 = walker3.nextNode();
         while (node3) {
           const el = node3 as HTMLElement;
-          if (el.children.length === 0 && el.textContent?.trim() === odontoText) {
-            const clickable = el.closest("button, [role='tab'], [role='button']");
-            if (clickable) {
-              (clickable as HTMLElement).style.display = "none";
-              (clickable as HTMLElement).setAttribute("data-crm-odontograma-tab-hidden", "1");
-              break;
-            }
+          if (el.children.length === 0 && el.textContent?.trim() === wrongText) {
+            el.textContent = "Odontograma";
+            el.setAttribute("data-crm-odontograma-tab-fixed", "1");
+            break;
           }
           node3 = walker3.nextNode();
         }
