@@ -4,17 +4,17 @@ import { useState } from "react";
 export const Route = createFileRoute("/baixar")({
   head: () => ({
     meta: [
-      { title: "Baixar pacote da extensão v0.42.2 | CRM Zaylo" },
+      { title: "Baixar pacote da extensão | CRM Zaylo" },
       {
         name: "description",
         content:
-          "Download direto do pacote .zip da extensão Zaylo CRM v0.42.2, pronto para upload no Chrome Web Store Developer Dashboard.",
+          "Download direto do pacote .zip mais recente da extensão Zaylo CRM, pronto para upload no Chrome Web Store Developer Dashboard.",
       },
-      { property: "og:title", content: "Baixar pacote da extensão v0.42.2" },
+      { property: "og:title", content: "Baixar pacote da extensão" },
       {
         property: "og:description",
         content:
-          "Pacote .zip da extensão Zaylo CRM pronto para upload na Chrome Web Store.",
+          "Pacote .zip mais recente da extensão Zaylo CRM pronto para upload na Chrome Web Store.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -23,15 +23,20 @@ export const Route = createFileRoute("/baixar")({
   component: BaixarPage,
 });
 
-const VERSION = "0.42.2";
-const FILE = "/zaylo-crm-v0.42.2.zip";
+// Nome de arquivo ESTÁVEL de propósito — sem número de versão no nome.
+// Antes disso, a versão vinha fixa em código (VERSION/FILE hardcoded) e
+// cada atualização da extensão exigia lembrar de editar essa página
+// junto; esquecer isso foi exatamente o motivo de ficar meses servindo
+// o pacote antigo sem ninguém perceber. Agora só troca o CONTEÚDO do
+// arquivo (mesmo nome, sempre), essa página nunca mais precisa mudar.
+const FILE = "/zaylo-crm-latest.zip";
 
 function BaixarPage() {
   const [status, setStatus] = useState<string | null>(null);
 
   const download = () => {
     setStatus("Preparando download...");
-    fetch(`${FILE}?v=${VERSION}&t=${Date.now()}`)
+    fetch(`${FILE}?t=${Date.now()}`)
       .then((res) => {
         if (!res.ok) throw new Error(`Falha no download: ${res.status}`);
         return res.blob();
@@ -39,10 +44,10 @@ function BaixarPage() {
       .then((blob) => {
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `zaylo-crm-v0.42.2.zip`;
+        a.download = "zaylo-crm-latest.zip";
         a.click();
         URL.revokeObjectURL(a.href);
-        setStatus("Download iniciado.");
+        setStatus("Download iniciado. Confira a versão dentro de manifest.json depois de descompactar, pra ter certeza que é a mais nova.");
       })
       .catch((err: Error) => setStatus(err.message));
   };
@@ -55,7 +60,7 @@ function BaixarPage() {
             Pacote da extensão
           </p>
           <h1 className="text-3xl font-medium">
-            Zaylo CRM v{VERSION}
+            Zaylo CRM (versão mais recente)
           </h1>
           <p className="text-sm text-muted-foreground">
             Arquivo .zip pronto para envio no Chrome Web Store Developer
@@ -69,7 +74,7 @@ function BaixarPage() {
           onClick={download}
           className="w-full rounded-md bg-primary px-6 py-4 text-sm font-medium text-primary-foreground transition hover:opacity-90"
         >
-          Baixar zaylo-crm-v0.42.2.zip
+          Baixar zaylo-crm-latest.zip
         </button>
 
         {status && (

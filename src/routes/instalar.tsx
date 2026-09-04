@@ -28,28 +28,20 @@ export const Route = createFileRoute("/instalar")({
 });
 
 // Fetch+blob evita a auth do preview em links diretos pra /public.
+// Nome de arquivo ESTÁVEL — mesmo motivo do /baixar: sem número de
+// versão no nome, pra nunca mais ficar servindo pacote antigo sem
+// ninguém perceber.
 function downloadZip() {
-  const version = Date.now();
-  const urls = [
-    `/zaylo-crm-v0.42.2.zip?v=${version}`,
-    `/crm-assinaturas-extension.zip?v=${version}`,
-  ];
-  urls
-    .reduce<Promise<Response>>(
-      (prev, url) =>
-        prev.catch(() =>
-          fetch(url, { cache: "no-store" }).then((res) => {
-            if (!res.ok) throw new Error(`Falha ao baixar: ${res.status}`);
-            return res;
-          }),
-        ),
-      Promise.reject(new Error("Iniciando download")),
-    )
-    .then((res) => res.blob())
+  const url = `/zaylo-crm-latest.zip?t=${Date.now()}`;
+  fetch(url, { cache: "no-store" })
+    .then((res) => {
+      if (!res.ok) throw new Error(`Falha ao baixar: ${res.status}`);
+      return res.blob();
+    })
     .then((blob) => {
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = "zaylo-crm-v0.42.2.zip";
+      a.download = "zaylo-crm-latest.zip";
       a.click();
       URL.revokeObjectURL(a.href);
     })
@@ -95,12 +87,11 @@ function Install() {
                 className="w-full bg-brand font-bold text-white hover:bg-brand-strong"
                 onClick={downloadZip}
               >
-                Baixar extensão v0.36.4 (.zip)
+                Baixar extensão (.zip)
               </Button>
               <p className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
                 Importante: remova a versão anterior em{" "}
                 <code className="rounded bg-neutral-800 px-1">chrome://extensions</code> antes de instalar.
-                A versão precisa aparecer como <strong>0.36.4</strong>.
               </p>
               <ol className="list-decimal space-y-2 pl-5 text-sm text-neutral-400">
                 <li>Descompacte o arquivo baixado em uma pasta.</li>
