@@ -63,6 +63,8 @@ function DentalChartInner({
   const [savedJustNow, setSavedJustNow] = useState(false);
   const mountedRef = useRef(true);
 
+  const chartWrapRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     mountedRef.current = true;
     setReady(false);
@@ -100,6 +102,36 @@ function DentalChartInner({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerId]);
+
+  // Troca pontual de texto: o título "React Advanced Odontogram" (nome
+  // da biblioteca em inglês) vira o nome da clínica. Não mexe em mais
+  // nada — só observa o texto exato desse título e substitui quando
+  // aparece (a biblioteca desenha isso de forma assíncrona, por isso o
+  // MutationObserver em vez de mexer só uma vez no efeito).
+  useEffect(() => {
+    const container = chartWrapRef.current;
+    if (!container) return;
+    const targetText = "React Advanced Odontogram";
+    const replacement = clinicName?.trim() || "Odontograma";
+
+    function patch() {
+      if (!container) return;
+      const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT);
+      let node = walker.nextNode();
+      while (node) {
+        const el = node as HTMLElement;
+        if (el.children.length === 0 && el.textContent?.trim() === targetText) {
+          el.textContent = replacement;
+        }
+        node = walker.nextNode();
+      }
+    }
+
+    patch();
+    const observer = new MutationObserver(patch);
+    observer.observe(container, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
+  }, [clinicName]);
 
   async function handleSave() {
     setSaving(true);
@@ -145,13 +177,7 @@ function DentalChartInner({
 
       {err && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{err}</div>}
 
-      <div className="relative overflow-x-auto rounded-xl border border-neutral-200 bg-white p-2">
-        {(clinicName || clinicLogo) && (
-          <div className="mb-2 flex items-center gap-2 border-b border-neutral-100 px-1 pb-2">
-            {clinicLogo && <img src={clinicLogo} alt="" className="h-6 w-6 shrink-0 rounded object-contain" />}
-            {clinicName && <span className="truncate text-sm font-semibold text-neutral-800">{clinicName}</span>}
-          </div>
-        )}
+      <div ref={chartWrapRef} className="relative overflow-x-auto rounded-xl border border-neutral-200 bg-white p-2">
         {!ready && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 text-sm text-neutral-400">
             Carregando...
