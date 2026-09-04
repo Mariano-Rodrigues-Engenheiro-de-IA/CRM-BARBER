@@ -140,6 +140,10 @@
   let status = { paired: false };
   let funnels = [];
   let billing = null;
+  // Nicho da conta ("barbearia", "odontologia"...) — vem junto na mesma
+  // chamada de billing (sem pedido novo). Controla texto/ícone/aba
+  // aparecendo diferente pra clínica, sem mexer em nada pra barbearia.
+  let businessType = "barbearia";
   let waData = { labels: [], contacts: [] };
   let quickReplies = [];
   let quickReplyCategories = [];
@@ -287,6 +291,27 @@
     topbarFilter = localStorage.getItem("crm-topbar-filter") || "tabs";
   } catch {}
 
+  /** Ajusta o trilho de ícones pro nicho da conta — esconde o que é só
+   * de barbearia (Assinaturas, Ranking de vendas) e mostra o que é de
+   * clínica (Pacientes, Follow-up) quando business_type = odontologia.
+   * Chamada na montagem inicial (com o valor padrão "barbearia", então
+   * ninguém vê diferença até o billing carregar) e de novo assim que
+   * loadBilling() souber o nicho de verdade. */
+  function applyNicheToRail() {
+    if (!railRef) return;
+    const isOdonto = businessType === "odontologia";
+    const barbeariaOnly = ["assinantes", "equipe"];
+    const clinicaOnly = ["pacientes", "follow-up"];
+    for (const key of barbeariaOnly) {
+      const btn = railRef.querySelector(`[data-go="${key}"]`);
+      if (btn) btn.style.display = isOdonto ? "none" : "";
+    }
+    for (const key of clinicaOnly) {
+      const btn = railRef.querySelector(`[data-go="${key}"]`);
+      if (btn) btn.style.display = isOdonto ? "" : "none";
+    }
+  }
+
   function buildShell() {
     const rail = document.createElement("div");
     rail.id = "crm-rail";
@@ -297,6 +322,8 @@
       <button class="crm-rail-btn" data-go="disparo" data-label="Disparo">${ICONS.send}</button>
       <button class="crm-rail-btn" data-go="assinantes" data-label="Assinaturas">${ICONS.badge}</button>
       <button class="crm-rail-btn" data-go="equipe" data-label="Ranking de vendas">${ICONS.ranking}</button>
+      <button class="crm-rail-btn" data-go="pacientes" data-label="Pacientes" style="display:none">${ICONS.account}</button>
+      <button class="crm-rail-btn" data-go="follow-up" data-label="Follow-up" style="display:none">${ICONS.clock}</button>
       <button class="crm-rail-btn" data-go="agente-ia" data-label="Agente de IA">${ICONS.robot}</button>
       <button class="crm-rail-btn" data-go="treinamento" data-label="Treinamentos">${ICONS.cap}</button>
       <button class="crm-rail-btn" data-go="conexao" data-label="Conexão">${ICONS.link}</button>
@@ -307,6 +334,7 @@
     `;
     document.body.appendChild(rail);
     railRef = rail;
+    applyNicheToRail();
 
     const topbar = document.createElement("div");
     topbar.id = "crm-topbar";
@@ -461,7 +489,7 @@
   function panelSwitcherHtml(activeKind) {
     const items = [
       { kind: "qr", icon: BOLT_SVG, label: "Respostas rápidas" },
-      { kind: "profile", icon: PROFILE_SVG, label: "Perfil do cliente" },
+      { kind: "profile", icon: PROFILE_SVG, label: businessType === "odontologia" ? "Perfil do paciente" : "Perfil do cliente" },
     ];
     return `<div class="crm-qrp-switcher">
       ${items
@@ -1373,6 +1401,8 @@
       .catch(() => null);
     if (r?.ok) {
       billing = r.billing || null;
+      businessType = r.business_type || "barbearia";
+      applyNicheToRail();
       renderTopbar();
     }
   }
@@ -2463,7 +2493,7 @@
     profileBtn.id = PROFILE_BTN_ID;
     profileBtn.className = "crm-chat-btn crm-chat-btn-icon";
     profileBtn.type = "button";
-    profileBtn.setAttribute("data-label", "Perfil do cliente");
+    profileBtn.setAttribute("data-label", businessType === "odontologia" ? "Perfil do paciente" : "Perfil do cliente");
     profileBtn.innerHTML = PROFILE_SVG;
     profileBtn.addEventListener("mouseenter", prewarmEngine);
     profileBtn.addEventListener("click", (e) => {
@@ -3278,7 +3308,7 @@
   async function renderProfilePanel(panel) {
     const kind = "profile";
     const mySeq = ++profileRenderSeq;
-    panel.innerHTML = `<div class="crm-qrp-head"><div class="crm-qr-mark">${PROFILE_SVG}</div><p class="crm-qrp-title">Perfil do cliente</p><button class="crm-qrp-close" data-close title="Fechar">&times;</button></div>${panelSwitcherHtml(kind)}<div class="crm-qrp-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
+    panel.innerHTML = `<div class="crm-qrp-head"><div class="crm-qr-mark">${PROFILE_SVG}</div><p class="crm-qrp-title">${businessType === "odontologia" ? "Perfil do paciente" : "Perfil do cliente"}</p><button class="crm-qrp-close" data-close title="Fechar">&times;</button></div>${panelSwitcherHtml(kind)}<div class="crm-qrp-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
     // Handler temporário, só pra enquanto os dados carregam (fechar/trocar
     // de aba). O de verdade — que também cobre o botão "Salvar perfil" —
     // é montado mais abaixo, depois que o conteúdo real existe; ACHADO DO
