@@ -133,6 +133,7 @@ function DentalChartInner({
         }
         node = walker.nextNode();
       }
+      console.info("[CRM odontograma] título encontrado/marcado?", !!titleEl, "clinicLogo veio preenchido?", !!clinicLogo);
 
       // Logo: procura só dentro do PAI do título (não o container
       // inteiro) — assim não confunde com os ícones da barra de
@@ -140,6 +141,7 @@ function DentalChartInner({
       if (clinicLogo && titleEl && !container.querySelector('[data-crm-logo-img="1"]')) {
         const scope = titleEl.parentElement?.parentElement ?? titleEl.parentElement;
         const logoSvg = scope?.querySelector("svg");
+        console.info("[CRM odontograma] tentando trocar logo. scope achado?", !!scope, "svg achado dentro do scope?", !!logoSvg);
         if (logoSvg) {
           logoSvg.style.display = "none";
           const img = document.createElement("img");
@@ -150,7 +152,10 @@ function DentalChartInner({
           img.style.objectFit = "contain";
           img.style.borderRadius = "6px";
           logoSvg.parentElement?.insertBefore(img, logoSvg);
+          console.info("[CRM odontograma] logo trocada com sucesso");
         }
+      } else if (!clinicLogo) {
+        console.info("[CRM odontograma] sem logo configurada nesse navegador (clinicLogo vazio). Não tenta trocar.");
       }
 
       // Barra de ferramentas: fileira de botõezinhos com um <svg> cada
@@ -161,6 +166,7 @@ function DentalChartInner({
         const iconButtons = Array.from(container.querySelectorAll("button")).filter(
           (b) => b.querySelector("svg") && b.children.length === 1,
         );
+        console.info("[CRM odontograma] total de botões com 1 ícone dentro encontrados:", iconButtons.length);
         // Agrupa por proximidade: pega a maior sequência de botões-ícone
         // que são irmãos diretos (mesmo pai) — essa é a barra de
         // ferramentas de verdade, não um botão-ícone avulso em outro
@@ -172,6 +178,10 @@ function DentalChartInner({
           list.push(b);
           byParent.set(b.parentElement, list);
         }
+        console.info(
+          "[CRM odontograma] grupos de botões por pai em comum (tamanho de cada grupo):",
+          Array.from(byParent.values()).map((l) => l.length),
+        );
         let toolbar: HTMLButtonElement[] | null = null;
         for (const list of byParent.values()) {
           // Restrito a 5-8 — a barra de ferramentas tem 6 botões (visto
@@ -181,6 +191,7 @@ function DentalChartInner({
           // acabava escondendo dente de verdade em vez do botãozinho.
           if (list.length >= 5 && list.length <= 8) toolbar = list;
         }
+        console.info("[CRM odontograma] barra de ferramentas identificada? tamanho:", toolbar?.length ?? "nenhuma achada");
         if (toolbar && toolbar.length >= 6) {
           toolbar[1].style.display = "none"; // idioma
           toolbar[2].style.display = "none"; // modo escuro
