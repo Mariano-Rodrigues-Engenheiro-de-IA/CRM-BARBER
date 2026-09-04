@@ -158,45 +158,45 @@ function DentalChartInner({
         console.info("[CRM odontograma] sem logo configurada nesse navegador (clinicLogo vazio). Não tenta trocar.");
       }
 
-      // Barra de ferramentas: fileira de botõezinhos com um <svg> cada
-      // (tour, idioma, modo escuro, configurações, exportar, importar,
-      // nessa ordem, confirmado pelo print do Mariano). Some com o 2º
-      // (idioma), 3º (modo escuro) e 6º (importar) — mantém o resto.
+      // Barra de ferramentas: em vez de tentar achar pela posição/grupo
+      // de botões vizinhos (não deu certo — a estrutura real não tem
+      // os 6 juntos num pai só, testado e confirmado), busca cada
+      // botão pelo texto exato do rótulo dele (title ou aria-label),
+      // que é o mesmo texto em português confirmado dentro do próprio
+      // código da biblioteca ("Idioma", "Modo escuro", "Importar").
       if (!container.querySelector('[data-crm-toolbar-patched="1"]')) {
-        const iconButtons = Array.from(container.querySelectorAll("button")).filter(
-          (b) => b.querySelector("svg") && b.children.length === 1,
-        );
-        console.info("[CRM odontograma] total de botões com 1 ícone dentro encontrados:", iconButtons.length);
-        // Agrupa por proximidade: pega a maior sequência de botões-ícone
-        // que são irmãos diretos (mesmo pai) — essa é a barra de
-        // ferramentas de verdade, não um botão-ícone avulso em outro
-        // canto da tela.
-        const byParent = new Map<Element, HTMLButtonElement[]>();
+        const iconButtons = Array.from(container.querySelectorAll("button")).filter((b) => b.querySelector("svg"));
+        const labelsToHide = ["Idioma", "Modo escuro", "Importar"];
+        let hiddenCount = 0;
         for (const b of iconButtons) {
-          if (!b.parentElement) continue;
-          const list = byParent.get(b.parentElement) ?? [];
-          list.push(b);
-          byParent.set(b.parentElement, list);
+          const label = (b.getAttribute("title") || b.getAttribute("aria-label") || "").trim();
+          if (labelsToHide.includes(label)) {
+            b.style.display = "none";
+            hiddenCount++;
+          }
         }
         console.info(
-          "[CRM odontograma] grupos de botões por pai em comum (tamanho de cada grupo):",
-          Array.from(byParent.values()).map((l) => l.length),
+          "[CRM odontograma] botões com ícone encontrados:",
+          iconButtons.length,
+          ". Escondidos pelo rótulo (Idioma/Modo escuro/Importar):",
+          hiddenCount,
         );
-        let toolbar: HTMLButtonElement[] | null = null;
-        for (const list of byParent.values()) {
-          // Restrito a 5-8 — a barra de ferramentas tem 6 botões (visto
-          // no print). Sem esse teto, um grupo bem maior (os próprios
-          // dentes do desenho, se também forem <button> com um <svg>
-          // dentro) podia "ganhar" por ser o maior grupo, e a gente
-          // acabava escondendo dente de verdade em vez do botãozinho.
-          if (list.length >= 5 && list.length <= 8) toolbar = list;
-        }
-        console.info("[CRM odontograma] barra de ferramentas identificada? tamanho:", toolbar?.length ?? "nenhuma achada");
-        if (toolbar && toolbar.length >= 6) {
-          toolbar[1].style.display = "none"; // idioma
-          toolbar[2].style.display = "none"; // modo escuro
-          toolbar[5].style.display = "none"; // importar
-          toolbar[0].setAttribute("data-crm-toolbar-patched", "1");
+        // Diagnóstico de reforço: se nada foi escondido pelo rótulo, é
+        // porque o atributo não é title/aria-label — lista o que cada
+        // botão realmente tem, pra eu conseguir mirar certo na próxima.
+        if (hiddenCount === 0) {
+          console.info(
+            "[CRM odontograma] nenhum bateu por rótulo. Detalhe de cada botão encontrado:",
+            iconButtons.map((b, i) => ({
+              indice: i,
+              title: b.getAttribute("title"),
+              ariaLabel: b.getAttribute("aria-label"),
+              texto: b.textContent?.trim().slice(0, 30),
+              html: b.outerHTML.slice(0, 150),
+            })),
+          );
+        } else {
+          container.querySelector("button")?.setAttribute("data-crm-toolbar-patched", "1");
         }
       }
     }
