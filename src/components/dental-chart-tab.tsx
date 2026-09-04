@@ -169,6 +169,16 @@ function DentalChartInner({
         const scope = titleEl.parentElement?.parentElement ?? titleEl.parentElement;
         const logoSvg = scope?.querySelector("svg");
         console.info("[CRM odontograma] tentando trocar logo. scope achado?", !!scope, "svg achado dentro do scope?", !!logoSvg);
+        if (!logoSvg && scope) {
+          // Não achou svg — mostra o HTML de verdade dessa área (e um
+          // pouco mais pra cima também) pra eu ver a estrutura real em
+          // vez de continuar tentando adivinhar.
+          console.info("[CRM odontograma] HTML do scope (sem svg dentro):", scope.outerHTML.slice(0, 800));
+          console.info(
+            "[CRM odontograma] HTML um nível acima do scope:",
+            scope.parentElement?.outerHTML.slice(0, 1000) ?? "(sem pai)",
+          );
+        }
         if (logoSvg) {
           logoSvg.style.display = "none";
           const img = document.createElement("img");
