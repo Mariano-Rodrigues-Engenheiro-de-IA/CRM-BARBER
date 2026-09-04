@@ -410,7 +410,7 @@ function SectionHeader({
   right?: React.ReactNode;
 }) {
   return (
-    <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
+    <header className="print:hidden sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
       <div className="flex items-center gap-3 px-5 py-3">
         <div className="flex min-w-0 flex-1 items-baseline gap-1.5">
           <h1 className="truncate text-[15px] font-semibold text-neutral-900">{title}</h1>
@@ -740,7 +740,7 @@ function Painel() {
          nenhum contêiner de rolagem independente, então a página inteira
          rolava e a barra lateral "subia" junto, dando sensação de site
          quebrado). */}
-      <aside className={"hidden md:flex h-full shrink-0 flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-200 " + (sidebarCollapsed ? "w-[68px]" : "w-64")}>
+      <aside className={"print:hidden hidden md:flex h-full shrink-0 flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-200 " + (sidebarCollapsed ? "w-[68px]" : "w-64")}>
         <div className={"flex pt-5 pb-4 " + (sidebarCollapsed ? "flex-col items-center gap-2 px-2" : "items-center justify-between pl-6 pr-3")}>
           <div className={"relative flex h-9 shrink-0 items-center transition-[width] duration-200 " + (sidebarCollapsed ? "w-9 justify-center" : "w-36 justify-start")}>
             {/* Ambas as imagens ficam sempre montadas (já pré-carregadas) e alternam

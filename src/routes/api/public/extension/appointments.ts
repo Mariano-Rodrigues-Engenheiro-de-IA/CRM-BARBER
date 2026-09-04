@@ -31,6 +31,7 @@ export const Route = createFileRoute("/api/public/extension/appointments")({
         const url = new URL(request.url);
         const from = url.searchParams.get("from");
         const to = url.searchParams.get("to");
+        const customerId = url.searchParams.get("customer_id");
 
         let query = supabaseAdmin
           .from("appointments")
@@ -42,6 +43,7 @@ export const Route = createFileRoute("/api/public/extension/appointments")({
           .order("scheduled_at", { ascending: true });
         if (from) query = query.gte("scheduled_at", from);
         if (to) query = query.lt("scheduled_at", to);
+        if (customerId) query = query.eq("customer_id", customerId);
 
         const { data, error } = await query;
         if (error) {

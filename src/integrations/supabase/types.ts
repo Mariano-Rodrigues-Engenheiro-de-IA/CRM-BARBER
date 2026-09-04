@@ -811,6 +811,73 @@ export type Database = {
           },
         ]
       }
+      dental_procedures: {
+        Row: {
+          appointment_id: string | null
+          barbershop_id: string
+          created_at: string
+          customer_id: string
+          id: string
+          notes: string | null
+          paid: boolean
+          performed_at: string
+          price_cents: number
+          procedure_type: string
+          tooth_number: number | null
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          barbershop_id: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          notes?: string | null
+          paid?: boolean
+          performed_at?: string
+          price_cents?: number
+          procedure_type: string
+          tooth_number?: number | null
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          barbershop_id?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          notes?: string | null
+          paid?: boolean
+          performed_at?: string
+          price_cents?: number
+          procedure_type?: string
+          tooth_number?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dental_procedures_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dental_procedures_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dental_procedures_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dental_charts: {
         Row: {
           barbershop_id: string
