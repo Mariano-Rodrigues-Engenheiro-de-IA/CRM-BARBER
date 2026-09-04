@@ -14,6 +14,7 @@ import { Route as AssinarRouteImport } from './routes/assinar'
 import { Route as BaixarRouteImport } from './routes/baixar'
 import { Route as InstalarRouteImport } from './routes/instalar'
 import { Route as LinkRouteImport } from './routes/link'
+import { Route as OdontologiaRouteImport } from './routes/odontologia'
 import { Route as PainelRouteImport } from './routes/painel'
 import { Route as PoliticasRouteImport } from './routes/politicas'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
@@ -126,6 +127,11 @@ const InstalarRoute = InstalarRouteImport.update({
 const LinkRoute = LinkRouteImport.update({
   id: '/link',
   path: '/link',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OdontologiaRoute = OdontologiaRouteImport.update({
+  id: '/odontologia',
+  path: '/odontologia',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PainelRoute = PainelRouteImport.update({
@@ -645,6 +651,7 @@ export interface FileRoutesByFullPath {
   '/baixar': typeof BaixarRoute
   '/instalar': typeof InstalarRoute
   '/link': typeof LinkRoute
+  '/odontologia': typeof OdontologiaRoute
   '/painel': typeof PainelRoute
   '/politicas': typeof PoliticasRoute
   '/admin/clients': typeof AdminClientsRoute
@@ -740,6 +747,7 @@ export interface FileRoutesByTo {
   '/baixar': typeof BaixarRoute
   '/instalar': typeof InstalarRoute
   '/link': typeof LinkRoute
+  '/odontologia': typeof OdontologiaRoute
   '/painel': typeof PainelRoute
   '/politicas': typeof PoliticasRoute
   '/admin/clients': typeof AdminClientsRoute
@@ -836,6 +844,7 @@ export interface FileRoutesById {
   '/baixar': typeof BaixarRoute
   '/instalar': typeof InstalarRoute
   '/link': typeof LinkRoute
+  '/odontologia': typeof OdontologiaRoute
   '/painel': typeof PainelRoute
   '/politicas': typeof PoliticasRoute
   '/admin/clients': typeof AdminClientsRoute
@@ -933,6 +942,7 @@ export interface FileRouteTypes {
     | '/baixar'
     | '/instalar'
     | '/link'
+    | '/odontologia'
     | '/painel'
     | '/politicas'
     | '/admin/clients'
@@ -1028,6 +1038,7 @@ export interface FileRouteTypes {
     | '/baixar'
     | '/instalar'
     | '/link'
+    | '/odontologia'
     | '/painel'
     | '/politicas'
     | '/admin/clients'
@@ -1123,6 +1134,7 @@ export interface FileRouteTypes {
     | '/baixar'
     | '/instalar'
     | '/link'
+    | '/odontologia'
     | '/painel'
     | '/politicas'
     | '/admin/clients'
@@ -1219,6 +1231,7 @@ export interface RootRouteChildren {
   BaixarRoute: typeof BaixarRoute
   InstalarRoute: typeof InstalarRoute
   LinkRoute: typeof LinkRoute
+  OdontologiaRoute: typeof OdontologiaRoute
   PainelRoute: typeof PainelRoute
   PoliticasRoute: typeof PoliticasRoute
   AdminClientsRoute: typeof AdminClientsRoute
@@ -1323,6 +1336,13 @@ declare module '@tanstack/react-router' {
       path: '/link'
       fullPath: '/link'
       preLoaderRoute: typeof LinkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/odontologia': {
+      id: '/odontologia'
+      path: '/odontologia'
+      fullPath: '/odontologia'
+      preLoaderRoute: typeof OdontologiaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/painel': {
@@ -2230,6 +2250,7 @@ const rootRouteChildren: RootRouteChildren = {
   BaixarRoute: BaixarRoute,
   InstalarRoute: InstalarRoute,
   LinkRoute: LinkRoute,
+  OdontologiaRoute: OdontologiaRoute,
   PainelRoute: PainelRoute,
   PoliticasRoute: PoliticasRoute,
   AdminClientsRoute: AdminClientsRoute,
