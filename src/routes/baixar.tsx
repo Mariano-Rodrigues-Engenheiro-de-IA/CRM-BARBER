@@ -1,16 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+// Importa o manifest.json DE VERDADE da extensão — não um número
+// digitado à mão. Assim, sempre que a versão mudar em extension/manifest.json,
+// essa página reflete sozinha no próximo build, sem precisar lembrar de
+// editar nada aqui (foi exatamente esquecer isso que causou o pacote
+// ficar travado em 0.42.2 por meses).
+import manifest from "../../extension/manifest.json";
+
+const EXTENSION_VERSION = manifest.version;
 
 export const Route = createFileRoute("/baixar")({
   head: () => ({
     meta: [
-      { title: "Baixar pacote da extensão | CRM Zaylo" },
+      { title: `Baixar pacote da extensão v${EXTENSION_VERSION} | CRM Zaylo` },
       {
         name: "description",
         content:
           "Download direto do pacote .zip mais recente da extensão Zaylo CRM, pronto para upload no Chrome Web Store Developer Dashboard.",
       },
-      { property: "og:title", content: "Baixar pacote da extensão" },
+      { property: "og:title", content: `Baixar pacote da extensão v${EXTENSION_VERSION}` },
       {
         property: "og:description",
         content:
@@ -44,10 +52,10 @@ function BaixarPage() {
       .then((blob) => {
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = "zaylo-crm-latest.zip";
+        a.download = `zaylo-crm-v${EXTENSION_VERSION}.zip`;
         a.click();
         URL.revokeObjectURL(a.href);
-        setStatus("Download iniciado. Confira a versão dentro de manifest.json depois de descompactar, pra ter certeza que é a mais nova.");
+        setStatus(`Download iniciado. Versão ${EXTENSION_VERSION}.`);
       })
       .catch((err: Error) => setStatus(err.message));
   };
@@ -60,7 +68,7 @@ function BaixarPage() {
             Pacote da extensão
           </p>
           <h1 className="text-3xl font-medium">
-            Zaylo CRM (versão mais recente)
+            Zaylo CRM v{EXTENSION_VERSION}
           </h1>
           <p className="text-sm text-muted-foreground">
             Arquivo .zip pronto para envio no Chrome Web Store Developer
@@ -74,7 +82,7 @@ function BaixarPage() {
           onClick={download}
           className="w-full rounded-md bg-primary px-6 py-4 text-sm font-medium text-primary-foreground transition hover:opacity-90"
         >
-          Baixar zaylo-crm-latest.zip
+          Baixar zaylo-crm-v{EXTENSION_VERSION}.zip
         </button>
 
         {status && (
