@@ -156,40 +156,15 @@ function DentalChartInner({
         node = walker.nextNode();
       }
 
-      // Logo: procura só dentro do PAI do título (não o container
-      // inteiro) — assim não confunde com os ícones da barra de
-      // ferramentas, que ficam numa parte separada da tela.
-      console.info(
-        "[CRM odontograma] clinicLogo recebido nessa passagem:",
-        clinicLogo ? `preenchido (${clinicLogo.slice(0, 40)}...)` : "vazio/undefined",
-        ". título já achado?",
-        !!titleEl,
-      );
-      if (clinicLogo && titleEl && !container.querySelector('[data-crm-logo-img="1"]')) {
-        const scope = titleEl.parentElement?.parentElement ?? titleEl.parentElement;
-        const logoSvg = scope?.querySelector("svg");
-        console.info("[CRM odontograma] tentando trocar logo. scope achado?", !!scope, "svg achado dentro do scope?", !!logoSvg);
-        if (!logoSvg && scope) {
-          // Não achou svg — mostra o HTML de verdade dessa área (e um
-          // pouco mais pra cima também) pra eu ver a estrutura real em
-          // vez de continuar tentando adivinhar.
-          console.info("[CRM odontograma] HTML do scope (sem svg dentro):", scope.outerHTML.slice(0, 800));
-          console.info(
-            "[CRM odontograma] HTML um nível acima do scope:",
-            scope.parentElement?.outerHTML.slice(0, 1000) ?? "(sem pai)",
-          );
-        }
-        if (logoSvg) {
-          logoSvg.style.display = "none";
-          const img = document.createElement("img");
-          img.src = clinicLogo;
-          img.setAttribute("data-crm-logo-img", "1");
-          img.style.width = "28px";
-          img.style.height = "28px";
-          img.style.objectFit = "contain";
-          img.style.borderRadius = "6px";
-          logoSvg.parentElement?.insertBefore(img, logoSvg);
-          console.info("[CRM odontograma] logo trocada com sucesso.");
+      // Logo: a biblioteca já renderiza um <img class="brand-logo">
+      // dentro de <header class="topbar"><div class="brand">> — só
+      // precisa trocar o src pela logo da clínica, nada de esconder
+      // nem criar elemento novo (confirmado direto no HTML real).
+      if (clinicLogo) {
+        const logoImg = container.querySelector<HTMLImageElement>("img.brand-logo");
+        if (logoImg && logoImg.getAttribute("src") !== clinicLogo) {
+          logoImg.src = clinicLogo;
+          logoImg.setAttribute("data-crm-logo-img", "1");
         }
       }
 
