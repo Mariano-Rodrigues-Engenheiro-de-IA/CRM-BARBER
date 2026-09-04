@@ -823,7 +823,7 @@ export type Database = {
           performed_at: string
           price_cents: number
           procedure_type: string
-          tooth_number: number | null
+          tooth_numbers: number[]
           updated_at: string
         }
         Insert: {
@@ -837,7 +837,7 @@ export type Database = {
           performed_at?: string
           price_cents?: number
           procedure_type: string
-          tooth_number?: number | null
+          tooth_numbers?: number[]
           updated_at?: string
         }
         Update: {
@@ -851,7 +851,7 @@ export type Database = {
           performed_at?: string
           price_cents?: number
           procedure_type?: string
-          tooth_number?: number | null
+          tooth_numbers?: number[]
           updated_at?: string
         }
         Relationships: [
@@ -871,6 +871,57 @@ export type Database = {
           },
           {
             foreignKeyName: "dental_procedures_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dental_attachments: {
+        Row: {
+          barbershop_id: string
+          content_type: string
+          created_at: string
+          customer_id: string
+          file_name: string
+          file_path: string
+          id: string
+          size_bytes: number
+          uploaded_by: string | null
+        }
+        Insert: {
+          barbershop_id: string
+          content_type: string
+          created_at?: string
+          customer_id: string
+          file_name: string
+          file_path: string
+          id?: string
+          size_bytes?: number
+          uploaded_by?: string | null
+        }
+        Update: {
+          barbershop_id?: string
+          content_type?: string
+          created_at?: string
+          customer_id?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          size_bytes?: number
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dental_attachments_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dental_attachments_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"

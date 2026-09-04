@@ -9,6 +9,7 @@
 
 import { useState, Suspense, lazy } from "react";
 import { DentalBudgetTab } from "@/components/dental-budget-tab";
+import { DentalAttachmentsTab } from "@/components/dental-attachments-tab";
 
 const DentalChartTab = lazy(() =>
   import("@/components/dental-chart-tab").then((m) => ({ default: m.DentalChartTab })),
@@ -108,6 +109,11 @@ export function PatientsView({ api, customers }: { api: ApiFn; customers: Patien
               <Suspense fallback={<p className="text-sm text-neutral-400">Carregando...</p>}>
                 <DentalChartTab api={api} customerId={selected.id} />
               </Suspense>
+            </div>
+
+            <div className="rounded-xl border border-neutral-200 bg-white p-4 print:hidden">
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Anexos</h3>
+              <DentalAttachmentsTab api={api} customerId={selected.id} />
             </div>
 
             <div className="rounded-xl border border-neutral-200 bg-white p-4">

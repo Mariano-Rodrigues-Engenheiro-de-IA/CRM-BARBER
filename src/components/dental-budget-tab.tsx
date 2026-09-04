@@ -17,7 +17,7 @@ type Appointment = {
 type Procedure = {
   id: string;
   appointment_id: string | null;
-  tooth_number: number | null;
+  tooth_numbers: number[];
   procedure_type: string;
   price_cents: number;
   paid: boolean;
@@ -48,6 +48,15 @@ function brlToCents(text: string): number {
   const digitsOnly = text.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
   const n = Number(digitsOnly);
   return Number.isFinite(n) ? Math.round(n * 100) : 0;
+}
+
+function parseTeeth(text: string): number[] {
+  return text
+    .split(/[,\s]+/)
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .map((t) => Number(t))
+    .filter((n) => Number.isInteger(n) && n >= 11 && n <= 85);
 }
 
 export function DentalBudgetTab({ api, customerId }: { api: ApiFn; customerId: string }) {
@@ -102,7 +111,7 @@ export function DentalBudgetTab({ api, customerId }: { api: ApiFn; customerId: s
       body: JSON.stringify({
         customer_id: customerId,
         appointment_id: formAppointmentId === "none" ? null : formAppointmentId,
-        tooth_number: formTooth ? Number(formTooth) : null,
+        tooth_numbers: parseTeeth(formTooth),
         procedure_type: formType,
         price_cents: brlToCents(formPrice),
         paid: formPaid,
@@ -194,8 +203,8 @@ export function DentalBudgetTab({ api, customerId }: { api: ApiFn; customerId: s
             </select>
             <input
               value={formTooth}
-              onChange={(e) => setFormTooth(e.target.value.replace(/\D/g, ""))}
-              placeholder="Dente (opcional, ex: 16)"
+              onChange={(e) => setFormTooth(e.target.value.replace(/[^\d,\s]/g, ""))}
+              placeholder="Dentes (opcional, ex: 16, 17, 18)"
               className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
             />
           </div>
@@ -274,7 +283,7 @@ function ProcedureList({
           <div className="min-w-0">
             <p className="truncate text-neutral-800">
               {p.procedure_type}
-              {p.tooth_number ? ` (dente ${p.tooth_number})` : ""}
+              {p.tooth_numbers.length > 0 ? ` (dente${p.tooth_numbers.length > 1 ? "s" : ""} ${p.tooth_numbers.join(", ")})` : ""}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">

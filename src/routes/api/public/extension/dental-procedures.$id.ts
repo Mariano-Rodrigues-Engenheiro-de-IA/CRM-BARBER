@@ -6,11 +6,11 @@ import { z } from "zod";
 import { jsonResponse, preflight } from "@/lib/extension-cors";
 import { authenticateExtension } from "@/lib/extension-auth";
 
-const SELECT = "id, customer_id, appointment_id, tooth_number, procedure_type, price_cents, paid, notes, performed_at, created_at";
+const SELECT = "id, customer_id, appointment_id, tooth_numbers, procedure_type, price_cents, paid, notes, performed_at, created_at";
 
 const patchSchema = z.object({
   appointment_id: z.string().uuid().nullable().optional(),
-  tooth_number: z.number().int().min(11).max(85).nullable().optional(),
+  tooth_numbers: z.array(z.number().int().min(11).max(85)).max(32).optional(),
   procedure_type: z.string().trim().min(1).max(120).optional(),
   price_cents: z.number().int().min(0).max(100_000_000).optional(),
   paid: z.boolean().optional(),

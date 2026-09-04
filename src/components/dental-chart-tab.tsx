@@ -126,7 +126,7 @@ function DentalChartInner({ api, customerId }: { api: ApiFn; customerId: string 
 
       {err && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{err}</div>}
 
-      <div className="relative rounded-xl border border-neutral-200 bg-white p-2">
+      <div className="relative overflow-x-auto rounded-xl border border-neutral-200 bg-white p-2">
         {!ready && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 text-sm text-neutral-400">
             Carregando...

@@ -532,6 +532,14 @@ function Painel() {
   useEffect(() => {
     localStorage.setItem("zaylo_sidebar_v2", sidebarCollapsed ? "1" : "0");
   }, [sidebarCollapsed]);
+  // Pacientes precisa de bastante espaço (odontograma é bem largo por
+  // dentro) — recolhe o menu sozinho ao entrar ali, mas a pessoa ainda
+  // pode reabrir manualmente se quiser (o botão continua funcionando
+  // normal).
+  useEffect(() => {
+    if (section === "pacientes") setSidebarCollapsed(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [section]);
 
   const [disparoTab, setDisparoTab] = useState<"novo" | "campanhas">("novo");
   // Host do cabeçalho dos funis: o seletor de funil + "novo funil" moram na

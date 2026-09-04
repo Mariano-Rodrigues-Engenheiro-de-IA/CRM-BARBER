@@ -8,12 +8,12 @@ import { z } from "zod";
 import { jsonResponse, preflight } from "@/lib/extension-cors";
 import { authenticateExtension } from "@/lib/extension-auth";
 
-const SELECT = "id, customer_id, appointment_id, tooth_number, procedure_type, price_cents, paid, notes, performed_at, created_at";
+const SELECT = "id, customer_id, appointment_id, tooth_numbers, procedure_type, price_cents, paid, notes, performed_at, created_at";
 
 const postSchema = z.object({
   customer_id: z.string().uuid(),
   appointment_id: z.string().uuid().nullable().optional(),
-  tooth_number: z.number().int().min(11).max(85).nullable().optional(),
+  tooth_numbers: z.array(z.number().int().min(11).max(85)).max(32).default([]),
   procedure_type: z.string().trim().min(1).max(120),
   price_cents: z.number().int().min(0).max(100_000_000).default(0),
   paid: z.boolean().default(false),
@@ -75,7 +75,7 @@ export const Route = createFileRoute("/api/public/extension/dental-procedures")(
             barbershop_id: shop,
             customer_id: parsed.data.customer_id,
             appointment_id: parsed.data.appointment_id ?? null,
-            tooth_number: parsed.data.tooth_number ?? null,
+            tooth_numbers: parsed.data.tooth_numbers,
             procedure_type: parsed.data.procedure_type,
             price_cents: parsed.data.price_cents,
             paid: parsed.data.paid,
