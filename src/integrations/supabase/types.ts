@@ -811,6 +811,54 @@ export type Database = {
           },
         ]
       }
+      dental_payments: {
+        Row: {
+          amount_cents: number
+          barbershop_id: string
+          created_at: string
+          customer_id: string
+          id: string
+          notes: string | null
+          paid_at: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents?: number
+          barbershop_id: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          notes?: string | null
+          paid_at?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          barbershop_id?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dental_payments_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dental_payments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dental_procedures: {
         Row: {
           appointment_id: string | null
@@ -819,7 +867,7 @@ export type Database = {
           customer_id: string
           id: string
           notes: string | null
-          paid: boolean
+          done: boolean
           performed_at: string
           price_cents: number
           procedure_type: string
@@ -833,7 +881,7 @@ export type Database = {
           customer_id: string
           id?: string
           notes?: string | null
-          paid?: boolean
+          done?: boolean
           performed_at?: string
           price_cents?: number
           procedure_type: string
@@ -847,7 +895,7 @@ export type Database = {
           customer_id?: string
           id?: string
           notes?: string | null
-          paid?: boolean
+          done?: boolean
           performed_at?: string
           price_cents?: number
           procedure_type?: string

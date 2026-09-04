@@ -1,7 +1,12 @@
-// Histórico de visitas + orçamento do paciente — dentro da aba
-// Pacientes. Visitas vêm da Agenda (sem duplicar nada); cada visita
-// pode ter um ou mais procedimentos lançados (dente, tipo, valor,
-// pago/pendente). O resumo geral soma tudo isso.
+// Orçamento do paciente, dividido em duas listas independentes -
+// pedido do Mariano depois de perceber que "o que foi feito" e "o que
+// foi pago" nem sempre andam juntos (paciente pode ter orcamento de
+// R$10.000 e ter pago R$4.000 até agora, sem esse valor corresponder a
+// um procedimento específico).
+//
+// Plano de tratamento: o que precisa/já foi feito, com valor cada.
+// Pagamentos: dinheiro recebido, sem vínculo obrigatório com
+// procedimento nenhum - a soma dos dois vira o resumo no topo.
 
 import { useEffect, useState } from "react";
 
@@ -20,9 +25,16 @@ type Procedure = {
   tooth_numbers: number[];
   procedure_type: string;
   price_cents: number;
-  paid: boolean;
+  done: boolean;
   notes: string | null;
   performed_at: string;
+};
+
+type Payment = {
+  id: string;
+  amount_cents: number;
+  notes: string | null;
+  paid_at: string;
 };
 
 const PROCEDURE_TYPES = [
@@ -59,29 +71,61 @@ function parseTeeth(text: string): number[] {
     .filter((n) => Number.isInteger(n) && n >= 11 && n <= 85);
 }
 
+function IconTrash() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 6h18" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+    </svg>
+  );
+}
+
+function IconPencil() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+      <path d="M15 5l4 4" />
+    </svg>
+  );
+}
+
 export function DentalBudgetTab({ api, customerId }: { api: ApiFn; customerId: string }) {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [procedures, setProcedures] = useState<Procedure[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-  const [formOpen, setFormOpen] = useState(false);
-  const [formAppointmentId, setFormAppointmentId] = useState<string>("none");
-  const [formTooth, setFormTooth] = useState("");
-  const [formType, setFormType] = useState(PROCEDURE_TYPES[0]);
-  const [formPrice, setFormPrice] = useState("");
-  const [formPaid, setFormPaid] = useState(false);
-  const [saving, setSaving] = useState(false);
+
+  const [procFormOpen, setProcFormOpen] = useState(false);
+  const [editingProcId, setEditingProcId] = useState<string | null>(null);
+  const [procAppointmentId, setProcAppointmentId] = useState<string>("none");
+  const [procTooth, setProcTooth] = useState("");
+  const [procType, setProcType] = useState(PROCEDURE_TYPES[0]);
+  const [procPrice, setProcPrice] = useState("");
+  const [procDone, setProcDone] = useState(false);
+  const [savingProc, setSavingProc] = useState(false);
+
+  const [payFormOpen, setPayFormOpen] = useState(false);
+  const [editingPayId, setEditingPayId] = useState<string | null>(null);
+  const [payAmount, setPayAmount] = useState("");
+  const [payNotes, setPayNotes] = useState("");
+  const [savingPay, setSavingPay] = useState(false);
 
   async function load() {
     setLoading(true);
     setErr(null);
-    const [apptRes, procRes] = await Promise.all([
+    const [apptRes, procRes, payRes] = await Promise.all([
       api(`/api/public/extension/appointments?customer_id=${encodeURIComponent(customerId)}`),
       api(`/api/public/extension/dental-procedures?customer_id=${encodeURIComponent(customerId)}`),
+      api(`/api/public/extension/dental-payments?customer_id=${encodeURIComponent(customerId)}`),
     ]);
     if (apptRes?.ok) setAppointments(apptRes.appointments || []);
     if (procRes?.ok) setProcedures(procRes.procedures || []);
-    if (!apptRes?.ok || !procRes?.ok) setErr("Não consegui carregar o histórico agora.");
+    if (payRes?.ok) setPayments(payRes.payments || []);
+    if (!apptRes?.ok || !procRes?.ok || !payRes?.ok) setErr("Não consegui carregar o orçamento agora.");
     setLoading(false);
   }
 
@@ -90,12 +134,58 @@ export function DentalBudgetTab({ api, customerId }: { api: ApiFn; customerId: s
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerId]);
 
-  async function togglePaid(proc: Procedure) {
+  function resetProcForm() {
+    setProcFormOpen(false);
+    setEditingProcId(null);
+    setProcAppointmentId("none");
+    setProcTooth("");
+    setProcType(PROCEDURE_TYPES[0]);
+    setProcPrice("");
+    setProcDone(false);
+  }
+
+  function openEditProc(p: Procedure) {
+    setEditingProcId(p.id);
+    setProcAppointmentId(p.appointment_id ?? "none");
+    setProcTooth(p.tooth_numbers.join(", "));
+    setProcType(p.procedure_type);
+    setProcPrice((p.price_cents / 100).toFixed(2).replace(".", ","));
+    setProcDone(p.done);
+    setProcFormOpen(true);
+  }
+
+  async function submitProc() {
+    setSavingProc(true);
+    const body = {
+      appointment_id: procAppointmentId === "none" ? null : procAppointmentId,
+      tooth_numbers: parseTeeth(procTooth),
+      procedure_type: procType,
+      price_cents: brlToCents(procPrice),
+      done: procDone,
+    };
+    const res = editingProcId
+      ? await api(`/api/public/extension/dental-procedures/${editingProcId}`, {
+          method: "PATCH",
+          body: JSON.stringify(body),
+        })
+      : await api("/api/public/extension/dental-procedures", {
+          method: "POST",
+          body: JSON.stringify({ ...body, customer_id: customerId }),
+        });
+    setSavingProc(false);
+    if (res?.ok) {
+      const saved = res.procedure as Procedure;
+      setProcedures((prev) => (editingProcId ? prev.map((p) => (p.id === saved.id ? saved : p)) : [saved, ...prev]));
+      resetProcForm();
+    }
+  }
+
+  async function toggleDone(proc: Procedure) {
     const res = await api(`/api/public/extension/dental-procedures/${proc.id}`, {
       method: "PATCH",
-      body: JSON.stringify({ paid: !proc.paid }),
+      body: JSON.stringify({ done: !proc.done }),
     });
-    if (res?.ok) setProcedures((prev) => prev.map((p) => (p.id === proc.id ? { ...p, paid: !p.paid } : p)));
+    if (res?.ok) setProcedures((prev) => prev.map((p) => (p.id === proc.id ? { ...p, done: !p.done } : p)));
   }
 
   async function removeProcedure(id: string) {
@@ -103,36 +193,55 @@ export function DentalBudgetTab({ api, customerId }: { api: ApiFn; customerId: s
     if (res?.ok) setProcedures((prev) => prev.filter((p) => p.id !== id));
   }
 
-  async function submitForm() {
-    if (!formType.trim()) return;
-    setSaving(true);
-    const res = await api("/api/public/extension/dental-procedures", {
-      method: "POST",
-      body: JSON.stringify({
-        customer_id: customerId,
-        appointment_id: formAppointmentId === "none" ? null : formAppointmentId,
-        tooth_numbers: parseTeeth(formTooth),
-        procedure_type: formType,
-        price_cents: brlToCents(formPrice),
-        paid: formPaid,
-      }),
-    });
-    setSaving(false);
+  function resetPayForm() {
+    setPayFormOpen(false);
+    setEditingPayId(null);
+    setPayAmount("");
+    setPayNotes("");
+  }
+
+  function openEditPay(p: Payment) {
+    setEditingPayId(p.id);
+    setPayAmount((p.amount_cents / 100).toFixed(2).replace(".", ","));
+    setPayNotes(p.notes ?? "");
+    setPayFormOpen(true);
+  }
+
+  async function submitPay() {
+    const amount_cents = brlToCents(payAmount);
+    if (amount_cents <= 0) return;
+    setSavingPay(true);
+    const body = { amount_cents, notes: payNotes.trim() || null };
+    const res = editingPayId
+      ? await api(`/api/public/extension/dental-payments/${editingPayId}`, {
+          method: "PATCH",
+          body: JSON.stringify(body),
+        })
+      : await api("/api/public/extension/dental-payments", {
+          method: "POST",
+          body: JSON.stringify({ ...body, customer_id: customerId }),
+        });
+    setSavingPay(false);
     if (res?.ok) {
-      setProcedures((prev) => [res.procedure, ...prev]);
-      setFormOpen(false);
-      setFormTooth("");
-      setFormPrice("");
-      setFormPaid(false);
-      setFormAppointmentId("none");
+      const saved = res.payment as Payment;
+      setPayments((prev) => (editingPayId ? prev.map((p) => (p.id === saved.id ? saved : p)) : [...prev, saved]));
+      resetPayForm();
     }
   }
 
-  const totalPaid = procedures.filter((p) => p.paid).reduce((sum, p) => sum + p.price_cents, 0);
-  const totalPending = procedures.filter((p) => !p.paid).reduce((sum, p) => sum + p.price_cents, 0);
+  async function removePayment(id: string) {
+    const res = await api(`/api/public/extension/dental-payments/${id}`, { method: "DELETE" });
+    if (res?.ok) setPayments((prev) => prev.filter((p) => p.id !== id));
+  }
+
+  const totalPlano = procedures.reduce((sum, p) => sum + p.price_cents, 0);
+  const totalPago = payments.reduce((sum, p) => sum + p.amount_cents, 0);
+  const saldo = totalPlano - totalPago;
+  const pendentesCount = procedures.filter((p) => !p.done).length;
 
   // Agrupa por visita (appointment) — procedimentos sem agendamento
-  // vinculado caem num grupo "avulso" no fim.
+  // vinculado caem num grupo "avulso" no fim (típico de item ainda
+  // pendente, que nem aconteceu ainda).
   const byAppointment = new Map<string, Procedure[]>();
   const loose: Procedure[] = [];
   for (const p of procedures) {
@@ -149,131 +258,228 @@ export function DentalBudgetTab({ api, customerId }: { api: ApiFn; customerId: s
     .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime())
     .map((a) => ({ appointment: a, items: byAppointment.get(a.id) ?? [] }));
 
-  if (loading) return <p className="text-sm text-neutral-400">Carregando histórico...</p>;
+  if (loading) return <p className="text-sm text-neutral-400">Carregando orçamento...</p>;
 
   return (
-    <div className="space-y-4 print:space-y-2">
+    <div className="space-y-5 print:space-y-2">
       {err && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 print:hidden">{err}</div>}
 
-      <div className="grid grid-cols-2 gap-3 print:grid-cols-2">
+      <div className="grid grid-cols-3 gap-3 print:grid-cols-3">
+        <div className="rounded-xl bg-neutral-100 p-3">
+          <p className="text-xs font-medium text-neutral-600">Total do plano</p>
+          <p className="text-lg font-semibold text-neutral-900">{centsToBRL(totalPlano)}</p>
+        </div>
         <div className="rounded-xl bg-emerald-50 p-3">
           <p className="text-xs font-medium text-emerald-700">Total pago</p>
-          <p className="text-lg font-semibold text-emerald-800">{centsToBRL(totalPaid)}</p>
+          <p className="text-lg font-semibold text-emerald-800">{centsToBRL(totalPago)}</p>
         </div>
-        <div className="rounded-xl bg-amber-50 p-3">
-          <p className="text-xs font-medium text-amber-700">Pendente</p>
-          <p className="text-lg font-semibold text-amber-800">{centsToBRL(totalPending)}</p>
+        <div className={`rounded-xl p-3 ${saldo > 0 ? "bg-amber-50" : "bg-blue-50"}`}>
+          <p className={`text-xs font-medium ${saldo > 0 ? "text-amber-700" : "text-blue-700"}`}>
+            {saldo > 0 ? "Saldo a pagar" : "Crédito do paciente"}
+          </p>
+          <p className={`text-lg font-semibold ${saldo > 0 ? "text-amber-800" : "text-blue-800"}`}>
+            {centsToBRL(Math.abs(saldo))}
+          </p>
         </div>
       </div>
+      {pendentesCount > 0 && (
+        <p className="text-xs text-neutral-500 print:hidden">
+          {pendentesCount} procedimento{pendentesCount > 1 ? "s" : ""} ainda pendente{pendentesCount > 1 ? "s" : ""} de fazer.
+        </p>
+      )}
 
-      <div className="flex items-center justify-between print:hidden">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Histórico de visitas</h3>
-        <div className="flex gap-2">
+      <div className="flex items-center justify-end gap-2 print:hidden">
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
+        >
+          Imprimir / exportar
+        </button>
+      </div>
+
+      {/* Plano de tratamento */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between print:hidden">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Plano de tratamento</h3>
           <button
             type="button"
-            onClick={() => window.print()}
-            className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
-          >
-            Imprimir / exportar
-          </button>
-          <button
-            type="button"
-            onClick={() => setFormOpen((v) => !v)}
+            onClick={() => (procFormOpen ? resetProcForm() : setProcFormOpen(true))}
             className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-strong"
           >
-            {formOpen ? "Cancelar" : "Lançar procedimento"}
+            {procFormOpen ? "Cancelar" : "Lançar procedimento"}
           </button>
         </div>
-      </div>
 
-      {formOpen && (
-        <div className="space-y-2 rounded-xl border border-neutral-200 bg-white p-3 print:hidden">
-          <div className="grid grid-cols-2 gap-2">
+        {procFormOpen && (
+          <div className="space-y-2 rounded-xl border border-neutral-200 bg-white p-3 print:hidden">
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                value={procAppointmentId}
+                onChange={(e) => setProcAppointmentId(e.target.value)}
+                className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+              >
+                <option value="none">Sem visita vinculada</option>
+                {appointments.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {new Date(a.scheduled_at).toLocaleDateString("pt-BR")}: {a.title}
+                  </option>
+                ))}
+              </select>
+              <input
+                value={procTooth}
+                onChange={(e) => setProcTooth(e.target.value.replace(/[^\d,\s]/g, ""))}
+                placeholder="Dentes (opcional, ex: 16, 17)"
+                className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+              />
+            </div>
             <select
-              value={formAppointmentId}
-              onChange={(e) => setFormAppointmentId(e.target.value)}
-              className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+              value={procType}
+              onChange={(e) => setProcType(e.target.value)}
+              className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
             >
-              <option value="none">Sem visita vinculada</option>
-              {appointments.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {new Date(a.scheduled_at).toLocaleDateString("pt-BR")}: {a.title}
+              {PROCEDURE_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
                 </option>
               ))}
             </select>
-            <input
-              value={formTooth}
-              onChange={(e) => setFormTooth(e.target.value.replace(/[^\d,\s]/g, ""))}
-              placeholder="Dentes (opcional, ex: 16, 17, 18)"
-              className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
-            />
+            <div className="flex items-center gap-2">
+              <input
+                value={procPrice}
+                onChange={(e) => setProcPrice(e.target.value)}
+                placeholder="Valor (R$)"
+                inputMode="decimal"
+                className="flex-1 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+              />
+              <label className="flex items-center gap-1.5 text-xs text-neutral-600">
+                <input type="checkbox" checked={procDone} onChange={(e) => setProcDone(e.target.checked)} />
+                Já feito
+              </label>
+            </div>
+            <button
+              type="button"
+              onClick={submitProc}
+              disabled={savingProc}
+              className="w-full rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
+            >
+              {savingProc ? "Salvando..." : editingProcId ? "Salvar alterações" : "Adicionar ao plano"}
+            </button>
           </div>
-          <select
-            value={formType}
-            onChange={(e) => setFormType(e.target.value)}
-            className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
-          >
-            {PROCEDURE_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
+        )}
+
+        {procedures.length === 0 ? (
+          <p className="text-sm text-neutral-400">Nenhum procedimento lançado ainda.</p>
+        ) : (
+          <div className="space-y-3">
+            {visitGroups.map(({ appointment, items }) => (
+              <div key={appointment.id} className="rounded-xl border border-neutral-200 bg-white p-3">
+                <p className="mb-2 text-sm font-semibold text-neutral-900">
+                  {new Date(appointment.scheduled_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+                </p>
+                <ProcedureList items={items} onToggleDone={toggleDone} onEdit={openEditProc} onRemove={removeProcedure} />
+              </div>
             ))}
-          </select>
-          <div className="flex items-center gap-2">
-            <input
-              value={formPrice}
-              onChange={(e) => setFormPrice(e.target.value)}
-              placeholder="Valor (R$)"
-              inputMode="decimal"
-              className="flex-1 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
-            />
-            <label className="flex items-center gap-1.5 text-xs text-neutral-600">
-              <input type="checkbox" checked={formPaid} onChange={(e) => setFormPaid(e.target.checked)} />
-              Já pago
-            </label>
+            {loose.length > 0 && (
+              <div className="rounded-xl border border-neutral-200 bg-white p-3">
+                <p className="mb-2 text-sm font-semibold text-neutral-900">Sem visita vinculada</p>
+                <ProcedureList items={loose} onToggleDone={toggleDone} onEdit={openEditProc} onRemove={removeProcedure} />
+              </div>
+            )}
           </div>
+        )}
+      </div>
+
+      {/* Pagamentos */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between print:hidden">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Pagamentos</h3>
           <button
             type="button"
-            onClick={submitForm}
-            disabled={saving}
-            className="w-full rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
+            onClick={() => (payFormOpen ? resetPayForm() : setPayFormOpen(true))}
+            className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-strong"
           >
-            {saving ? "Salvando..." : "Salvar procedimento"}
+            {payFormOpen ? "Cancelar" : "Lançar pagamento"}
           </button>
         </div>
-      )}
 
-      {procedures.length === 0 ? (
-        <p className="text-sm text-neutral-400">Nenhum procedimento lançado ainda.</p>
-      ) : (
-        <div className="space-y-3">
-          {visitGroups.map(({ appointment, items }) => (
-            <div key={appointment.id} className="rounded-xl border border-neutral-200 bg-white p-3">
-              <p className="mb-2 text-sm font-semibold text-neutral-900">
-                {new Date(appointment.scheduled_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
-              </p>
-              <ProcedureList items={items} onTogglePaid={togglePaid} onRemove={removeProcedure} />
+        {payFormOpen && (
+          <div className="space-y-2 rounded-xl border border-neutral-200 bg-white p-3 print:hidden">
+            <input
+              value={payAmount}
+              onChange={(e) => setPayAmount(e.target.value)}
+              placeholder="Valor recebido (R$)"
+              inputMode="decimal"
+              className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+            />
+            <input
+              value={payNotes}
+              onChange={(e) => setPayNotes(e.target.value)}
+              placeholder="Observação (opcional, ex: sinal, parcela 2)"
+              className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+            />
+            <button
+              type="button"
+              onClick={submitPay}
+              disabled={savingPay}
+              className="w-full rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
+            >
+              {savingPay ? "Salvando..." : editingPayId ? "Salvar alterações" : "Lançar pagamento"}
+            </button>
+          </div>
+        )}
+
+        {payments.length === 0 ? (
+          <p className="text-sm text-neutral-400">Nenhum pagamento lançado ainda.</p>
+        ) : (
+          <div className="rounded-xl border border-neutral-200 bg-white p-3">
+            <div className="space-y-1.5">
+              {payments.map((p) => (
+                <div key={p.id} className="flex items-center justify-between gap-2 text-sm">
+                  <div className="min-w-0">
+                    <p className="truncate text-neutral-800">
+                      {new Date(p.paid_at).toLocaleDateString("pt-BR")}
+                      {p.notes ? ` · ${p.notes}` : ""}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="font-medium text-emerald-700">{centsToBRL(p.amount_cents)}</span>
+                    <button
+                      type="button"
+                      onClick={() => openEditPay(p)}
+                      title="Editar"
+                      className="text-neutral-400 hover:text-neutral-700 print:hidden"
+                    >
+                      <IconPencil />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removePayment(p.id)}
+                      title="Remover"
+                      className="text-neutral-400 hover:text-red-600 print:hidden"
+                    >
+                      <IconTrash />
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-          {loose.length > 0 && (
-            <div className="rounded-xl border border-neutral-200 bg-white p-3">
-              <p className="mb-2 text-sm font-semibold text-neutral-900">Sem visita vinculada</p>
-              <ProcedureList items={loose} onTogglePaid={togglePaid} onRemove={removeProcedure} />
-            </div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 function ProcedureList({
   items,
-  onTogglePaid,
+  onToggleDone,
+  onEdit,
   onRemove,
 }: {
   items: Procedure[];
-  onTogglePaid: (p: Procedure) => void;
+  onToggleDone: (p: Procedure) => void;
+  onEdit: (p: Procedure) => void;
   onRemove: (id: string) => void;
 }) {
   return (
@@ -290,12 +496,20 @@ function ProcedureList({
             <span className="text-neutral-600">{centsToBRL(p.price_cents)}</span>
             <button
               type="button"
-              onClick={() => onTogglePaid(p)}
+              onClick={() => onToggleDone(p)}
               className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                p.paid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                p.done ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
               }`}
             >
-              {p.paid ? "Pago" : "Pendente"}
+              {p.done ? "Feito" : "Pendente"}
+            </button>
+            <button
+              type="button"
+              onClick={() => onEdit(p)}
+              title="Editar"
+              className="text-neutral-400 hover:text-neutral-700 print:hidden"
+            >
+              <IconPencil />
             </button>
             <button
               type="button"
@@ -303,7 +517,7 @@ function ProcedureList({
               title="Remover"
               className="text-neutral-400 hover:text-red-600 print:hidden"
             >
-              ✕
+              <IconTrash />
             </button>
           </div>
         </div>

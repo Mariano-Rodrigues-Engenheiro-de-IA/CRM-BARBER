@@ -47,6 +47,7 @@ import { Route as ApiPublicExtensionCustomerProfileRouteImport } from './routes/
 import { Route as ApiPublicExtensionCustomersRouteImport } from './routes/api/public/extension/customers'
 import { Route as ApiPublicExtensionDentalAttachmentsRouteImport } from './routes/api/public/extension/dental-attachments'
 import { Route as ApiPublicExtensionDentalChartRouteImport } from './routes/api/public/extension/dental-chart'
+import { Route as ApiPublicExtensionDentalPaymentsRouteImport } from './routes/api/public/extension/dental-payments'
 import { Route as ApiPublicExtensionDentalProceduresRouteImport } from './routes/api/public/extension/dental-procedures'
 import { Route as ApiPublicExtensionFunnelCardsRouteImport } from './routes/api/public/extension/funnel-cards'
 import { Route as ApiPublicExtensionFunnelFollowupReportRouteImport } from './routes/api/public/extension/funnel-followup-report'
@@ -78,6 +79,7 @@ import { Route as ApiPublicExtensionCampaignsIdRouteImport } from './routes/api/
 import { Route as ApiPublicExtensionCustomersIdRouteImport } from './routes/api/public/extension/customers.$id'
 import { Route as ApiPublicExtensionCustomersImportRouteImport } from './routes/api/public/extension/customers.import'
 import { Route as ApiPublicExtensionDentalAttachmentsIdRouteImport } from './routes/api/public/extension/dental-attachments.$id'
+import { Route as ApiPublicExtensionDentalPaymentsIdRouteImport } from './routes/api/public/extension/dental-payments.$id'
 import { Route as ApiPublicExtensionDentalProceduresIdRouteImport } from './routes/api/public/extension/dental-procedures.$id'
 import { Route as ApiPublicExtensionFunnelCardsScheduleRouteImport } from './routes/api/public/extension/funnel-cards.schedule'
 import { Route as ApiPublicExtensionFunnelFollowupRulesIdRouteImport } from './routes/api/public/extension/funnel-followup-rules.$id'
@@ -311,6 +313,12 @@ const ApiPublicExtensionDentalChartRoute =
     path: '/api/public/extension/dental-chart',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicExtensionDentalPaymentsRoute =
+  ApiPublicExtensionDentalPaymentsRouteImport.update({
+    id: '/api/public/extension/dental-payments',
+    path: '/api/public/extension/dental-payments',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicExtensionDentalProceduresRoute =
   ApiPublicExtensionDentalProceduresRouteImport.update({
     id: '/api/public/extension/dental-procedures',
@@ -493,6 +501,12 @@ const ApiPublicExtensionDentalAttachmentsIdRoute =
     id: '/$id',
     path: '/$id',
     getParentRoute: () => ApiPublicExtensionDentalAttachmentsRoute,
+  } as any)
+const ApiPublicExtensionDentalPaymentsIdRoute =
+  ApiPublicExtensionDentalPaymentsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicExtensionDentalPaymentsRoute,
   } as any)
 const ApiPublicExtensionDentalProceduresIdRoute =
   ApiPublicExtensionDentalProceduresIdRouteImport.update({
@@ -684,6 +698,7 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/dental-attachments': typeof ApiPublicExtensionDentalAttachmentsRouteWithChildren
   '/api/public/extension/dental-chart': typeof ApiPublicExtensionDentalChartRoute
+  '/api/public/extension/dental-payments': typeof ApiPublicExtensionDentalPaymentsRouteWithChildren
   '/api/public/extension/dental-procedures': typeof ApiPublicExtensionDentalProceduresRouteWithChildren
   '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   '/api/public/extension/funnel-followup-report': typeof ApiPublicExtensionFunnelFollowupReportRoute
@@ -715,6 +730,7 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
   '/api/public/extension/dental-attachments/$id': typeof ApiPublicExtensionDentalAttachmentsIdRoute
+  '/api/public/extension/dental-payments/$id': typeof ApiPublicExtensionDentalPaymentsIdRoute
   '/api/public/extension/dental-procedures/$id': typeof ApiPublicExtensionDentalProceduresIdRoute
   '/api/public/extension/funnel-cards/schedule': typeof ApiPublicExtensionFunnelCardsScheduleRoute
   '/api/public/extension/funnel-followup-rules/$id': typeof ApiPublicExtensionFunnelFollowupRulesIdRoute
@@ -780,6 +796,7 @@ export interface FileRoutesByTo {
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/dental-attachments': typeof ApiPublicExtensionDentalAttachmentsRouteWithChildren
   '/api/public/extension/dental-chart': typeof ApiPublicExtensionDentalChartRoute
+  '/api/public/extension/dental-payments': typeof ApiPublicExtensionDentalPaymentsRouteWithChildren
   '/api/public/extension/dental-procedures': typeof ApiPublicExtensionDentalProceduresRouteWithChildren
   '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   '/api/public/extension/funnel-followup-report': typeof ApiPublicExtensionFunnelFollowupReportRoute
@@ -811,6 +828,7 @@ export interface FileRoutesByTo {
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
   '/api/public/extension/dental-attachments/$id': typeof ApiPublicExtensionDentalAttachmentsIdRoute
+  '/api/public/extension/dental-payments/$id': typeof ApiPublicExtensionDentalPaymentsIdRoute
   '/api/public/extension/dental-procedures/$id': typeof ApiPublicExtensionDentalProceduresIdRoute
   '/api/public/extension/funnel-cards/schedule': typeof ApiPublicExtensionFunnelCardsScheduleRoute
   '/api/public/extension/funnel-followup-rules/$id': typeof ApiPublicExtensionFunnelFollowupRulesIdRoute
@@ -877,6 +895,7 @@ export interface FileRoutesById {
   '/api/public/extension/customers': typeof ApiPublicExtensionCustomersRouteWithChildren
   '/api/public/extension/dental-attachments': typeof ApiPublicExtensionDentalAttachmentsRouteWithChildren
   '/api/public/extension/dental-chart': typeof ApiPublicExtensionDentalChartRoute
+  '/api/public/extension/dental-payments': typeof ApiPublicExtensionDentalPaymentsRouteWithChildren
   '/api/public/extension/dental-procedures': typeof ApiPublicExtensionDentalProceduresRouteWithChildren
   '/api/public/extension/funnel-cards': typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   '/api/public/extension/funnel-followup-report': typeof ApiPublicExtensionFunnelFollowupReportRoute
@@ -908,6 +927,7 @@ export interface FileRoutesById {
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
   '/api/public/extension/dental-attachments/$id': typeof ApiPublicExtensionDentalAttachmentsIdRoute
+  '/api/public/extension/dental-payments/$id': typeof ApiPublicExtensionDentalPaymentsIdRoute
   '/api/public/extension/dental-procedures/$id': typeof ApiPublicExtensionDentalProceduresIdRoute
   '/api/public/extension/funnel-cards/schedule': typeof ApiPublicExtensionFunnelCardsScheduleRoute
   '/api/public/extension/funnel-followup-rules/$id': typeof ApiPublicExtensionFunnelFollowupRulesIdRoute
@@ -975,6 +995,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/customers'
     | '/api/public/extension/dental-attachments'
     | '/api/public/extension/dental-chart'
+    | '/api/public/extension/dental-payments'
     | '/api/public/extension/dental-procedures'
     | '/api/public/extension/funnel-cards'
     | '/api/public/extension/funnel-followup-report'
@@ -1006,6 +1027,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
     | '/api/public/extension/dental-attachments/$id'
+    | '/api/public/extension/dental-payments/$id'
     | '/api/public/extension/dental-procedures/$id'
     | '/api/public/extension/funnel-cards/schedule'
     | '/api/public/extension/funnel-followup-rules/$id'
@@ -1071,6 +1093,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/customers'
     | '/api/public/extension/dental-attachments'
     | '/api/public/extension/dental-chart'
+    | '/api/public/extension/dental-payments'
     | '/api/public/extension/dental-procedures'
     | '/api/public/extension/funnel-cards'
     | '/api/public/extension/funnel-followup-report'
@@ -1102,6 +1125,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
     | '/api/public/extension/dental-attachments/$id'
+    | '/api/public/extension/dental-payments/$id'
     | '/api/public/extension/dental-procedures/$id'
     | '/api/public/extension/funnel-cards/schedule'
     | '/api/public/extension/funnel-followup-rules/$id'
@@ -1167,6 +1191,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/customers'
     | '/api/public/extension/dental-attachments'
     | '/api/public/extension/dental-chart'
+    | '/api/public/extension/dental-payments'
     | '/api/public/extension/dental-procedures'
     | '/api/public/extension/funnel-cards'
     | '/api/public/extension/funnel-followup-report'
@@ -1198,6 +1223,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
     | '/api/public/extension/dental-attachments/$id'
+    | '/api/public/extension/dental-payments/$id'
     | '/api/public/extension/dental-procedures/$id'
     | '/api/public/extension/funnel-cards/schedule'
     | '/api/public/extension/funnel-followup-rules/$id'
@@ -1263,6 +1289,7 @@ export interface RootRouteChildren {
   ApiPublicExtensionCustomersRoute: typeof ApiPublicExtensionCustomersRouteWithChildren
   ApiPublicExtensionDentalAttachmentsRoute: typeof ApiPublicExtensionDentalAttachmentsRouteWithChildren
   ApiPublicExtensionDentalChartRoute: typeof ApiPublicExtensionDentalChartRoute
+  ApiPublicExtensionDentalPaymentsRoute: typeof ApiPublicExtensionDentalPaymentsRouteWithChildren
   ApiPublicExtensionDentalProceduresRoute: typeof ApiPublicExtensionDentalProceduresRouteWithChildren
   ApiPublicExtensionFunnelCardsRoute: typeof ApiPublicExtensionFunnelCardsRouteWithChildren
   ApiPublicExtensionFunnelFollowupReportRoute: typeof ApiPublicExtensionFunnelFollowupReportRoute
@@ -1569,6 +1596,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensionDentalChartRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/extension/dental-payments': {
+      id: '/api/public/extension/dental-payments'
+      path: '/api/public/extension/dental-payments'
+      fullPath: '/api/public/extension/dental-payments'
+      preLoaderRoute: typeof ApiPublicExtensionDentalPaymentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/extension/dental-procedures': {
       id: '/api/public/extension/dental-procedures'
       path: '/api/public/extension/dental-procedures'
@@ -1785,6 +1819,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/public/extension/dental-attachments/$id'
       preLoaderRoute: typeof ApiPublicExtensionDentalAttachmentsIdRouteImport
       parentRoute: typeof ApiPublicExtensionDentalAttachmentsRoute
+    }
+    '/api/public/extension/dental-payments/$id': {
+      id: '/api/public/extension/dental-payments/$id'
+      path: '/$id'
+      fullPath: '/api/public/extension/dental-payments/$id'
+      preLoaderRoute: typeof ApiPublicExtensionDentalPaymentsIdRouteImport
+      parentRoute: typeof ApiPublicExtensionDentalPaymentsRoute
     }
     '/api/public/extension/dental-procedures/$id': {
       id: '/api/public/extension/dental-procedures/$id'
@@ -2051,6 +2092,21 @@ const ApiPublicExtensionDentalAttachmentsRouteWithChildren =
     ApiPublicExtensionDentalAttachmentsRouteChildren,
   )
 
+interface ApiPublicExtensionDentalPaymentsRouteChildren {
+  ApiPublicExtensionDentalPaymentsIdRoute: typeof ApiPublicExtensionDentalPaymentsIdRoute
+}
+
+const ApiPublicExtensionDentalPaymentsRouteChildren: ApiPublicExtensionDentalPaymentsRouteChildren =
+  {
+    ApiPublicExtensionDentalPaymentsIdRoute:
+      ApiPublicExtensionDentalPaymentsIdRoute,
+  }
+
+const ApiPublicExtensionDentalPaymentsRouteWithChildren =
+  ApiPublicExtensionDentalPaymentsRoute._addFileChildren(
+    ApiPublicExtensionDentalPaymentsRouteChildren,
+  )
+
 interface ApiPublicExtensionDentalProceduresRouteChildren {
   ApiPublicExtensionDentalProceduresIdRoute: typeof ApiPublicExtensionDentalProceduresIdRoute
 }
@@ -2290,6 +2346,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicExtensionDentalAttachmentsRoute:
     ApiPublicExtensionDentalAttachmentsRouteWithChildren,
   ApiPublicExtensionDentalChartRoute: ApiPublicExtensionDentalChartRoute,
+  ApiPublicExtensionDentalPaymentsRoute:
+    ApiPublicExtensionDentalPaymentsRouteWithChildren,
   ApiPublicExtensionDentalProceduresRoute:
     ApiPublicExtensionDentalProceduresRouteWithChildren,
   ApiPublicExtensionFunnelCardsRoute:

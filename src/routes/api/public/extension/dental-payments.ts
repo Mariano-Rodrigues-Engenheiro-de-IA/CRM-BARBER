@@ -1,27 +1,21 @@
-// GET    /api/public/extension/dental-procedures?customer_id=X -> lista (mais recente primeiro)
-// POST   /api/public/extension/dental-procedures -> lança um item no plano de tratamento
-// PATCH  /api/public/extension/dental-procedures/:id -> edita (ex: marcar como feito)
-// DELETE /api/public/extension/dental-procedures/:id -> remove um lançamento errado
+// GET  /api/public/extension/dental-payments?customer_id=X -> lista (mais antigo primeiro)
+// POST /api/public/extension/dental-payments -> lança um pagamento recebido
 
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { jsonResponse, preflight } from "@/lib/extension-cors";
 import { authenticateExtension } from "@/lib/extension-auth";
 
-const SELECT = "id, customer_id, appointment_id, tooth_numbers, procedure_type, price_cents, done, notes, performed_at, created_at";
+const SELECT = "id, customer_id, amount_cents, notes, paid_at, created_at";
 
 const postSchema = z.object({
   customer_id: z.string().uuid(),
-  appointment_id: z.string().uuid().nullable().optional(),
-  tooth_numbers: z.array(z.number().int().min(11).max(85)).max(32).default([]),
-  procedure_type: z.string().trim().min(1).max(120),
-  price_cents: z.number().int().min(0).max(100_000_000).default(0),
-  done: z.boolean().default(false),
-  notes: z.string().trim().max(2000).nullable().optional(),
-  performed_at: z.string().datetime().optional(),
+  amount_cents: z.number().int().min(1).max(100_000_000),
+  notes: z.string().trim().max(500).nullable().optional(),
+  paid_at: z.string().datetime().optional(),
 });
 
-export const Route = createFileRoute("/api/public/extension/dental-procedures")({
+export const Route = createFileRoute("/api/public/extension/dental-payments")({
   server: {
     handlers: {
       OPTIONS: async ({ request }) => preflight(request),
@@ -39,13 +33,13 @@ export const Route = createFileRoute("/api/public/extension/dental-procedures")(
           return jsonResponse(request, { ok: false, error: "Falta o parâmetro customer_id." }, { status: 400 });
         }
         const { data, error } = await supabaseAdmin
-          .from("dental_procedures")
+          .from("dental_payments")
           .select(SELECT)
           .eq("barbershop_id", shop)
           .eq("customer_id", customerId)
-          .order("performed_at", { ascending: false });
+          .order("paid_at", { ascending: true });
         if (error) return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
-        return jsonResponse(request, { ok: true, procedures: data ?? [] });
+        return jsonResponse(request, { ok: true, payments: data ?? [] });
       },
 
       POST: async ({ request }) => {
@@ -59,7 +53,6 @@ export const Route = createFileRoute("/api/public/extension/dental-procedures")(
         if (!parsed.success) {
           return jsonResponse(request, { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." }, { status: 400 });
         }
-        // Confere que o paciente é mesmo dessa barbearia antes de gravar.
         const { data: customer } = await supabaseAdmin
           .from("customers")
           .select("id")
@@ -70,22 +63,18 @@ export const Route = createFileRoute("/api/public/extension/dental-procedures")(
           return jsonResponse(request, { ok: false, error: "Paciente não encontrado." }, { status: 404 });
         }
         const { data, error } = await supabaseAdmin
-          .from("dental_procedures")
+          .from("dental_payments")
           .insert({
             barbershop_id: shop,
             customer_id: parsed.data.customer_id,
-            appointment_id: parsed.data.appointment_id ?? null,
-            tooth_numbers: parsed.data.tooth_numbers,
-            procedure_type: parsed.data.procedure_type,
-            price_cents: parsed.data.price_cents,
-            done: parsed.data.done,
+            amount_cents: parsed.data.amount_cents,
             notes: parsed.data.notes ?? null,
-            ...(parsed.data.performed_at ? { performed_at: parsed.data.performed_at } : {}),
+            ...(parsed.data.paid_at ? { paid_at: parsed.data.paid_at } : {}),
           })
           .select(SELECT)
           .single();
         if (error) return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
-        return jsonResponse(request, { ok: true, procedure: data });
+        return jsonResponse(request, { ok: true, payment: data });
       },
     },
   },
