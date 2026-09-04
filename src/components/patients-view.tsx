@@ -33,17 +33,28 @@ export function PatientsView({
   clinicName,
   clinicLogo,
   headerHost,
+  onPatientCreated,
 }: {
   api: ApiFn;
   customers: PatientRow[];
   clinicName?: string;
   clinicLogo?: string;
   headerHost?: HTMLElement | null;
+  onPatientCreated?: () => void;
 }) {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [listOpen, setListOpen] = useState(true);
   const [budgetOpen, setBudgetOpen] = useState(false);
+  const [newFormOpen, setNewFormOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [savingNew, setSavingNew] = useState(false);
+  // Guarda o paciente recém-criado localmente até a lista do componente
+  // pai (painel.tsx) recarregar de verdade — sem isso, "abrir ficha"
+  // logo após cadastrar mostraria "selecione um paciente" por um
+  // instante, já que ele ainda não existiria na prop `customers`.
+  const [justCreated, setJustCreated] = useState<PatientRow | null>(null);
 
   const active = customers.filter((c) => !c.archived_at);
   const q = query.trim().toLowerCase();
@@ -54,7 +65,7 @@ export function PatientsView({
       )
     : active;
 
-  const selected = active.find((c) => c.id === selectedId) ?? null;
+  const selected = active.find((c) => c.id === selectedId) ?? (justCreated?.id === selectedId ? justCreated : null);
 
   function selectPatient(id: string) {
     setSelectedId(id);
@@ -62,6 +73,24 @@ export function PatientsView({
     // servir pro odontograma, que precisa respirar. Fica só um resumo
     // com botão pra trocar de paciente sem perder a busca.
     setListOpen(false);
+  }
+
+  async function createPatient() {
+    if (!newName.trim() || !newPhone.trim()) return;
+    setSavingNew(true);
+    const res = await api("/api/public/extension/customers", {
+      method: "POST",
+      body: JSON.stringify({ name: newName.trim(), phone: newPhone.trim() }),
+    });
+    setSavingNew(false);
+    if (res?.ok && res.customer) {
+      onPatientCreated?.();
+      setJustCreated(res.customer);
+      setNewFormOpen(false);
+      setNewName("");
+      setNewPhone("");
+      selectPatient(res.customer.id);
+    }
   }
 
   // Cabeçalho da seção (compartilhado com o resto do painel, mesmo
@@ -108,12 +137,51 @@ export function PatientsView({
       <div className={(listOpen ? "flex gap-4 " : "") + "print:hidden"}>
         {listOpen && (
           <div className="w-72 shrink-0 space-y-3 print:hidden">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar paciente por nome ou telefone"
-              className="w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand"
-            />
+            <div className="flex items-center gap-2">
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar paciente por nome ou telefone"
+                className="w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand"
+              />
+              <button
+                type="button"
+                onClick={() => setNewFormOpen((v) => !v)}
+                title="Novo paciente"
+                className="flex shrink-0 items-center justify-center rounded-xl border border-neutral-300 bg-white p-2 text-neutral-600 hover:bg-neutral-50"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </button>
+            </div>
+
+            {newFormOpen && (
+              <div className="space-y-2 rounded-xl border border-neutral-200 bg-white p-3">
+                <p className="text-xs font-semibold text-neutral-600">Novo paciente</p>
+                <input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Nome"
+                  className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+                />
+                <input
+                  value={newPhone}
+                  onChange={(e) => setNewPhone(e.target.value)}
+                  placeholder="WhatsApp (com DDD)"
+                  className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={createPatient}
+                  disabled={savingNew || !newName.trim() || !newPhone.trim()}
+                  className="w-full rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
+                >
+                  {savingNew ? "Salvando..." : "Cadastrar e abrir ficha"}
+                </button>
+              </div>
+            )}
+
             <div className="max-h-[70vh] space-y-1 overflow-y-auto rounded-xl border border-neutral-200 bg-white p-1.5">
               {filtered.length === 0 ? (
                 <p className="px-2 py-4 text-center text-xs text-neutral-400">Nenhum paciente encontrado.</p>

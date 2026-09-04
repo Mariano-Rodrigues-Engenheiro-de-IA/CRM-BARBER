@@ -1101,6 +1101,7 @@ function Painel() {
                 clinicName={shopName}
                 clinicLogo={shop?.logo_url ?? undefined}
                 headerHost={pacientesHeaderEl}
+                onPatientCreated={() => reload(true)}
               />
             </main>
           </>

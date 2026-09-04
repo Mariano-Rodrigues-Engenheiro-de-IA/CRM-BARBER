@@ -3022,6 +3022,24 @@
     if (r) {
       crmToast("Contato salvo!", "ok", anchor);
       void updateSaveContactButton();
+      // Também cria (ou reaproveita, se já existir por telefone) um
+      // cliente de verdade no nosso banco — mesmo cadastro usado pela
+      // Agenda e pelo Odontograma/Pacientes. Sem isso, salvar aqui só
+      // mexia no WhatsApp do celular, sem nenhum efeito no resto do
+      // sistema — pedido explícito do Mariano pra unificar os três
+      // jeitos de cadastrar (WhatsApp, Agenda, Pacientes) no mesmo lugar.
+      const phone = String(chat.wa_id).split("@")[0];
+      const existing = await safeSendMessage({
+        type: "api",
+        path: `/api/public/extension/customers?phone=${encodeURIComponent(phone)}`,
+      }).catch(() => null);
+      if (!existing?.ok || !existing.customers?.length) {
+        await safeSendMessage({
+          type: "api",
+          path: "/api/public/extension/customers",
+          opts: { method: "POST", body: JSON.stringify({ name: name.trim(), phone }) },
+        }).catch(() => null);
+      }
       return true;
     } else {
       crmToast("Falha ao salvar contato.", "err", anchor);
@@ -3262,7 +3280,7 @@
     const mySeq = ++profileRenderSeq;
     panel.innerHTML = `<div class="crm-qrp-head"><div class="crm-qr-mark">${PROFILE_SVG}</div><p class="crm-qrp-title">Perfil do cliente</p><button class="crm-qrp-close" data-close title="Fechar">&times;</button></div>${panelSwitcherHtml(kind)}<div class="crm-qrp-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
     // Handler temporário, só pra enquanto os dados carregam (fechar/trocar
-    // de aba). O de verdade — que também cobre o botão "Salvar na agenda" —
+    // de aba). O de verdade — que também cobre o botão "Salvar perfil" —
     // é montado mais abaixo, depois que o conteúdo real existe; ACHADO DO
     // BUG: aquele de baixo pisava em cima deste sem saber lidar com
     // [data-save-contact], fazendo o clique nesse botão não fazer nada.
@@ -3321,7 +3339,7 @@
         <p class="crm-cp-phone">${escapeHtml(chat.phone || "")}</p>
         ${
           savedInfo?.is_saved === false
-            ? `<button type="button" class="crm-cp-save-contact" data-save-contact>${SAVE_CONTACT_SVG} Salvar na agenda</button>`
+            ? `<button type="button" class="crm-cp-save-contact" data-save-contact>${SAVE_CONTACT_SVG} Salvar perfil</button>`
             : ""
         }
       </div>
@@ -3375,7 +3393,7 @@
       const sw = e.target.closest("[data-switch]");
       if (sw) return void openSharedPanel(sw.getAttribute("data-switch"));
       // ESTE handler substitui por completo o de cima (mesma variável
-      // panelClickHandler) — era aqui que o clique em "Salvar na agenda"
+      // panelClickHandler) — era aqui que o clique em "Salvar perfil"
       // se perdia silenciosamente, porque esse bloco só sabia lidar com
       // [data-save] (o botão geral do rodapé) e ignorava [data-save-contact]
       // (o botão de dentro do card de avatar/nome/telefone).
