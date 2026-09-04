@@ -671,7 +671,7 @@ function Painel() {
     );
   }
 
-  const shopName = brand.name || shop?.name || "Sua barbearia";
+  const shopName = brand.name || shop?.name || (businessType === "odontologia" ? "Sua clínica" : "Sua barbearia");
 
   /** Abre o checkout do Premium em nova aba, já identificando a barbearia. */
   function openCheckout() {
@@ -728,7 +728,7 @@ function Painel() {
         { key: "servicos", label: "Serviços" },
         { key: "produtos", label: "Produtos" },
         { key: "profissionais", label: "Profissionais" },
-        { key: "clientes", label: "Clientes" },
+        { key: "clientes", label: businessType === "odontologia" ? "Importar pacientes" : "Clientes" },
         { key: "gerais", label: "Gerais" },
         { key: "conta", label: "Minha conta" },
       ],
@@ -899,7 +899,10 @@ function Painel() {
             <SectionHeader icon={<IconCalendar />} title="Agenda" subtitle={agendaTab === "lembretes" ? "Lembretes / Confirmações" : undefined} />
             <main className="px-4 py-4">
               {agendaTab === "agenda" ? (
-                <AgendaView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+                <AgendaView
+                  api={(path: string, opts?: RequestInit) => api(token, path, opts)}
+                  businessType={businessType}
+                />
               ) : (
                 <PremiumSoftLock active={!!billing && !billing.premium} onUpgrade={openCheckout}>
                   <AgendaRemindersView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
@@ -968,7 +971,7 @@ function Painel() {
                 (configTab === "servicos" && "Serviços") ||
                 (configTab === "produtos" && "Produtos") ||
                 (configTab === "profissionais" && "Profissionais") ||
-                (configTab === "clientes" && "Clientes") ||
+                (configTab === "clientes" && (businessType === "odontologia" ? "Importar pacientes" : "Clientes")) ||
                 (configTab === "gerais" && "Gerais") ||
                 (configTab === "conta" && "Minha conta") ||
                 undefined
@@ -1136,7 +1139,10 @@ function Painel() {
           <>
             <SectionHeader icon={<IconPlug />} title="Conexão" />
             <main className="max-w-3xl px-4 py-4">
-              <ConnectionView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+              <ConnectionView
+                api={(path: string, opts?: RequestInit) => api(token, path, opts)}
+                businessType={businessType}
+              />
             </main>
           </>
         )}

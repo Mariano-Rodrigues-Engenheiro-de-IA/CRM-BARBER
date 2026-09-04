@@ -106,7 +106,7 @@ type Connection = {
   } | null;
 };
 
-export function ConnectionView({ api }: { api: Api }) {
+export function ConnectionView({ api, businessType }: { api: Api; businessType?: string }) {
   const [conn, setConn] = useState<Connection | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -518,8 +518,8 @@ export function ConnectionView({ api }: { api: Api }) {
                 <div className="mt-4 flex flex-col items-center gap-3">
                   <QrImage qrcode={conn.qrcode} />
                   <p className="text-center text-sm text-neutral-600">
-                    Abra o WhatsApp da barbearia → Aparelhos conectados → Conectar aparelho → aponte a câmera pro
-                    código.
+                    Abra o WhatsApp da {businessType === "odontologia" ? "clínica" : "barbearia"} → Aparelhos conectados → Conectar
+                    aparelho → aponte a câmera pro código.
                   </p>
                 </div>
               ) : isMetaConnection ? (
@@ -629,6 +629,7 @@ export function ConnectionView({ api }: { api: Api }) {
         action={confirmAction}
         pendingProvider={pendingProvider}
         busy={busy}
+        businessType={businessType}
         onCancel={() => { setConfirmAction(null); setPendingProvider(null); }}
         onConfirm={() => void runConfirmedAction()}
       />
@@ -640,12 +641,14 @@ function ConnectionConfirmDialog({
   action,
   pendingProvider,
   busy,
+  businessType,
   onCancel,
   onConfirm,
 }: {
   action: "connect" | "disconnect" | "switch_provider" | null;
   pendingProvider: "uazapi" | "meta" | null;
   busy: boolean;
+  businessType?: string;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -655,7 +658,7 @@ function ConnectionConfirmDialog({
 
   const title = isConnect ? "Conectar WhatsApp?" : isSwitch ? "Trocar de modo de conexão?" : "Desconectar WhatsApp?";
   const description = isConnect
-    ? "Vamos gerar um QR code para parear o WhatsApp da barbearia."
+    ? `Vamos gerar um QR code para parear o WhatsApp da ${businessType === "odontologia" ? "clínica" : "barbearia"}.`
     : isSwitch
       ? `Isso desconecta o WhatsApp que está ativo agora, para conectar pelo modo "${targetLabel}" em seguida. Os disparos ficam parados até a nova conexão terminar.`
       : "Os disparos vão parar até você conectar o WhatsApp novamente.";

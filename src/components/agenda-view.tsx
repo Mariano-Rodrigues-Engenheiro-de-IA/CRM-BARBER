@@ -85,7 +85,7 @@ function minutesToTime(mins: number) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
-export function AgendaView({ api }: { api: Api }) {
+export function AgendaView({ api, businessType }: { api: Api; businessType?: string }) {
   const { confirm, dialog } = useConfirm();
   const [day, setDay] = useState(() => new Date());
   const [settings, setSettings] = useState<AgendaSettings | null>(staticCache?.settings ?? null);
@@ -488,6 +488,7 @@ export function AgendaView({ api }: { api: Api }) {
         onSave={handleSave}
         onCancelAppointment={editing ? () => handleCancel(editing) : undefined}
         onStatusChange={editing ? (s) => handleStatusChange(editing, s) : undefined}
+        businessType={businessType}
       />
 
 
@@ -515,6 +516,7 @@ export function AgendaView({ api }: { api: Api }) {
         services={services}
         timeBlocks={timeBlocks}
         api={api}
+        businessType={businessType}
         onAppointmentSaved={async (data) => {
           await handleSave(data);
           setSlotDialogOpen(false);
@@ -545,6 +547,7 @@ function AppointmentFormDialog({
   onSave,
   onCancelAppointment,
   onStatusChange,
+  businessType,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -555,6 +558,7 @@ function AppointmentFormDialog({
   professionals: Professional[];
   services: Service[];
   api: Api;
+  businessType?: string;
   onSave: (data: {
     title: string;
     customer_id: string | null;
@@ -616,7 +620,7 @@ function AppointmentFormDialog({
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label>Cliente</Label>
-            <CustomerPicker customers={customers} value={customerId} onChange={setCustomerId} api={api} />
+            <CustomerPicker customers={customers} value={customerId} onChange={setCustomerId} api={api} businessType={businessType} />
           </div>
 
           {services.length > 0 && (
@@ -752,6 +756,7 @@ function SlotActionDialog({
   services,
   timeBlocks,
   api,
+  businessType,
   onAppointmentSaved,
   onBlockSaved,
   deleteBlock,
@@ -765,6 +770,7 @@ function SlotActionDialog({
   services: Service[];
   timeBlocks: TimeBlock[];
   api: Api;
+  businessType?: string;
   onAppointmentSaved: (data: {
     title: string;
     customer_id: string | null;
@@ -818,6 +824,7 @@ function SlotActionDialog({
               professionals={professionals}
               services={services}
               api={api}
+              businessType={businessType}
               onSave={onAppointmentSaved}
             />
           </TabsContent>
@@ -866,6 +873,7 @@ function SlotAppointmentForm({
   services,
   api,
   onSave,
+  businessType,
 }: {
   prefill: { time: string; professionalId: string | null } | null;
   day: Date;
@@ -873,6 +881,7 @@ function SlotAppointmentForm({
   professionals: Professional[];
   services: Service[];
   api: Api;
+  businessType?: string;
   onSave: (data: {
     title: string;
     customer_id: string | null;
@@ -923,7 +932,7 @@ function SlotAppointmentForm({
     <div className="space-y-3 py-2">
       <div className="space-y-1.5">
         <Label>Cliente</Label>
-        <CustomerPicker customers={customers} value={customerId} onChange={setCustomerId} api={api} />
+        <CustomerPicker customers={customers} value={customerId} onChange={setCustomerId} api={api} businessType={businessType} />
       </div>
 
       {services.length > 0 && (
@@ -1223,11 +1232,13 @@ function CustomerPicker({
   value,
   onChange,
   api,
+  businessType,
 }: {
   customers: CustomerOption[];
   value: string;
   onChange: (v: string) => void;
   api: Api;
+  businessType?: string;
 }) {
   const [query, setQuery] = useState("");
   const [created, setCreated] = useState<CustomerOption[]>([]);
@@ -1293,11 +1304,11 @@ function CustomerPicker({
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar cliente por nome ou telefone..."
+          placeholder={`Buscar ${businessType === "odontologia" ? "paciente" : "cliente"} por nome ou telefone...`}
         />
         <button
           type="button"
-          title="Cadastrar novo cliente"
+          title={`Cadastrar novo ${businessType === "odontologia" ? "paciente" : "cliente"}`}
           onClick={() => setNewOpen((v) => !v)}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-neutral-300 text-lg font-semibold text-brand transition hover:bg-neutral-50"
         >
@@ -1329,7 +1340,7 @@ function CustomerPicker({
 
       {newOpen && (
         <div className="space-y-2 rounded-md border border-neutral-200 bg-neutral-50 p-3">
-          <p className="text-xs font-semibold text-neutral-600">Novo cliente</p>
+          <p className="text-xs font-semibold text-neutral-600">Novo {businessType === "odontologia" ? "paciente" : "cliente"}</p>
           <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nome" />
           <Input value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="Telefone (com DDD)" />
           <div className="flex justify-end gap-2">
