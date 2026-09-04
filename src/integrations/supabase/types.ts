@@ -225,6 +225,7 @@ export type Database = {
       barbershops: {
         Row: {
           ai_access_enabled: boolean
+          business_type: string
           created_at: string
           created_by: string | null
           id: string
@@ -237,6 +238,7 @@ export type Database = {
         }
         Insert: {
           ai_access_enabled?: boolean
+          business_type?: string
           created_at?: string
           created_by?: string | null
           id?: string
@@ -249,6 +251,7 @@ export type Database = {
         }
         Update: {
           ai_access_enabled?: boolean
+          business_type?: string
           created_at?: string
           created_by?: string | null
           id?: string

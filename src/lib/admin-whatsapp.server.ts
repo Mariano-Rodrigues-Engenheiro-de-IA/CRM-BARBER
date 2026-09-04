@@ -31,6 +31,11 @@ export const providerSchema = z.object({
   provider: z.enum(["uazapi", "meta"]),
 });
 
+export const businessTypeSchema = z.object({
+  barbershop_id: z.string().uuid(),
+  business_type: z.enum(["barbearia", "odontologia"]),
+});
+
 export const claimPendingSchema = z.object({
   pending_id: z.string().uuid(),
   barbershop_id: z.string().uuid(),
@@ -57,6 +62,7 @@ export type AdminClientOverviewRow = {
   name: string;
   owner_phone: string | null;
   owner_email: string | null;
+  business_type: string;
   provider: string | null;
   status: string | null;
   connected_phone: string | null;
@@ -68,7 +74,7 @@ export type AdminClientOverviewRow = {
 export async function listClientsOverview(supabaseAdmin: Admin): Promise<AdminClientOverviewRow[]> {
   const { data: shops, error } = await supabaseAdmin
     .from("barbershops")
-    .select("id, name, owner_phone, owner_email, created_at")
+    .select("id, name, owner_phone, owner_email, business_type, created_at")
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
 
@@ -92,6 +98,7 @@ export async function listClientsOverview(supabaseAdmin: Admin): Promise<AdminCl
       name: s.name,
       owner_phone: s.owner_phone,
       owner_email: s.owner_email,
+      business_type: s.business_type,
       provider: i?.provider ?? null,
       status: i?.status ?? null,
       connected_phone: i?.phone ?? null,
@@ -100,6 +107,20 @@ export async function listClientsOverview(supabaseAdmin: Admin): Promise<AdminCl
       created_at: s.created_at ?? null,
     };
   });
+}
+
+/** Só o admin decide o nicho de cada conta por enquanto — o cliente não
+ * escolhe isso sozinho. Direto pelo painel de Clientes. */
+export async function setBusinessType(
+  supabaseAdmin: Admin,
+  input: { barbershop_id: string; business_type: "barbearia" | "odontologia" },
+): Promise<{ ok: true }> {
+  const { error } = await supabaseAdmin
+    .from("barbershops")
+    .update({ business_type: input.business_type })
+    .eq("id", input.barbershop_id);
+  if (error) throw new Error(error.message);
+  return { ok: true };
 }
 
 type Admin = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];

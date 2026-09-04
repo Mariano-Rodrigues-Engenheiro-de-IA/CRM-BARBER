@@ -2,7 +2,14 @@
 // Rotas/funções fora de /api/public ficam atrás da autenticação do site.
 
 import { createServerFn } from "@tanstack/react-start";
-import { providerSchema, registerSchema, saveSchema, testSchema, claimPendingSchema } from "./admin-whatsapp.server";
+import {
+  providerSchema,
+  registerSchema,
+  saveSchema,
+  testSchema,
+  claimPendingSchema,
+  businessTypeSchema,
+} from "./admin-whatsapp.server";
 
 export const adminListShops = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -15,6 +22,14 @@ export const adminListClientsOverview = createServerFn({ method: "GET" }).handle
   const { listClientsOverview } = await import("./admin-whatsapp.server");
   return listClientsOverview(supabaseAdmin);
 });
+
+export const adminSetBusinessType = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => businessTypeSchema.parse(data))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { setBusinessType } = await import("./admin-whatsapp.server");
+    return setBusinessType(supabaseAdmin, data);
+  });
 
 export const adminSaveMetaCredentials = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => saveSchema.parse(data))
