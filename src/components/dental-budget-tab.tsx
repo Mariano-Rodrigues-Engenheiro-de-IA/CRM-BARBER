@@ -1,12 +1,8 @@
-// Orçamento do paciente, dividido em duas listas independentes -
-// pedido do Mariano depois de perceber que "o que foi feito" e "o que
-// foi pago" nem sempre andam juntos (paciente pode ter orcamento de
-// R$10.000 e ter pago R$4.000 até agora, sem esse valor corresponder a
-// um procedimento específico).
-//
-// Plano de tratamento: o que precisa/já foi feito, com valor cada.
-// Pagamentos: dinheiro recebido, sem vínculo obrigatório com
-// procedimento nenhum - a soma dos dois vira o resumo no topo.
+// Orçamento do paciente — plano de tratamento e pagamentos lado a lado,
+// aproveitando o espaço largo da tela. Marcar "feito" é um botão de
+// verdade, clicável direto na lista, sem precisar abrir nada. O saldo
+// a pagar conta só o que já foi feito — o paciente não paga o que
+// ainda nem aconteceu.
 
 import { useEffect, useState } from "react";
 
@@ -88,6 +84,30 @@ function IconPencil() {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
       <path d="M15 5l4 4" />
+    </svg>
+  );
+}
+
+function IconCheck() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
+function IconCircle() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+    </svg>
+  );
+}
+
+function IconPlus() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 5v14M5 12h14" />
     </svg>
   );
 }
@@ -181,11 +201,16 @@ export function DentalBudgetTab({ api, customerId }: { api: ApiFn; customerId: s
   }
 
   async function toggleDone(proc: Procedure) {
+    // Otimista — a tela muda na hora, sem esperar o servidor. É o botão
+    // mais usado dessa tela inteira, tem que responder na hora.
+    setProcedures((prev) => prev.map((p) => (p.id === proc.id ? { ...p, done: !p.done } : p)));
     const res = await api(`/api/public/extension/dental-procedures/${proc.id}`, {
       method: "PATCH",
       body: JSON.stringify({ done: !proc.done }),
     });
-    if (res?.ok) setProcedures((prev) => prev.map((p) => (p.id === proc.id ? { ...p, done: !p.done } : p)));
+    if (!res?.ok) {
+      setProcedures((prev) => prev.map((p) => (p.id === proc.id ? { ...p, done: proc.done } : p)));
+    }
   }
 
   async function removeProcedure(id: string) {
@@ -235,13 +260,13 @@ export function DentalBudgetTab({ api, customerId }: { api: ApiFn; customerId: s
   }
 
   const totalPlano = procedures.reduce((sum, p) => sum + p.price_cents, 0);
+  const totalFeito = procedures.filter((p) => p.done).reduce((sum, p) => sum + p.price_cents, 0);
   const totalPago = payments.reduce((sum, p) => sum + p.amount_cents, 0);
-  const saldo = totalPlano - totalPago;
+  // Saldo a pagar conta só o que já foi feito — o paciente não deve
+  // por procedimento que ainda nem aconteceu, pedido explícito.
+  const saldo = totalFeito - totalPago;
   const pendentesCount = procedures.filter((p) => !p.done).length;
 
-  // Agrupa por visita (appointment) — procedimentos sem agendamento
-  // vinculado caem num grupo "avulso" no fim (típico de item ainda
-  // pendente, que nem aconteceu ainda).
   const byAppointment = new Map<string, Procedure[]>();
   const loose: Procedure[] = [];
   for (const p of procedures) {
@@ -264,208 +289,214 @@ export function DentalBudgetTab({ api, customerId }: { api: ApiFn; customerId: s
     <div className="space-y-5 print:space-y-2">
       {err && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 print:hidden">{err}</div>}
 
-      <div className="grid grid-cols-3 gap-3 print:grid-cols-3">
-        <div className="rounded-xl bg-neutral-100 p-3">
-          <p className="text-xs font-medium text-neutral-600">Total do plano</p>
-          <p className="text-lg font-semibold text-neutral-900">{centsToBRL(totalPlano)}</p>
+      <div className="flex items-center justify-between print:hidden">
+        <div className="grid flex-1 grid-cols-4 gap-3">
+          <div className="rounded-xl bg-neutral-100 p-3">
+            <p className="text-xs font-medium text-neutral-600">Plano total</p>
+            <p className="text-lg font-semibold text-neutral-900">{centsToBRL(totalPlano)}</p>
+          </div>
+          <div className="rounded-xl bg-sky-50 p-3">
+            <p className="text-xs font-medium text-sky-700">Já feito</p>
+            <p className="text-lg font-semibold text-sky-800">{centsToBRL(totalFeito)}</p>
+          </div>
+          <div className="rounded-xl bg-emerald-50 p-3">
+            <p className="text-xs font-medium text-emerald-700">Total pago</p>
+            <p className="text-lg font-semibold text-emerald-800">{centsToBRL(totalPago)}</p>
+          </div>
+          <div className={`rounded-xl p-3 ${saldo > 0 ? "bg-amber-50" : "bg-blue-50"}`}>
+            <p className={`text-xs font-medium ${saldo > 0 ? "text-amber-700" : "text-blue-700"}`}>
+              {saldo > 0 ? "Falta pagar" : "Crédito"}
+            </p>
+            <p className={`text-lg font-semibold ${saldo > 0 ? "text-amber-800" : "text-blue-800"}`}>
+              {centsToBRL(Math.abs(saldo))}
+            </p>
+          </div>
         </div>
-        <div className="rounded-xl bg-emerald-50 p-3">
-          <p className="text-xs font-medium text-emerald-700">Total pago</p>
-          <p className="text-lg font-semibold text-emerald-800">{centsToBRL(totalPago)}</p>
-        </div>
-        <div className={`rounded-xl p-3 ${saldo > 0 ? "bg-amber-50" : "bg-blue-50"}`}>
-          <p className={`text-xs font-medium ${saldo > 0 ? "text-amber-700" : "text-blue-700"}`}>
-            {saldo > 0 ? "Saldo a pagar" : "Crédito do paciente"}
-          </p>
-          <p className={`text-lg font-semibold ${saldo > 0 ? "text-amber-800" : "text-blue-800"}`}>
-            {centsToBRL(Math.abs(saldo))}
-          </p>
-        </div>
-      </div>
-      {pendentesCount > 0 && (
-        <p className="text-xs text-neutral-500 print:hidden">
-          {pendentesCount} procedimento{pendentesCount > 1 ? "s" : ""} ainda pendente{pendentesCount > 1 ? "s" : ""} de fazer.
-        </p>
-      )}
-
-      <div className="flex items-center justify-end gap-2 print:hidden">
         <button
           type="button"
           onClick={() => window.print()}
-          className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
+          className="ml-3 shrink-0 rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
         >
-          Imprimir / exportar
+          Imprimir
         </button>
       </div>
+      {pendentesCount > 0 && (
+        <p className="-mt-2 text-xs text-neutral-500 print:hidden">
+          {pendentesCount} procedimento{pendentesCount > 1 ? "s" : ""} ainda pendente{pendentesCount > 1 ? "s" : ""}.
+          Não entra no valor a pagar até ser marcado como feito.
+        </p>
+      )}
 
-      {/* Plano de tratamento */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between print:hidden">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Plano de tratamento</h3>
-          <button
-            type="button"
-            onClick={() => (procFormOpen ? resetProcForm() : setProcFormOpen(true))}
-            className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-strong"
-          >
-            {procFormOpen ? "Cancelar" : "Lançar procedimento"}
-          </button>
-        </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Plano de tratamento */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-neutral-800">Plano de tratamento</h3>
+            <button
+              type="button"
+              onClick={() => (procFormOpen ? resetProcForm() : setProcFormOpen(true))}
+              className="print:hidden flex items-center gap-1 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-strong"
+            >
+              <IconPlus /> Procedimento
+            </button>
+          </div>
 
-        {procFormOpen && (
-          <div className="space-y-2 rounded-xl border border-neutral-200 bg-white p-3 print:hidden">
-            <div className="grid grid-cols-2 gap-2">
+          {procFormOpen && (
+            <div className="space-y-2 rounded-xl border border-neutral-200 bg-white p-3 print:hidden">
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={procAppointmentId}
+                  onChange={(e) => setProcAppointmentId(e.target.value)}
+                  className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+                >
+                  <option value="none">Sem visita vinculada</option>
+                  {appointments.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {new Date(a.scheduled_at).toLocaleDateString("pt-BR")}: {a.title}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  value={procTooth}
+                  onChange={(e) => setProcTooth(e.target.value.replace(/[^\d,\s]/g, ""))}
+                  placeholder="Dentes (ex: 16, 17)"
+                  className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+                />
+              </div>
               <select
-                value={procAppointmentId}
-                onChange={(e) => setProcAppointmentId(e.target.value)}
-                className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+                value={procType}
+                onChange={(e) => setProcType(e.target.value)}
+                className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
               >
-                <option value="none">Sem visita vinculada</option>
-                {appointments.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {new Date(a.scheduled_at).toLocaleDateString("pt-BR")}: {a.title}
+                {PROCEDURE_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
                   </option>
                 ))}
               </select>
-              <input
-                value={procTooth}
-                onChange={(e) => setProcTooth(e.target.value.replace(/[^\d,\s]/g, ""))}
-                placeholder="Dentes (opcional, ex: 16, 17)"
-                className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
-              />
-            </div>
-            <select
-              value={procType}
-              onChange={(e) => setProcType(e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
-            >
-              {PROCEDURE_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-            <div className="flex items-center gap-2">
-              <input
-                value={procPrice}
-                onChange={(e) => setProcPrice(e.target.value)}
-                placeholder="Valor (R$)"
-                inputMode="decimal"
-                className="flex-1 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
-              />
-              <label className="flex items-center gap-1.5 text-xs text-neutral-600">
-                <input type="checkbox" checked={procDone} onChange={(e) => setProcDone(e.target.checked)} />
-                Já feito
-              </label>
-            </div>
-            <button
-              type="button"
-              onClick={submitProc}
-              disabled={savingProc}
-              className="w-full rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
-            >
-              {savingProc ? "Salvando..." : editingProcId ? "Salvar alterações" : "Adicionar ao plano"}
-            </button>
-          </div>
-        )}
-
-        {procedures.length === 0 ? (
-          <p className="text-sm text-neutral-400">Nenhum procedimento lançado ainda.</p>
-        ) : (
-          <div className="space-y-3">
-            {visitGroups.map(({ appointment, items }) => (
-              <div key={appointment.id} className="rounded-xl border border-neutral-200 bg-white p-3">
-                <p className="mb-2 text-sm font-semibold text-neutral-900">
-                  {new Date(appointment.scheduled_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
-                </p>
-                <ProcedureList items={items} onToggleDone={toggleDone} onEdit={openEditProc} onRemove={removeProcedure} />
+              <div className="flex items-center gap-2">
+                <input
+                  value={procPrice}
+                  onChange={(e) => setProcPrice(e.target.value)}
+                  placeholder="Valor (R$)"
+                  inputMode="decimal"
+                  className="flex-1 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+                />
+                <label className="flex items-center gap-1.5 text-xs text-neutral-600">
+                  <input type="checkbox" checked={procDone} onChange={(e) => setProcDone(e.target.checked)} className="h-4 w-4" />
+                  Já feito
+                </label>
               </div>
-            ))}
-            {loose.length > 0 && (
-              <div className="rounded-xl border border-neutral-200 bg-white p-3">
-                <p className="mb-2 text-sm font-semibold text-neutral-900">Sem visita vinculada</p>
-                <ProcedureList items={loose} onToggleDone={toggleDone} onEdit={openEditProc} onRemove={removeProcedure} />
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+              <button
+                type="button"
+                onClick={submitProc}
+                disabled={savingProc}
+                className="w-full rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
+              >
+                {savingProc ? "Salvando..." : editingProcId ? "Salvar alterações" : "Adicionar ao plano"}
+              </button>
+            </div>
+          )}
 
-      {/* Pagamentos */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between print:hidden">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Pagamentos</h3>
-          <button
-            type="button"
-            onClick={() => (payFormOpen ? resetPayForm() : setPayFormOpen(true))}
-            className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-strong"
-          >
-            {payFormOpen ? "Cancelar" : "Lançar pagamento"}
-          </button>
-        </div>
-
-        {payFormOpen && (
-          <div className="space-y-2 rounded-xl border border-neutral-200 bg-white p-3 print:hidden">
-            <input
-              value={payAmount}
-              onChange={(e) => setPayAmount(e.target.value)}
-              placeholder="Valor recebido (R$)"
-              inputMode="decimal"
-              className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
-            />
-            <input
-              value={payNotes}
-              onChange={(e) => setPayNotes(e.target.value)}
-              placeholder="Observação (opcional, ex: sinal, parcela 2)"
-              className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
-            />
-            <button
-              type="button"
-              onClick={submitPay}
-              disabled={savingPay}
-              className="w-full rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
-            >
-              {savingPay ? "Salvando..." : editingPayId ? "Salvar alterações" : "Lançar pagamento"}
-            </button>
-          </div>
-        )}
-
-        {payments.length === 0 ? (
-          <p className="text-sm text-neutral-400">Nenhum pagamento lançado ainda.</p>
-        ) : (
-          <div className="rounded-xl border border-neutral-200 bg-white p-3">
-            <div className="space-y-1.5">
-              {payments.map((p) => (
-                <div key={p.id} className="flex items-center justify-between gap-2 text-sm">
-                  <div className="min-w-0">
-                    <p className="truncate text-neutral-800">
-                      {new Date(p.paid_at).toLocaleDateString("pt-BR")}
-                      {p.notes ? ` · ${p.notes}` : ""}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <span className="font-medium text-emerald-700">{centsToBRL(p.amount_cents)}</span>
-                    <button
-                      type="button"
-                      onClick={() => openEditPay(p)}
-                      title="Editar"
-                      className="text-neutral-400 hover:text-neutral-700 print:hidden"
-                    >
-                      <IconPencil />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => removePayment(p.id)}
-                      title="Remover"
-                      className="text-neutral-400 hover:text-red-600 print:hidden"
-                    >
-                      <IconTrash />
-                    </button>
-                  </div>
+          {procedures.length === 0 ? (
+            <p className="text-sm text-neutral-400">Nenhum procedimento lançado ainda.</p>
+          ) : (
+            <div className="space-y-3">
+              {visitGroups.map(({ appointment, items }) => (
+                <div key={appointment.id} className="rounded-xl border border-neutral-200 bg-white p-3">
+                  <p className="mb-2 text-sm font-semibold text-neutral-900">
+                    {new Date(appointment.scheduled_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+                  </p>
+                  <ProcedureList items={items} onToggleDone={toggleDone} onEdit={openEditProc} onRemove={removeProcedure} />
                 </div>
               ))}
+              {loose.length > 0 && (
+                <div className="rounded-xl border border-neutral-200 bg-white p-3">
+                  <p className="mb-2 text-sm font-semibold text-neutral-900">Sem visita vinculada</p>
+                  <ProcedureList items={loose} onToggleDone={toggleDone} onEdit={openEditProc} onRemove={removeProcedure} />
+                </div>
+              )}
             </div>
+          )}
+        </div>
+
+        {/* Pagamentos */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-neutral-800">Pagamentos</h3>
+            <button
+              type="button"
+              onClick={() => (payFormOpen ? resetPayForm() : setPayFormOpen(true))}
+              className="print:hidden flex items-center gap-1 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-strong"
+            >
+              <IconPlus /> Pagamento
+            </button>
           </div>
-        )}
+
+          {payFormOpen && (
+            <div className="space-y-2 rounded-xl border border-neutral-200 bg-white p-3 print:hidden">
+              <input
+                value={payAmount}
+                onChange={(e) => setPayAmount(e.target.value)}
+                placeholder="Valor recebido (R$)"
+                inputMode="decimal"
+                className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+              />
+              <input
+                value={payNotes}
+                onChange={(e) => setPayNotes(e.target.value)}
+                placeholder="Observação (opcional, ex: sinal, parcela 2)"
+                className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+              />
+              <button
+                type="button"
+                onClick={submitPay}
+                disabled={savingPay}
+                className="w-full rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
+              >
+                {savingPay ? "Salvando..." : editingPayId ? "Salvar alterações" : "Lançar pagamento"}
+              </button>
+            </div>
+          )}
+
+          {payments.length === 0 ? (
+            <p className="text-sm text-neutral-400">Nenhum pagamento lançado ainda.</p>
+          ) : (
+            <div className="rounded-xl border border-neutral-200 bg-white p-3">
+              <div className="space-y-1.5">
+                {payments.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between gap-2 text-sm">
+                    <div className="min-w-0">
+                      <p className="truncate text-neutral-800">
+                        {new Date(p.paid_at).toLocaleDateString("pt-BR")}
+                        {p.notes ? ` · ${p.notes}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="font-medium text-emerald-700">{centsToBRL(p.amount_cents)}</span>
+                      <button
+                        type="button"
+                        onClick={() => openEditPay(p)}
+                        title="Editar"
+                        className="text-neutral-400 hover:text-neutral-700 print:hidden"
+                      >
+                        <IconPencil />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removePayment(p.id)}
+                        title="Remover"
+                        className="text-neutral-400 hover:text-red-600 print:hidden"
+                      >
+                        <IconTrash />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -483,10 +514,10 @@ function ProcedureList({
   onRemove: (id: string) => void;
 }) {
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       {items.map((p) => (
         <div key={p.id} className="flex items-center justify-between gap-2 text-sm">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="truncate text-neutral-800">
               {p.procedure_type}
               {p.tooth_numbers.length > 0 ? ` (dente${p.tooth_numbers.length > 1 ? "s" : ""} ${p.tooth_numbers.join(", ")})` : ""}
@@ -497,10 +528,14 @@ function ProcedureList({
             <button
               type="button"
               onClick={() => onToggleDone(p)}
-              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                p.done ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+              title={p.done ? "Marcar como pendente" : "Marcar como feito"}
+              className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${
+                p.done
+                  ? "border-emerald-300 bg-emerald-500 text-white hover:bg-emerald-600"
+                  : "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
               }`}
             >
+              {p.done ? <IconCheck /> : <IconCircle />}
               {p.done ? "Feito" : "Pendente"}
             </button>
             <button

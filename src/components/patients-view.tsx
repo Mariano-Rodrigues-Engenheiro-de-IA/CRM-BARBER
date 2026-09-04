@@ -11,6 +11,7 @@ import { useState, Suspense, lazy } from "react";
 import { createPortal } from "react-dom";
 import { DentalBudgetTab } from "@/components/dental-budget-tab";
 import { DentalAttachmentsTab } from "@/components/dental-attachments-tab";
+import { PatientNotesCard } from "@/components/patient-notes-card";
 
 const DentalChartTab = lazy(() =>
   import("@/components/dental-chart-tab").then((m) => ({ default: m.DentalChartTab })),
@@ -22,6 +23,7 @@ type PatientRow = {
   id: string;
   name: string;
   phone: string;
+  notes?: string | null;
   archived_at: string | null;
 };
 
@@ -128,6 +130,8 @@ export function PatientsView({
             </div>
           ) : (
             <div className="space-y-4">
+              <PatientNotesCard api={api} customerId={selected.id} initialNotes={selected.notes ?? null} />
+
               <div className="rounded-xl border border-neutral-200 bg-white p-4 print:hidden">
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Odontograma</h3>
                 <Suspense fallback={<p className="text-sm text-neutral-400">Carregando...</p>}>
