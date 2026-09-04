@@ -103,27 +103,54 @@ function DentalChartInner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerId]);
 
-  // Troca pontual de texto: o título "React Advanced Odontogram" (nome
-  // da biblioteca em inglês) vira o nome da clínica. Não mexe em mais
-  // nada — só observa o texto exato desse título e substitui quando
-  // aparece (a biblioteca desenha isso de forma assíncrona, por isso o
-  // MutationObserver em vez de mexer só uma vez no efeito).
+  // Troca pontual: título "React Advanced Odontogram" vira o nome da
+  // clínica, ícone da biblioteca vira a logo da clínica (se tiver uma
+  // configurada), e o subtítulo de configuração ("Em português. Usando
+  // a numeração FDI...") some. Só mexe nesses três pontos específicos,
+  // por texto/posição exata — nada de classe ou estrutura genérica.
   useEffect(() => {
     const container = chartWrapRef.current;
     if (!container) return;
-    const targetText = "React Advanced Odontogram";
-    const replacement = clinicName?.trim() || "Odontograma";
+    const titleText = "React Advanced Odontogram";
+    const titleReplacement = clinicName?.trim() || "Odontograma";
+    const subtitlePrefix = "Em português. Usando a numeração FDI";
 
     function patch() {
       if (!container) return;
+      let titleEl: HTMLElement | null = container.querySelector('[data-crm-title="1"]');
       const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT);
       let node = walker.nextNode();
       while (node) {
         const el = node as HTMLElement;
-        if (el.children.length === 0 && el.textContent?.trim() === targetText) {
-          el.textContent = replacement;
+        const text = el.children.length === 0 ? el.textContent?.trim() : null;
+        if (text === titleText) {
+          el.textContent = titleReplacement;
+          el.setAttribute("data-crm-title", "1");
+          titleEl = el;
+        } else if (text?.startsWith(subtitlePrefix)) {
+          el.style.display = "none";
         }
         node = walker.nextNode();
+      }
+      // Logo: o primeiro <svg> do container, antes do título no
+      // documento — o cabeçalho vem primeiro que qualquer desenho de
+      // dente, então é um jeito seguro de achar só o ícone da marca.
+      // Só tenta se ainda não trocou (idempotente) — sem essa guarda,
+      // uma passagem seguinte do observer podia achar outro <svg>
+      // qualquer (um dente de verdade) e escondê-lo por engano.
+      if (clinicLogo && titleEl && !container.querySelector('[data-crm-logo-img="1"]')) {
+        const firstSvg = container.querySelector("svg");
+        if (firstSvg && firstSvg.compareDocumentPosition(titleEl) & Node.DOCUMENT_POSITION_FOLLOWING) {
+          firstSvg.style.display = "none";
+          const img = document.createElement("img");
+          img.src = clinicLogo;
+          img.setAttribute("data-crm-logo-img", "1");
+          img.style.width = "28px";
+          img.style.height = "28px";
+          img.style.objectFit = "contain";
+          img.style.borderRadius = "6px";
+          firstSvg.parentElement?.insertBefore(img, firstSvg);
+        }
       }
     }
 
@@ -131,7 +158,7 @@ function DentalChartInner({
     const observer = new MutationObserver(patch);
     observer.observe(container, { childList: true, subtree: true, characterData: true });
     return () => observer.disconnect();
-  }, [clinicName]);
+  }, [clinicName, clinicLogo]);
 
   async function handleSave() {
     setSaving(true);
