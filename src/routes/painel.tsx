@@ -21,6 +21,7 @@ import { useConfirm } from "@/components/confirm-dialog";
 import { AgendaView } from "@/components/agenda-view";
 import { AgendaRemindersView } from "@/components/agenda-reminders-view";
 import { FollowupView } from "@/components/followup-view";
+import { PatientsView } from "@/components/patients-view";
 import { AulasView } from "@/components/aulas-view";
 import { AgenteIaView } from "@/components/agente-ia-view";
 import { ServicesTab, ProfessionalsTab, ProductsTab } from "@/components/professionals-services-dialog";
@@ -246,7 +247,7 @@ function nudgeExtensionPoll() {
   window.postMessage({ __crm: "poll_now_v180" }, window.location.origin);
 }
 
-type Section = "agenda" | "agente-ia" | "treinamento" | "configuracoes" | "assinantes" | "funis" | "follow-up" | "disparo" | "equipe" | "conexao" | "templates";
+type Section = "agenda" | "agente-ia" | "treinamento" | "configuracoes" | "assinantes" | "funis" | "follow-up" | "disparo" | "equipe" | "conexao" | "templates" | "pacientes";
 
 /** Sub-abas da sanfona de Assinaturas. */
 type AssinTab = "visao" | "assinantes";
@@ -692,16 +693,20 @@ function Painel() {
     { key: "funis", label: "Funis de Vendas", icon: <IconChart /> },
     { key: "follow-up", label: "Follow-up", icon: <IconClock /> },
     { key: "disparo", label: "Disparo", icon: <IconSend /> },
-    {
-      key: "assinantes",
-      label: "Assinaturas",
-      icon: <IconBadgeCheck />,
-      children: [
-        { key: "visao", label: "Visão geral" },
-        { key: "assinantes", label: "Assinantes" },
-      ],
-    },
-    { key: "equipe", label: "Ranking de vendas", icon: <IconRankingBars /> },
+    ...(businessType === "odontologia"
+      ? [{ key: "pacientes" as Section, label: "Pacientes", icon: <IconUsers /> }]
+      : [
+          {
+            key: "assinantes" as Section,
+            label: "Assinaturas",
+            icon: <IconBadgeCheck />,
+            children: [
+              { key: "visao" as AssinTab, label: "Visão geral" },
+              { key: "assinantes" as AssinTab, label: "Assinantes" },
+            ],
+          },
+          { key: "equipe" as Section, label: "Ranking de vendas", icon: <IconRankingBars /> },
+        ]),
     ...(isMetaProvider ? [{ key: "templates" as Section, label: "Modelos", icon: <IconNote /> }] : []),
 
     { key: "conexao", label: "Conexão", icon: <IconPlug /> },
@@ -885,10 +890,7 @@ function Painel() {
             <SectionHeader icon={<IconCalendar />} title="Agenda" subtitle={agendaTab === "lembretes" ? "Lembretes / Confirmações" : undefined} />
             <main className="px-4 py-4">
               {agendaTab === "agenda" ? (
-                <AgendaView
-                  api={(path: string, opts?: RequestInit) => api(token, path, opts)}
-                  businessType={businessType}
-                />
+                <AgendaView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
               ) : (
                 <PremiumSoftLock active={!!billing && !billing.premium} onUpgrade={openCheckout}>
                   <AgendaRemindersView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
@@ -1072,6 +1074,18 @@ function Painel() {
               <PremiumSoftLock active={!!billing && !billing.premium} onUpgrade={openCheckout}>
                 <FollowupView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
               </PremiumSoftLock>
+            </main>
+          </>
+        )}
+
+        {section === "pacientes" && token && (
+          <>
+            <SectionHeader icon={<IconUsers />} title="Pacientes" />
+            <main className="px-4 py-4">
+              <PatientsView
+                api={(path: string, opts?: RequestInit) => api(token, path, opts)}
+                customers={customers}
+              />
             </main>
           </>
         )}
