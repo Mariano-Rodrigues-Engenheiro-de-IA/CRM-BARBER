@@ -227,13 +227,12 @@ async function handleConfirmationButtonReply(repliedToWamid: string, buttonText:
 }
 
 /** Casa uma resposta DIGITADA (não clique) com a confirmação pendente
- * mais recente daquele número de telefone — não tem WAMID de contexto
- * pra casar direto, então usa telefone + "ainda não confirmado" + janela
- * de tempo recente. Se o texto bater com alguma palavra configurada na
- * regra (sim, ok, confirmo...), confirma. */
+ * mais recente daquele número de telefone — resolve o barbershop_id
+ * pelo phone_number_id (identificador da Meta) e delega o resto pra
+ * lógica compartilhada com o webhook da uazapi. */
 async function handleConfirmationTextReply(phoneNumberId: string, fromPhone: string, text: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { textMatchesConfirmKeywords } = await import("@/lib/agenda-reminders");
+  const { handleConfirmationTextReplyForBarbershop } = await import("@/lib/agenda-reminders.server");
 
   const { data: instance } = await supabaseAdmin
     .from("whatsapp_instances")
@@ -242,52 +241,12 @@ async function handleConfirmationTextReply(phoneNumberId: string, fromPhone: str
     .maybeSingle();
   if (!instance?.barbershop_id) return;
 
-  const normalizedPhone = fromPhone.replace(/\D/g, "");
-  const sinceIso = new Date(Date.now() - 48 * 3600_000).toISOString();
-
-  // Confirmação pendente mais recente pra esse telefone: job criado por
-  // uma regra de confirmação, enviado (não falho/pendente), dentro da
-  // janela de 48h, cujo agendamento ainda não está confirmed.
-  const { data: candidates } = await supabaseAdmin
-    .from("message_jobs")
-    .select("id, appointment_id, agenda_reminder_rule_id, sent_at, appointments!inner(status)")
-    .eq("barbershop_id", instance.barbershop_id)
-    .eq("phone", normalizedPhone)
-    .not("agenda_reminder_rule_id", "is", null)
-    .not("appointment_id", "is", null)
-    .eq("status", "sent")
-    .gte("sent_at", sinceIso)
-    .order("sent_at", { ascending: false })
-    .limit(5);
-  if (!candidates?.length) return;
-
-  for (const job of candidates) {
-    const appt = job.appointments as unknown as { status: string } | null;
-    if (appt?.status === "confirmed") continue; // já confirmado, ignora
-    const { data: rule } = await supabaseAdmin
-      .from("agenda_reminder_rules")
-      .select("kind, confirm_keywords")
-      .eq("id", job.agenda_reminder_rule_id as string)
-      .maybeSingle();
-    if (rule?.kind !== "confirmation") continue;
-    const keywords = (rule.confirm_keywords as string[] | null) || [];
-    if (!keywords.length || !textMatchesConfirmKeywords(text, keywords)) continue;
-    await confirmAppointment(job.appointment_id as string, "texto digitado");
-    return; // só a confirmação mais recente que bateu, não continua olhando as outras
-  }
+  await handleConfirmationTextReplyForBarbershop(instance.barbershop_id, fromPhone, text);
 }
 
 async function confirmAppointment(appointmentId: string, via: "botão" | "texto digitado") {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { error } = await supabaseAdmin
-    .from("appointments")
-    .update({ status: "confirmed" })
-    .eq("id", appointmentId);
-  if (error) {
-    console.error(`[whatsapp.webhook] falha ao confirmar agendamento via ${via}:`, error.message);
-  } else {
-    console.info(`[whatsapp.webhook] agendamento confirmado via ${via}:`, appointmentId);
-  }
+  const { confirmAppointment: shared } = await import("@/lib/agenda-reminders.server");
+  return shared(appointmentId, via);
 }
 
 async function logWebhookCall(kind: string, statusCode: number, headers: Record<string, string>, body: unknown, note?: string) {

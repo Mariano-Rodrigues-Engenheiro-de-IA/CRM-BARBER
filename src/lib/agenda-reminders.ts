@@ -41,10 +41,19 @@ export const agendaReminderRuleSchema = agendaReminderRuleBaseSchema
     message: "Lembrete precisa de uma mensagem ou de um modelo.",
     path: ["message_text"],
   })
-  .refine((v) => v.kind !== "confirmation" || (!!v.template_name && !!v.template_language), {
-    message: "Confirmação precisa de um modelo aprovado com botões.",
-    path: ["template_name"],
-  });
+  .refine(
+    (v) =>
+      v.kind !== "confirmation" ||
+      (!!v.template_name && !!v.template_language) ||
+      !!v.message_text?.trim(),
+    {
+      // Confirmação por modelo (com botão) é exclusiva da API oficial —
+      // fora dela, usa texto livre + palavra-chave de confirmação (ver
+      // confirm_keywords), então precisa de UM dos dois, não só modelo.
+      message: "Confirmação precisa de um modelo aprovado com botões, ou de uma mensagem de texto (fora da API oficial).",
+      path: ["template_name"],
+    },
+  );
 
 export type AgendaReminderRule = {
   id: string;
@@ -88,4 +97,18 @@ export function renderAgendaReminderText(
   vars: { nome?: string; data?: string; hora?: string; servico?: string; profissional?: string },
 ) {
   return text.replace(/\{(\w+)\}/g, (m, k: string) => (vars as Record<string, string | undefined>)[k] ?? m);
+}
+
+/** Confirmação fora da API oficial não tem botão — precisa pedir uma
+ * resposta digitada. Junta a mensagem configurada com uma instrução
+ * clara, usando a mesma palavra do botão (confirm_button_text) que a
+ * regra já guarda pro modelo da Meta, ou "Sim" como padrão. */
+export function renderConfirmationFreeText(
+  messageText: string,
+  vars: { nome?: string; data?: string; hora?: string; servico?: string; profissional?: string },
+  confirmButtonText?: string | null,
+) {
+  const body = renderAgendaReminderText(messageText, vars);
+  const word = confirmButtonText?.trim() || "Sim";
+  return `${body}\n\nResponda "${word}" para confirmar.`;
 }

@@ -10,7 +10,7 @@
 // Autenticação: header `apikey` = SUPABASE_PUBLISHABLE_KEY (padrão pg_cron).
 
 import { createFileRoute } from "@tanstack/react-router";
-import { renderAgendaReminderText } from "@/lib/agenda-reminders";
+import { renderAgendaReminderText, renderConfirmationFreeText } from "@/lib/agenda-reminders";
 
 const BATCH_LIMIT = 200; // agendamentos avaliados por regra, por rodada
 
@@ -40,6 +40,16 @@ export const Route = createFileRoute("/api/public/hooks/evaluate-agenda-reminder
 
         let created = 0;
         for (const rule of rules ?? []) {
+          // Provedor conectado dessa barbearia/clínica — decide se
+          // confirmação pode usar modelo (só a Meta suporta) ou precisa
+          // cair pra texto livre + palavra-chave de resposta.
+          const { data: inst } = await supabaseAdmin
+            .from("whatsapp_instances")
+            .select("provider")
+            .eq("barbershop_id", rule.barbershop_id)
+            .maybeSingle();
+          const isMeta = inst?.provider === "meta";
+
           // O ponto de corte: agendamentos cujo (scheduled_at - offset)
           // já passou. Só olha os das próximas ~48h pra trás até agora,
           // pra não escanear a tabela inteira de agendamentos antigos a
@@ -95,27 +105,30 @@ export const Route = createFileRoute("/api/public/hooks/evaluate-agenda-reminder
             const dt = new Date(appt.scheduled_at as string);
             const vars = {
               nome: customer.name || "",
-              data: dt.toLocaleDateString("pt-BR"),
-              hora: dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+              data: dt.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }),
+              hora: dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" }),
               servico: serviceName,
               profissional: professionalName,
             };
 
-            // Confirmação sempre usa modelo. Lembrete pode usar modelo OU
-            // texto livre — depende do que foi configurado na regra
-            // (a tela só oferece texto livre quando o número não está
-            // conectado via Meta, já que texto livre não é entregue de
-            // forma confiável na API oficial).
-            const usesTemplate = rule.kind === "confirmation" || !!rule.template_name;
+            // Confirmação por modelo com botão é exclusiva da API oficial
+            // (Meta) — fora dela, cai pra texto livre + instrução de
+            // resposta, e quem detecta o "sim" do cliente depois é o
+            // webhook de mensagem recebida (Meta ou uazapi, cada um no
+            // seu). Lembrete sempre pode usar texto livre quando
+            // configurado, template só se foi escolhido um.
+            const usesTemplate = rule.kind === "confirmation" ? isMeta : !!rule.template_name;
+            const freeText =
+              rule.kind === "confirmation"
+                ? renderConfirmationFreeText(rule.message_text || "", vars, rule.confirm_button_text)
+                : renderAgendaReminderText(rule.message_text || "", vars);
             const { data: job, error: jobErr } = await supabaseAdmin
               .from("message_jobs")
               .insert({
                 barbershop_id: rule.barbershop_id,
                 customer_id: appt.customer_id,
                 phone: customer.phone,
-                rendered_body: usesTemplate
-                  ? `[Modelo: ${rule.template_name}]`
-                  : renderAgendaReminderText(rule.message_text || "", vars),
+                rendered_body: usesTemplate ? `[Modelo: ${rule.template_name}]` : freeText,
                 template_name: usesTemplate ? rule.template_name : null,
                 template_language: usesTemplate ? rule.template_language : null,
                 template_header_media_path: usesTemplate ? rule.template_header_media_path : null,
