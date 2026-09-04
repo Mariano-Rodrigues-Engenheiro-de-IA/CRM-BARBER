@@ -1093,6 +1093,8 @@ function Painel() {
               <PatientsView
                 api={(path: string, opts?: RequestInit) => api(token, path, opts)}
                 customers={customers}
+                clinicName={shopName}
+                clinicLogo={brand.logo}
               />
             </main>
           </>

@@ -41,7 +41,7 @@ export const Route = createFileRoute("/api/public/extension/dental-attachments")
           .select("id, file_name, content_type, size_bytes, file_path, created_at")
           .eq("barbershop_id", shop)
           .eq("customer_id", customerId)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: true });
         if (error) return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
 
         // Bucket privado — cada arquivo precisa de uma URL assinada

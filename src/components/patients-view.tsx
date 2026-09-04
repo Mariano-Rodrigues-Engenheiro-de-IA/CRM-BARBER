@@ -24,7 +24,17 @@ type PatientRow = {
   archived_at: string | null;
 };
 
-export function PatientsView({ api, customers }: { api: ApiFn; customers: PatientRow[] }) {
+export function PatientsView({
+  api,
+  customers,
+  clinicName,
+  clinicLogo,
+}: {
+  api: ApiFn;
+  customers: PatientRow[];
+  clinicName?: string;
+  clinicLogo?: string;
+}) {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [listOpen, setListOpen] = useState(true);
@@ -107,7 +117,7 @@ export function PatientsView({ api, customers }: { api: ApiFn; customers: Patien
             <div className="rounded-xl border border-neutral-200 bg-white p-4 print:hidden">
               <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Odontograma</h3>
               <Suspense fallback={<p className="text-sm text-neutral-400">Carregando...</p>}>
-                <DentalChartTab api={api} customerId={selected.id} />
+                <DentalChartTab api={api} customerId={selected.id} clinicName={clinicName} clinicLogo={clinicLogo} />
               </Suspense>
             </div>
 

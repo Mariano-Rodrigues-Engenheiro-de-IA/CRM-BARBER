@@ -46,7 +46,17 @@ class OdontogramErrorBoundary extends Component<{ children: ReactNode }, { error
   }
 }
 
-function DentalChartInner({ api, customerId }: { api: ApiFn; customerId: string }) {
+function DentalChartInner({
+  api,
+  customerId,
+  clinicName,
+  clinicLogo,
+}: {
+  api: ApiFn;
+  customerId: string;
+  clinicName?: string;
+  clinicLogo?: string;
+}) {
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -78,6 +88,15 @@ function DentalChartInner({ api, customerId }: { api: ApiFn; customerId: string 
     return () => {
       mountedRef.current = false;
       destroyOdontogram();
+      // Rede de segurança: a biblioteca cria modais/popups direto no
+      // <body> (fora da árvore que o React controla), pra sobrepor a
+      // tela toda. Se destroyOdontogram() não limpar um deles a tempo
+      // (troca rápida de paciente, por exemplo), sobra um overlay
+      // "fantasma" cobrindo tudo — dá exatamente a impressão de menu
+      // sumido, quando na real só está por baixo de algo invisível.
+      // Remove qualquer resto identificável dela, sem mexer em nada
+      // nosso (nenhuma classe nossa começa com "odon-").
+      document.querySelectorAll('[class*="odon-"][class*="backdrop"], [class*="odon-"][class*="overlay"]').forEach((el) => el.remove());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerId]);
@@ -127,6 +146,12 @@ function DentalChartInner({ api, customerId }: { api: ApiFn; customerId: string 
       {err && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{err}</div>}
 
       <div className="relative overflow-x-auto rounded-xl border border-neutral-200 bg-white p-2">
+        {(clinicName || clinicLogo) && (
+          <div className="mb-2 flex items-center gap-2 border-b border-neutral-100 px-1 pb-2">
+            {clinicLogo && <img src={clinicLogo} alt="" className="h-6 w-6 shrink-0 rounded object-contain" />}
+            {clinicName && <span className="truncate text-sm font-semibold text-neutral-800">{clinicName}</span>}
+          </div>
+        )}
         {!ready && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 text-sm text-neutral-400">
             Carregando...
@@ -138,7 +163,7 @@ function DentalChartInner({ api, customerId }: { api: ApiFn; customerId: string 
   );
 }
 
-export function DentalChartTab(props: { api: ApiFn; customerId: string }) {
+export function DentalChartTab(props: { api: ApiFn; customerId: string; clinicName?: string; clinicLogo?: string }) {
   return (
     <OdontogramErrorBoundary>
       <DentalChartInner {...props} />

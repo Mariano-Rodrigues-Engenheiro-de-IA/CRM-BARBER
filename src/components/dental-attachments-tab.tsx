@@ -105,7 +105,7 @@ export function DentalAttachmentsTab({ api, customerId }: { api: ApiFn; customer
           }),
         });
         if (res?.ok) {
-          setAttachments((prev) => [res.attachment, ...prev]);
+          setAttachments((prev) => [...prev, res.attachment]);
         } else {
           setErr(res?.error || `Não consegui enviar "${file.name}".`);
         }
@@ -169,7 +169,7 @@ export function DentalAttachmentsTab({ api, customerId }: { api: ApiFn; customer
         <p className="text-sm text-neutral-400">Nenhum anexo enviado ainda.</p>
       ) : (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {attachments.map((a) => (
+          {attachments.map((a, i) => (
             <div key={a.id} className="group relative overflow-hidden rounded-xl border border-neutral-200 bg-white">
               <a
                 href={a.url ?? undefined}
@@ -185,8 +185,14 @@ export function DentalAttachmentsTab({ api, customerId }: { api: ApiFn; customer
                   </div>
                 )}
                 <div className="p-2">
-                  <p className="truncate text-xs font-medium text-neutral-800">{a.file_name}</p>
-                  <p className="text-[11px] text-neutral-400">{formatSize(a.size_bytes)}</p>
+                  <p className="truncate text-xs font-medium text-neutral-800">
+                    {i + 1}. {a.file_name}
+                  </p>
+                  <p className="text-[11px] text-neutral-400">
+                    {new Date(a.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                    {" · "}
+                    {formatSize(a.size_bytes)}
+                  </p>
                 </div>
               </a>
               <button
