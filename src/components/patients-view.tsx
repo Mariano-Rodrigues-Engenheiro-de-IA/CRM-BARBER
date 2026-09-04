@@ -8,6 +8,7 @@
 // espremido num modal pequeno.
 
 import { useState, Suspense, lazy } from "react";
+import { createPortal } from "react-dom";
 import { DentalBudgetTab } from "@/components/dental-budget-tab";
 import { DentalAttachmentsTab } from "@/components/dental-attachments-tab";
 
@@ -29,11 +30,13 @@ export function PatientsView({
   customers,
   clinicName,
   clinicLogo,
+  headerHost,
 }: {
   api: ApiFn;
   customers: PatientRow[];
   clinicName?: string;
   clinicLogo?: string;
+  headerHost?: HTMLElement | null;
 }) {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -58,83 +61,95 @@ export function PatientsView({
     setListOpen(false);
   }
 
+  // Cabeçalho da seção (compartilhado com o resto do painel, mesmo
+  // truque de portal que Funis já usa): quando tem paciente selecionado
+  // e a lista está fechada, mostra "Trocar paciente" + nome ali em
+  // cima, economizando a linha que tinha dentro do conteúdo — pedido
+  // explícito do Mariano, "some uma das abas".
+  const header =
+    selected && !listOpen ? (
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setListOpen(true)}
+          title="Trocar paciente"
+          className="flex shrink-0 items-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M9 6l-6 6 6 6" />
+          </svg>
+          Trocar paciente
+        </button>
+        <span className="truncate text-sm font-semibold text-neutral-950">{selected.name}</span>
+      </div>
+    ) : (
+      <h1 className="truncate text-[15px] font-semibold text-neutral-900">Pacientes</h1>
+    );
+
   return (
-    <div className={listOpen ? "flex gap-4 print:block" : "print:block"}>
-      {listOpen && (
-        <div className="w-72 shrink-0 space-y-3 print:hidden">
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar paciente por nome ou telefone"
-            className="w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand"
-          />
-          <div className="max-h-[70vh] space-y-1 overflow-y-auto rounded-xl border border-neutral-200 bg-white p-1.5">
-            {filtered.length === 0 ? (
-              <p className="px-2 py-4 text-center text-xs text-neutral-400">Nenhum paciente encontrado.</p>
-            ) : (
-              filtered.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => selectPatient(c.id)}
-                  className={`w-full rounded-lg px-3 py-2 text-left text-sm transition ${
-                    selectedId === c.id ? "bg-brand/10 font-semibold text-brand" : "text-neutral-700 hover:bg-neutral-50"
-                  }`}
-                >
-                  <p className="truncate">{c.name}</p>
-                  <p className="truncate text-xs text-neutral-400">{c.phone}</p>
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-      )}
+    <>
+      {headerHost ? createPortal(header, headerHost) : null}
 
-      <div className={listOpen ? "min-w-0 flex-1" : ""}>
-        {!selected ? (
-          <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-neutral-300 text-sm text-neutral-400">
-            Selecione um paciente na lista pra ver a ficha completa.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {!listOpen && (
-              <div className="flex items-center gap-3 print:hidden">
-                <button
-                  type="button"
-                  onClick={() => setListOpen(true)}
-                  title="Trocar paciente"
-                  className="flex shrink-0 items-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d="M9 6l-6 6 6 6" />
-                  </svg>
-                  Trocar paciente
-                </button>
-                <span className="truncate text-sm font-semibold text-neutral-950">{selected.name}</span>
-              </div>
-            )}
-
-            <div className="rounded-xl border border-neutral-200 bg-white p-4 print:hidden">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Odontograma</h3>
-              <Suspense fallback={<p className="text-sm text-neutral-400">Carregando...</p>}>
-                <DentalChartTab api={api} customerId={selected.id} clinicName={clinicName} clinicLogo={clinicLogo} />
-              </Suspense>
-            </div>
-
-            <div className="rounded-xl border border-neutral-200 bg-white p-4 print:hidden">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Anexos</h3>
-              <DentalAttachmentsTab api={api} customerId={selected.id} />
-            </div>
-
-            <div className="rounded-xl border border-neutral-200 bg-white p-4">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 print:text-black">
-                Histórico e orçamento de {selected.name}
-              </h3>
-              <DentalBudgetTab api={api} customerId={selected.id} />
+      <div className={listOpen ? "flex gap-4 print:block" : "print:block"}>
+        {listOpen && (
+          <div className="w-72 shrink-0 space-y-3 print:hidden">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar paciente por nome ou telefone"
+              className="w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand"
+            />
+            <div className="max-h-[70vh] space-y-1 overflow-y-auto rounded-xl border border-neutral-200 bg-white p-1.5">
+              {filtered.length === 0 ? (
+                <p className="px-2 py-4 text-center text-xs text-neutral-400">Nenhum paciente encontrado.</p>
+              ) : (
+                filtered.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => selectPatient(c.id)}
+                    className={`w-full rounded-lg px-3 py-2 text-left text-sm transition ${
+                      selectedId === c.id ? "bg-brand/10 font-semibold text-brand" : "text-neutral-700 hover:bg-neutral-50"
+                    }`}
+                  >
+                    <p className="truncate">{c.name}</p>
+                    <p className="truncate text-xs text-neutral-400">{c.phone}</p>
+                  </button>
+                ))
+              )}
             </div>
           </div>
         )}
+
+        <div className={listOpen ? "min-w-0 flex-1" : ""}>
+          {!selected ? (
+            <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-neutral-300 text-sm text-neutral-400">
+              Selecione um paciente na lista pra ver a ficha completa.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-neutral-200 bg-white p-4 print:hidden">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Odontograma</h3>
+                <Suspense fallback={<p className="text-sm text-neutral-400">Carregando...</p>}>
+                  <DentalChartTab api={api} customerId={selected.id} clinicName={clinicName} clinicLogo={clinicLogo} />
+                </Suspense>
+              </div>
+
+              <div className="rounded-xl border border-neutral-200 bg-white p-4 print:hidden">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Anexos</h3>
+                <DentalAttachmentsTab api={api} customerId={selected.id} />
+              </div>
+
+              <div className="rounded-xl border border-neutral-200 bg-white p-4">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 print:text-black">
+                  Histórico e orçamento de {selected.name}
+                </h3>
+                <DentalBudgetTab api={api} customerId={selected.id} />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

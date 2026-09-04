@@ -545,6 +545,7 @@ function Painel() {
   // Host do cabeçalho dos funis: o seletor de funil + "novo funil" moram na
   // barra superior, mas o estado deles vive dentro do FunnelsView (portal).
   const [funisHeaderEl, setFunisHeaderEl] = useState<HTMLDivElement | null>(null);
+  const [pacientesHeaderEl, setPacientesHeaderEl] = useState<HTMLDivElement | null>(null);
   // Host do cabeçalho de Assinantes: os botões de ação moram na barra do topo,
   // ao lado do título, liberando altura pros kanbans.
   const [assinHeaderEl, setAssinHeaderEl] = useState<HTMLDivElement | null>(null);
@@ -1088,13 +1089,18 @@ function Painel() {
 
         {section === "pacientes" && token && (
           <>
-            <SectionHeader icon={<IconUsers />} title="Pacientes" />
+            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
+              <div className="flex items-center gap-3 px-5 py-2.5">
+                <div ref={setPacientesHeaderEl} className="flex min-w-0 flex-1 items-center gap-2" />
+              </div>
+            </header>
             <main className="px-4 py-4">
               <PatientsView
                 api={(path: string, opts?: RequestInit) => api(token, path, opts)}
                 customers={customers}
                 clinicName={shopName}
                 clinicLogo={shop?.logo_url ?? undefined}
+                headerHost={pacientesHeaderEl}
               />
             </main>
           </>
