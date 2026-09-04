@@ -280,15 +280,36 @@ function DentalChartInner({
           const clickable = el.closest("button, [role='tab'], [role='button']") ?? el;
           (clickable as HTMLElement).style.display = "none";
           el.setAttribute("data-crm-periograma-hidden", "1");
+          console.info("[CRM odontograma] achou e escondeu 'Periograma'. HTML do elemento clicável:", clickable.outerHTML.slice(0, 300));
         }
         node = walker.nextNode();
       }
+    }
+
+    // Diagnóstico: procura "Periograma" em QUALQUER lugar do documento
+    // (não só nos filhos novos do body) — se aparecer aqui mas o resto
+    // do código não estiver achando, o problema é de ONDE a busca
+    // olha, não do texto em si.
+    function diagnosticSearch(label: string) {
+      const all = document.querySelectorAll("*");
+      let found = 0;
+      for (const el of Array.from(all)) {
+        if (el.children.length === 0 && el.textContent?.trim() === "Periograma") {
+          found++;
+          console.info(
+            `[CRM odontograma][diagnóstico ${label}] achou 'Periograma' na busca ampla. Pai mais próximo clicável:`,
+            (el.closest("button, [role='tab'], [role='button']") ?? el).outerHTML.slice(0, 300),
+          );
+        }
+      }
+      if (found === 0) console.info(`[CRM odontograma][diagnóstico ${label}] 'Periograma' não encontrado em lugar nenhum do documento.`);
     }
 
     const bodyObserver = new MutationObserver((mutations) => {
       for (const m of mutations) {
         m.addedNodes.forEach((n) => {
           if (n.nodeType !== Node.ELEMENT_NODE) return;
+          console.info("[CRM odontograma] novo filho direto do body:", (n as Element).outerHTML.slice(0, 200));
           hidePeriogramaTab(n as Element);
           // A biblioteca às vezes anexa o painel vazio primeiro e só
           // preenche o conteúdo um instante depois — uma segunda
@@ -296,12 +317,44 @@ function DentalChartInner({
           // página inteira o tempo todo (subtree:true no body seria
           // caro — reagiria a QUALQUER mudança em QUALQUER aba do
           // sistema, não só no odontograma).
-          setTimeout(() => hidePeriogramaTab(n as Element), 200);
+          setTimeout(() => {
+            hidePeriogramaTab(n as Element);
+            diagnosticSearch("200ms depois de um filho novo no body");
+          }, 200);
         });
       }
     });
     bodyObserver.observe(document.body, { childList: true });
     return () => bodyObserver.disconnect();
+  }, []);
+
+  // Diagnóstico extra: cobre a possibilidade de o painel de
+  // Configurações abrir DENTRO do próprio container (não anexado no
+  // body como eu supus) — nesse caso o vigia principal (que já
+  // desligou) nunca veria, e o vigia do body também não, já que nada
+  // novo apareceria lá fora. Any clique dentro do odontograma dispara
+  // uma checagem ampla, com atraso, só pra diagnóstico.
+  useEffect(() => {
+    const container = chartWrapRef.current;
+    if (!container) return;
+    function onClick() {
+      setTimeout(() => {
+        const all = document.querySelectorAll("*");
+        let found = 0;
+        for (const el of Array.from(all)) {
+          if (el.children.length === 0 && el.textContent?.trim() === "Periograma") {
+            found++;
+            console.info(
+              "[CRM odontograma][diagnóstico clique] achou 'Periograma'. Pai clicável mais próximo:",
+              (el.closest("button, [role='tab'], [role='button']") ?? el).outerHTML.slice(0, 300),
+            );
+          }
+        }
+        if (found === 0) console.info("[CRM odontograma][diagnóstico clique] 'Periograma' não encontrado 300ms depois do clique.");
+      }, 300);
+    }
+    container.addEventListener("click", onClick);
+    return () => container.removeEventListener("click", onClick);
   }, []);
 
   async function handleSave() {
