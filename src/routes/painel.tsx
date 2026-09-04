@@ -549,7 +549,7 @@ function Painel() {
   // ao lado do título, liberando altura pros kanbans.
   const [assinHeaderEl, setAssinHeaderEl] = useState<HTMLDivElement | null>(null);
   const [equipeHeaderEl, setEquipeHeaderEl] = useState<HTMLDivElement | null>(null);
-  const [shop, setShop] = useState<{ id: string; name: string } | null>(null);
+  const [shop, setShop] = useState<{ id: string; name: string; logo_url?: string | null } | null>(null);
   const [isAdmin, setIsAdmin] = useState(() => {
     // Cache leve em sessionStorage — sem isso, a aba "Modelos" só aparece
     // depois de duas chamadas de rede resolverem (essa e a de baixo),
@@ -1094,7 +1094,7 @@ function Painel() {
                 api={(path: string, opts?: RequestInit) => api(token, path, opts)}
                 customers={customers}
                 clinicName={shopName}
-                clinicLogo={brand.logo}
+                clinicLogo={shop?.logo_url ?? undefined}
               />
             </main>
           </>

@@ -30,7 +30,7 @@ export const Route = createFileRoute("/api/public/extension/meta")({
             .limit(1000),
           supabaseAdmin
             .from("barbershops")
-            .select("name")
+            .select("name, logo_url")
             .eq("id", auth.token.barbershop_id)
             .maybeSingle(),
         ]);
@@ -41,7 +41,7 @@ export const Route = createFileRoute("/api/public/extension/meta")({
 
         return jsonResponse(request, {
           ok: true,
-          barbershop: { id: auth.token.barbershop_id, name: shopRes.data?.name ?? "Barbearia" },
+          barbershop: { id: auth.token.barbershop_id, name: shopRes.data?.name ?? "Barbearia", logo_url: shopRes.data?.logo_url ?? null },
           statuses: CUSTOMER_STATUSES,
           suggested_tags: Array.from(new Set([...DEFAULT_CUSTOMER_TAGS, ...usedTags])).sort(),
           is_admin: isAdminBarbershop(auth.token.barbershop_id),
