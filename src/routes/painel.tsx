@@ -1051,7 +1051,7 @@ function Painel() {
 
         {section === "funis" && token && (
           <>
-            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
+            <header className="print:hidden sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
               <div className="flex items-center gap-3 px-5 py-2.5">
                 <div ref={setFunisHeaderEl} className="flex min-w-0 flex-1 items-center gap-2" />
               </div>
@@ -1089,7 +1089,7 @@ function Painel() {
 
         {section === "pacientes" && token && (
           <>
-            <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
+            <header className="print:hidden sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
               <div className="flex items-center gap-3 px-5 py-2.5">
                 <div ref={setPacientesHeaderEl} className="flex min-w-0 flex-1 items-center gap-2" />
               </div>
