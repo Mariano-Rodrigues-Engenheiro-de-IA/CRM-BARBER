@@ -18,7 +18,7 @@ const signupSchema = z.object({
   name: z.string().trim().min(1).max(120),
   email: z.string().trim().email().max(255),
   phone: z.string().trim().min(8).max(20),
-  business_type: z.enum(["barbearia", "odontologia"]).default("barbearia"),
+  business_type: z.enum(["barbearia", "odontologia", "estetica"]).default("barbearia"),
 });
 
 function normalizePhone(input: string): string {
