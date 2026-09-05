@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Bell, MessageSquareCheck, Plus, Trash2, Pencil, X } from "lucide-react";
 import { useConfirm } from "@/components/confirm-dialog";
-import { DEFAULT_CONFIRM_KEYWORDS } from "@/lib/agenda-reminders";
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -224,8 +223,6 @@ function ReminderRuleForm({
   const [messageText, setMessageText] = useState(rule?.message_text || "");
   const [templateName, setTemplateName] = useState(rule?.template_name || "");
   const [confirmButtonText, setConfirmButtonText] = useState(rule?.confirm_button_text || "");
-  const [confirmKeywords, setConfirmKeywords] = useState<string[]>(rule?.confirm_keywords || DEFAULT_CONFIRM_KEYWORDS);
-  const [newKeyword, setNewKeyword] = useState("");
   const [headerMediaPath, setHeaderMediaPath] = useState<string | null>(rule?.template_header_media_path || null);
   const [headerPreview, setHeaderPreview] = useState<string | null>(null);
   const [uploadingHeader, setUploadingHeader] = useState(false);
@@ -283,7 +280,6 @@ function ReminderRuleForm({
       template_language: usesTemplate ? selectedTemplate?.language || "pt_BR" : null,
       template_header_media_path: usesTemplate && selectedTemplate?.hasImageHeader ? headerMediaPath : null,
       confirm_button_text: kind === "confirmation" ? confirmButtonText : null,
-      confirm_keywords: kind === "confirmation" ? confirmKeywords : undefined,
     };
     const r = rule
       ? await api(`/api/public/extension/agenda-reminder-rules/${rule.id}`, { method: "PATCH", body: JSON.stringify(body) })
@@ -413,8 +409,9 @@ function ReminderRuleForm({
                   />
                   <p className="mt-1 text-xs text-neutral-500">
                     Sem modelo com botão (fora da API oficial), a confirmação vira uma instrução no fim da
-                    mensagem: "Responda '{confirmButtonText || "Sim"}' para confirmar." As palavras da lista
-                    abaixo também contam, mesmo que o cliente digite diferente dessa aqui.
+                    mensagem: "Responda '{confirmButtonText || "Sim"}' para confirmar." A resposta do cliente
+                    não muda o status sozinha. É pra quem estiver acompanhando a conversa confirmar
+                    manualmente na Agenda.
                   </p>
                 </div>
               )}
@@ -481,63 +478,11 @@ function ReminderRuleForm({
                     </SelectContent>
                   </Select>
                   <p className="mt-1 text-xs text-neutral-500">
-                    Quando o cliente tocar nesse botão, o agendamento muda pra "Confirmado" sozinho.
+                    Só pra referência. O clique nesse botão não muda o status sozinho, é preciso confirmar
+                    manualmente na Agenda.
                   </p>
                 </div>
               )}
-            </div>
-          )}
-          {kind === "confirmation" && (
-            <div>
-              <Label>Palavras que também confirmam, se o cliente digitar</Label>
-              <p className="mt-1 mb-2 text-xs text-neutral-500">
-                Muita gente responde digitando em vez de tocar no botão (ou é a única forma, fora da API
-                oficial). Se a resposta do cliente contiver alguma dessas palavras, confirma do mesmo jeito.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {confirmKeywords.map((kw) => (
-                  <span
-                    key={kw}
-                    className="flex items-center gap-1 rounded-full border border-neutral-300 bg-neutral-50 px-3 py-1 text-xs text-neutral-700"
-                  >
-                    {kw}
-                    <button
-                      type="button"
-                      onClick={() => setConfirmKeywords((prev) => prev.filter((k) => k !== kw))}
-                      className="text-neutral-400 hover:text-red-600"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <div className="mt-2 flex gap-2">
-                <Input
-                  value={newKeyword}
-                  onChange={(e) => setNewKeyword(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key !== "Enter") return;
-                    e.preventDefault();
-                    const v = newKeyword.trim();
-                    if (v && !confirmKeywords.includes(v)) setConfirmKeywords((prev) => [...prev, v]);
-                    setNewKeyword("");
-                  }}
-                  placeholder="Adicionar palavra…"
-                  className="h-8 text-sm"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const v = newKeyword.trim();
-                    if (v && !confirmKeywords.includes(v)) setConfirmKeywords((prev) => [...prev, v]);
-                    setNewKeyword("");
-                  }}
-                >
-                  Adicionar
-                </Button>
-              </div>
             </div>
           )}
         </div>

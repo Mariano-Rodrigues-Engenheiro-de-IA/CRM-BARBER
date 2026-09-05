@@ -161,93 +161,11 @@ async function handleAccountUpdate(change: Json, entryWabaId: string | null) {
   }
 }
 
-async function handleMessagesChange(change: Json) {
-  console.info("[whatsapp.webhook] messages recebido:", JSON.stringify(change).slice(0, 2000));
-  // Ingestão de mensagens normais pro resto do sistema (funil, etc.)
-  // continua vindo por outro caminho (sincronização via extensão) — o que
-  // ESTE webhook trata de verdade é confirmação de agendamento, de duas
-  // formas: clique num botão de resposta rápida do modelo (mensagem tipo
-  // "button", casa pelo WAMID em `context.id`), ou resposta DIGITADA
-  // (mensagem tipo "text" — casa pelo número de telefone com a
-  // confirmação pendente mais recente, e compara o texto contra as
-  // palavras configuradas na regra).
-  try {
-    const value = (change.value as Json | undefined) ?? {};
-    const metadata = (value.metadata as Json | undefined) ?? {};
-    const phoneNumberId = typeof metadata.phone_number_id === "string" ? metadata.phone_number_id : null;
-    const messages = Array.isArray(value.messages) ? (value.messages as Json[]) : [];
-    for (const msg of messages) {
-      if (msg.type === "button") {
-        const button = msg.button as Json | undefined;
-        const context = msg.context as Json | undefined;
-        const repliedToWamid = typeof context?.id === "string" ? context.id : null;
-        const buttonText = typeof button?.text === "string" ? button.text : null;
-        if (repliedToWamid && buttonText) {
-          await handleConfirmationButtonReply(repliedToWamid, buttonText);
-        }
-      } else if (msg.type === "text") {
-        const textObj = msg.text as Json | undefined;
-        const body = typeof textObj?.body === "string" ? textObj.body : null;
-        const from = typeof msg.from === "string" ? msg.from : null;
-        if (body && from && phoneNumberId) {
-          await handleConfirmationTextReply(phoneNumberId, from, body);
-        }
-      }
-    }
-  } catch (e) {
-    console.error("[whatsapp.webhook] falha ao processar mensagem recebida:", e);
-  }
-}
-
-/** Casa o clique num botão de volta com o envio original (via WAMID) e,
- * se o texto do botão bater com o configurado na regra como "botão de
- * confirmar", muda o agendamento pra confirmed sozinho. */
-async function handleConfirmationButtonReply(repliedToWamid: string, buttonText: string) {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data: job } = await supabaseAdmin
-    .from("message_jobs")
-    .select("id, appointment_id, agenda_reminder_rule_id")
-    .eq("provider_message_id", repliedToWamid)
-    .maybeSingle();
-  if (!job?.appointment_id || !job.agenda_reminder_rule_id) return;
-
-  const { data: rule } = await supabaseAdmin
-    .from("agenda_reminder_rules")
-    .select("confirm_button_text")
-    .eq("id", job.agenda_reminder_rule_id)
-    .maybeSingle();
-  const expected = (rule?.confirm_button_text || "").trim().toLowerCase();
-  if (!expected || buttonText.trim().toLowerCase() !== expected) {
-    // Clicou em outro botão do mesmo modelo (ex: "Cancelar") — não é o
-    // de confirmar, não faz nada automaticamente por enquanto.
-    return;
-  }
-
-  await confirmAppointment(job.appointment_id, "botão");
-}
-
-/** Casa uma resposta DIGITADA (não clique) com a confirmação pendente
- * mais recente daquele número de telefone — resolve o barbershop_id
- * pelo phone_number_id (identificador da Meta) e delega o resto pra
- * lógica compartilhada com o webhook da uazapi. */
-async function handleConfirmationTextReply(phoneNumberId: string, fromPhone: string, text: string) {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { handleConfirmationTextReplyForBarbershop } = await import("@/lib/agenda-reminders.server");
-
-  const { data: instance } = await supabaseAdmin
-    .from("whatsapp_instances")
-    .select("barbershop_id")
-    .eq("phone_number_id", phoneNumberId)
-    .maybeSingle();
-  if (!instance?.barbershop_id) return;
-
-  await handleConfirmationTextReplyForBarbershop(instance.barbershop_id, fromPhone, text);
-}
-
-async function confirmAppointment(appointmentId: string, via: "botão" | "texto digitado") {
-  const { confirmAppointment: shared } = await import("@/lib/agenda-reminders.server");
-  return shared(appointmentId, via);
-}
+// Confirmação automática por botão/palavra-chave (clique num botão de
+// resposta rápida, ou resposta digitada tipo "sim") foi removida por
+// pedido explícito — o sistema só dispara a mensagem de confirmação,
+// sem tentar detectar/mudar o status do agendamento sozinho. Continua
+// existindo no histórico do git se um dia fizer sentido reativar.
 
 async function logWebhookCall(kind: string, statusCode: number, headers: Record<string, string>, body: unknown, note?: string) {
   try {
@@ -326,8 +244,6 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
               fields.push(typeof field === "string" ? field : String(field));
               if (field === "account_update") {
                 await handleAccountUpdate(change, typeof entry.id === "string" ? entry.id : null);
-              } else if (field === "messages") {
-                await handleMessagesChange(change);
               } else {
                 console.info("[whatsapp.webhook] evento não tratado:", field);
               }

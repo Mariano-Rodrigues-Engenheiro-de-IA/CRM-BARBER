@@ -3,16 +3,14 @@ import { z } from "zod";
 // Lembretes/Confirmações da Agenda — mensagem automática X minutos antes
 // do horário do agendamento.
 //
-//  - "reminder": aviso informativo, não espera resposta. Manda texto
-//    livre com variáveis {nome} {data} {hora} {servico} {profissional}
-//    OU um modelo aprovado, dependendo do provedor conectado — número
-//    conectado via Meta (API oficial) só entrega mensagem por modelo
-//    aprovado; texto livre só funciona no provedor não oficial.
-//  - "confirmation": manda um MODELO aprovado com botões de resposta
-//    rápida (ex: "Confirmar" / "Cancelar"). Quando o cliente toca em
-//    "Confirmar", o agendamento muda pra confirmed sozinho — a
-//    correlação usa o WAMID da mensagem enviada (ver provider_message_id
-//    em message_jobs e o webhook da Meta).
+//  - "reminder": aviso informativo, texto livre com variáveis {nome}
+//    {data} {hora} {servico} {profissional} OU modelo aprovado,
+//    dependendo do provedor conectado.
+//  - "confirmation": pede confirmação, com modelo aprovado com botões
+//    (API oficial) OU texto livre pedindo resposta (fora da Meta). O
+//    sistema só DISPARA a mensagem — não detecta clique de botão nem
+//    resposta digitada automaticamente; confirmar o agendamento
+//    continua sendo manual, na Agenda.
 
 export const AGENDA_REMINDER_STATUS_OPTIONS = ["scheduled", "confirmed", "done", "canceled"] as const;
 
@@ -28,11 +26,10 @@ export const agendaReminderRuleBaseSchema = z.object({
   // isso em TODO envio, não só na criação do modelo (mesma regra já
   // corrigida no Disparo/campanha).
   template_header_media_path: z.string().trim().max(400).nullable().optional(),
+  // Palavra usada na instrução de resposta do texto livre ("Responda X
+  // para confirmar"), ou rótulo de referência do botão do modelo — não
+  // aciona nenhuma detecção automática.
   confirm_button_text: z.string().trim().max(60).nullable().optional(),
-  // Palavras/frases que, numa resposta DIGITADA (não só clique no
-  // botão), contam como confirmação — comparado sem diferenciar
-  // maiúsculas/acentos (ver normalizeForMatch abaixo).
-  confirm_keywords: z.array(z.string().trim().min(1).max(40)).max(30).optional(),
   active: z.boolean().optional(),
 });
 
@@ -47,9 +44,9 @@ export const agendaReminderRuleSchema = agendaReminderRuleBaseSchema
       (!!v.template_name && !!v.template_language) ||
       !!v.message_text?.trim(),
     {
-      // Confirmação por modelo (com botão) é exclusiva da API oficial —
-      // fora dela, usa texto livre + palavra-chave de confirmação (ver
-      // confirm_keywords), então precisa de UM dos dois, não só modelo.
+      // Confirmação por modelo (com botão) é exclusiva da API oficial;
+      // fora dela, usa texto livre pedindo resposta — precisa de UM
+      // dos dois, não só modelo.
       message: "Confirmação precisa de um modelo aprovado com botões, ou de uma mensagem de texto (fora da API oficial).",
       path: ["template_name"],
     },
@@ -65,30 +62,8 @@ export type AgendaReminderRule = {
   template_name: string | null;
   template_language: string | null;
   confirm_button_text: string | null;
-  confirm_keywords: string[];
   active: boolean;
 };
-
-export const DEFAULT_CONFIRM_KEYWORDS = [
-  "sim", "ok", "okay", "certo", "confirmo", "confirmado", "beleza", "blz", "ta bom", "tá bom",
-];
-
-/** Sem acento e minúsculo, pra comparar resposta digitada do cliente
- * contra as palavras configuradas sem depender de acento/maiúscula. */
-export function normalizeForMatch(text: string) {
-  return text
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-}
-
-/** true se o texto digitado pelo cliente contém alguma das palavras de
- * confirmação da regra (comparação sem acento/maiúscula, por substring). */
-export function textMatchesConfirmKeywords(text: string, keywords: string[]) {
-  const normalized = normalizeForMatch(text);
-  return keywords.some((k) => normalized.includes(normalizeForMatch(k)));
-}
 
 /** Substitui {nome} {data} {hora} {servico} {profissional} no texto —
  * mesma convenção de chaves usada nas Respostas Rápidas. */
@@ -102,7 +77,8 @@ export function renderAgendaReminderText(
 /** Confirmação fora da API oficial não tem botão — precisa pedir uma
  * resposta digitada. Junta a mensagem configurada com uma instrução
  * clara, usando a mesma palavra do botão (confirm_button_text) que a
- * regra já guarda pro modelo da Meta, ou "Sim" como padrão. */
+ * regra já guarda pro modelo da Meta, ou "Sim" como padrão. Só monta o
+ * texto — não há detecção automática da resposta. */
 export function renderConfirmationFreeText(
   messageText: string,
   vars: { nome?: string; data?: string; hora?: string; servico?: string; profissional?: string },

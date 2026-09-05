@@ -77,7 +77,6 @@ export const Route = createFileRoute("/api/public/extension/agenda-reminder-rule
             template_language: parsed.data.template_language ?? null,
             template_header_media_path: parsed.data.template_header_media_path ?? null,
             confirm_button_text: parsed.data.confirm_button_text ?? null,
-            ...(parsed.data.confirm_keywords ? { confirm_keywords: parsed.data.confirm_keywords } : {}),
             active: parsed.data.active ?? true,
           })
           .select(SELECT_COLS)

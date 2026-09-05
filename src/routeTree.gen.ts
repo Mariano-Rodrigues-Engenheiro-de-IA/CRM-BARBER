@@ -70,7 +70,6 @@ import { Route as ApiPublicHooksDispatchJobsRouteImport } from './routes/api/pub
 import { Route as ApiPublicHooksEvaluateAgendaRemindersRouteImport } from './routes/api/public/hooks/evaluate-agenda-reminders'
 import { Route as ApiPublicHooksEvaluateFollowupsRouteImport } from './routes/api/public/hooks/evaluate-followups'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
-import { Route as ApiPublicWhatsappUazapiWebhookTokenRouteImport } from './routes/api/public/whatsapp-uazapi-webhook.$token'
 import { Route as ApiPublicWhatsappSignupCallbackRouteImport } from './routes/api/public/whatsapp.signup-callback'
 import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp.webhook'
 import { Route as ApiPublicAiProductsSearchRouteImport } from './routes/api/public/ai/products.search'
@@ -449,12 +448,6 @@ const ApiPublicPaymentsWebhookRoute =
     path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicWhatsappUazapiWebhookTokenRoute =
-  ApiPublicWhatsappUazapiWebhookTokenRouteImport.update({
-    id: '/api/public/whatsapp-uazapi-webhook/$token',
-    path: '/api/public/whatsapp-uazapi-webhook/$token',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiPublicWhatsappSignupCallbackRoute =
   ApiPublicWhatsappSignupCallbackRouteImport.update({
     id: '/api/public/whatsapp/signup-callback',
@@ -728,7 +721,6 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/evaluate-agenda-reminders': typeof ApiPublicHooksEvaluateAgendaRemindersRoute
   '/api/public/hooks/evaluate-followups': typeof ApiPublicHooksEvaluateFollowupsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
-  '/api/public/whatsapp-uazapi-webhook/$token': typeof ApiPublicWhatsappUazapiWebhookTokenRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
   '/api/public/ai/products/search': typeof ApiPublicAiProductsSearchRoute
@@ -827,7 +819,6 @@ export interface FileRoutesByTo {
   '/api/public/hooks/evaluate-agenda-reminders': typeof ApiPublicHooksEvaluateAgendaRemindersRoute
   '/api/public/hooks/evaluate-followups': typeof ApiPublicHooksEvaluateFollowupsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
-  '/api/public/whatsapp-uazapi-webhook/$token': typeof ApiPublicWhatsappUazapiWebhookTokenRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
   '/api/public/ai/products/search': typeof ApiPublicAiProductsSearchRoute
@@ -927,7 +918,6 @@ export interface FileRoutesById {
   '/api/public/hooks/evaluate-agenda-reminders': typeof ApiPublicHooksEvaluateAgendaRemindersRoute
   '/api/public/hooks/evaluate-followups': typeof ApiPublicHooksEvaluateFollowupsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
-  '/api/public/whatsapp-uazapi-webhook/$token': typeof ApiPublicWhatsappUazapiWebhookTokenRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
   '/api/public/ai/products/search': typeof ApiPublicAiProductsSearchRoute
@@ -1028,7 +1018,6 @@ export interface FileRouteTypes {
     | '/api/public/hooks/evaluate-agenda-reminders'
     | '/api/public/hooks/evaluate-followups'
     | '/api/public/payments/webhook'
-    | '/api/public/whatsapp-uazapi-webhook/$token'
     | '/api/public/whatsapp/signup-callback'
     | '/api/public/whatsapp/webhook'
     | '/api/public/ai/products/search'
@@ -1127,7 +1116,6 @@ export interface FileRouteTypes {
     | '/api/public/hooks/evaluate-agenda-reminders'
     | '/api/public/hooks/evaluate-followups'
     | '/api/public/payments/webhook'
-    | '/api/public/whatsapp-uazapi-webhook/$token'
     | '/api/public/whatsapp/signup-callback'
     | '/api/public/whatsapp/webhook'
     | '/api/public/ai/products/search'
@@ -1226,7 +1214,6 @@ export interface FileRouteTypes {
     | '/api/public/hooks/evaluate-agenda-reminders'
     | '/api/public/hooks/evaluate-followups'
     | '/api/public/payments/webhook'
-    | '/api/public/whatsapp-uazapi-webhook/$token'
     | '/api/public/whatsapp/signup-callback'
     | '/api/public/whatsapp/webhook'
     | '/api/public/ai/products/search'
@@ -1325,7 +1312,6 @@ export interface RootRouteChildren {
   ApiPublicHooksEvaluateAgendaRemindersRoute: typeof ApiPublicHooksEvaluateAgendaRemindersRoute
   ApiPublicHooksEvaluateFollowupsRoute: typeof ApiPublicHooksEvaluateFollowupsRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
-  ApiPublicWhatsappUazapiWebhookTokenRoute: typeof ApiPublicWhatsappUazapiWebhookTokenRoute
   ApiPublicWhatsappSignupCallbackRoute: typeof ApiPublicWhatsappSignupCallbackRoute
   ApiPublicWhatsappWebhookRoute: typeof ApiPublicWhatsappWebhookRoute
   ApiPublicAiProductsSearchRoute: typeof ApiPublicAiProductsSearchRoute
@@ -1769,13 +1755,6 @@ declare module '@tanstack/react-router' {
       path: '/api/public/payments/webhook'
       fullPath: '/api/public/payments/webhook'
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/whatsapp-uazapi-webhook/$token': {
-      id: '/api/public/whatsapp-uazapi-webhook/$token'
-      path: '/api/public/whatsapp-uazapi-webhook/$token'
-      fullPath: '/api/public/whatsapp-uazapi-webhook/$token'
-      preLoaderRoute: typeof ApiPublicWhatsappUazapiWebhookTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/whatsapp/signup-callback': {
@@ -2403,8 +2382,6 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicHooksEvaluateAgendaRemindersRoute,
   ApiPublicHooksEvaluateFollowupsRoute: ApiPublicHooksEvaluateFollowupsRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
-  ApiPublicWhatsappUazapiWebhookTokenRoute:
-    ApiPublicWhatsappUazapiWebhookTokenRoute,
   ApiPublicWhatsappSignupCallbackRoute: ApiPublicWhatsappSignupCallbackRoute,
   ApiPublicWhatsappWebhookRoute: ApiPublicWhatsappWebhookRoute,
   ApiPublicAiProductsSearchRoute: ApiPublicAiProductsSearchRoute,
