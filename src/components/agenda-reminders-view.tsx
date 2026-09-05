@@ -263,7 +263,7 @@ function ReminderRuleForm({
     if (!name.trim()) return toast.error("Dá um nome pra regra.");
     if (usesTemplate && !templateName) return toast.error("Escolhe um modelo aprovado.");
     if (!usesTemplate && !messageText.trim()) return toast.error("Escreve a mensagem do lembrete.");
-    if (kind === "confirmation" && !confirmButtonText) return toast.error("Escolhe qual botão conta como confirmação.");
+    if (kind === "confirmation" && !usesTemplate && !confirmButtonText) return toast.error("Escreve a palavra de confirmação.");
     if (usesTemplate && selectedTemplate?.hasImageHeader && !headerMediaPath) {
       return toast.error("Esse modelo tem imagem no cabeçalho, envie uma imagem antes de salvar.");
     }
@@ -279,7 +279,7 @@ function ReminderRuleForm({
       template_name: usesTemplate ? templateName : null,
       template_language: usesTemplate ? selectedTemplate?.language || "pt_BR" : null,
       template_header_media_path: usesTemplate && selectedTemplate?.hasImageHeader ? headerMediaPath : null,
-      confirm_button_text: kind === "confirmation" ? confirmButtonText : null,
+      confirm_button_text: kind === "confirmation" && !usesTemplate ? confirmButtonText : null,
     };
     const r = rule
       ? await api(`/api/public/extension/agenda-reminder-rules/${rule.id}`, { method: "PATCH", body: JSON.stringify(body) })
@@ -331,7 +331,7 @@ function ReminderRuleForm({
               >
                 <MessageSquareCheck className="mb-1 h-4 w-4 text-sky-600" />
                 <p className="font-medium text-neutral-900">Confirmação</p>
-                <p className="text-xs text-neutral-500">Modelo com botão, confirma sozinho</p>
+                <p className="text-xs text-neutral-500">Pede resposta do cliente</p>
               </button>
             </div>
           </div>
@@ -460,27 +460,6 @@ function ReminderRuleForm({
                     className="block w-full text-sm text-neutral-600"
                   />
                   {uploadingHeader && <p className="mt-1 text-xs text-neutral-500">Enviando…</p>}
-                </div>
-              )}
-              {kind === "confirmation" && selectedTemplate && selectedTemplate.buttonTexts.length > 0 && (
-                <div>
-                  <Label>Qual botão conta como confirmação</Label>
-                  <Select value={confirmButtonText} onValueChange={setConfirmButtonText}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Escolha o botão…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectedTemplate.buttonTexts.map((bt) => (
-                        <SelectItem key={bt} value={bt}>
-                          {bt}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="mt-1 text-xs text-neutral-500">
-                    Só pra referência. O clique nesse botão não muda o status sozinho, é preciso confirmar
-                    manualmente na Agenda.
-                  </p>
                 </div>
               )}
             </div>
