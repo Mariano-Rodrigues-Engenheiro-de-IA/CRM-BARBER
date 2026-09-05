@@ -231,12 +231,17 @@ function ReminderRuleForm({
   const [uploadingHeader, setUploadingHeader] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const reminderNeedsTemplate = kind === "reminder" && isMetaProvider;
+  // Modelo aprovado só é exigido pela Meta — não importa se é lembrete
+  // ou confirmação. Fora da Meta, os dois usam texto livre (a
+  // confirmação junta uma instrução de resposta ao texto, ver
+  // renderConfirmationFreeText no backend). Antes, confirmação forçava
+  // modelo sempre, mesmo fora da Meta — não dava nem pra criar a regra
+  // direito sem provedor oficial.
   const allTemplates = templates.filter((t) => t.status === "APPROVED");
   const confirmTemplates = allTemplates.filter((t) => t.hasQuickReplyButtons);
   const templateOptions = kind === "confirmation" ? confirmTemplates : allTemplates;
   const selectedTemplate = templates.find((t) => t.name === templateName);
-  const usesTemplate = kind === "confirmation" || reminderNeedsTemplate;
+  const usesTemplate = isMetaProvider;
 
   async function handleHeaderFile(file: File) {
     setUploadingHeader(true);
@@ -381,29 +386,44 @@ function ReminderRuleForm({
           </div>
 
           {!usesTemplate ? (
-            <div>
-              <Label>Mensagem</Label>
-              <Textarea
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-                rows={4}
-                placeholder={"Oi {nome}! Passando pra lembrar do seu horário dia {data} às {hora}."}
-              />
-              <p className="mt-1 text-xs text-neutral-500">
-                Variáveis: <code className="rounded bg-neutral-100 px-1">{"{nome}"}</code>{" "}
-                <code className="rounded bg-neutral-100 px-1">{"{data}"}</code>{" "}
-                <code className="rounded bg-neutral-100 px-1">{"{hora}"}</code>{" "}
-                <code className="rounded bg-neutral-100 px-1">{"{servico}"}</code>{" "}
-                <code className="rounded bg-neutral-100 px-1">{"{profissional}"}</code>
-              </p>
+            <div className="space-y-3">
+              <div>
+                <Label>Mensagem</Label>
+                <Textarea
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  rows={4}
+                  placeholder={"Oi {nome}! Passando pra lembrar do seu horário dia {data} às {hora}."}
+                />
+                <p className="mt-1 text-xs text-neutral-500">
+                  Variáveis: <code className="rounded bg-neutral-100 px-1">{"{nome}"}</code>{" "}
+                  <code className="rounded bg-neutral-100 px-1">{"{data}"}</code>{" "}
+                  <code className="rounded bg-neutral-100 px-1">{"{hora}"}</code>{" "}
+                  <code className="rounded bg-neutral-100 px-1">{"{servico}"}</code>{" "}
+                  <code className="rounded bg-neutral-100 px-1">{"{profissional}"}</code>
+                </p>
+              </div>
+              {kind === "confirmation" && (
+                <div>
+                  <Label>Palavra que o cliente deve responder pra confirmar</Label>
+                  <Input
+                    value={confirmButtonText}
+                    onChange={(e) => setConfirmButtonText(e.target.value)}
+                    placeholder="Sim"
+                  />
+                  <p className="mt-1 text-xs text-neutral-500">
+                    Sem modelo com botão (fora da API oficial), a confirmação vira uma instrução no fim da
+                    mensagem: "Responda '{confirmButtonText || "Sim"}' para confirmar." As palavras da lista
+                    abaixo também contam, mesmo que o cliente digite diferente dessa aqui.
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
-              {reminderNeedsTemplate && (
-                <p className="text-xs text-neutral-500">
-                  Seu número está conectado via Meta, então o lembrete precisa de um modelo aprovado.
-                </p>
-              )}
+              <p className="text-xs text-neutral-500">
+                Seu número está conectado via Meta, então {kind === "confirmation" ? "a confirmação precisa" : "o lembrete precisa"} de um modelo aprovado.
+              </p>
               <div>
                 <Label>Modelo aprovado{kind === "confirmation" ? " com botões" : ""}</Label>
                 {templateOptions.length === 0 ? (
@@ -465,59 +485,59 @@ function ReminderRuleForm({
                   </p>
                 </div>
               )}
-              {kind === "confirmation" && (
-                <div>
-                  <Label>Palavras que também confirmam, se o cliente digitar</Label>
-                  <p className="mt-1 mb-2 text-xs text-neutral-500">
-                    Muita gente responde digitando em vez de tocar no botão. Se a resposta do cliente contiver
-                    alguma dessas palavras, confirma do mesmo jeito.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {confirmKeywords.map((kw) => (
-                      <span
-                        key={kw}
-                        className="flex items-center gap-1 rounded-full border border-neutral-300 bg-neutral-50 px-3 py-1 text-xs text-neutral-700"
-                      >
-                        {kw}
-                        <button
-                          type="button"
-                          onClick={() => setConfirmKeywords((prev) => prev.filter((k) => k !== kw))}
-                          className="text-neutral-400 hover:text-red-600"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                  <div className="mt-2 flex gap-2">
-                    <Input
-                      value={newKeyword}
-                      onChange={(e) => setNewKeyword(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key !== "Enter") return;
-                        e.preventDefault();
-                        const v = newKeyword.trim();
-                        if (v && !confirmKeywords.includes(v)) setConfirmKeywords((prev) => [...prev, v]);
-                        setNewKeyword("");
-                      }}
-                      placeholder="Adicionar palavra…"
-                      className="h-8 text-sm"
-                    />
-                    <Button
+            </div>
+          )}
+          {kind === "confirmation" && (
+            <div>
+              <Label>Palavras que também confirmam, se o cliente digitar</Label>
+              <p className="mt-1 mb-2 text-xs text-neutral-500">
+                Muita gente responde digitando em vez de tocar no botão (ou é a única forma, fora da API
+                oficial). Se a resposta do cliente contiver alguma dessas palavras, confirma do mesmo jeito.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {confirmKeywords.map((kw) => (
+                  <span
+                    key={kw}
+                    className="flex items-center gap-1 rounded-full border border-neutral-300 bg-neutral-50 px-3 py-1 text-xs text-neutral-700"
+                  >
+                    {kw}
+                    <button
                       type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const v = newKeyword.trim();
-                        if (v && !confirmKeywords.includes(v)) setConfirmKeywords((prev) => [...prev, v]);
-                        setNewKeyword("");
-                      }}
+                      onClick={() => setConfirmKeywords((prev) => prev.filter((k) => k !== kw))}
+                      className="text-neutral-400 hover:text-red-600"
                     >
-                      Adicionar
-                    </Button>
-                  </div>
-                </div>
-              )}
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div className="mt-2 flex gap-2">
+                <Input
+                  value={newKeyword}
+                  onChange={(e) => setNewKeyword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return;
+                    e.preventDefault();
+                    const v = newKeyword.trim();
+                    if (v && !confirmKeywords.includes(v)) setConfirmKeywords((prev) => [...prev, v]);
+                    setNewKeyword("");
+                  }}
+                  placeholder="Adicionar palavra…"
+                  className="h-8 text-sm"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const v = newKeyword.trim();
+                    if (v && !confirmKeywords.includes(v)) setConfirmKeywords((prev) => [...prev, v]);
+                    setNewKeyword("");
+                  }}
+                >
+                  Adicionar
+                </Button>
+              </div>
             </div>
           )}
         </div>
