@@ -62,6 +62,7 @@
     "lucide-react": "^0.575.0",
     "react": "^19.2.0",
     "react-advanced-odontogram": "2.4.0",
+    "react-body-highlighter": "^2.0.5",
     "react-day-picker": "^9.14.0",
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.71.2",

@@ -1,52 +1,50 @@
 // Mapa corporal — equivalente do odontograma pra clínica de estética.
-// Clica numa região do corpo (frente ou costas), escolhe o procedimento,
-// marca. Reaproveita a mesma ideia de "clicar na região abre a ficha"
-// do odontograma, mas com SVG desenhado à mão (não existe biblioteca
-// pronta de mapa corporal com nota clínica embutida, ao contrário do
-// odontograma) — mesmo desenho aprovado no protótipo mostrado antes.
+// Usa a biblioteca react-body-highlighter (corpo anatômico de verdade,
+// com coordenadas reais de cada região — MIT, npm), a mesma ideia do
+// odontograma: "clicar na região abre a ficha". A primeira versão desse
+// componente desenhava o corpo à mão (rascunho simples, sem parecer um
+// corpo real) — trocado por pedido do Mariano depois de ver o
+// resultado, pelo mesmo padrão de qualidade do odontograma.
 
 import { useEffect, useState } from "react";
+import Model, { Muscle, IExerciseData } from "react-body-highlighter";
 
 type ApiFn = (path: string, opts?: RequestInit) => Promise<any>;
 
 type Marking = {
   id: string;
   view: "front" | "back";
-  region: string;
+  region: Muscle;
   procedure: string;
   notes: string | null;
   done: boolean;
   created_at: string;
 };
 
-type Region = { id: string; label: string; d: string };
-
-const REGIONS_FRONT: Region[] = [
-  { id: "rosto", label: "Rosto", d: "M95,20 q15,-14 30,0 q6,18 -4,32 q-11,10 -22,0 q-10,-14 -4,-32 Z" },
-  { id: "pescoco", label: "Pescoço", d: "M100,50 h20 v14 h-20 Z" },
-  { id: "peito", label: "Peito", d: "M72,66 q38,-14 76,0 l6,44 q-44,16 -88,0 Z" },
-  { id: "braco-esquerdo", label: "Braço esquerdo", d: "M64,70 q-16,10 -18,60 q-2,30 6,50 l14,-4 q-6,-42 2,-70 q4,-20 12,-30 Z" },
-  { id: "braco-direito", label: "Braço direito", d: "M156,70 q16,10 18,60 q2,30 -6,50 l-14,-4 q6,-42 -2,-70 q-4,-20 -12,-30 Z" },
-  { id: "abdomen", label: "Abdômen", d: "M74,112 q36,14 72,0 l-4,50 q-32,14 -64,0 Z" },
-  { id: "quadril", label: "Quadril", d: "M70,164 q40,16 80,0 l4,30 q-44,18 -88,0 Z" },
-  { id: "coxa-esquerda", label: "Coxa esquerda", d: "M76,196 h32 l-2,90 h-28 Z" },
-  { id: "coxa-direita", label: "Coxa direita", d: "M112,196 h32 l-2,90 h-28 Z" },
-  { id: "perna-esquerda", label: "Perna esquerda", d: "M78,288 h26 l-2,86 h-22 Z" },
-  { id: "perna-direita", label: "Perna direita", d: "M116,288 h26 l-2,86 h-22 Z" },
-];
-
-const REGIONS_BACK: Region[] = [
-  { id: "nuca", label: "Nuca", d: "M95,18 q15,-12 30,0 v18 h-30 Z" },
-  { id: "costas-superior", label: "Costas superior", d: "M72,40 q38,-12 76,0 l4,50 q-42,16 -84,0 Z" },
-  { id: "braco-esquerdo-costas", label: "Braço esquerdo", d: "M64,44 q-16,10 -18,60 q-2,30 6,50 l14,-4 q-6,-42 2,-70 q4,-20 12,-30 Z" },
-  { id: "braco-direito-costas", label: "Braço direito", d: "M156,44 q16,10 18,60 q2,30 -6,50 l-14,-4 q6,-42 -2,-70 q-4,-20 -12,-30 Z" },
-  { id: "lombar", label: "Lombar", d: "M74,90 q36,14 72,0 l-2,44 q-34,14 -68,0 Z" },
-  { id: "gluteo", label: "Glúteo", d: "M70,138 q40,18 80,0 l4,34 q-44,18 -88,0 Z" },
-  { id: "posterior-coxa-esquerda", label: "Posterior de coxa esquerda", d: "M76,176 h32 l-2,100 h-28 Z" },
-  { id: "posterior-coxa-direita", label: "Posterior de coxa direita", d: "M112,176 h32 l-2,100 h-28 Z" },
-  { id: "panturrilha-esquerda", label: "Panturrilha esquerda", d: "M78,278 h26 l-2,96 h-22 Z" },
-  { id: "panturrilha-direita", label: "Panturrilha direita", d: "M116,278 h26 l-2,96 h-22 Z" },
-];
+const REGION_LABELS: Record<Muscle, string> = {
+  trapezius: "Trapézio",
+  "upper-back": "Costas superior",
+  "lower-back": "Lombar",
+  chest: "Peito",
+  biceps: "Bíceps",
+  triceps: "Tríceps",
+  forearm: "Antebraço",
+  "back-deltoids": "Ombro (posterior)",
+  "front-deltoids": "Ombro (anterior)",
+  abs: "Abdômen",
+  obliques: "Oblíquos",
+  adductor: "Adutor",
+  abductors: "Abdutores",
+  hamstring: "Posterior de coxa",
+  quadriceps: "Quadríceps",
+  calves: "Panturrilha",
+  gluteal: "Glúteo",
+  head: "Rosto",
+  neck: "Pescoço",
+  knees: "Joelhos",
+  "left-soleus": "Solear esquerdo",
+  "right-soleus": "Solear direito",
+};
 
 const PROCEDIMENTOS = [
   "Botox",
@@ -59,13 +57,13 @@ const PROCEDIMENTOS = [
   "Outro",
 ];
 
-const RAMP_FILLS = ["#AFA9EC", "#5DCAA5", "#F0997B", "#ED93B1", "#85B7EB", "#FAC775"];
+const HIGHLIGHT_COLOR = "#5DCAA5";
 
 export function BodyMapTab({ api, customerId }: { api: ApiFn; customerId: string }) {
   const [markings, setMarkings] = useState<Marking[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"front" | "back">("front");
-  const [selected, setSelected] = useState<Region | null>(null);
+  const [selected, setSelected] = useState<Muscle | null>(null);
   const [procedure, setProcedure] = useState(PROCEDIMENTOS[0]);
   const [saving, setSaving] = useState(false);
 
@@ -84,15 +82,19 @@ export function BodyMapTab({ api, customerId }: { api: ApiFn; customerId: string
     };
   }, [customerId]);
 
-  const regions = view === "front" ? REGIONS_FRONT : REGIONS_BACK;
-  const markingsByRegion = new Map(markings.map((m) => [`${m.view}:${m.region}`, m]));
+  // Biblioteca espera uma lista de "exercícios" (nome + músculos
+  // trabalhados) — reaproveitado aqui como "procedimento + região",
+  // só pra pintar quem já tem marcação (frequency > 0 vira destacado).
+  const chartData: IExerciseData[] = markings
+    .filter((m) => m.view === view)
+    .map((m) => ({ name: m.procedure, muscles: [m.region] }));
 
   async function handleMark() {
     if (!selected) return;
     setSaving(true);
     const r = await api("/api/public/extension/body-map-markings", {
       method: "POST",
-      body: JSON.stringify({ customer_id: customerId, view, region: selected.id, procedure }),
+      body: JSON.stringify({ customer_id: customerId, view, region: selected, procedure }),
     }).catch(() => null);
     setSaving(false);
     if (r?.ok && r.marking) {
@@ -120,7 +122,7 @@ export function BodyMapTab({ api, customerId }: { api: ApiFn; customerId: string
 
   return (
     <div className="flex flex-wrap gap-6">
-      <div className="shrink-0">
+      <div className="w-[220px] shrink-0">
         <div className="mb-2 flex gap-2">
           <button
             type="button"
@@ -143,30 +145,14 @@ export function BodyMapTab({ api, customerId }: { api: ApiFn; customerId: string
             Costas
           </button>
         </div>
-        <svg width="220" height="440" viewBox="0 0 220 440" role="img" aria-label="Mapa corporal">
-          <path
-            d="M110,4 q22,0 22,22 q0,16 -10,26 q30,10 34,72 q4,56 -4,90 q30,10 34,86 q6,66 -8,106 l-2,120 h-26 l-4,-92 l-4,92 h-24 l-2,-118 l-2,118 h-24 l-4,-92 l-4,92 h-26 l-2,-120 q-14,-40 -8,-106 q4,-76 34,-86 q-8,-34 -4,-90 q4,-62 34,-72 q-10,-10 -10,-26 q0,-22 22,-22 Z"
-            fill="#F5F5F0"
-            stroke="#B4B2A9"
-            strokeWidth={1}
-          />
-          {regions.map((r, i) => {
-            const key = `${view}:${r.id}`;
-            const mark = markingsByRegion.get(key);
-            const idx = markings.findIndex((m) => `${m.view}:${m.region}` === key);
-            return (
-              <path
-                key={r.id}
-                d={r.d}
-                fill={mark ? RAMP_FILLS[idx % RAMP_FILLS.length] : "transparent"}
-                stroke={selected?.id === r.id ? "#185FA5" : "#D3D1C7"}
-                strokeWidth={selected?.id === r.id ? 2 : 0.5}
-                style={{ cursor: "pointer" }}
-                onClick={() => setSelected(r)}
-              />
-            );
-          })}
-        </svg>
+        <Model
+          type={view === "front" ? "anterior" : "posterior"}
+          data={chartData}
+          style={{ width: "220px" }}
+          bodyColor="#F5F5F0"
+          highlightedColors={[HIGHLIGHT_COLOR]}
+          onClick={(result) => setSelected(result.muscle)}
+        />
       </div>
 
       <div className="min-w-[240px] flex-1">
@@ -175,7 +161,7 @@ export function BodyMapTab({ api, customerId }: { api: ApiFn; customerId: string
         ) : (
           <div className="mb-5">
             <p className="mb-1 text-xs text-neutral-500">Região selecionada</p>
-            <p className="mb-3 text-base font-bold text-neutral-900">{selected.label}</p>
+            <p className="mb-3 text-base font-bold text-neutral-900">{REGION_LABELS[selected] ?? selected}</p>
             <label className="mb-1 block text-xs text-neutral-500">Procedimento</label>
             <select
               value={procedure}
@@ -203,36 +189,30 @@ export function BodyMapTab({ api, customerId }: { api: ApiFn; customerId: string
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">Regiões marcadas</p>
             <div className="space-y-1.5">
-              {markings.map((m, i) => {
-                const region = [...REGIONS_FRONT, ...REGIONS_BACK].find((r) => r.id === m.region);
-                return (
-                  <div key={m.id} className="flex items-center gap-2 text-sm">
-                    <span
-                      className="h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ background: RAMP_FILLS[i % RAMP_FILLS.length] }}
-                    />
-                    <span className={`flex-1 ${m.done ? "text-neutral-400 line-through" : "text-neutral-700"}`}>
-                      {region ? region.label : m.region}: {m.procedure}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleDone(m)}
-                      title={m.done ? "Marcar como pendente" : "Marcar como feito"}
-                      className="text-xs text-neutral-400 hover:text-emerald-600"
-                    >
-                      {m.done ? "Desfazer" : "Feito"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(m)}
-                      title="Remover"
-                      className="text-xs text-neutral-400 hover:text-red-600"
-                    >
-                      Remover
-                    </button>
-                  </div>
-                );
-              })}
+              {markings.map((m) => (
+                <div key={m.id} className="flex items-center gap-2 text-sm">
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: HIGHLIGHT_COLOR }} />
+                  <span className={`flex-1 ${m.done ? "text-neutral-400 line-through" : "text-neutral-700"}`}>
+                    {REGION_LABELS[m.region] ?? m.region} ({m.view === "front" ? "frente" : "costas"}): {m.procedure}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleDone(m)}
+                    title={m.done ? "Marcar como pendente" : "Marcar como feito"}
+                    className="text-xs text-neutral-400 hover:text-emerald-600"
+                  >
+                    {m.done ? "Desfazer" : "Feito"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(m)}
+                    title="Remover"
+                    className="text-xs text-neutral-400 hover:text-red-600"
+                  >
+                    Remover
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         )}
