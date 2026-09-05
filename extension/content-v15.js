@@ -143,7 +143,11 @@
   // Nicho da conta ("barbearia", "odontologia"...) — vem junto na mesma
   // chamada de billing (sem pedido novo). Controla texto/ícone/aba
   // aparecendo diferente pra clínica, sem mexer em nada pra barbearia.
-  let businessType = "barbearia";
+  // Vazio, não "barbearia" — mesmo motivo do lado do site: começar com
+  // um nicho definido mostra Assinaturas/Ranking por um instante antes
+  // do valor de verdade chegar do loadBilling(), e depois some. Achado
+  // de bug real: o Mariano viu exatamente isso acontecer.
+  let businessType = "";
   let waData = { labels: [], contacts: [] };
   let quickReplies = [];
   let quickReplyCategories = [];
@@ -291,19 +295,20 @@
     topbarFilter = localStorage.getItem("crm-topbar-filter") || "tabs";
   } catch {}
 
-  /** Ajusta o trilho de ícones pro nicho da conta — esconde o que é só
-   * de barbearia (Assinaturas, Ranking de vendas) e mostra o que é de
-   * clínica (Pacientes, Follow-up) quando business_type é odontologia
-   * ou estética, e o que é de barbearia (Assinaturas, Ranking) só
-   * quando business_type é barbearia. "outros" não mostra nenhum dos
-   * dois grupos, fica só com a base genérica do CRM.
-   * Chamada na montagem inicial (com o valor padrão "barbearia", então
-   * ninguém vê diferença até o billing carregar) e de novo assim que
-   * loadBilling() souber o nicho de verdade. */
-  /* Nichos que usam terminologia de clínica (Paciente, trilho sem
-   * Assinaturas/Ranking) — mesmo conceito de isClinicNiche() do lado do
-   * site (src/lib/business-niche.ts), duplicado aqui porque a extensão
-   * não importa módulos do site. Adicionar um nicho novo aqui também. */
+  /** Ajusta o trilho de ícones pro nicho da conta — esconde Assinaturas
+   * e Ranking de vendas (só fazem sentido pra barbearia) e mostra
+   * Pacientes quando business_type é odontologia ou estética. Follow-up
+   * é universal (pedido do Mariano), não entra nessa troca. "outros"
+   * não mostra nem Assinaturas/Ranking nem Pacientes, fica só com a
+   * base genérica do CRM.
+   *
+   * businessType começa vazio ("") até loadBilling() responder — nunca
+   * um nicho definido — e essa função já roda uma vez logo depois de
+   * montar o trilho, antes de qualquer pintura na tela (chamada
+   * síncrona, mesmo turno de execução do buildShell). Achado de bug
+   * real: businessType começava em "barbearia" antes, o que fazia
+   * Assinaturas/Ranking aparecerem visíveis por um instante pra
+   * qualquer nicho, até o valor de verdade chegar. */
   function isClinicBusinessType(bt) {
     return bt === "odontologia" || bt === "estetica";
   }
@@ -313,7 +318,7 @@
     const isClinic = isClinicBusinessType(businessType);
     const isBarbearia = businessType === "barbearia";
     const barbeariaOnly = ["assinantes", "equipe"];
-    const clinicaOnly = ["pacientes", "follow-up"];
+    const clinicaOnly = ["pacientes"];
     for (const key of barbeariaOnly) {
       const btn = railRef.querySelector(`[data-go="${key}"]`);
       if (btn) btn.style.display = isBarbearia ? "" : "none";
@@ -335,7 +340,7 @@
       <button class="crm-rail-btn" data-go="assinantes" data-label="Assinaturas">${ICONS.badge}</button>
       <button class="crm-rail-btn" data-go="equipe" data-label="Ranking de vendas">${ICONS.ranking}</button>
       <button class="crm-rail-btn" data-go="pacientes" data-label="Pacientes" style="display:none">${ICONS.account}</button>
-      <button class="crm-rail-btn" data-go="follow-up" data-label="Follow-up" style="display:none">${ICONS.clock}</button>
+      <button class="crm-rail-btn" data-go="follow-up" data-label="Follow-up">${ICONS.clock}</button>
       <button class="crm-rail-btn" data-go="agente-ia" data-label="Agente de IA">${ICONS.robot}</button>
       <button class="crm-rail-btn" data-go="treinamento" data-label="Treinamentos">${ICONS.cap}</button>
       <button class="crm-rail-btn" data-go="conexao" data-label="Conexão">${ICONS.link}</button>
@@ -1413,7 +1418,7 @@
       .catch(() => null);
     if (r?.ok) {
       billing = r.billing || null;
-      businessType = r.business_type || "barbearia";
+      businessType = r.business_type || "";
       applyNicheToRail();
       renderTopbar();
     }

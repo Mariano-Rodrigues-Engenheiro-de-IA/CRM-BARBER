@@ -572,7 +572,14 @@ function Painel() {
     }
   });
   const [billing, setBilling] = useState<BillingStatus | null>(null);
-  const [businessType, setBusinessType] = useState<string>("barbearia");
+  // Vazio, não "barbearia" — se começasse com um nicho pré-definido, a
+  // barra lateral mostraria Assinaturas/Ranking (ou qualquer outro
+  // nicho) por um instante antes do valor de verdade chegar do
+  // servidor, e sumir logo depois. Achado de bug real: exatamente esse
+  // pisca-pisca que o Mariano viu ao recarregar a página com nicho
+  // "outros". Com string vazia, a barra não mostra nada da parte
+  // condicionada por nicho até saber a resposta certa.
+  const [businessType, setBusinessType] = useState<string>("");
   const [showFunnelMovePopup, setShowFunnelMovePopup] = useState(false);
   const [showTemplateCreatePopup, setShowTemplateCreatePopup] = useState(false);
   const [brand, setBrand] = useState<Brand>({});
