@@ -14,6 +14,7 @@ const BUSINESS_TYPE_LABELS: Record<string, string> = {
   barbearia: "Barbearia",
   odontologia: "Odontologia",
   estetica: "Estética",
+  outros: "Outros (genérico)",
 };
 
 function statusBadge(status: string | null) {
@@ -44,7 +45,7 @@ export function AdminClientsPanel() {
     }
   });
 
-  async function handleBusinessTypeChange(barbershop_id: string, business_type: "barbearia" | "odontologia" | "estetica") {
+  async function handleBusinessTypeChange(barbershop_id: string, business_type: "barbearia" | "odontologia" | "estetica" | "outros") {
     // Otimista: atualiza a tela na hora, sem esperar o servidor — só
     // volta atrás se der erro de verdade.
     const previous = rows;
@@ -122,7 +123,7 @@ export function AdminClientsPanel() {
                       value={r.business_type}
                       disabled={savingId === r.barbershop_id}
                       onChange={(e) =>
-                        handleBusinessTypeChange(r.barbershop_id, e.target.value as "barbearia" | "odontologia" | "estetica")
+                        handleBusinessTypeChange(r.barbershop_id, e.target.value as "barbearia" | "odontologia" | "estetica" | "outros")
                       }
                       className="rounded-lg border border-neutral-300 bg-white px-2 py-1 text-xs outline-none focus:border-brand disabled:opacity-50"
                     >

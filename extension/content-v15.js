@@ -293,7 +293,10 @@
 
   /** Ajusta o trilho de ícones pro nicho da conta — esconde o que é só
    * de barbearia (Assinaturas, Ranking de vendas) e mostra o que é de
-   * clínica (Pacientes, Follow-up) quando business_type = odontologia.
+   * clínica (Pacientes, Follow-up) quando business_type é odontologia
+   * ou estética, e o que é de barbearia (Assinaturas, Ranking) só
+   * quando business_type é barbearia. "outros" não mostra nenhum dos
+   * dois grupos, fica só com a base genérica do CRM.
    * Chamada na montagem inicial (com o valor padrão "barbearia", então
    * ninguém vê diferença até o billing carregar) e de novo assim que
    * loadBilling() souber o nicho de verdade. */
@@ -307,16 +310,17 @@
 
   function applyNicheToRail() {
     if (!railRef) return;
-    const isOdonto = isClinicBusinessType(businessType);
+    const isClinic = isClinicBusinessType(businessType);
+    const isBarbearia = businessType === "barbearia";
     const barbeariaOnly = ["assinantes", "equipe"];
     const clinicaOnly = ["pacientes", "follow-up"];
     for (const key of barbeariaOnly) {
       const btn = railRef.querySelector(`[data-go="${key}"]`);
-      if (btn) btn.style.display = isOdonto ? "none" : "";
+      if (btn) btn.style.display = isBarbearia ? "" : "none";
     }
     for (const key of clinicaOnly) {
       const btn = railRef.querySelector(`[data-go="${key}"]`);
-      if (btn) btn.style.display = isOdonto ? "" : "none";
+      if (btn) btn.style.display = isClinic ? "" : "none";
     }
   }
 

@@ -512,10 +512,10 @@ function Painel() {
   const [loading, setLoading] = useState(false);
 
   const initialSection: Section = (() => {
-    if (typeof window === "undefined") return "assinantes";
+    if (typeof window === "undefined") return "agenda";
     const s = new URLSearchParams(window.location.search).get("section");
     if (s === "agenda" || s === "agente-ia" || s === "treinamento" || s === "configuracoes" || s === "equipe" || s === "conexao" || s === "funis" || s === "follow-up" || s === "disparo" || s === "templates" || s === "pacientes") return s;
-    return "assinantes";
+    return "agenda";
   })();
   const [section, setSection] = useState<Section>(initialSection);
   const [assinTab, setAssinTab] = useState<AssinTab>("assinantes");
@@ -672,7 +672,10 @@ function Painel() {
     );
   }
 
-  const shopName = brand.name || shop?.name || (isClinicNiche(businessType) ? "Sua clínica" : "Sua barbearia");
+  const shopName =
+    brand.name ||
+    shop?.name ||
+    (isClinicNiche(businessType) ? "Sua clínica" : businessType === "barbearia" ? "Sua barbearia" : "Seu negócio");
 
   /** Abre o checkout do Premium em nova aba, já identificando a barbearia. */
   function openCheckout() {
@@ -705,18 +708,20 @@ function Painel() {
     { key: "disparo", label: "Disparo", icon: <IconSend /> },
     ...(isClinicNiche(businessType)
       ? [{ key: "pacientes" as Section, label: "Pacientes", icon: <IconUsers /> }]
-      : [
-          {
-            key: "assinantes" as Section,
-            label: "Assinaturas",
-            icon: <IconBadgeCheck />,
-            children: [
-              { key: "visao" as AssinTab, label: "Visão geral" },
-              { key: "assinantes" as AssinTab, label: "Assinantes" },
-            ],
-          },
-          { key: "equipe" as Section, label: "Ranking de vendas", icon: <IconRankingBars /> },
-        ]),
+      : businessType === "barbearia"
+        ? [
+            {
+              key: "assinantes" as Section,
+              label: "Assinaturas",
+              icon: <IconBadgeCheck />,
+              children: [
+                { key: "visao" as AssinTab, label: "Visão geral" },
+                { key: "assinantes" as AssinTab, label: "Assinantes" },
+              ],
+            },
+            { key: "equipe" as Section, label: "Ranking de vendas", icon: <IconRankingBars /> },
+          ]
+        : []), // "outros": CRM genérico, sem Pacientes nem Assinaturas/Ranking
     ...(isMetaProvider ? [{ key: "templates" as Section, label: "Modelos", icon: <IconNote /> }] : []),
 
     { key: "conexao", label: "Conexão", icon: <IconPlug /> },
