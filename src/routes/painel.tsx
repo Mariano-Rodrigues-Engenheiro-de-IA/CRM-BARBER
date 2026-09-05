@@ -649,6 +649,21 @@ function Painel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
+  // Trava de segurança: esconder o link no menu não impede alguém de
+  // cair direto numa URL com ?section=equipe (ou já estar nela antes do
+  // nicho mudar) — o CONTEÚDO da seção não tinha guarda nenhuma. Achado
+  // de bug real: Mariano escolheu "outros" e ainda viu Assinaturas/
+  // Ranking, porque só o menu tinha sido corrigido antes, não o
+  // conteúdo. Assim que o nicho de verdade chega (billing carrega),
+  // tira a pessoa de uma seção que não faz sentido pra ela.
+  useEffect(() => {
+    const isBarbeariaOnly = section === "assinantes" || section === "equipe";
+    const isClinicOnly = section === "pacientes";
+    if (isBarbeariaOnly && businessType !== "barbearia") setSection("agenda");
+    if (isClinicOnly && !isClinicNiche(businessType)) setSection("agenda");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessType]);
+
 
   // Refresh silencioso ao voltar pra seção assinantes — sem "Carregando..." piscando entre abas.
   useEffect(() => {

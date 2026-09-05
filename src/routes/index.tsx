@@ -33,7 +33,9 @@ const formSchema = z.object({
   name: z.string().trim().min(1, "Informe seu nome").max(120),
   email: z.string().trim().email("E-mail inválido").max(255),
   phone: z.string().trim().min(8, "Telefone inválido").max(20),
-  business_type: z.enum(["barbearia", "odontologia", "estetica", "outros"]),
+  business_type: z.enum(["barbearia", "odontologia", "estetica", "outros"], {
+    errorMap: () => ({ message: "Escolha o tipo do seu negócio" }),
+  }),
 });
 
 const DORES = [
@@ -122,7 +124,7 @@ const FAQ = [
 
 function Landing() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: "", email: "", phone: "", business_type: "barbearia" as "barbearia" | "odontologia" | "estetica" | "outros" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", business_type: "" as "" | "barbearia" | "odontologia" | "estetica" | "outros" });
   const [loading, setLoading] = useState(false);
 
   function scrollToForm() {
@@ -329,20 +331,29 @@ function Landing() {
           </p>
           <form onSubmit={onSubmit} className="mt-6 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="business_type">Tipo de negócio</Label>
+              <Label htmlFor="business_type">
+                Tipo de negócio <span className="text-red-400">*</span>
+              </Label>
               <select
                 id="business_type"
+                required
                 value={form.business_type}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, business_type: e.target.value as "barbearia" | "odontologia" | "estetica" | "outros" }))
                 }
                 className="flex h-10 w-full rounded-md border border-white/20 bg-[#0a1120] px-3 py-2 text-sm text-slate-100"
               >
+                <option value="" disabled>
+                  Selecione o tipo do seu negócio...
+                </option>
                 <option value="barbearia">Barbearia / negócio de serviços</option>
                 <option value="odontologia">Clínica odontológica</option>
                 <option value="estetica">Clínica de estética</option>
                 <option value="outros">Outro tipo de negócio</option>
               </select>
+              <p className="text-xs text-slate-500">
+                Isso define quais telas e recursos aparecem pro seu negócio depois. Escolha com atenção.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="name">Nome</Label>
