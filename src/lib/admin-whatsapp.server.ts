@@ -33,7 +33,7 @@ export const providerSchema = z.object({
 
 export const businessTypeSchema = z.object({
   barbershop_id: z.string().uuid(),
-  business_type: z.enum(["barbearia", "odontologia"]),
+  business_type: z.enum(["barbearia", "odontologia", "estetica"]),
 });
 
 export const claimPendingSchema = z.object({
@@ -113,7 +113,7 @@ export async function listClientsOverview(supabaseAdmin: Admin): Promise<AdminCl
  * escolhe isso sozinho. Direto pelo painel de Clientes. */
 export async function setBusinessType(
   supabaseAdmin: Admin,
-  input: { barbershop_id: string; business_type: "barbearia" | "odontologia" },
+  input: { barbershop_id: string; business_type: "barbearia" | "odontologia" | "estetica" },
 ): Promise<{ ok: true }> {
   const { error } = await supabaseAdmin
     .from("barbershops")

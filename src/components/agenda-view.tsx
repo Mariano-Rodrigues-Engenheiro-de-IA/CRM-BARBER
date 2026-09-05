@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { isClinicNiche } from "@/lib/business-niche";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1304,11 +1305,11 @@ function CustomerPicker({
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={`Buscar ${businessType === "odontologia" ? "paciente" : "cliente"} por nome ou telefone...`}
+          placeholder={`Buscar ${isClinicNiche(businessType) ? "paciente" : "cliente"} por nome ou telefone...`}
         />
         <button
           type="button"
-          title={`Cadastrar novo ${businessType === "odontologia" ? "paciente" : "cliente"}`}
+          title={`Cadastrar novo ${isClinicNiche(businessType) ? "paciente" : "cliente"}`}
           onClick={() => setNewOpen((v) => !v)}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-neutral-300 text-lg font-semibold text-brand transition hover:bg-neutral-50"
         >
@@ -1340,7 +1341,7 @@ function CustomerPicker({
 
       {newOpen && (
         <div className="space-y-2 rounded-md border border-neutral-200 bg-neutral-50 p-3">
-          <p className="text-xs font-semibold text-neutral-600">Novo {businessType === "odontologia" ? "paciente" : "cliente"}</p>
+          <p className="text-xs font-semibold text-neutral-600">Novo {isClinicNiche(businessType) ? "paciente" : "cliente"}</p>
           <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nome" />
           <Input value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="Telefone (com DDD)" />
           <div className="flex justify-end gap-2">

@@ -13,6 +13,7 @@ type Row = Awaited<ReturnType<typeof adminListClientsOverview>>[number];
 const BUSINESS_TYPE_LABELS: Record<string, string> = {
   barbearia: "Barbearia",
   odontologia: "Odontologia",
+  estetica: "Estética",
 };
 
 function statusBadge(status: string | null) {
@@ -43,7 +44,7 @@ export function AdminClientsPanel() {
     }
   });
 
-  async function handleBusinessTypeChange(barbershop_id: string, business_type: "barbearia" | "odontologia") {
+  async function handleBusinessTypeChange(barbershop_id: string, business_type: "barbearia" | "odontologia" | "estetica") {
     // Otimista: atualiza a tela na hora, sem esperar o servidor — só
     // volta atrás se der erro de verdade.
     const previous = rows;
@@ -121,7 +122,7 @@ export function AdminClientsPanel() {
                       value={r.business_type}
                       disabled={savingId === r.barbershop_id}
                       onChange={(e) =>
-                        handleBusinessTypeChange(r.barbershop_id, e.target.value as "barbearia" | "odontologia")
+                        handleBusinessTypeChange(r.barbershop_id, e.target.value as "barbearia" | "odontologia" | "estetica")
                       }
                       className="rounded-lg border border-neutral-300 bg-white px-2 py-1 text-xs outline-none focus:border-brand disabled:opacity-50"
                     >

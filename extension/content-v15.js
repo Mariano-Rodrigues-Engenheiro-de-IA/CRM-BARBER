@@ -297,9 +297,17 @@
    * Chamada na montagem inicial (com o valor padrão "barbearia", então
    * ninguém vê diferença até o billing carregar) e de novo assim que
    * loadBilling() souber o nicho de verdade. */
+  /* Nichos que usam terminologia de clínica (Paciente, trilho sem
+   * Assinaturas/Ranking) — mesmo conceito de isClinicNiche() do lado do
+   * site (src/lib/business-niche.ts), duplicado aqui porque a extensão
+   * não importa módulos do site. Adicionar um nicho novo aqui também. */
+  function isClinicBusinessType(bt) {
+    return bt === "odontologia" || bt === "estetica";
+  }
+
   function applyNicheToRail() {
     if (!railRef) return;
-    const isOdonto = businessType === "odontologia";
+    const isOdonto = isClinicBusinessType(businessType);
     const barbeariaOnly = ["assinantes", "equipe"];
     const clinicaOnly = ["pacientes", "follow-up"];
     for (const key of barbeariaOnly) {
@@ -489,7 +497,7 @@
   function panelSwitcherHtml(activeKind) {
     const items = [
       { kind: "qr", icon: BOLT_SVG, label: "Respostas rápidas" },
-      { kind: "profile", icon: PROFILE_SVG, label: businessType === "odontologia" ? "Perfil do paciente" : "Perfil do cliente" },
+      { kind: "profile", icon: PROFILE_SVG, label: isClinicBusinessType(businessType) ? "Perfil do paciente" : "Perfil do cliente" },
     ];
     return `<div class="crm-qrp-switcher">
       ${items
@@ -2493,7 +2501,7 @@
     profileBtn.id = PROFILE_BTN_ID;
     profileBtn.className = "crm-chat-btn crm-chat-btn-icon";
     profileBtn.type = "button";
-    profileBtn.setAttribute("data-label", businessType === "odontologia" ? "Perfil do paciente" : "Perfil do cliente");
+    profileBtn.setAttribute("data-label", isClinicBusinessType(businessType) ? "Perfil do paciente" : "Perfil do cliente");
     profileBtn.innerHTML = PROFILE_SVG;
     profileBtn.addEventListener("mouseenter", prewarmEngine);
     profileBtn.addEventListener("click", (e) => {
@@ -3321,7 +3329,7 @@
   async function renderProfilePanel(panel) {
     const kind = "profile";
     const mySeq = ++profileRenderSeq;
-    panel.innerHTML = `<div class="crm-qrp-head"><div class="crm-qr-mark">${PROFILE_SVG}</div><p class="crm-qrp-title">${businessType === "odontologia" ? "Perfil do paciente" : "Perfil do cliente"}</p><button class="crm-qrp-close" data-close title="Fechar">&times;</button></div>${panelSwitcherHtml(kind)}<div class="crm-qrp-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
+    panel.innerHTML = `<div class="crm-qrp-head"><div class="crm-qr-mark">${PROFILE_SVG}</div><p class="crm-qrp-title">${isClinicBusinessType(businessType) ? "Perfil do paciente" : "Perfil do cliente"}</p><button class="crm-qrp-close" data-close title="Fechar">&times;</button></div>${panelSwitcherHtml(kind)}<div class="crm-qrp-body"><p class="crm-fn-pop-empty">Carregando...</p></div>`;
     // Handler temporário, só pra enquanto os dados carregam (fechar/trocar
     // de aba). O de verdade — que também cobre o botão "Salvar perfil" —
     // é montado mais abaixo, depois que o conteúdo real existe; ACHADO DO

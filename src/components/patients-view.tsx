@@ -12,6 +12,8 @@ import { createPortal } from "react-dom";
 import { DentalBudgetTab } from "@/components/dental-budget-tab";
 import { DentalAttachmentsTab } from "@/components/dental-attachments-tab";
 import { PatientNotesCard } from "@/components/patient-notes-card";
+import { BodyMapTab } from "@/components/body-map-tab";
+import { AnamneseTab } from "@/components/anamnese-tab";
 
 const DentalChartTab = lazy(() =>
   import("@/components/dental-chart-tab").then((m) => ({ default: m.DentalChartTab })),
@@ -34,6 +36,7 @@ export function PatientsView({
   clinicLogo,
   headerHost,
   onPatientCreated,
+  businessType,
 }: {
   api: ApiFn;
   customers: PatientRow[];
@@ -41,6 +44,7 @@ export function PatientsView({
   clinicLogo?: string;
   headerHost?: HTMLElement | null;
   onPatientCreated?: () => void;
+  businessType?: string;
 }) {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -226,12 +230,30 @@ export function PatientsView({
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="rounded-xl border border-neutral-200 bg-white p-4 print:hidden">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Odontograma</h3>
-                <Suspense fallback={<p className="text-sm text-neutral-400">Carregando...</p>}>
-                  <DentalChartTab api={api} customerId={selected.id} clinicName={clinicName} clinicLogo={clinicLogo} />
-                </Suspense>
-              </div>
+              {businessType === "estetica" ? (
+                <>
+                  <div className="rounded-xl border border-neutral-200 bg-white p-4 print:hidden">
+                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                      Ficha de anamnese
+                    </h3>
+                    <AnamneseTab api={api} customerId={selected.id} />
+                  </div>
+
+                  <div className="rounded-xl border border-neutral-200 bg-white p-4 print:hidden">
+                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                      Mapa corporal
+                    </h3>
+                    <BodyMapTab api={api} customerId={selected.id} />
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-xl border border-neutral-200 bg-white p-4 print:hidden">
+                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Odontograma</h3>
+                  <Suspense fallback={<p className="text-sm text-neutral-400">Carregando...</p>}>
+                    <DentalChartTab api={api} customerId={selected.id} clinicName={clinicName} clinicLogo={clinicLogo} />
+                  </Suspense>
+                </div>
+              )}
 
               <div className="rounded-xl border border-neutral-200 bg-white p-4 print:hidden">
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Anexos</h3>

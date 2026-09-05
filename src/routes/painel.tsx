@@ -28,6 +28,7 @@ import { ServicesTab, ProfessionalsTab, ProductsTab } from "@/components/profess
 import { GeneralSettingsTab } from "@/components/agenda-settings-dialog";
 import { AccountTab } from "@/components/account-tab";
 import { CustomersTab } from "@/components/customers-tab";
+import { isClinicNiche } from "@/lib/business-niche";
 import { toast } from "sonner";
 
 
@@ -671,7 +672,7 @@ function Painel() {
     );
   }
 
-  const shopName = brand.name || shop?.name || (businessType === "odontologia" ? "Sua clínica" : "Sua barbearia");
+  const shopName = brand.name || shop?.name || (isClinicNiche(businessType) ? "Sua clínica" : "Sua barbearia");
 
   /** Abre o checkout do Premium em nova aba, já identificando a barbearia. */
   function openCheckout() {
@@ -702,7 +703,7 @@ function Painel() {
     { key: "funis", label: "Funis de Vendas", icon: <IconChart /> },
     { key: "follow-up", label: "Follow-up", icon: <IconClock /> },
     { key: "disparo", label: "Disparo", icon: <IconSend /> },
-    ...(businessType === "odontologia"
+    ...(isClinicNiche(businessType)
       ? [{ key: "pacientes" as Section, label: "Pacientes", icon: <IconUsers /> }]
       : [
           {
@@ -728,7 +729,7 @@ function Painel() {
         { key: "servicos", label: "Serviços" },
         { key: "produtos", label: "Produtos" },
         { key: "profissionais", label: "Profissionais" },
-        { key: "clientes", label: businessType === "odontologia" ? "Importar pacientes" : "Clientes" },
+        { key: "clientes", label: isClinicNiche(businessType) ? "Importar pacientes" : "Clientes" },
         { key: "gerais", label: "Gerais" },
         { key: "conta", label: "Minha conta" },
       ],
@@ -971,7 +972,7 @@ function Painel() {
                 (configTab === "servicos" && "Serviços") ||
                 (configTab === "produtos" && "Produtos") ||
                 (configTab === "profissionais" && "Profissionais") ||
-                (configTab === "clientes" && (businessType === "odontologia" ? "Importar pacientes" : "Clientes")) ||
+                (configTab === "clientes" && (isClinicNiche(businessType) ? "Importar pacientes" : "Clientes")) ||
                 (configTab === "gerais" && "Gerais") ||
                 (configTab === "conta" && "Minha conta") ||
                 undefined
@@ -1110,6 +1111,7 @@ function Painel() {
                 clinicLogo={shop?.logo_url ?? undefined}
                 headerHost={pacientesHeaderEl}
                 onPatientCreated={() => reload(true)}
+                businessType={businessType}
               />
             </main>
           </>

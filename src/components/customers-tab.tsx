@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { isClinicNiche } from "@/lib/business-niche";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +27,7 @@ const SYSTEM_FIELDS = [
  * conferir → confirmar). */
 export function CustomersTab({ api, businessType }: { api: Api; businessType?: string }) {
   const [mode, setMode] = useState<"list" | "individual" | "bulk">("list");
-  const noun = businessType === "odontologia" ? "paciente" : "cliente";
+  const noun = isClinicNiche(businessType) ? "paciente" : "cliente";
 
   return (
     <div className="space-y-4">
@@ -82,7 +83,7 @@ type Customer = {
 /** Listagem de clientes já cadastrados — busca por nome/telefone, edição
  * via dialog. */
 function CustomerListView({ api, businessType }: { api: Api; businessType?: string }) {
-  const noun = businessType === "odontologia" ? "paciente" : "cliente";
+  const noun = isClinicNiche(businessType) ? "paciente" : "cliente";
   const [customers, setCustomers] = useState<Customer[] | null>(null);
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Customer | null>(null);
@@ -307,7 +308,7 @@ function CustomerEditDialog({
   businessType?: string;
   onSaved: () => void;
 }) {
-  const noun = businessType === "odontologia" ? "paciente" : "cliente";
+  const noun = isClinicNiche(businessType) ? "paciente" : "cliente";
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -398,7 +399,7 @@ function CustomerEditDialog({
 }
 
 function IndividualForm({ api, businessType }: { api: Api; businessType?: string }) {
-  const noun = businessType === "odontologia" ? "paciente" : "cliente";
+  const noun = isClinicNiche(businessType) ? "paciente" : "cliente";
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -477,7 +478,7 @@ type SheetRow = Record<string, any>;
 /** Wizard de importação por planilha: 1) upload  2) mapear colunas
  * 3) conferir e confirmar — mesmo fluxo usado por sistemas como Trinks. */
 function SpreadsheetImportWizard({ api, businessType }: { api: Api; businessType?: string }) {
-  const noun = businessType === "odontologia" ? "paciente" : "cliente";
+  const noun = isClinicNiche(businessType) ? "paciente" : "cliente";
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [fileName, setFileName] = useState("");
   const [headers, setHeaders] = useState<string[]>([]);

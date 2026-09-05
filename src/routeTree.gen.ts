@@ -38,9 +38,11 @@ import { Route as ApiPublicExtensionAgendaSettingsRouteImport } from './routes/a
 import { Route as ApiPublicExtensionAgenteIaAccessLinkRouteImport } from './routes/api/public/extension/agente-ia-access-link'
 import { Route as ApiPublicExtensionAgenteIaSettingsRouteImport } from './routes/api/public/extension/agente-ia-settings'
 import { Route as ApiPublicExtensionAiDemoLeadsRouteImport } from './routes/api/public/extension/ai-demo-leads'
+import { Route as ApiPublicExtensionAnamneseRouteImport } from './routes/api/public/extension/anamnese'
 import { Route as ApiPublicExtensionAppointmentsRouteImport } from './routes/api/public/extension/appointments'
 import { Route as ApiPublicExtensionBillingRouteImport } from './routes/api/public/extension/billing'
 import { Route as ApiPublicExtensionBillingPortalRouteImport } from './routes/api/public/extension/billing-portal'
+import { Route as ApiPublicExtensionBodyMapMarkingsRouteImport } from './routes/api/public/extension/body-map-markings'
 import { Route as ApiPublicExtensionCampaignsRouteImport } from './routes/api/public/extension/campaigns'
 import { Route as ApiPublicExtensionCustomerDealRouteImport } from './routes/api/public/extension/customer-deal'
 import { Route as ApiPublicExtensionCustomerProfileRouteImport } from './routes/api/public/extension/customer-profile'
@@ -75,6 +77,7 @@ import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/publi
 import { Route as ApiPublicAiProductsSearchRouteImport } from './routes/api/public/ai/products.search'
 import { Route as ApiPublicExtensionAgendaReminderRulesIdRouteImport } from './routes/api/public/extension/agenda-reminder-rules.$id'
 import { Route as ApiPublicExtensionAppointmentsIdRouteImport } from './routes/api/public/extension/appointments.$id'
+import { Route as ApiPublicExtensionBodyMapMarkingsIdRouteImport } from './routes/api/public/extension/body-map-markings.$id'
 import { Route as ApiPublicExtensionCampaignsIdRouteImport } from './routes/api/public/extension/campaigns.$id'
 import { Route as ApiPublicExtensionCustomersIdRouteImport } from './routes/api/public/extension/customers.$id'
 import { Route as ApiPublicExtensionCustomersImportRouteImport } from './routes/api/public/extension/customers.import'
@@ -259,6 +262,12 @@ const ApiPublicExtensionAiDemoLeadsRoute =
     path: '/api/public/extension/ai-demo-leads',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicExtensionAnamneseRoute =
+  ApiPublicExtensionAnamneseRouteImport.update({
+    id: '/api/public/extension/anamnese',
+    path: '/api/public/extension/anamnese',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicExtensionAppointmentsRoute =
   ApiPublicExtensionAppointmentsRouteImport.update({
     id: '/api/public/extension/appointments',
@@ -275,6 +284,12 @@ const ApiPublicExtensionBillingPortalRoute =
   ApiPublicExtensionBillingPortalRouteImport.update({
     id: '/api/public/extension/billing-portal',
     path: '/api/public/extension/billing-portal',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionBodyMapMarkingsRoute =
+  ApiPublicExtensionBodyMapMarkingsRouteImport.update({
+    id: '/api/public/extension/body-map-markings',
+    path: '/api/public/extension/body-map-markings',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicExtensionCampaignsRoute =
@@ -477,6 +492,12 @@ const ApiPublicExtensionAppointmentsIdRoute =
     id: '/$id',
     path: '/$id',
     getParentRoute: () => ApiPublicExtensionAppointmentsRoute,
+  } as any)
+const ApiPublicExtensionBodyMapMarkingsIdRoute =
+  ApiPublicExtensionBodyMapMarkingsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiPublicExtensionBodyMapMarkingsRoute,
   } as any)
 const ApiPublicExtensionCampaignsIdRoute =
   ApiPublicExtensionCampaignsIdRouteImport.update({
@@ -689,9 +710,11 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/agente-ia-access-link': typeof ApiPublicExtensionAgenteIaAccessLinkRoute
   '/api/public/extension/agente-ia-settings': typeof ApiPublicExtensionAgenteIaSettingsRoute
   '/api/public/extension/ai-demo-leads': typeof ApiPublicExtensionAiDemoLeadsRoute
+  '/api/public/extension/anamnese': typeof ApiPublicExtensionAnamneseRoute
   '/api/public/extension/appointments': typeof ApiPublicExtensionAppointmentsRouteWithChildren
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/billing-portal': typeof ApiPublicExtensionBillingPortalRoute
+  '/api/public/extension/body-map-markings': typeof ApiPublicExtensionBodyMapMarkingsRouteWithChildren
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customer-deal': typeof ApiPublicExtensionCustomerDealRoute
   '/api/public/extension/customer-profile': typeof ApiPublicExtensionCustomerProfileRoute
@@ -726,6 +749,7 @@ export interface FileRoutesByFullPath {
   '/api/public/ai/products/search': typeof ApiPublicAiProductsSearchRoute
   '/api/public/extension/agenda-reminder-rules/$id': typeof ApiPublicExtensionAgendaReminderRulesIdRoute
   '/api/public/extension/appointments/$id': typeof ApiPublicExtensionAppointmentsIdRoute
+  '/api/public/extension/body-map-markings/$id': typeof ApiPublicExtensionBodyMapMarkingsIdRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
@@ -787,9 +811,11 @@ export interface FileRoutesByTo {
   '/api/public/extension/agente-ia-access-link': typeof ApiPublicExtensionAgenteIaAccessLinkRoute
   '/api/public/extension/agente-ia-settings': typeof ApiPublicExtensionAgenteIaSettingsRoute
   '/api/public/extension/ai-demo-leads': typeof ApiPublicExtensionAiDemoLeadsRoute
+  '/api/public/extension/anamnese': typeof ApiPublicExtensionAnamneseRoute
   '/api/public/extension/appointments': typeof ApiPublicExtensionAppointmentsRouteWithChildren
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/billing-portal': typeof ApiPublicExtensionBillingPortalRoute
+  '/api/public/extension/body-map-markings': typeof ApiPublicExtensionBodyMapMarkingsRouteWithChildren
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customer-deal': typeof ApiPublicExtensionCustomerDealRoute
   '/api/public/extension/customer-profile': typeof ApiPublicExtensionCustomerProfileRoute
@@ -824,6 +850,7 @@ export interface FileRoutesByTo {
   '/api/public/ai/products/search': typeof ApiPublicAiProductsSearchRoute
   '/api/public/extension/agenda-reminder-rules/$id': typeof ApiPublicExtensionAgendaReminderRulesIdRoute
   '/api/public/extension/appointments/$id': typeof ApiPublicExtensionAppointmentsIdRoute
+  '/api/public/extension/body-map-markings/$id': typeof ApiPublicExtensionBodyMapMarkingsIdRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
@@ -886,9 +913,11 @@ export interface FileRoutesById {
   '/api/public/extension/agente-ia-access-link': typeof ApiPublicExtensionAgenteIaAccessLinkRoute
   '/api/public/extension/agente-ia-settings': typeof ApiPublicExtensionAgenteIaSettingsRoute
   '/api/public/extension/ai-demo-leads': typeof ApiPublicExtensionAiDemoLeadsRoute
+  '/api/public/extension/anamnese': typeof ApiPublicExtensionAnamneseRoute
   '/api/public/extension/appointments': typeof ApiPublicExtensionAppointmentsRouteWithChildren
   '/api/public/extension/billing': typeof ApiPublicExtensionBillingRoute
   '/api/public/extension/billing-portal': typeof ApiPublicExtensionBillingPortalRoute
+  '/api/public/extension/body-map-markings': typeof ApiPublicExtensionBodyMapMarkingsRouteWithChildren
   '/api/public/extension/campaigns': typeof ApiPublicExtensionCampaignsRouteWithChildren
   '/api/public/extension/customer-deal': typeof ApiPublicExtensionCustomerDealRoute
   '/api/public/extension/customer-profile': typeof ApiPublicExtensionCustomerProfileRoute
@@ -923,6 +952,7 @@ export interface FileRoutesById {
   '/api/public/ai/products/search': typeof ApiPublicAiProductsSearchRoute
   '/api/public/extension/agenda-reminder-rules/$id': typeof ApiPublicExtensionAgendaReminderRulesIdRoute
   '/api/public/extension/appointments/$id': typeof ApiPublicExtensionAppointmentsIdRoute
+  '/api/public/extension/body-map-markings/$id': typeof ApiPublicExtensionBodyMapMarkingsIdRoute
   '/api/public/extension/campaigns/$id': typeof ApiPublicExtensionCampaignsIdRoute
   '/api/public/extension/customers/$id': typeof ApiPublicExtensionCustomersIdRoute
   '/api/public/extension/customers/import': typeof ApiPublicExtensionCustomersImportRoute
@@ -986,9 +1016,11 @@ export interface FileRouteTypes {
     | '/api/public/extension/agente-ia-access-link'
     | '/api/public/extension/agente-ia-settings'
     | '/api/public/extension/ai-demo-leads'
+    | '/api/public/extension/anamnese'
     | '/api/public/extension/appointments'
     | '/api/public/extension/billing'
     | '/api/public/extension/billing-portal'
+    | '/api/public/extension/body-map-markings'
     | '/api/public/extension/campaigns'
     | '/api/public/extension/customer-deal'
     | '/api/public/extension/customer-profile'
@@ -1023,6 +1055,7 @@ export interface FileRouteTypes {
     | '/api/public/ai/products/search'
     | '/api/public/extension/agenda-reminder-rules/$id'
     | '/api/public/extension/appointments/$id'
+    | '/api/public/extension/body-map-markings/$id'
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
@@ -1084,9 +1117,11 @@ export interface FileRouteTypes {
     | '/api/public/extension/agente-ia-access-link'
     | '/api/public/extension/agente-ia-settings'
     | '/api/public/extension/ai-demo-leads'
+    | '/api/public/extension/anamnese'
     | '/api/public/extension/appointments'
     | '/api/public/extension/billing'
     | '/api/public/extension/billing-portal'
+    | '/api/public/extension/body-map-markings'
     | '/api/public/extension/campaigns'
     | '/api/public/extension/customer-deal'
     | '/api/public/extension/customer-profile'
@@ -1121,6 +1156,7 @@ export interface FileRouteTypes {
     | '/api/public/ai/products/search'
     | '/api/public/extension/agenda-reminder-rules/$id'
     | '/api/public/extension/appointments/$id'
+    | '/api/public/extension/body-map-markings/$id'
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
@@ -1182,9 +1218,11 @@ export interface FileRouteTypes {
     | '/api/public/extension/agente-ia-access-link'
     | '/api/public/extension/agente-ia-settings'
     | '/api/public/extension/ai-demo-leads'
+    | '/api/public/extension/anamnese'
     | '/api/public/extension/appointments'
     | '/api/public/extension/billing'
     | '/api/public/extension/billing-portal'
+    | '/api/public/extension/body-map-markings'
     | '/api/public/extension/campaigns'
     | '/api/public/extension/customer-deal'
     | '/api/public/extension/customer-profile'
@@ -1219,6 +1257,7 @@ export interface FileRouteTypes {
     | '/api/public/ai/products/search'
     | '/api/public/extension/agenda-reminder-rules/$id'
     | '/api/public/extension/appointments/$id'
+    | '/api/public/extension/body-map-markings/$id'
     | '/api/public/extension/campaigns/$id'
     | '/api/public/extension/customers/$id'
     | '/api/public/extension/customers/import'
@@ -1280,9 +1319,11 @@ export interface RootRouteChildren {
   ApiPublicExtensionAgenteIaAccessLinkRoute: typeof ApiPublicExtensionAgenteIaAccessLinkRoute
   ApiPublicExtensionAgenteIaSettingsRoute: typeof ApiPublicExtensionAgenteIaSettingsRoute
   ApiPublicExtensionAiDemoLeadsRoute: typeof ApiPublicExtensionAiDemoLeadsRoute
+  ApiPublicExtensionAnamneseRoute: typeof ApiPublicExtensionAnamneseRoute
   ApiPublicExtensionAppointmentsRoute: typeof ApiPublicExtensionAppointmentsRouteWithChildren
   ApiPublicExtensionBillingRoute: typeof ApiPublicExtensionBillingRoute
   ApiPublicExtensionBillingPortalRoute: typeof ApiPublicExtensionBillingPortalRoute
+  ApiPublicExtensionBodyMapMarkingsRoute: typeof ApiPublicExtensionBodyMapMarkingsRouteWithChildren
   ApiPublicExtensionCampaignsRoute: typeof ApiPublicExtensionCampaignsRouteWithChildren
   ApiPublicExtensionCustomerDealRoute: typeof ApiPublicExtensionCustomerDealRoute
   ApiPublicExtensionCustomerProfileRoute: typeof ApiPublicExtensionCustomerProfileRoute
@@ -1533,6 +1574,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensionAiDemoLeadsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/extension/anamnese': {
+      id: '/api/public/extension/anamnese'
+      path: '/api/public/extension/anamnese'
+      fullPath: '/api/public/extension/anamnese'
+      preLoaderRoute: typeof ApiPublicExtensionAnamneseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/extension/appointments': {
       id: '/api/public/extension/appointments'
       path: '/api/public/extension/appointments'
@@ -1552,6 +1600,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/extension/billing-portal'
       fullPath: '/api/public/extension/billing-portal'
       preLoaderRoute: typeof ApiPublicExtensionBillingPortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/body-map-markings': {
+      id: '/api/public/extension/body-map-markings'
+      path: '/api/public/extension/body-map-markings'
+      fullPath: '/api/public/extension/body-map-markings'
+      preLoaderRoute: typeof ApiPublicExtensionBodyMapMarkingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/extension/campaigns': {
@@ -1791,6 +1846,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/public/extension/appointments/$id'
       preLoaderRoute: typeof ApiPublicExtensionAppointmentsIdRouteImport
       parentRoute: typeof ApiPublicExtensionAppointmentsRoute
+    }
+    '/api/public/extension/body-map-markings/$id': {
+      id: '/api/public/extension/body-map-markings/$id'
+      path: '/$id'
+      fullPath: '/api/public/extension/body-map-markings/$id'
+      preLoaderRoute: typeof ApiPublicExtensionBodyMapMarkingsIdRouteImport
+      parentRoute: typeof ApiPublicExtensionBodyMapMarkingsRoute
     }
     '/api/public/extension/campaigns/$id': {
       id: '/api/public/extension/campaigns/$id'
@@ -2044,6 +2106,21 @@ const ApiPublicExtensionAppointmentsRouteChildren: ApiPublicExtensionAppointment
 const ApiPublicExtensionAppointmentsRouteWithChildren =
   ApiPublicExtensionAppointmentsRoute._addFileChildren(
     ApiPublicExtensionAppointmentsRouteChildren,
+  )
+
+interface ApiPublicExtensionBodyMapMarkingsRouteChildren {
+  ApiPublicExtensionBodyMapMarkingsIdRoute: typeof ApiPublicExtensionBodyMapMarkingsIdRoute
+}
+
+const ApiPublicExtensionBodyMapMarkingsRouteChildren: ApiPublicExtensionBodyMapMarkingsRouteChildren =
+  {
+    ApiPublicExtensionBodyMapMarkingsIdRoute:
+      ApiPublicExtensionBodyMapMarkingsIdRoute,
+  }
+
+const ApiPublicExtensionBodyMapMarkingsRouteWithChildren =
+  ApiPublicExtensionBodyMapMarkingsRoute._addFileChildren(
+    ApiPublicExtensionBodyMapMarkingsRouteChildren,
   )
 
 interface ApiPublicExtensionCampaignsRouteChildren {
@@ -2332,10 +2409,13 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicExtensionAgenteIaSettingsRoute:
     ApiPublicExtensionAgenteIaSettingsRoute,
   ApiPublicExtensionAiDemoLeadsRoute: ApiPublicExtensionAiDemoLeadsRoute,
+  ApiPublicExtensionAnamneseRoute: ApiPublicExtensionAnamneseRoute,
   ApiPublicExtensionAppointmentsRoute:
     ApiPublicExtensionAppointmentsRouteWithChildren,
   ApiPublicExtensionBillingRoute: ApiPublicExtensionBillingRoute,
   ApiPublicExtensionBillingPortalRoute: ApiPublicExtensionBillingPortalRoute,
+  ApiPublicExtensionBodyMapMarkingsRoute:
+    ApiPublicExtensionBodyMapMarkingsRouteWithChildren,
   ApiPublicExtensionCampaignsRoute:
     ApiPublicExtensionCampaignsRouteWithChildren,
   ApiPublicExtensionCustomerDealRoute: ApiPublicExtensionCustomerDealRoute,

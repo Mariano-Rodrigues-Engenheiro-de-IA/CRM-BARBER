@@ -811,6 +811,132 @@ export type Database = {
           },
         ]
       }
+      anamnese_forms: {
+        Row: {
+          allergies: Json
+          allergies_other: string | null
+          barbershop_id: string
+          created_at: string
+          customer_id: string
+          filled_at: string
+          health_conditions: Json
+          id: string
+          is_breastfeeding: boolean | null
+          is_pregnant: boolean | null
+          keloid_tendency: boolean | null
+          medications: string | null
+          notes: string | null
+          procedure_history: string | null
+          skin_type: number | null
+          updated_at: string
+        }
+        Insert: {
+          allergies?: Json
+          allergies_other?: string | null
+          barbershop_id: string
+          created_at?: string
+          customer_id: string
+          filled_at?: string
+          health_conditions?: Json
+          id?: string
+          is_breastfeeding?: boolean | null
+          is_pregnant?: boolean | null
+          keloid_tendency?: boolean | null
+          medications?: string | null
+          notes?: string | null
+          procedure_history?: string | null
+          skin_type?: number | null
+          updated_at?: string
+        }
+        Update: {
+          allergies?: Json
+          allergies_other?: string | null
+          barbershop_id?: string
+          created_at?: string
+          customer_id?: string
+          filled_at?: string
+          health_conditions?: Json
+          id?: string
+          is_breastfeeding?: boolean | null
+          is_pregnant?: boolean | null
+          keloid_tendency?: boolean | null
+          medications?: string | null
+          notes?: string | null
+          procedure_history?: string | null
+          skin_type?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anamnese_forms_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anamnese_forms_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      body_map_markings: {
+        Row: {
+          barbershop_id: string
+          created_at: string
+          customer_id: string
+          done: boolean
+          id: string
+          notes: string | null
+          procedure: string
+          region: string
+          updated_at: string
+          view: string
+        }
+        Insert: {
+          barbershop_id: string
+          created_at?: string
+          customer_id: string
+          done?: boolean
+          id?: string
+          notes?: string | null
+          procedure: string
+          region: string
+          updated_at?: string
+          view: string
+        }
+        Update: {
+          barbershop_id?: string
+          created_at?: string
+          customer_id?: string
+          done?: boolean
+          id?: string
+          notes?: string | null
+          procedure?: string
+          region?: string
+          updated_at?: string
+          view?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "body_map_markings_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "body_map_markings_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dental_payments: {
         Row: {
           amount_cents: number

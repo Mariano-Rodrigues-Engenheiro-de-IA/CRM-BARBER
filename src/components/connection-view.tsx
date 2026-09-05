@@ -11,6 +11,7 @@
 // como fallback visual (chamada só do lado do usuário, imagem estática).
 
 import { useEffect, useRef, useState } from "react";
+import { isClinicNiche } from "@/lib/business-niche";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -518,7 +519,7 @@ export function ConnectionView({ api, businessType }: { api: Api; businessType?:
                 <div className="mt-4 flex flex-col items-center gap-3">
                   <QrImage qrcode={conn.qrcode} />
                   <p className="text-center text-sm text-neutral-600">
-                    Abra o WhatsApp da {businessType === "odontologia" ? "clínica" : "barbearia"} → Aparelhos conectados → Conectar
+                    Abra o WhatsApp da {isClinicNiche(businessType) ? "clínica" : "barbearia"} → Aparelhos conectados → Conectar
                     aparelho → aponte a câmera pro código.
                   </p>
                 </div>
@@ -658,7 +659,7 @@ function ConnectionConfirmDialog({
 
   const title = isConnect ? "Conectar WhatsApp?" : isSwitch ? "Trocar de modo de conexão?" : "Desconectar WhatsApp?";
   const description = isConnect
-    ? `Vamos gerar um QR code para parear o WhatsApp da ${businessType === "odontologia" ? "clínica" : "barbearia"}.`
+    ? `Vamos gerar um QR code para parear o WhatsApp da ${isClinicNiche(businessType) ? "clínica" : "barbearia"}.`
     : isSwitch
       ? `Isso desconecta o WhatsApp que está ativo agora, para conectar pelo modo "${targetLabel}" em seguida. Os disparos ficam parados até a nova conexão terminar.`
       : "Os disparos vão parar até você conectar o WhatsApp novamente.";
