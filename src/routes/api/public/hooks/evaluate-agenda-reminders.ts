@@ -10,7 +10,7 @@
 // Autenticação: header `apikey` = SUPABASE_PUBLISHABLE_KEY (padrão pg_cron).
 
 import { createFileRoute } from "@tanstack/react-router";
-import { renderAgendaReminderText, renderConfirmationFreeText } from "@/lib/agenda-reminders";
+import { renderAgendaReminderText } from "@/lib/agenda-reminders";
 
 const BATCH_LIMIT = 200; // agendamentos avaliados por regra, por rodada
 
@@ -105,23 +105,20 @@ export const Route = createFileRoute("/api/public/hooks/evaluate-agenda-reminder
             const dt = new Date(appt.scheduled_at as string);
             const vars = {
               nome: customer.name || "",
+              primeiro_nome: (customer.name || "").trim().split(/\s+/)[0] || "",
               data: dt.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }),
               hora: dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" }),
               servico: serviceName,
               profissional: professionalName,
             };
 
-            // Confirmação por modelo com botão é exclusiva da API oficial
-            // (Meta) — fora dela, cai pra texto livre + instrução de
-            // resposta, e quem detecta o "sim" do cliente depois é o
-            // webhook de mensagem recebida (Meta ou uazapi, cada um no
-            // seu). Lembrete sempre pode usar texto livre quando
-            // configurado, template só se foi escolhido um.
+            // Modelo aprovado (com botão) é exclusivo da API oficial —
+            // fora dela, ou quando a regra não usa modelo, cai pra texto
+            // livre. Lembrete e confirmação usam a MESMA função agora —
+            // sem instrução extra grudada no fim, é exatamente o texto
+            // que foi escrito na regra, com as variáveis substituídas.
             const usesTemplate = rule.kind === "confirmation" ? isMeta : !!rule.template_name;
-            const freeText =
-              rule.kind === "confirmation"
-                ? renderConfirmationFreeText(rule.message_text || "", vars, rule.confirm_button_text)
-                : renderAgendaReminderText(rule.message_text || "", vars);
+            const freeText = renderAgendaReminderText(rule.message_text || "", vars);
             const { data: job, error: jobErr } = await supabaseAdmin
               .from("message_jobs")
               .insert({

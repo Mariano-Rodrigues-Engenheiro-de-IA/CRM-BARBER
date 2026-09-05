@@ -222,7 +222,6 @@ function ReminderRuleForm({
   const [statuses, setStatuses] = useState<string[]>(rule?.applies_to_statuses || ["scheduled", "confirmed"]);
   const [messageText, setMessageText] = useState(rule?.message_text || "");
   const [templateName, setTemplateName] = useState(rule?.template_name || "");
-  const [confirmButtonText, setConfirmButtonText] = useState(rule?.confirm_button_text || "");
   const [headerMediaPath, setHeaderMediaPath] = useState<string | null>(rule?.template_header_media_path || null);
   const [headerPreview, setHeaderPreview] = useState<string | null>(null);
   const [uploadingHeader, setUploadingHeader] = useState(false);
@@ -263,7 +262,6 @@ function ReminderRuleForm({
     if (!name.trim()) return toast.error("Dá um nome pra regra.");
     if (usesTemplate && !templateName) return toast.error("Escolhe um modelo aprovado.");
     if (!usesTemplate && !messageText.trim()) return toast.error("Escreve a mensagem do lembrete.");
-    if (kind === "confirmation" && !usesTemplate && !confirmButtonText) return toast.error("Escreve a palavra de confirmação.");
     if (usesTemplate && selectedTemplate?.hasImageHeader && !headerMediaPath) {
       return toast.error("Esse modelo tem imagem no cabeçalho, envie uma imagem antes de salvar.");
     }
@@ -279,7 +277,6 @@ function ReminderRuleForm({
       template_name: usesTemplate ? templateName : null,
       template_language: usesTemplate ? selectedTemplate?.language || "pt_BR" : null,
       template_header_media_path: usesTemplate && selectedTemplate?.hasImageHeader ? headerMediaPath : null,
-      confirm_button_text: kind === "confirmation" && !usesTemplate ? confirmButtonText : null,
     };
     const r = rule
       ? await api(`/api/public/extension/agenda-reminder-rules/${rule.id}`, { method: "PATCH", body: JSON.stringify(body) })
@@ -382,39 +379,22 @@ function ReminderRuleForm({
           </div>
 
           {!usesTemplate ? (
-            <div className="space-y-3">
-              <div>
-                <Label>Mensagem</Label>
-                <Textarea
-                  value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
-                  rows={4}
-                  placeholder={"Oi {nome}! Passando pra lembrar do seu horário dia {data} às {hora}."}
-                />
-                <p className="mt-1 text-xs text-neutral-500">
-                  Variáveis: <code className="rounded bg-neutral-100 px-1">{"{nome}"}</code>{" "}
-                  <code className="rounded bg-neutral-100 px-1">{"{data}"}</code>{" "}
-                  <code className="rounded bg-neutral-100 px-1">{"{hora}"}</code>{" "}
-                  <code className="rounded bg-neutral-100 px-1">{"{servico}"}</code>{" "}
-                  <code className="rounded bg-neutral-100 px-1">{"{profissional}"}</code>
-                </p>
-              </div>
-              {kind === "confirmation" && (
-                <div>
-                  <Label>Palavra que o cliente deve responder pra confirmar</Label>
-                  <Input
-                    value={confirmButtonText}
-                    onChange={(e) => setConfirmButtonText(e.target.value)}
-                    placeholder="Sim"
-                  />
-                  <p className="mt-1 text-xs text-neutral-500">
-                    Sem modelo com botão (fora da API oficial), a confirmação vira uma instrução no fim da
-                    mensagem: "Responda '{confirmButtonText || "Sim"}' para confirmar." A resposta do cliente
-                    não muda o status sozinha. É pra quem estiver acompanhando a conversa confirmar
-                    manualmente na Agenda.
-                  </p>
-                </div>
-              )}
+            <div>
+              <Label>Mensagem</Label>
+              <Textarea
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                rows={4}
+                placeholder={"Oi {primeiro_nome}! Passando pra lembrar do seu horário dia {data} às {hora}."}
+              />
+              <p className="mt-1 text-xs text-neutral-500">
+                Variáveis: <code className="rounded bg-neutral-100 px-1">{"{nome}"}</code>{" "}
+                <code className="rounded bg-neutral-100 px-1">{"{primeiro_nome}"}</code>{" "}
+                <code className="rounded bg-neutral-100 px-1">{"{data}"}</code>{" "}
+                <code className="rounded bg-neutral-100 px-1">{"{hora}"}</code>{" "}
+                <code className="rounded bg-neutral-100 px-1">{"{servico}"}</code>{" "}
+                <code className="rounded bg-neutral-100 px-1">{"{profissional}"}</code>
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -429,7 +409,7 @@ function ReminderRuleForm({
                     Cria um na aba Modelos{kind === "confirmation" ? ' com botões tipo "Confirmar" e "Cancelar"' : ""}.
                   </p>
                 ) : (
-                  <Select value={templateName} onValueChange={(v) => { setTemplateName(v); setConfirmButtonText(""); setHeaderMediaPath(null); setHeaderPreview(null); }}>
+                  <Select value={templateName} onValueChange={(v) => { setTemplateName(v); setHeaderMediaPath(null); setHeaderPreview(null); }}>
                     <SelectTrigger>
                       <SelectValue placeholder="Escolha um modelo…" />
                     </SelectTrigger>
