@@ -93,6 +93,27 @@ const RECURSOS = [
   },
 ];
 
+// PENDENTE: substituir pelos depoimentos reais das clínicas que já
+// usam o sistema antes de publicar. Nome e clínica genéricos de
+// propósito, pra não passar como se fosse cliente de verdade.
+const DEPOIMENTOS = [
+  {
+    nome: "Nome do responsável",
+    clinica: "Nome da clínica",
+    texto: "Espaço reservado para o depoimento real do primeiro cliente.",
+  },
+  {
+    nome: "Nome do responsável",
+    clinica: "Nome da clínica",
+    texto: "Espaço reservado para o depoimento real do segundo cliente.",
+  },
+  {
+    nome: "Nome do responsável",
+    clinica: "Nome da clínica",
+    texto: "Espaço reservado para o depoimento real do terceiro cliente.",
+  },
+];
+
 const PASSOS = [
   { n: "1", t: "Crie sua conta", d: "Nome, e-mail e o WhatsApp da empresa. Leva menos de um minuto." },
   { n: "2", t: "Adicione ao Chrome", d: "Instalação em um clique, sem nada pra configurar em servidor." },
@@ -182,7 +203,7 @@ function Landing() {
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[820px] -translate-x-1/2 rounded-full bg-[#2f6df6]/20 blur-3xl" />
         <div className="relative mx-auto max-w-4xl px-5 pt-10 text-center md:pt-14">
-          <h1 className="text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl md:text-6xl">
+          <h1 className="text-2xl font-bold leading-[1.15] tracking-tight sm:text-4xl md:text-5xl">
             O motor que sua <span className="text-[#4f8bff]">clínica</span> precisa pra vender mais
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base text-slate-300 md:text-lg">
@@ -195,8 +216,9 @@ function Landing() {
         </div>
       </section>
 
-      {/* Vídeo de demonstração — vídeo real do Mariano no YouTube. */}
-      <section className="mx-auto max-w-4xl px-5 pt-3 pb-10">
+      {/* Vídeo de demonstração — vídeo real do Mariano no YouTube. Menor
+       * que a largura total do Hero, pra não dominar a primeira dobra. */}
+      <section className="mx-auto max-w-2xl px-5 pt-3 pb-10">
         <div className="overflow-hidden rounded-2xl border border-[#2f6df6]/40 bg-[#0d1830] shadow-[0_0_60px_-20px_#2f6df6]">
           <div className="relative aspect-video w-full">
             <iframe
@@ -255,6 +277,91 @@ function Landing() {
             >
               <h3 className="font-semibold text-[#8fb6ff]">{r.titulo}</h3>
               <p className="mt-2 text-sm text-slate-300">{r.texto}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Celular com a IA atendendo — mostra o produto em ação em vez de
+       * só descrever em texto. Anotações flutuantes ao lado apontam pro
+       * que está acontecendo em cada momento da conversa. */}
+      <section className="border-y border-white/10 bg-[#0d1830]">
+        <div className="mx-auto max-w-5xl px-5 py-16">
+          <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
+            Enquanto você atende quem já está na cadeira, a IA já está fechando o próximo horário
+          </h2>
+          <div className="mt-12 grid items-center gap-10 md:grid-cols-[minmax(0,280px)_1fr]">
+            {/* Moldura de celular */}
+            <div className="mx-auto w-full max-w-[280px]">
+              <div className="rounded-[2.5rem] border-4 border-neutral-800 bg-neutral-950 p-2 shadow-2xl">
+                <div className="overflow-hidden rounded-[2rem] bg-[#0b141a]">
+                  <div className="flex items-center gap-2 bg-[#1f2c34] px-4 py-3">
+                    <div className="h-8 w-8 rounded-full bg-[#2f6df6]" />
+                    <div>
+                      <p className="text-xs font-semibold text-white">Clínica Sorriso+</p>
+                      <p className="text-[10px] text-emerald-400">online</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2 px-3 py-4">
+                    <div className="max-w-[85%] rounded-lg rounded-tl-none bg-[#1f2c34] px-3 py-2 text-[11px] text-slate-200">
+                      Oi, vi o anúncio de vocês. Quanto fica a avaliação pra implante?
+                    </div>
+                    <div className="ml-auto max-w-[85%] rounded-lg rounded-tr-none bg-[#005c4b] px-3 py-2 text-[11px] text-slate-100">
+                      Oi! A avaliação é gratuita 😊 Tenho horário amanhã às 14h ou 16h, qual prefere?
+                    </div>
+                    <div className="max-w-[85%] rounded-lg rounded-tl-none bg-[#1f2c34] px-3 py-2 text-[11px] text-slate-200">
+                      16h fica ótimo
+                    </div>
+                    <div className="ml-auto max-w-[85%] rounded-lg rounded-tr-none bg-[#005c4b] px-3 py-2 text-[11px] text-slate-100">
+                      Marcado! Te aviso 1h antes. Até amanhã 👋
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Anotações do que aconteceu na conversa */}
+            <div className="space-y-5">
+              <div className="flex gap-3">
+                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#4f8bff]" />
+                <p className="text-sm text-slate-300">
+                  <span className="font-semibold text-white">A IA respondeu na hora</span>, sem o lead esperar
+                  alguém ver a mensagem.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#4f8bff]" />
+                <p className="text-sm text-slate-300">
+                  <span className="font-semibold text-white">O horário já caiu na agenda</span> e o card desse
+                  lead andou sozinho pro funil de "Agendado".
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#4f8bff]" />
+                <p className="text-sm text-slate-300">
+                  <span className="font-semibold text-white">O lembrete de 1h antes</span> vai sair sozinho, sem
+                  ninguém precisar lembrar de mandar.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Depoimentos — PENDENTE: os 3 abaixo são placeholder, precisam
+       * ser trocados por feedback real de clínicas que já usam o
+       * sistema antes de publicar. Não deixar nome/depoimento fictício
+       * no ar como se fosse cliente de verdade. */}
+      <section className="mx-auto max-w-6xl px-5 py-16">
+        <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
+          Clínicas que já pararam de perder contato
+        </h2>
+        <div className="mt-10 grid gap-5 md:grid-cols-3">
+          {DEPOIMENTOS.map((d) => (
+            <div key={d.nome} className="rounded-2xl border border-white/10 bg-[#0d1830] p-6">
+              <p className="text-sm text-slate-300">"{d.texto}"</p>
+              <p className="mt-4 text-sm font-semibold text-white">{d.nome}</p>
+              <p className="text-xs text-slate-500">{d.clinica}</p>
             </div>
           ))}
         </div>
