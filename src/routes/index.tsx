@@ -195,23 +195,17 @@ function Landing() {
         </div>
       </section>
 
-      {/* Vídeo de demonstração — PENDENTE: Mariano vai gravar amanhã.
-       * Quando tiver o link (Loom, YouTube não-listado, etc), troca o
-       * bloco de placeholder abaixo (o <div> inteiro com "Play") pelo
-       * <iframe src="SEU_LINK_DE_EMBED" className="absolute inset-0
-       * h-full w-full" allow="autoplay; fullscreen; picture-in-picture"
-       * allowFullScreen title="Veja o CRM funcionando" />. Até lá, fica
-       * um estado visual limpo, sem link quebrado aparecendo pro
-       * visitante. */}
+      {/* Vídeo de demonstração — vídeo real do Mariano no YouTube. */}
       <section className="mx-auto max-w-4xl px-5 pt-3 pb-10">
         <div className="overflow-hidden rounded-2xl border border-[#2f6df6]/40 bg-[#0d1830] shadow-[0_0_60px_-20px_#2f6df6]">
-          <div className="relative flex aspect-video w-full items-center justify-center bg-[#0a1120]">
-            <div className="flex flex-col items-center gap-3 text-slate-500">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/20">
-                <div className="ml-1 h-0 w-0 border-y-[10px] border-l-[16px] border-y-transparent border-l-slate-500" />
-              </div>
-              <span className="text-sm">Aula em breve</span>
-            </div>
+          <div className="relative aspect-video w-full">
+            <iframe
+              src="https://www.youtube.com/embed/Od2D8ncTtMw"
+              className="absolute inset-0 h-full w-full"
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowFullScreen
+              title="Veja o CRM funcionando"
+            />
           </div>
         </div>
       </section>
