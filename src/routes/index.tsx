@@ -267,7 +267,7 @@ function Landing() {
         >
           QUERO TESTAR GRÁTIS
         </Button>
-        <p className="mt-3 text-xs text-slate-500">Sem cartão de crédito. Teste antes de decidir.</p>
+        <p className="mt-3 text-xs text-slate-500">Teste sem compromisso!</p>
       </section>
 
       {/* Dores */}
