@@ -1,7 +1,8 @@
 // Central de disparo — único lugar do CRM onde se cria campanha.
 //
 // Público possível:
-//   • Assinantes → coluna (status) do kanban de assinaturas
+//   • Assinantes → coluna (status) do kanban de assinaturas (só existe
+//     pra barbearia — isBarbearia controla isso)
 //   • Listas     → lista nativa do WhatsApp já sincronizada (wa_labels)
 //   • Funis      → funil + coluna
 //
@@ -63,14 +64,19 @@ export function DispatchCenter({
   cols,
   onNeedConnection,
   onDone,
+  isBarbearia,
 }: {
   api: ApiFn;
   customers: DispatchCustomer[];
   cols: Array<{ key: string; label: string }>;
   onNeedConnection: () => void;
   onDone: () => void;
+  // "Assinantes" é conceito exclusivo de barbearia (kanban de
+  // assinatura) — vazava pro nicho genérico/clínica, que nunca tem
+  // esse kanban. Achado de bug real reportado pelo Mariano.
+  isBarbearia: boolean;
 }) {
-  const [audience, setAudience] = useState<Audience>("assinantes");
+  const [audience, setAudience] = useState<Audience>(isBarbearia ? "assinantes" : "funis");
 
   // Assinantes
   const [status, setStatus] = useState<string>(cols[0]?.key ?? "all");
@@ -404,7 +410,7 @@ export function DispatchCenter({
   }
 
   const audienceOptions: Array<{ key: Audience; label: string }> = [
-    { key: "assinantes", label: "Assinantes" },
+    ...(isBarbearia ? [{ key: "assinantes" as Audience, label: "Assinantes" }] : []),
     { key: "funis", label: "Funis de vendas" },
     { key: "planilha", label: "Importar planilha" },
   ];
@@ -418,7 +424,7 @@ export function DispatchCenter({
 
       <div>
         <Label>Público</Label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className={"grid gap-2 " + (audienceOptions.length === 3 ? "grid-cols-3" : "grid-cols-2")}>
           {audienceOptions.map((o) => (
             <button
               key={o.key}

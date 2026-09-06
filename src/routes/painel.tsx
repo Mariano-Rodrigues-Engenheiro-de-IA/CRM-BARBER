@@ -1078,6 +1078,7 @@ function Painel() {
                   cols={visibleColumns(shop?.id ?? "default")}
                   onNeedConnection={() => setSection("conexao")}
                   onDone={() => setDisparoTab("campanhas")}
+                  isBarbearia={businessType === "barbearia"}
                 />
               )}
               {disparoTab === "campanhas" && <CampaignsView token={token} />}

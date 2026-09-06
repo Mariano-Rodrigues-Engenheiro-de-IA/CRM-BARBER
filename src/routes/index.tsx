@@ -124,7 +124,12 @@ const FAQ = [
 
 function Landing() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: "", email: "", phone: "", business_type: "" as "" | "barbearia" | "odontologia" | "estetica" | "outros" });
+  // Fase atual do negócio: página só serve o CRM genérico, sem
+  // seletor de nicho — decidido pelo Mariano pra reduzir trabalho
+  // duplicado (vídeo, criativos) enquanto ainda não escalou. Nicho
+  // específico volta a ser escolhido dentro do admin, cliente por
+  // cliente, quando fizer sentido.
+  const [form, setForm] = useState({ name: "", email: "", phone: "", business_type: "outros" as "barbearia" | "odontologia" | "estetica" | "outros" });
   const [loading, setLoading] = useState(false);
 
   function scrollToForm() {
@@ -205,6 +210,27 @@ function Landing() {
             <span>✓ Usa seu número atual</span>
             <span>✓ Instala em 1 clique</span>
             <span>✓ Cancela quando quiser</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Vídeo de demonstração — PENDENTE: Mariano vai gravar amanhã.
+       * Quando tiver o link (Loom, YouTube não-listado, etc), troca o
+       * bloco de placeholder abaixo (o <div> inteiro com "Play") pelo
+       * <iframe src="SEU_LINK_DE_EMBED" className="absolute inset-0
+       * h-full w-full" allow="autoplay; fullscreen; picture-in-picture"
+       * allowFullScreen title="Veja o CRM funcionando" />. Até lá, fica
+       * um estado visual limpo, sem link quebrado aparecendo pro
+       * visitante. */}
+      <section className="mx-auto max-w-4xl px-5 pb-16">
+        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0d1830]">
+          <div className="relative flex aspect-video w-full items-center justify-center bg-[#0a1120]">
+            <div className="flex flex-col items-center gap-3 text-slate-500">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/20">
+                <div className="ml-1 h-0 w-0 border-y-[10px] border-l-[16px] border-y-transparent border-l-slate-500" />
+              </div>
+              <span className="text-sm">Vídeo de demonstração em breve</span>
+            </div>
           </div>
         </div>
       </section>
@@ -330,31 +356,6 @@ function Landing() {
             Preencha seus dados para liberar a instalação da extensão. Leva menos de um minuto.
           </p>
           <form onSubmit={onSubmit} className="mt-6 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="business_type">
-                Tipo de negócio <span className="text-red-400">*</span>
-              </Label>
-              <select
-                id="business_type"
-                required
-                value={form.business_type}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, business_type: e.target.value as "barbearia" | "odontologia" | "estetica" | "outros" }))
-                }
-                className="flex h-10 w-full rounded-md border border-white/20 bg-[#0a1120] px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="" disabled>
-                  Selecione o tipo do seu negócio...
-                </option>
-                <option value="barbearia">Barbearia / negócio de serviços</option>
-                <option value="odontologia">Clínica odontológica</option>
-                <option value="estetica">Clínica de estética</option>
-                <option value="outros">Outro tipo de negócio</option>
-              </select>
-              <p className="text-xs text-slate-500">
-                Isso define quais telas e recursos aparecem pro seu negócio depois. Escolha com atenção.
-              </p>
-            </div>
             <div className="space-y-2">
               <Label htmlFor="name">Nome</Label>
               <Input
