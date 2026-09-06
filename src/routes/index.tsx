@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { FREE_LIMITS } from "@/lib/billing";
 import { MobileMockup } from "@/components/ui/whatsapp-mobile-mockup";
+import { InfiniteMovingCards } from "@/components/ui/infinite-moving-cards";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -97,24 +98,36 @@ const RECURSOS = [
 // PENDENTE: substituir pelos depoimentos reais das clínicas que já
 // usam o sistema antes de publicar. Nome e clínica genéricos de
 // propósito, pra não passar como se fosse cliente de verdade.
+// FICTÍCIO — a pedido do Mariano, só pra visualizar o layout. Precisa
+// virar depoimento real (nome, clínica e texto de verdade, com
+// autorização do cliente) antes de publicar de vez.
+// FICTÍCIO — a pedido do Mariano, só pra visualizar o layout. Precisa
+// virar depoimento real (nome, clínica e texto de verdade, com
+// autorização do cliente) antes de publicar de vez.
 const DEPOIMENTOS = [
   {
-    nome: "Nome do responsável",
-    clinica: "Nome da clínica",
-    iniciais: "??",
-    texto: "Espaço reservado para o depoimento real do primeiro cliente.",
+    name: "Dra. Camila Vasconcelos",
+    title: "Sorriso+ Odontologia",
+    iniciais: "CV",
+    quote: "Antes eu perdia lead no meio da conversa porque ninguém retomava o orçamento. Hoje o sistema já lembra sozinho.",
   },
   {
-    nome: "Nome do responsável",
-    clinica: "Nome da clínica",
-    iniciais: "??",
-    texto: "Espaço reservado para o depoimento real do segundo cliente.",
+    name: "Rafael Nogueira",
+    title: "Prótese capilar RN Hair",
+    iniciais: "RN",
+    quote: "O agente de IA qualifica o lead antes de eu nem ver a mensagem. Chega pronto pra eu fechar.",
   },
   {
-    nome: "Nome do responsável",
-    clinica: "Nome da clínica",
-    iniciais: "??",
-    texto: "Espaço reservado para o depoimento real do terceiro cliente.",
+    name: "Dra. Beatriz Andrade",
+    title: "Clínica Andrade Estética",
+    iniciais: "BA",
+    quote: "A agenda com lembrete automático cortou boa parte das faltas. Isso sozinho já pagou o sistema.",
+  },
+  {
+    name: "Dr. Thiago Salles",
+    title: "Clínica Salles Odontologia",
+    iniciais: "TS",
+    quote: "Consigo ver o histórico completo do paciente numa tela só, mesmo quando outro dentista atendeu antes de mim.",
   },
 ];
 
@@ -192,10 +205,21 @@ function Landing() {
     // Tema claro — pedido do Mariano pra sair do "dark mode genérico"
     // que a maioria dos concorrentes usa. Azul da marca mantido como
     // única cor de destaque, contra fundo claro.
-    // Fundo com leve textura/gradiente, não branco cru — pedido do
-    // Mariano depois de ver a referência (WeSales), que tem sempre um
-    // "algo" por trás, nunca 100% chapado.
-    <div className="min-h-screen bg-gradient-to-b from-[#f7f9fd] via-white to-[#f7f9fd] text-slate-900">
+    // Fundo com padrão de pontos sutil (mesma técnica usada em página
+    // premium tipo Vercel/Linear) + brilho azul no topo — a tentativa
+    // anterior (gradiente quase invisível) não resolveu, isso aqui é
+    // visualmente perceptível sem competir com o conteúdo.
+    <div className="relative min-h-screen bg-white text-slate-900">
+      <div
+        className="pointer-events-none fixed inset-0 z-0 opacity-[0.4]"
+        style={{
+          backgroundImage: "radial-gradient(circle, #cbd5e1 1px, transparent 1px)",
+          backgroundSize: "28px 28px",
+          maskImage: "radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%)",
+          WebkitMaskImage: "radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%)",
+        }}
+      />
+      <div className="relative z-10">
       {/* Top bar */}
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center px-5 py-3">
@@ -324,29 +348,17 @@ function Landing() {
         </div>
       </section>
 
-      {/* Depoimentos — PENDENTE: os 3 abaixo são placeholder, precisam
-       * ser trocados por feedback real de donos de clínica que já usam
-       * o sistema antes de publicar. Sem foto nem nome fictício -
-       * avatar fica como iniciais até ter foto de verdade autorizada
-       * pelo cliente. */}
-      <section className="mx-auto max-w-6xl px-5 py-16">
-        <h2 className="text-center text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+      {/* Depoimentos — PENDENTE: os 4 abaixo são fictícios, a pedido do
+       * Mariano, só pra visualizar o layout. Precisam virar depoimento
+       * real (nome, clínica e texto de verdade, com autorização do
+       * cliente) antes de publicar de vez. Avatar fica como iniciais
+       * por decisão do Mariano, não foto. */}
+      <section className="py-16">
+        <h2 className="mx-auto max-w-6xl px-5 text-center text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
           Clínicas que já pararam de perder contato
         </h2>
-        <div className="mt-10 flex flex-wrap items-stretch justify-center gap-6">
-          {DEPOIMENTOS.map((d) => (
-            <div key={d.nome} className="w-full max-w-80 rounded-2xl bg-[#0f172a] text-white">
-              <div className="relative -mt-px flex h-40 items-center justify-center overflow-hidden rounded-t-2xl bg-gradient-to-br from-[#2f6df6]/40 to-[#0f172a]">
-                <span className="text-3xl font-bold text-white/70">{d.iniciais}</span>
-                <div className="pointer-events-none absolute bottom-0 h-24 w-full bg-gradient-to-t from-[#0f172a] to-transparent" />
-              </div>
-              <div className="px-5 pb-5 pt-1">
-                <p className="border-b border-white/15 pb-4 text-sm font-medium">"{d.texto}"</p>
-                <p className="mt-4 text-sm">{d.nome}</p>
-                <p className="text-xs font-medium text-[#8fb6ff]">{d.clinica}</p>
-              </div>
-            </div>
-          ))}
+        <div className="mt-10">
+          <InfiniteMovingCards items={DEPOIMENTOS} direction="left" speed="slow" />
         </div>
       </section>
 
@@ -492,6 +504,7 @@ function Landing() {
           </Link>
         </div>
       </footer>
+      </div>
     </div>
   );
 }

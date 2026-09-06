@@ -236,3 +236,15 @@
 .thin-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: rgba(0, 0, 0, 0.3);
 }
+
+/* Scroll infinito do carrossel de depoimentos (infinite-moving-cards).
+   --animation-duration e --animation-direction são setados via JS no
+   próprio componente, por card. */
+@keyframes scroll {
+  to {
+    transform: translate(calc(-50% - 0.5rem));
+  }
+}
+.animate-scroll {
+  animation: scroll var(--animation-duration, 40s) var(--animation-direction, forwards) linear infinite;
+}
