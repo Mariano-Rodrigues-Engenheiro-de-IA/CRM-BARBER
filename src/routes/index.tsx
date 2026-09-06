@@ -189,7 +189,7 @@ function Landing() {
             Você já investe em anúncio pra atrair lead. O Zaylo CRM garante que nenhum se perca,
             direto dentro do WhatsApp que sua clínica já usa.
           </p>
-          <p className="mt-3 text-sm font-semibold uppercase tracking-wider text-[#8fb6ff]">
+          <p className="mt-8 text-sm font-semibold uppercase tracking-wider text-[#8fb6ff]">
             ▶ Assista a aula abaixo e veja como funciona
           </p>
         </div>
