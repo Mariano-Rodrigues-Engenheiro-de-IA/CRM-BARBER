@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -143,6 +143,93 @@ const FAQ = [
   },
 ];
 
+// Conversa animada dentro do celular — mensagens aparecem uma de cada
+// vez, com "digitando..." antes da resposta da IA, e a conversa reinicia
+// sozinha depois de terminar. Dá vida de verdade, não é print estático.
+const CHAT_SCRIPT: Array<{ from: "lead" | "ai"; text: string }> = [
+  { from: "lead", text: "Oi, vi o anúncio de vocês. Quanto fica a avaliação pra implante?" },
+  { from: "ai", text: "Oi! A avaliação é gratuita 😊 Tenho horário amanhã às 14h ou 16h, qual prefere?" },
+  { from: "lead", text: "16h fica ótimo" },
+  { from: "ai", text: "Marcado! Te aviso 1h antes. Até amanhã 👋" },
+];
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function WhatsAppDemo() {
+  const [visibleCount, setVisibleCount] = useState(0);
+  const [typing, setTyping] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function run() {
+      while (!cancelled) {
+        setVisibleCount(0);
+        setTyping(false);
+        await sleep(700);
+        for (let i = 0; i < CHAT_SCRIPT.length; i++) {
+          if (cancelled) return;
+          if (CHAT_SCRIPT[i].from === "ai") {
+            setTyping(true);
+            await sleep(1300);
+            if (cancelled) return;
+            setTyping(false);
+          }
+          setVisibleCount(i + 1);
+          await sleep(1100);
+        }
+        await sleep(2800);
+      }
+    }
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    // Proporção de smartphone de verdade (~9:19.5), não um retângulo
+    // qualquer — é o que dava a sensação de "celular fajuto" antes.
+    <div className="mx-auto w-full max-w-[300px]">
+      <div className="relative aspect-[9/19.5] w-full rounded-[3rem] border-[6px] border-neutral-800 bg-neutral-950 shadow-2xl">
+        <div className="absolute left-1/2 top-2 z-10 h-5 w-24 -translate-x-1/2 rounded-full bg-neutral-950" />
+        <div className="flex h-full flex-col overflow-hidden rounded-[2.4rem] bg-[#0b141a]">
+          <div className="flex items-center gap-2 bg-[#1f2c34] px-4 pb-3 pt-8">
+            <div className="h-9 w-9 shrink-0 rounded-full bg-[#2f6df6]" />
+            <div>
+              <p className="text-xs font-semibold text-white">Clínica Sorriso+</p>
+              <p className="text-[10px] text-emerald-400">{typing ? "digitando…" : "online"}</p>
+            </div>
+          </div>
+          <div className="flex flex-1 flex-col justify-end gap-2 px-3 pb-4">
+            {CHAT_SCRIPT.slice(0, visibleCount).map((m, i) => (
+              <div
+                key={i}
+                className={
+                  "max-w-[85%] rounded-lg px-3 py-2 text-[12px] " +
+                  (m.from === "lead"
+                    ? "rounded-tl-none bg-[#1f2c34] text-slate-200"
+                    : "ml-auto rounded-tr-none bg-[#005c4b] text-slate-100")
+                }
+              >
+                {m.text}
+              </div>
+            ))}
+            {typing && (
+              <div className="ml-auto flex gap-1 rounded-lg rounded-tr-none bg-[#005c4b] px-3 py-2.5">
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-300 [animation-delay:-0.3s]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-300 [animation-delay:-0.15s]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-300" />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Landing() {
   const navigate = useNavigate();
   // Fase atual do negócio: página só serve o CRM genérico, sem
@@ -203,7 +290,7 @@ function Landing() {
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[820px] -translate-x-1/2 rounded-full bg-[#2f6df6]/20 blur-3xl" />
         <div className="relative mx-auto max-w-4xl px-5 pt-10 text-center md:pt-14">
-          <h1 className="text-2xl font-bold leading-[1.15] tracking-tight sm:text-4xl md:text-5xl">
+          <h1 className="text-xl font-bold leading-[1.2] tracking-tight sm:text-3xl md:text-4xl">
             O motor que sua <span className="text-[#4f8bff]">clínica</span> precisa pra vender mais
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base text-slate-300 md:text-lg">
@@ -291,34 +378,8 @@ function Landing() {
             Enquanto você atende quem já está na cadeira, a IA já está fechando o próximo horário
           </h2>
           <div className="mt-12 grid items-center gap-10 md:grid-cols-[minmax(0,280px)_1fr]">
-            {/* Moldura de celular */}
-            <div className="mx-auto w-full max-w-[280px]">
-              <div className="rounded-[2.5rem] border-4 border-neutral-800 bg-neutral-950 p-2 shadow-2xl">
-                <div className="overflow-hidden rounded-[2rem] bg-[#0b141a]">
-                  <div className="flex items-center gap-2 bg-[#1f2c34] px-4 py-3">
-                    <div className="h-8 w-8 rounded-full bg-[#2f6df6]" />
-                    <div>
-                      <p className="text-xs font-semibold text-white">Clínica Sorriso+</p>
-                      <p className="text-[10px] text-emerald-400">online</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2 px-3 py-4">
-                    <div className="max-w-[85%] rounded-lg rounded-tl-none bg-[#1f2c34] px-3 py-2 text-[11px] text-slate-200">
-                      Oi, vi o anúncio de vocês. Quanto fica a avaliação pra implante?
-                    </div>
-                    <div className="ml-auto max-w-[85%] rounded-lg rounded-tr-none bg-[#005c4b] px-3 py-2 text-[11px] text-slate-100">
-                      Oi! A avaliação é gratuita 😊 Tenho horário amanhã às 14h ou 16h, qual prefere?
-                    </div>
-                    <div className="max-w-[85%] rounded-lg rounded-tl-none bg-[#1f2c34] px-3 py-2 text-[11px] text-slate-200">
-                      16h fica ótimo
-                    </div>
-                    <div className="ml-auto max-w-[85%] rounded-lg rounded-tr-none bg-[#005c4b] px-3 py-2 text-[11px] text-slate-100">
-                      Marcado! Te aviso 1h antes. Até amanhã 👋
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* Celular animado */}
+            <WhatsAppDemo />
 
             {/* Anotações do que aconteceu na conversa */}
             <div className="space-y-5">
