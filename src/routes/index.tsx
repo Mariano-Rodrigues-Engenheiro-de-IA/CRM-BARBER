@@ -186,9 +186,12 @@ function Landing() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a1120] text-slate-100">
+    // Tema claro — pedido do Mariano pra sair do "dark mode genérico"
+    // que a maioria dos concorrentes usa. Azul da marca mantido como
+    // única cor de destaque, contra fundo claro.
+    <div className="min-h-screen bg-white text-slate-900">
       {/* Top bar */}
-      <header className="border-b border-white/10 bg-[#0a1120]/90 backdrop-blur">
+      <header className="border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center px-5 py-3">
           <img src="/brand/zaylo-logo.png" alt="Zaylo CRM" className="h-7 w-auto object-contain" />
         </div>
@@ -196,12 +199,12 @@ function Landing() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[820px] -translate-x-1/2 rounded-full bg-[#2f6df6]/20 blur-3xl" />
+        <div className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[820px] -translate-x-1/2 rounded-full bg-[#2f6df6]/10 blur-3xl" />
         <div className="relative mx-auto max-w-4xl px-5 pt-10 text-center md:pt-14">
-          <h1 className="text-3xl font-bold leading-[1.2] tracking-tight sm:text-4xl md:text-5xl">
-            O CRM que a sua <span className="text-[#4f8bff]">clínica</span> precisa para vender mais todos os dias!
+          <h1 className="text-3xl font-bold leading-[1.2] tracking-tight text-slate-900 sm:text-4xl md:text-5xl">
+            O CRM que a sua <span className="text-[#2f6df6]">clínica</span> precisa para vender mais todos os dias!
           </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-base text-slate-300 md:text-lg">
+          <p className="mx-auto mt-4 max-w-2xl text-base text-slate-600 md:text-lg">
             Tudo em um só lugar: disparos, funis, agenda, follow up, agentes de IA e treinamentos.
           </p>
         </div>
@@ -210,7 +213,7 @@ function Landing() {
       {/* Vídeo de demonstração — vídeo real do Mariano no YouTube. Menor
        * que a largura total do Hero, pra não dominar a primeira dobra. */}
       <section className="mx-auto max-w-2xl px-5 pt-6 pb-10">
-        <div className="overflow-hidden rounded-2xl border border-[#2f6df6]/40 bg-[#0d1830] shadow-[0_0_60px_-20px_#2f6df6]">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/60">
           <div className="relative aspect-video w-full">
             <iframe
               src="https://www.youtube.com/embed/Od2D8ncTtMw"
@@ -224,7 +227,8 @@ function Landing() {
       </section>
 
       {/* CTA logo abaixo do vídeo — depois de ver a aula, o próximo
-       * passo natural é começar. */}
+       * passo natural é começar. Teste grátis funciona como a garantia
+       * (sem cobrança de reembolso separada, pedido do Mariano). */}
       <section className="mx-auto max-w-4xl px-5 pb-16 text-center">
         <Button
           size="lg"
@@ -233,22 +237,23 @@ function Landing() {
         >
           QUERO TESTAR GRÁTIS
         </Button>
+        <p className="mt-3 text-xs text-slate-500">Sem cartão de crédito. Teste antes de decidir.</p>
       </section>
 
       {/* Dores */}
-      <section className="border-y border-white/10 bg-[#0d1830]">
+      <section className="border-y border-slate-200 bg-[#f5f7fb]">
         <div className="mx-auto max-w-6xl px-5 py-14">
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             Se sua clínica se identifica com isso, o problema não é o seu time. É a falta de processo
           </h2>
           <ul className="mt-8 grid gap-4 sm:grid-cols-2">
             {DORES.map((d) => (
               <li
                 key={d}
-                className="flex items-start gap-3 rounded-xl border border-white/10 bg-[#0a1120] p-4"
+                className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4"
               >
-                <span className="mt-0.5 text-rose-400">✕</span>
-                <span className="text-sm text-slate-300">{d}</span>
+                <span className="mt-0.5 text-rose-500">✕</span>
+                <span className="text-sm text-slate-700">{d}</span>
               </li>
             ))}
           </ul>
@@ -257,17 +262,17 @@ function Landing() {
 
       {/* Recursos */}
       <section className="mx-auto max-w-6xl px-5 py-16">
-        <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          Tudo que sua clínica precisa, <span className="text-[#4f8bff]">sem sair do WhatsApp</span>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          Tudo que sua clínica precisa, <span className="text-[#2f6df6]">sem sair do WhatsApp</span>
         </h2>
         <div className="mt-10 grid gap-5 md:grid-cols-3">
           {RECURSOS.map((r) => (
             <div
               key={r.titulo}
-              className="rounded-2xl border border-white/10 bg-[#0d1830] p-5 transition hover:border-[#2f6df6]/50"
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-[#2f6df6]/40 hover:shadow-md"
             >
-              <h3 className="font-semibold text-[#8fb6ff]">{r.titulo}</h3>
-              <p className="mt-2 text-sm text-slate-300">{r.texto}</p>
+              <h3 className="font-semibold text-[#2f6df6]">{r.titulo}</h3>
+              <p className="mt-2 text-sm text-slate-600">{r.texto}</p>
             </div>
           ))}
         </div>
@@ -276,9 +281,9 @@ function Landing() {
       {/* Celular com a IA atendendo — mostra o produto em ação em vez de
        * só descrever em texto. Anotações flutuantes ao lado apontam pro
        * que está acontecendo em cada momento da conversa. */}
-      <section className="border-y border-white/10 bg-[#0d1830]">
+      <section className="border-y border-slate-200 bg-[#f5f7fb]">
         <div className="mx-auto max-w-5xl px-5 py-16">
-          <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
+          <h2 className="text-center text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             Enquanto você atende quem já está na cadeira, a IA já está fechando o próximo horário
           </h2>
           <div className="mt-12 grid items-center gap-10 md:grid-cols-[minmax(0,280px)_1fr]">
@@ -288,23 +293,23 @@ function Landing() {
             {/* Anotações do que aconteceu na conversa */}
             <div className="space-y-5">
               <div className="flex gap-3">
-                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#4f8bff]" />
-                <p className="text-sm text-slate-300">
-                  <span className="font-semibold text-white">A IA respondeu na hora</span>, sem o lead esperar
+                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#2f6df6]" />
+                <p className="text-sm text-slate-700">
+                  <span className="font-semibold text-slate-900">A IA respondeu na hora</span>, sem o lead esperar
                   alguém ver a mensagem.
                 </p>
               </div>
               <div className="flex gap-3">
-                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#4f8bff]" />
-                <p className="text-sm text-slate-300">
-                  <span className="font-semibold text-white">O horário já caiu na agenda</span> e o card desse
+                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#2f6df6]" />
+                <p className="text-sm text-slate-700">
+                  <span className="font-semibold text-slate-900">O horário já caiu na agenda</span> e o card desse
                   lead andou sozinho pro funil de "Agendado".
                 </p>
               </div>
               <div className="flex gap-3">
-                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#4f8bff]" />
-                <p className="text-sm text-slate-300">
-                  <span className="font-semibold text-white">O lembrete de 1h antes</span> vai sair sozinho, sem
+                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#2f6df6]" />
+                <p className="text-sm text-slate-700">
+                  <span className="font-semibold text-slate-900">O lembrete de 1h antes</span> vai sair sozinho, sem
                   ninguém precisar lembrar de mandar.
                 </p>
               </div>
@@ -318,14 +323,14 @@ function Landing() {
        * sistema antes de publicar. Não deixar nome/depoimento fictício
        * no ar como se fosse cliente de verdade. */}
       <section className="mx-auto max-w-6xl px-5 py-16">
-        <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
+        <h2 className="text-center text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
           Clínicas que já pararam de perder contato
         </h2>
         <div className="mt-10 grid gap-5 md:grid-cols-3">
           {DEPOIMENTOS.map((d) => (
-            <div key={d.nome} className="rounded-2xl border border-white/10 bg-[#0d1830] p-6">
-              <p className="text-sm text-slate-300">"{d.texto}"</p>
-              <p className="mt-4 text-sm font-semibold text-white">{d.nome}</p>
+            <div key={d.nome} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <p className="text-sm text-slate-700">"{d.texto}"</p>
+              <p className="mt-4 text-sm font-semibold text-slate-900">{d.nome}</p>
               <p className="text-xs text-slate-500">{d.clinica}</p>
             </div>
           ))}
@@ -333,17 +338,17 @@ function Landing() {
       </section>
 
       {/* Passos */}
-      <section className="border-y border-white/10 bg-[#0d1830]">
+      <section className="border-y border-slate-200 bg-[#f5f7fb]">
         <div className="mx-auto max-w-6xl px-5 py-16">
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Funcionando em 3 minutos</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Funcionando em 3 minutos</h2>
           <div className="mt-10 grid gap-6 md:grid-cols-3">
             {PASSOS.map((p) => (
-              <div key={p.n} className="rounded-2xl border border-white/10 bg-[#0a1120] p-6">
+              <div key={p.n} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#2f6df6] text-lg font-bold text-white">
                   {p.n}
                 </span>
-                <h3 className="mt-4 font-semibold">{p.t}</h3>
-                <p className="mt-1 text-sm text-slate-400">{p.d}</p>
+                <h3 className="mt-4 font-semibold text-slate-900">{p.t}</h3>
+                <p className="mt-1 text-sm text-slate-600">{p.d}</p>
               </div>
             ))}
           </div>
@@ -352,29 +357,29 @@ function Landing() {
 
       {/* Planos */}
       <section className="mx-auto max-w-5xl px-5 py-16">
-        <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
+        <h2 className="text-center text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
           Comece grátis. Assine quando fizer sentido.
         </h2>
         <div className="mt-10 grid gap-6 md:grid-cols-2">
-          <div className="rounded-2xl border border-white/10 bg-[#0d1830] p-6">
-            <p className="text-sm font-semibold text-slate-400">Grátis</p>
-            <p className="mt-2 text-3xl font-bold">R$ 0</p>
-            <ul className="mt-5 space-y-2 text-sm text-slate-300">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p className="text-sm font-semibold text-slate-500">Grátis</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">R$ 0</p>
+            <ul className="mt-5 space-y-2 text-sm text-slate-700">
               <li>✓ Até {FREE_LIMITS.customers} contatos</li>
               <li>✓ Disparo de até {FREE_LIMITS.dispatchBatch} contatos por vez</li>
               <li>✓ Funis, agenda e importação de planilha</li>
-              <li className="text-slate-500">✕ Disparo em massa e treinamentos</li>
+              <li className="text-slate-400">✕ Disparo em massa e treinamentos</li>
             </ul>
             <Button variant="secondary" className="mt-6 w-full" onClick={scrollToForm}>
               Instalar extensão
             </Button>
           </div>
-          <div className="rounded-2xl border-2 border-[#2f6df6] bg-[#0d1830] p-6 shadow-[0_0_60px_-20px_#2f6df6]">
-            <p className="text-sm font-semibold text-[#8fb6ff]">Premium</p>
-            <p className="mt-2 text-3xl font-bold">
-              R$ 97<span className="text-base font-medium text-slate-400">/mês</span>
+          <div className="rounded-2xl border-2 border-[#2f6df6] bg-white p-6 shadow-xl shadow-[#2f6df6]/10">
+            <p className="text-sm font-semibold text-[#2f6df6]">Premium</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">
+              R$ 97<span className="text-base font-medium text-slate-500">/mês</span>
             </p>
-            <ul className="mt-5 space-y-2 text-sm text-slate-200">
+            <ul className="mt-5 space-y-2 text-sm text-slate-700">
               <li>✓ Contatos ilimitados</li>
               <li>✓ Disparos e campanhas ilimitados</li>
               <li>✓ Funis, automações e agenda completos</li>
@@ -393,14 +398,14 @@ function Landing() {
       </section>
 
       {/* FAQ */}
-      <section className="border-t border-white/10 bg-[#0d1830]">
+      <section className="border-t border-slate-200 bg-[#f5f7fb]">
         <div className="mx-auto max-w-3xl px-5 py-16">
-          <h2 className="text-2xl font-bold tracking-tight">Perguntas frequentes</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Perguntas frequentes</h2>
           <div className="mt-8 space-y-4">
             {FAQ.map((f) => (
-              <div key={f.q} className="rounded-xl border border-white/10 bg-[#0a1120] p-5">
-                <p className="font-semibold text-[#8fb6ff]">{f.q}</p>
-                <p className="mt-2 text-sm text-slate-300">{f.a}</p>
+              <div key={f.q} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p className="font-semibold text-[#2f6df6]">{f.q}</p>
+                <p className="mt-2 text-sm text-slate-600">{f.a}</p>
               </div>
             ))}
           </div>
@@ -409,9 +414,9 @@ function Landing() {
 
       {/* Cadastro */}
       <section id="cadastro" className="px-5 py-20">
-        <div className="mx-auto max-w-md rounded-3xl border border-[#2f6df6]/40 bg-[#0d1830] p-7">
-          <h2 className="text-2xl font-bold tracking-tight">Instale e comece grátis</h2>
-          <p className="mt-2 text-sm text-slate-400">
+        <div className="mx-auto max-w-md rounded-3xl border border-[#2f6df6]/30 bg-white p-7 shadow-xl shadow-slate-200/60">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Instale e comece grátis</h2>
+          <p className="mt-2 text-sm text-slate-500">
             Preencha seus dados para liberar a instalação da extensão. Leva menos de um minuto.
           </p>
           <form onSubmit={onSubmit} className="mt-6 space-y-4">
@@ -459,17 +464,17 @@ function Landing() {
             >
               {loading ? "Enviando…" : "ADICIONAR AO CHROME"}
             </Button>
-            <p className="text-center text-[11px] text-slate-500">
+            <p className="text-center text-[11px] text-slate-400">
               Use o mesmo número do WhatsApp da empresa. É ele que faz o pareamento.
             </p>
           </form>
         </div>
       </section>
 
-      <footer className="border-t border-white/10 py-8">
+      <footer className="border-t border-slate-200 py-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-5 text-xs text-slate-500">
           <span>Zaylo CRM · O motor que sua clínica precisa pra vender mais</span>
-          <Link to="/politicas" className="text-slate-400 transition-colors hover:text-[#8fb6ff]">
+          <Link to="/politicas" className="text-slate-500 transition-colors hover:text-[#2f6df6]">
             Política de Privacidade e Termos de Uso
           </Link>
         </div>
