@@ -10,17 +10,17 @@ import { PREMIUM_PRICE_LABEL, FREE_LIMITS } from "@/lib/billing";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Zaylo CRM | CRM completo dentro do WhatsApp" },
+      { title: "Zaylo CRM | O motor que sua clínica precisa pra vender mais" },
       {
         name: "description",
         content:
-          "CRM completo integrado ao WhatsApp: disparo em massa, agente de IA, funis, automações, agenda, respostas rápidas, treinamentos e gestão de equipe para sua empresa vender mais.",
+          "CRM dentro do WhatsApp pra clínicas que investem em tráfego pago: disparo em massa, agente de IA, funis, automações, agenda, respostas rápidas, treinamentos e gestão de equipe. Nenhum lead se perde.",
       },
-      { property: "og:title", content: "Zaylo CRM | CRM completo dentro do WhatsApp" },
+      { property: "og:title", content: "Zaylo CRM | O motor que sua clínica precisa pra vender mais" },
       {
         property: "og:description",
         content:
-          "CRM completo integrado ao WhatsApp: disparo em massa, agente de IA, funis, automações, agenda, respostas rápidas, treinamentos e gestão de equipe para sua empresa vender mais.",
+          "CRM dentro do WhatsApp pra clínicas que investem em tráfego pago: disparo em massa, agente de IA, funis, automações, agenda, respostas rápidas, treinamentos e gestão de equipe. Nenhum lead se perde.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -39,10 +39,10 @@ const formSchema = z.object({
 });
 
 const DORES = [
-  "Leads chegam no WhatsApp e se perdem no meio das conversas",
-  "Follow-up e cobrança feitos na mão, um cliente por vez",
+  "Você investe em tráfego, mas o lead esfria no meio da conversa do WhatsApp",
+  "Follow-up e cobrança feitos na mão, um paciente por vez",
   "Nenhum funil: o orçamento some na conversa e ninguém retoma",
-  "Sem controle de vendas por vendedor, nem histórico do cliente",
+  "Sem controle de vendas por vendedor, nem histórico do paciente",
 ];
 
 const RECURSOS = [
@@ -105,8 +105,8 @@ const FAQ = [
     a: "Não. O CRM usa a sua própria sessão do WhatsApp Web, o mesmo número que a sua empresa já usa.",
   },
   {
-    q: "Serve para qualquer tipo de empresa?",
-    a: "Sim. Se o seu atendimento e a sua venda acontecem no WhatsApp, o Zaylo CRM se encaixa: serviços, comércio, clínicas, agências e assinaturas.",
+    q: "Serve só para clínicas?",
+    a: "O foco é clínica odontológica, de estética e de prótese capilar, negócios que investem em tráfego pago e não podem perder lead. Mas se o seu atendimento e sua venda acontecem no WhatsApp, o Zaylo CRM também se encaixa.",
   },
   {
     q: "Meus contatos ficam salvos onde?",
@@ -183,34 +183,18 @@ function Landing() {
         <div className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[820px] -translate-x-1/2 rounded-full bg-[#2f6df6]/20 blur-3xl" />
         <div className="relative mx-auto max-w-4xl px-5 py-16 text-center md:py-24">
           <span className="inline-block rounded-full border border-[#8fb6ff]/40 bg-[#2f6df6]/10 px-3 py-1 text-[11px] font-semibold tracking-wider text-[#8fb6ff]">
-            CRM · IA · AUTOMAÇÃO NO WHATSAPP
+            PARA CLÍNICAS QUE INVESTEM EM TRÁFEGO PAGO
           </span>
           <h1 className="mt-5 text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl md:text-6xl">
-            O CRM completo integrado ao{" "}
-            <span className="text-[#4f8bff]">WhatsApp</span> para sua empresa vender mais
+            O motor que sua <span className="text-[#4f8bff]">clínica</span> precisa pra vender mais
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base text-slate-300 md:text-lg">
-            Disparo em massa, agente de IA, funis, automações, agenda, respostas rápidas,
-            treinamentos e gestão de equipe, tudo dentro do WhatsApp que você já usa, sem trocar de
-            ferramenta e sem abrir conversa por conversa.
+            Você já investe em anúncio pra atrair lead. O Zaylo CRM garante que nenhum se perca,
+            direto dentro do WhatsApp que sua clínica já usa.
           </p>
-          <div className="mt-8 flex flex-col items-center gap-3">
-            <Button
-              size="lg"
-              className="w-full max-w-[280px] bg-[#2f6df6] px-8 py-5 text-base font-bold text-white hover:bg-[#1f5ae0]"
-              onClick={scrollToForm}
-            >
-              QUERO TESTAR GRÁTIS
-            </Button>
-            <span className="text-xs text-slate-400">
-              Sem cartão para começar · {PREMIUM_PRICE_LABEL} quando quiser liberar tudo
-            </span>
-          </div>
-          <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-slate-400">
-            <span>✓ Usa seu número atual</span>
-            <span>✓ Instala em 1 clique</span>
-            <span>✓ Cancela quando quiser</span>
-          </div>
+          <p className="mt-6 text-sm font-semibold uppercase tracking-wider text-[#8fb6ff]">
+            ▶ Assista a aula abaixo e veja como funciona
+          </p>
         </div>
       </section>
 
@@ -222,16 +206,38 @@ function Landing() {
        * allowFullScreen title="Veja o CRM funcionando" />. Até lá, fica
        * um estado visual limpo, sem link quebrado aparecendo pro
        * visitante. */}
-      <section className="mx-auto max-w-4xl px-5 pb-16">
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0d1830]">
+      <section className="mx-auto max-w-4xl px-5 pb-10">
+        <div className="overflow-hidden rounded-2xl border border-[#2f6df6]/40 bg-[#0d1830] shadow-[0_0_60px_-20px_#2f6df6]">
           <div className="relative flex aspect-video w-full items-center justify-center bg-[#0a1120]">
             <div className="flex flex-col items-center gap-3 text-slate-500">
               <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/20">
                 <div className="ml-1 h-0 w-0 border-y-[10px] border-l-[16px] border-y-transparent border-l-slate-500" />
               </div>
-              <span className="text-sm">Vídeo de demonstração em breve</span>
+              <span className="text-sm">Aula em breve</span>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* CTA logo abaixo do vídeo — depois de ver a aula, o próximo
+       * passo natural é começar. */}
+      <section className="mx-auto max-w-4xl px-5 pb-16 text-center">
+        <div className="flex flex-col items-center gap-3">
+          <Button
+            size="lg"
+            className="w-full max-w-[280px] bg-[#2f6df6] px-8 py-5 text-base font-bold text-white hover:bg-[#1f5ae0]"
+            onClick={scrollToForm}
+          >
+            QUERO TESTAR GRÁTIS
+          </Button>
+          <span className="text-xs text-slate-400">
+            Sem cartão para começar · {PREMIUM_PRICE_LABEL} quando quiser liberar tudo
+          </span>
+        </div>
+        <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-slate-400">
+          <span>✓ Usa seu número atual</span>
+          <span>✓ Instala em 1 clique</span>
+          <span>✓ Cancela quando quiser</span>
         </div>
       </section>
 
@@ -239,7 +245,7 @@ function Landing() {
       <section className="border-y border-white/10 bg-[#0d1830]">
         <div className="mx-auto max-w-6xl px-5 py-14">
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Se você se identifica com isso, o problema não é o seu time. É a falta de processo
+            Se sua clínica se identifica com isso, o problema não é o seu time. É a falta de processo
           </h2>
           <ul className="mt-8 grid gap-4 sm:grid-cols-2">
             {DORES.map((d) => (
@@ -258,7 +264,7 @@ function Landing() {
       {/* Recursos */}
       <section className="mx-auto max-w-6xl px-5 py-16">
         <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          Tudo que sua operação precisa, <span className="text-[#4f8bff]">sem sair do WhatsApp</span>
+          Tudo que sua clínica precisa, <span className="text-[#4f8bff]">sem sair do WhatsApp</span>
         </h2>
         <div className="mt-10 grid gap-5 md:grid-cols-3">
           {RECURSOS.map((r) => (
@@ -409,7 +415,7 @@ function Landing() {
 
       <footer className="border-t border-white/10 py-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-5 text-xs text-slate-500">
-          <span>Zaylo CRM · CRM completo integrado ao WhatsApp</span>
+          <span>Zaylo CRM · O motor que sua clínica precisa pra vender mais</span>
           <Link to="/politicas" className="text-slate-400 transition-colors hover:text-[#8fb6ff]">
             Política de Privacidade e Termos de Uso
           </Link>
