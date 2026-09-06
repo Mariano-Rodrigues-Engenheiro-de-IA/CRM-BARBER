@@ -1,11 +1,12 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { FREE_LIMITS } from "@/lib/billing";
+import { MobileMockup } from "@/components/ui/whatsapp-mobile-mockup";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -142,107 +143,6 @@ const FAQ = [
     a: "Pode. A assinatura é mensal, sem fidelidade, e você cancela pelo próprio painel.",
   },
 ];
-
-// Conversa animada dentro do celular — mensagens aparecem uma de cada
-// vez, com "digitando..." antes da resposta da IA, e a conversa reinicia
-// sozinha depois de terminar. Dá vida de verdade, não é print estático.
-// Conversa mais longa e natural — a curta demais foi uma das críticas.
-// Só as últimas N mensagens ficam visíveis de cada vez (como um chat de
-// verdade rolando), então a moldura não precisa crescer sem parar.
-const CHAT_SCRIPT: Array<{ from: "lead" | "ai"; text: string }> = [
-  { from: "lead", text: "Oi, vi o anúncio de vocês no Instagram. Vocês fazem avaliação pra implante?" },
-  { from: "ai", text: "Oi! Fazemos sim 😊 A avaliação é gratuita, só leva uns 20 minutos." },
-  { from: "lead", text: "Ah que bom. E dá pra parcelar o tratamento?" },
-  { from: "ai", text: "Dá sim, em até 12x. Na avaliação a dentista já te passa os valores certinhos pro seu caso." },
-  { from: "lead", text: "Perfeito. Vocês têm horário essa semana?" },
-  { from: "ai", text: "Tenho quinta às 14h ou sexta às 10h. Qual fica melhor pra você?" },
-  { from: "lead", text: "Quinta às 14h" },
-  { from: "ai", text: "Combinado! Já deixei marcado aqui. Te mando o endereço e um lembrete 1h antes 👍" },
-  { from: "lead", text: "Show, obrigado!" },
-];
-
-const VISIBLE_WINDOW = 5;
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function WhatsAppDemo() {
-  const [visibleCount, setVisibleCount] = useState(0);
-  const [typing, setTyping] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function run() {
-      while (!cancelled) {
-        setVisibleCount(0);
-        setTyping(false);
-        await sleep(700);
-        for (let i = 0; i < CHAT_SCRIPT.length; i++) {
-          if (cancelled) return;
-          if (CHAT_SCRIPT[i].from === "ai") {
-            setTyping(true);
-            await sleep(1300);
-            if (cancelled) return;
-            setTyping(false);
-          }
-          setVisibleCount(i + 1);
-          await sleep(1000);
-        }
-        await sleep(3200);
-      }
-    }
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const shown = CHAT_SCRIPT.slice(Math.max(0, visibleCount - VISIBLE_WINDOW), visibleCount);
-
-  return (
-    // Proporção comprovada de mockup de celular (padrão usado em
-    // bibliotecas de componente como Flowbite: moldura h-600/w-300),
-    // com botões laterais de verdade — não um retângulo esticado.
-    <div className="relative mx-auto h-[600px] w-[300px] rounded-[2.5rem] border-[14px] border-neutral-800 bg-neutral-800 shadow-2xl">
-      <span className="absolute -left-[17px] top-[124px] h-[46px] w-[3px] rounded-l-lg bg-neutral-800" />
-      <span className="absolute -left-[17px] top-[178px] h-[46px] w-[3px] rounded-l-lg bg-neutral-800" />
-      <span className="absolute -right-[17px] top-[142px] h-[64px] w-[3px] rounded-r-lg bg-neutral-800" />
-      <div className="absolute left-1/2 top-0 z-10 h-6 w-40 -translate-x-1/2 rounded-b-2xl bg-neutral-800" />
-      <div className="flex h-full w-full flex-col overflow-hidden rounded-[2rem] bg-[#0b141a]">
-        <div className="flex items-center gap-2 bg-[#1f2c34] px-4 pb-3 pt-8">
-          <div className="h-9 w-9 shrink-0 rounded-full bg-[#2f6df6]" />
-          <div>
-            <p className="text-xs font-semibold text-white">Clínica Sorriso+</p>
-            <p className="text-[10px] text-emerald-400">{typing ? "digitando…" : "online"}</p>
-          </div>
-        </div>
-        <div className="flex flex-1 flex-col justify-end gap-2 px-3 pb-4">
-          {shown.map((m, i) => (
-            <div
-              key={visibleCount - shown.length + i}
-              className={
-                "max-w-[85%] rounded-lg px-3 py-2 text-[12px] leading-snug " +
-                (m.from === "lead"
-                  ? "rounded-tl-none bg-[#1f2c34] text-slate-200"
-                  : "ml-auto rounded-tr-none bg-[#005c4b] text-slate-100")
-              }
-            >
-              {m.text}
-            </div>
-          ))}
-          {typing && (
-            <div className="ml-auto flex gap-1 rounded-lg rounded-tr-none bg-[#005c4b] px-3 py-2.5">
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-300 [animation-delay:-0.3s]" />
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-300 [animation-delay:-0.15s]" />
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-300" />
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function Landing() {
   const navigate = useNavigate();
@@ -383,7 +283,7 @@ function Landing() {
           </h2>
           <div className="mt-12 grid items-center gap-10 md:grid-cols-[minmax(0,280px)_1fr]">
             {/* Celular animado */}
-            <WhatsAppDemo />
+            <MobileMockup />
 
             {/* Anotações do que aconteceu na conversa */}
             <div className="space-y-5">
