@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { PREMIUM_PRICE_LABEL, FREE_LIMITS } from "@/lib/billing";
+import { FREE_LIMITS } from "@/lib/billing";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -181,18 +181,15 @@ function Landing() {
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[820px] -translate-x-1/2 rounded-full bg-[#2f6df6]/20 blur-3xl" />
-        <div className="relative mx-auto max-w-4xl px-5 py-16 text-center md:py-24">
-          <span className="inline-block rounded-full border border-[#8fb6ff]/40 bg-[#2f6df6]/10 px-3 py-1 text-[11px] font-semibold tracking-wider text-[#8fb6ff]">
-            PARA CLÍNICAS QUE INVESTEM EM TRÁFEGO PAGO
-          </span>
-          <h1 className="mt-5 text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl md:text-6xl">
+        <div className="relative mx-auto max-w-4xl px-5 pt-10 text-center md:pt-14">
+          <h1 className="text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl md:text-6xl">
             O motor que sua <span className="text-[#4f8bff]">clínica</span> precisa pra vender mais
           </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-base text-slate-300 md:text-lg">
+          <p className="mx-auto mt-4 max-w-2xl text-base text-slate-300 md:text-lg">
             Você já investe em anúncio pra atrair lead. O Zaylo CRM garante que nenhum se perca,
             direto dentro do WhatsApp que sua clínica já usa.
           </p>
-          <p className="mt-6 text-sm font-semibold uppercase tracking-wider text-[#8fb6ff]">
+          <p className="mt-3 text-sm font-semibold uppercase tracking-wider text-[#8fb6ff]">
             ▶ Assista a aula abaixo e veja como funciona
           </p>
         </div>
@@ -206,7 +203,7 @@ function Landing() {
        * allowFullScreen title="Veja o CRM funcionando" />. Até lá, fica
        * um estado visual limpo, sem link quebrado aparecendo pro
        * visitante. */}
-      <section className="mx-auto max-w-4xl px-5 pb-10">
+      <section className="mx-auto max-w-4xl px-5 pt-3 pb-10">
         <div className="overflow-hidden rounded-2xl border border-[#2f6df6]/40 bg-[#0d1830] shadow-[0_0_60px_-20px_#2f6df6]">
           <div className="relative flex aspect-video w-full items-center justify-center bg-[#0a1120]">
             <div className="flex flex-col items-center gap-3 text-slate-500">
@@ -222,23 +219,13 @@ function Landing() {
       {/* CTA logo abaixo do vídeo — depois de ver a aula, o próximo
        * passo natural é começar. */}
       <section className="mx-auto max-w-4xl px-5 pb-16 text-center">
-        <div className="flex flex-col items-center gap-3">
-          <Button
-            size="lg"
-            className="w-full max-w-[280px] bg-[#2f6df6] px-8 py-5 text-base font-bold text-white hover:bg-[#1f5ae0]"
-            onClick={scrollToForm}
-          >
-            QUERO TESTAR GRÁTIS
-          </Button>
-          <span className="text-xs text-slate-400">
-            Sem cartão para começar · {PREMIUM_PRICE_LABEL} quando quiser liberar tudo
-          </span>
-        </div>
-        <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-slate-400">
-          <span>✓ Usa seu número atual</span>
-          <span>✓ Instala em 1 clique</span>
-          <span>✓ Cancela quando quiser</span>
-        </div>
+        <Button
+          size="lg"
+          className="w-full max-w-[280px] bg-[#2f6df6] px-8 py-5 text-base font-bold text-white hover:bg-[#1f5ae0]"
+          onClick={scrollToForm}
+        >
+          QUERO TESTAR GRÁTIS
+        </Button>
       </section>
 
       {/* Dores */}
