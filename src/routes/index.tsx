@@ -101,16 +101,19 @@ const DEPOIMENTOS = [
   {
     nome: "Nome do responsável",
     clinica: "Nome da clínica",
+    iniciais: "??",
     texto: "Espaço reservado para o depoimento real do primeiro cliente.",
   },
   {
     nome: "Nome do responsável",
     clinica: "Nome da clínica",
+    iniciais: "??",
     texto: "Espaço reservado para o depoimento real do segundo cliente.",
   },
   {
     nome: "Nome do responsável",
     clinica: "Nome da clínica",
+    iniciais: "??",
     texto: "Espaço reservado para o depoimento real do terceiro cliente.",
   },
 ];
@@ -189,7 +192,10 @@ function Landing() {
     // Tema claro — pedido do Mariano pra sair do "dark mode genérico"
     // que a maioria dos concorrentes usa. Azul da marca mantido como
     // única cor de destaque, contra fundo claro.
-    <div className="min-h-screen bg-white text-slate-900">
+    // Fundo com leve textura/gradiente, não branco cru — pedido do
+    // Mariano depois de ver a referência (WeSales), que tem sempre um
+    // "algo" por trás, nunca 100% chapado.
+    <div className="min-h-screen bg-gradient-to-b from-[#f7f9fd] via-white to-[#f7f9fd] text-slate-900">
       {/* Top bar */}
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center px-5 py-3">
@@ -319,19 +325,26 @@ function Landing() {
       </section>
 
       {/* Depoimentos — PENDENTE: os 3 abaixo são placeholder, precisam
-       * ser trocados por feedback real de clínicas que já usam o
-       * sistema antes de publicar. Não deixar nome/depoimento fictício
-       * no ar como se fosse cliente de verdade. */}
+       * ser trocados por feedback real de donos de clínica que já usam
+       * o sistema antes de publicar. Sem foto nem nome fictício -
+       * avatar fica como iniciais até ter foto de verdade autorizada
+       * pelo cliente. */}
       <section className="mx-auto max-w-6xl px-5 py-16">
         <h2 className="text-center text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
           Clínicas que já pararam de perder contato
         </h2>
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
+        <div className="mt-10 flex flex-wrap items-stretch justify-center gap-6">
           {DEPOIMENTOS.map((d) => (
-            <div key={d.nome} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <p className="text-sm text-slate-700">"{d.texto}"</p>
-              <p className="mt-4 text-sm font-semibold text-slate-900">{d.nome}</p>
-              <p className="text-xs text-slate-500">{d.clinica}</p>
+            <div key={d.nome} className="w-full max-w-80 rounded-2xl bg-[#0f172a] text-white">
+              <div className="relative -mt-px flex h-40 items-center justify-center overflow-hidden rounded-t-2xl bg-gradient-to-br from-[#2f6df6]/40 to-[#0f172a]">
+                <span className="text-3xl font-bold text-white/70">{d.iniciais}</span>
+                <div className="pointer-events-none absolute bottom-0 h-24 w-full bg-gradient-to-t from-[#0f172a] to-transparent" />
+              </div>
+              <div className="px-5 pb-5 pt-1">
+                <p className="border-b border-white/15 pb-4 text-sm font-medium">"{d.texto}"</p>
+                <p className="mt-4 text-sm">{d.nome}</p>
+                <p className="text-xs font-medium text-[#8fb6ff]">{d.clinica}</p>
+              </div>
             </div>
           ))}
         </div>
