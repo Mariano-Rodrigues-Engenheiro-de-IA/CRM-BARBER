@@ -42,7 +42,7 @@ const DORES = [
   "Você investe em tráfego, mas o lead esfria no meio da conversa do WhatsApp",
   "Follow-up e cobrança feitos na mão, um paciente por vez",
   "Nenhum funil: o orçamento some na conversa e ninguém retoma",
-  "Sem controle de vendas por vendedor, nem histórico do paciente",
+  "Sem histórico organizado do paciente, cada atendente vê uma parte diferente da conversa",
 ];
 
 const RECURSOS = [
@@ -54,7 +54,7 @@ const RECURSOS = [
   {
     titulo: "Agente de IA",
     texto:
-      "IA que entende a intenção do cliente, responde, qualifica o lead e move o card no funil sozinha.",
+      "IA que entende a intenção do paciente, responde, qualifica o lead e move o card no funil sozinha.",
   },
   {
     titulo: "Funis de vendas",
@@ -69,7 +69,7 @@ const RECURSOS = [
   {
     titulo: "Agenda e agendamento online",
     texto:
-      "Agenda por profissional, bloqueios, status do atendimento e link público para o cliente agendar sozinho.",
+      "Agenda por profissional, bloqueios, status do atendimento e link público para o paciente agendar sozinho.",
   },
   {
     titulo: "Respostas rápidas",
@@ -77,17 +77,17 @@ const RECURSOS = [
       "Atalho ⚡ dentro da conversa para enviar mensagens e mídias prontas de cobrança, orçamento e reativação.",
   },
   {
-    titulo: "Equipe e vendas",
+    titulo: "Ficha e histórico do paciente",
     texto:
-      "Lançamento de venda por vendedor, ranking gamificado, ranking de clientes e histórico de consumo.",
+      "Anamnese, odontograma e histórico de procedimentos organizados por paciente, acessíveis por toda a equipe.",
   },
   {
     titulo: "Treinamentos e aulas",
     texto:
-      "Área de aulas dentro do próprio CRM para treinar o time e colocar todo mundo vendendo do mesmo jeito.",
+      "Área de aulas dentro do próprio CRM para treinar a equipe e manter todo mundo alinhado no mesmo processo.",
   },
   {
-    titulo: "Base de clientes unificada",
+    titulo: "Base de pacientes unificada",
     texto:
       "Importação de planilha, contatos do WhatsApp e cadastro manual em uma base só, sem duplicar contato.",
   },
@@ -146,12 +146,22 @@ const FAQ = [
 // Conversa animada dentro do celular — mensagens aparecem uma de cada
 // vez, com "digitando..." antes da resposta da IA, e a conversa reinicia
 // sozinha depois de terminar. Dá vida de verdade, não é print estático.
+// Conversa mais longa e natural — a curta demais foi uma das críticas.
+// Só as últimas N mensagens ficam visíveis de cada vez (como um chat de
+// verdade rolando), então a moldura não precisa crescer sem parar.
 const CHAT_SCRIPT: Array<{ from: "lead" | "ai"; text: string }> = [
-  { from: "lead", text: "Oi, vi o anúncio de vocês. Quanto fica a avaliação pra implante?" },
-  { from: "ai", text: "Oi! A avaliação é gratuita 😊 Tenho horário amanhã às 14h ou 16h, qual prefere?" },
-  { from: "lead", text: "16h fica ótimo" },
-  { from: "ai", text: "Marcado! Te aviso 1h antes. Até amanhã 👋" },
+  { from: "lead", text: "Oi, vi o anúncio de vocês no Instagram. Vocês fazem avaliação pra implante?" },
+  { from: "ai", text: "Oi! Fazemos sim 😊 A avaliação é gratuita, só leva uns 20 minutos." },
+  { from: "lead", text: "Ah que bom. E dá pra parcelar o tratamento?" },
+  { from: "ai", text: "Dá sim, em até 12x. Na avaliação a dentista já te passa os valores certinhos pro seu caso." },
+  { from: "lead", text: "Perfeito. Vocês têm horário essa semana?" },
+  { from: "ai", text: "Tenho quinta às 14h ou sexta às 10h. Qual fica melhor pra você?" },
+  { from: "lead", text: "Quinta às 14h" },
+  { from: "ai", text: "Combinado! Já deixei marcado aqui. Te mando o endereço e um lembrete 1h antes 👍" },
+  { from: "lead", text: "Show, obrigado!" },
 ];
+
+const VISIBLE_WINDOW = 5;
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -177,9 +187,9 @@ function WhatsAppDemo() {
             setTyping(false);
           }
           setVisibleCount(i + 1);
-          await sleep(1100);
+          await sleep(1000);
         }
-        await sleep(2800);
+        await sleep(3200);
       }
     }
     run();
@@ -188,42 +198,46 @@ function WhatsAppDemo() {
     };
   }, []);
 
+  const shown = CHAT_SCRIPT.slice(Math.max(0, visibleCount - VISIBLE_WINDOW), visibleCount);
+
   return (
-    // Proporção de smartphone de verdade (~9:19.5), não um retângulo
-    // qualquer — é o que dava a sensação de "celular fajuto" antes.
-    <div className="mx-auto w-full max-w-[300px]">
-      <div className="relative aspect-[9/19.5] w-full rounded-[3rem] border-[6px] border-neutral-800 bg-neutral-950 shadow-2xl">
-        <div className="absolute left-1/2 top-2 z-10 h-5 w-24 -translate-x-1/2 rounded-full bg-neutral-950" />
-        <div className="flex h-full flex-col overflow-hidden rounded-[2.4rem] bg-[#0b141a]">
-          <div className="flex items-center gap-2 bg-[#1f2c34] px-4 pb-3 pt-8">
-            <div className="h-9 w-9 shrink-0 rounded-full bg-[#2f6df6]" />
-            <div>
-              <p className="text-xs font-semibold text-white">Clínica Sorriso+</p>
-              <p className="text-[10px] text-emerald-400">{typing ? "digitando…" : "online"}</p>
+    // Proporção comprovada de mockup de celular (padrão usado em
+    // bibliotecas de componente como Flowbite: moldura h-600/w-300),
+    // com botões laterais de verdade — não um retângulo esticado.
+    <div className="relative mx-auto h-[600px] w-[300px] rounded-[2.5rem] border-[14px] border-neutral-800 bg-neutral-800 shadow-2xl">
+      <span className="absolute -left-[17px] top-[124px] h-[46px] w-[3px] rounded-l-lg bg-neutral-800" />
+      <span className="absolute -left-[17px] top-[178px] h-[46px] w-[3px] rounded-l-lg bg-neutral-800" />
+      <span className="absolute -right-[17px] top-[142px] h-[64px] w-[3px] rounded-r-lg bg-neutral-800" />
+      <div className="absolute left-1/2 top-0 z-10 h-6 w-40 -translate-x-1/2 rounded-b-2xl bg-neutral-800" />
+      <div className="flex h-full w-full flex-col overflow-hidden rounded-[2rem] bg-[#0b141a]">
+        <div className="flex items-center gap-2 bg-[#1f2c34] px-4 pb-3 pt-8">
+          <div className="h-9 w-9 shrink-0 rounded-full bg-[#2f6df6]" />
+          <div>
+            <p className="text-xs font-semibold text-white">Clínica Sorriso+</p>
+            <p className="text-[10px] text-emerald-400">{typing ? "digitando…" : "online"}</p>
+          </div>
+        </div>
+        <div className="flex flex-1 flex-col justify-end gap-2 px-3 pb-4">
+          {shown.map((m, i) => (
+            <div
+              key={visibleCount - shown.length + i}
+              className={
+                "max-w-[85%] rounded-lg px-3 py-2 text-[12px] leading-snug " +
+                (m.from === "lead"
+                  ? "rounded-tl-none bg-[#1f2c34] text-slate-200"
+                  : "ml-auto rounded-tr-none bg-[#005c4b] text-slate-100")
+              }
+            >
+              {m.text}
             </div>
-          </div>
-          <div className="flex flex-1 flex-col justify-end gap-2 px-3 pb-4">
-            {CHAT_SCRIPT.slice(0, visibleCount).map((m, i) => (
-              <div
-                key={i}
-                className={
-                  "max-w-[85%] rounded-lg px-3 py-2 text-[12px] " +
-                  (m.from === "lead"
-                    ? "rounded-tl-none bg-[#1f2c34] text-slate-200"
-                    : "ml-auto rounded-tr-none bg-[#005c4b] text-slate-100")
-                }
-              >
-                {m.text}
-              </div>
-            ))}
-            {typing && (
-              <div className="ml-auto flex gap-1 rounded-lg rounded-tr-none bg-[#005c4b] px-3 py-2.5">
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-300 [animation-delay:-0.3s]" />
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-300 [animation-delay:-0.15s]" />
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-300" />
-              </div>
-            )}
-          </div>
+          ))}
+          {typing && (
+            <div className="ml-auto flex gap-1 rounded-lg rounded-tr-none bg-[#005c4b] px-3 py-2.5">
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-300 [animation-delay:-0.3s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-300 [animation-delay:-0.15s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-300" />
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -275,14 +289,8 @@ function Landing() {
     <div className="min-h-screen bg-[#0a1120] text-slate-100">
       {/* Top bar */}
       <header className="border-b border-white/10 bg-[#0a1120]/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3">
+        <div className="mx-auto flex max-w-6xl items-center px-5 py-3">
           <img src="/brand/zaylo-logo.png" alt="Zaylo CRM" className="h-7 w-auto object-contain" />
-          <button
-            onClick={scrollToForm}
-            className="rounded-lg bg-[#2f6df6] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#1f5ae0]"
-          >
-            COMEÇAR GRÁTIS
-          </button>
         </div>
       </header>
 
@@ -290,22 +298,18 @@ function Landing() {
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[820px] -translate-x-1/2 rounded-full bg-[#2f6df6]/20 blur-3xl" />
         <div className="relative mx-auto max-w-4xl px-5 pt-10 text-center md:pt-14">
-          <h1 className="text-xl font-bold leading-[1.2] tracking-tight sm:text-3xl md:text-4xl">
-            O motor que sua <span className="text-[#4f8bff]">clínica</span> precisa pra vender mais
+          <h1 className="text-3xl font-bold leading-[1.2] tracking-tight sm:text-4xl md:text-5xl">
+            O CRM que a sua <span className="text-[#4f8bff]">clínica</span> precisa para vender mais todos os dias!
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base text-slate-300 md:text-lg">
-            Você já investe em anúncio pra atrair lead. O Zaylo CRM garante que nenhum se perca,
-            direto dentro do WhatsApp que sua clínica já usa.
-          </p>
-          <p className="mt-8 text-sm font-semibold uppercase tracking-wider text-[#8fb6ff]">
-            ▶ Assista a aula abaixo e veja como funciona
+            Tudo em um só lugar: disparos, funis, agenda, follow up, agentes de IA e treinamentos.
           </p>
         </div>
       </section>
 
       {/* Vídeo de demonstração — vídeo real do Mariano no YouTube. Menor
        * que a largura total do Hero, pra não dominar a primeira dobra. */}
-      <section className="mx-auto max-w-2xl px-5 pt-3 pb-10">
+      <section className="mx-auto max-w-2xl px-5 pt-6 pb-10">
         <div className="overflow-hidden rounded-2xl border border-[#2f6df6]/40 bg-[#0d1830] shadow-[0_0_60px_-20px_#2f6df6]">
           <div className="relative aspect-video w-full">
             <iframe
@@ -459,7 +463,7 @@ function Landing() {
               <li>✓ Até {FREE_LIMITS.customers} contatos</li>
               <li>✓ Disparo de até {FREE_LIMITS.dispatchBatch} contatos por vez</li>
               <li>✓ Funis, agenda e importação de planilha</li>
-              <li className="text-slate-500">✕ Gestão de equipe e vendas</li>
+              <li className="text-slate-500">✕ Disparo em massa e treinamentos</li>
             </ul>
             <Button variant="secondary" className="mt-6 w-full" onClick={scrollToForm}>
               Instalar extensão
@@ -474,7 +478,7 @@ function Landing() {
               <li>✓ Contatos ilimitados</li>
               <li>✓ Disparos e campanhas ilimitados</li>
               <li>✓ Funis, automações e agenda completos</li>
-              <li>✓ Gestão de equipe, vendas e rankings</li>
+              <li>✓ Ficha, anamnese e odontograma por paciente</li>
               <li>✓ Respostas rápidas com mídia e treinamentos</li>
               <li>✓ Suporte prioritário</li>
             </ul>
