@@ -48,7 +48,12 @@ export const Route = createFileRoute("/api/public/extension/agente-ia-free-acces
 
         try {
           const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 8000);
+          // Criar tenant novo faz várias chamadas em sequência (usuário,
+          // tenant, vínculo, link) — 8s era curto demais pra isso,
+          // principalmente com a função "fria". Checagem de status
+          // continua rápida, mantém o timeout curto.
+          const timeoutMs = createIfMissing ? 20000 : 8000;
+          const timeout = setTimeout(() => controller.abort(), timeoutMs);
           const res = await fetch(bridgeUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-shared-secret": bridgeSecret },
