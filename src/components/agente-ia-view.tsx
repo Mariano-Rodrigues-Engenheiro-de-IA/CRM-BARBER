@@ -42,10 +42,14 @@ export function AgenteIaView({ api }: { api: Api }) {
   });
   // Checagem de status do caminho grátis — sem create=1, nunca cria
   // tenant sozinha, só pergunta "já existe alguma coisa vinculada?".
+  // status=1 garante que a ponte NUNCA gera um link de verdade aqui
+  // (achado de bug real: gerar link nessa checagem invalidava o link
+  // que o cliente tinha acabado de copiar/clicar, já que o Supabase
+  // mata o link anterior toda vez que um novo é emitido).
   const { data: freeTenant, loading: loadingFreeTenant } = useCachedFetch<{ found: boolean; onboarding_completed?: boolean } | null>(
     "agente-ia-free-status",
     async () => {
-      const r = await api("/api/public/extension/agente-ia-free-access-link");
+      const r = await api("/api/public/extension/agente-ia-free-access-link?status=1");
       if (!r?.ok) return null;
       return { found: !!r.found, onboarding_completed: r.onboarding_completed };
     },
