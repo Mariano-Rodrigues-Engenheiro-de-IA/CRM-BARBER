@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { FREE_LIMITS } from "@/lib/billing";
 import { MobileMockup } from "@/components/ui/whatsapp-mobile-mockup";
 import { InfiniteMovingCards } from "@/components/ui/infinite-moving-cards";
+import { DispatchSimulator } from "@/components/ui/dispatch-simulator";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -305,6 +306,23 @@ function Landing() {
               <p className="mt-2 text-sm text-slate-600">{r.texto}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Simulação de disparo em massa — mostra a campanha rodando de
+       * verdade (contato ganhando check um a um, barra de progresso),
+       * em vez de só descrever "disparo em massa" em texto. */}
+      <section className="border-y border-slate-200 bg-[#f5f7fb]">
+        <div className="mx-auto max-w-4xl px-5 py-16">
+          <h2 className="text-center text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            Uma campanha, centenas de contatos, sem abrir conversa por conversa
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-center text-sm text-slate-600">
+            Escreve a mensagem uma vez, escolhe a lista, e acompanha o envio em tempo real.
+          </p>
+          <div className="mt-10">
+            <DispatchSimulator />
+          </div>
         </div>
       </section>
 
