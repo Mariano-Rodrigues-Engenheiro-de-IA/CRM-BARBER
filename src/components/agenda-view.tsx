@@ -19,8 +19,19 @@ type Api = (path: string, opts?: RequestInit) => Promise<any>;
  * voltar, não deve piscar "Carregando..." de novo. Configurações,
  * profissionais, clientes e serviços mudam pouco (cache único); os
  * agendamentos/bloqueios do dia são indexados por data (cada dia guarda
- * sua própria entrada, nunca mistura dados de dias diferentes). */
-let staticCache: { settings: AgendaSettings; professionals: Professional[]; customers: CustomerOption[]; services: Service[] } | null = null;
+ * sua própria entrada, nunca mistura dados de dias diferentes).
+ *
+ * ACHADO DE BUG CRÍTICO: antes isso era UMA variável global (não um Map
+ * por token) — se a mesma aba do navegador visse a Agenda de duas
+ * barbearias diferentes (ex: testando com token de um cliente e depois
+ * o seu próprio, sem fechar a aba), a segunda carga pulava a busca por
+ * completo (`if (staticCache) return`) e ficava mostrando profissionais,
+ * clientes e serviços da PRIMEIRA barbearia a sessão inteira. Agora cada
+ * token tem sua própria entrada, isolada. */
+const staticCacheByToken = new Map<
+  string,
+  { settings: AgendaSettings; professionals: Professional[]; customers: CustomerOption[]; services: Service[] }
+>();
 const dayCache = new Map<string, { appointments: Appointment[]; timeBlocks: TimeBlock[] }>();
 
 export type AppointmentStatus = "scheduled" | "confirmed" | "done" | "canceled";
@@ -86,15 +97,16 @@ function minutesToTime(mins: number) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
-export function AgendaView({ api, businessType }: { api: Api; businessType?: string }) {
+export function AgendaView({ api, businessType, token }: { api: Api; businessType?: string; token: string }) {
   const { confirm, dialog } = useConfirm();
   const [day, setDay] = useState(() => new Date());
-  const [settings, setSettings] = useState<AgendaSettings | null>(staticCache?.settings ?? null);
-  const [professionals, setProfessionals] = useState<Professional[]>(staticCache?.professionals ?? []);
+  const cachedForToken = staticCacheByToken.get(token);
+  const [settings, setSettings] = useState<AgendaSettings | null>(cachedForToken?.settings ?? null);
+  const [professionals, setProfessionals] = useState<Professional[]>(cachedForToken?.professionals ?? []);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
-  const [customers, setCustomers] = useState<CustomerOption[]>(staticCache?.customers ?? []);
-  const [services, setServices] = useState<Service[]>(staticCache?.services ?? []);
+  const [customers, setCustomers] = useState<CustomerOption[]>(cachedForToken?.customers ?? []);
+  const [services, setServices] = useState<Service[]>(cachedForToken?.services ?? []);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Appointment | null>(null);
@@ -121,7 +133,7 @@ export function AgendaView({ api, businessType }: { api: Api; businessType?: str
    * em segundo plano — só usa o loader de tela cheia em dias nunca
    * visitados nesta sessão. */
   async function loadDay(showLoader = true) {
-    const key = ymd(day);
+    const key = `${token}:${ymd(day)}`;
     const cached = dayCache.get(key);
     if (cached) {
       setAppointments(cached.appointments);
@@ -152,8 +164,9 @@ export function AgendaView({ api, businessType }: { api: Api; businessType?: str
   const loadTimeBlocks = () => loadDay(false);
 
   useEffect(() => {
-    if (staticCache) {
-      // Já em cache de uma visita anterior nesta sessão — nada pra buscar.
+    if (staticCacheByToken.has(token)) {
+      // Já em cache de uma visita anterior nesta sessão, PRA ESSE TOKEN
+      // especificamente — nada pra buscar.
       return;
     }
     (async () => {
@@ -169,15 +182,15 @@ export function AgendaView({ api, businessType }: { api: Api; businessType?: str
       const servicesList = servicesRes?.ok ? servicesRes.services || [] : [];
       setCustomers(customersList);
       setServices(servicesList);
-      staticCache = {
+      staticCacheByToken.set(token, {
         settings: settingsRes,
         professionals: professionalsRes,
         customers: customersList,
         services: servicesList,
-      };
+      });
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     void loadDay();

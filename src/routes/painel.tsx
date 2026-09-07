@@ -956,6 +956,7 @@ function Painel() {
                 <AgendaView
                   api={(path: string, opts?: RequestInit) => api(token, path, opts)}
                   businessType={businessType}
+                  token={token}
                 />
               ) : (
                 <PremiumSoftLock active={!!billing && !billing.premium} onUpgrade={openCheckout}>
