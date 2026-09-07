@@ -331,7 +331,7 @@ export function AgendaView({ api, businessType }: { api: Api; businessType?: str
   return (
     <div>
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex max-w-[280px] items-center gap-2">
           <Button
             variant="outline"
             size="icon"
