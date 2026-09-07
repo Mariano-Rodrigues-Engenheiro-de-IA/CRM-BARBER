@@ -518,6 +518,12 @@ function Painel() {
     return "agenda";
   })();
   const [section, setSection] = useState<Section>(initialSection);
+  // Modo "só agenda" — usado pelo link dedicado de Configurações >
+  // Gerais ("Minha agenda"), pra abrir SÓ a Agenda no celular, sem o
+  // menu inteiro do sistema. Detectado uma vez, não muda durante a
+  // sessão (não precisa ser state).
+  const mobileAgendaOnly =
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("mobile") === "agenda";
   const [assinTab, setAssinTab] = useState<AssinTab>("assinantes");
   const [configTab, setConfigTab] = useState<ConfigTab>("servicos");
   const [agendaTab, setAgendaTab] = useState<AgendaTab>("agenda");
@@ -777,6 +783,7 @@ function Painel() {
          nenhum contêiner de rolagem independente, então a página inteira
          rolava e a barra lateral "subia" junto, dando sensação de site
          quebrado). */}
+      {!mobileAgendaOnly && (
       <aside className={"print:hidden hidden md:flex h-full shrink-0 flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-200 " + (sidebarCollapsed ? "w-[68px]" : "w-64")}>
         <div className={"flex pt-5 pb-4 " + (sidebarCollapsed ? "flex-col items-center gap-2 px-2" : "items-center justify-between pl-6 pr-3")}>
           <div className={"relative flex h-9 shrink-0 items-center transition-[width] duration-200 " + (sidebarCollapsed ? "w-9 justify-center" : "w-36 justify-start")}>
@@ -897,24 +904,43 @@ function Painel() {
         </nav>
 
       </aside>
+      )}
 
-      {/* Mobile top bar */}
+      {/* Mobile top bar — no modo "só agenda" (link dedicado), mostra só
+       * o toggle Agenda/Lembretes, sem o menu completo do sistema. */}
       <div className="print:hidden md:hidden fixed top-0 inset-x-0 z-30 flex items-center justify-between border-b border-sidebar-border bg-sidebar text-sidebar-foreground px-4 py-3">
         <img src="/brand/zaylo-logo.png" alt="CRM Zaylo" className="h-7 w-auto object-contain" />
-        <div className="flex gap-1 rounded-lg bg-sidebar-accent/40 p-1">
-          {NAV_TOP.map((n) => (
-            <button
-              key={n.key}
-              onClick={() => setSection(n.key)}
-              className={
-                "rounded-md px-2.5 py-1 text-[11px] font-medium " +
-                (section === n.key ? "bg-brand text-white" : "text-sidebar-foreground/70")
-              }
-            >
-              {n.label}
-            </button>
-          ))}
-        </div>
+        {mobileAgendaOnly ? (
+          <div className="flex gap-1 rounded-lg bg-sidebar-accent/40 p-1">
+            {(["agenda", "lembretes"] as const).map((key) => (
+              <button
+                key={key}
+                onClick={() => setAgendaTab(key)}
+                className={
+                  "rounded-md px-2.5 py-1 text-[11px] font-medium " +
+                  (agendaTab === key ? "bg-brand text-white" : "text-sidebar-foreground/70")
+                }
+              >
+                {key === "agenda" ? "Agenda" : "Lembretes"}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="flex gap-1 rounded-lg bg-sidebar-accent/40 p-1">
+            {NAV_TOP.map((n) => (
+              <button
+                key={n.key}
+                onClick={() => setSection(n.key)}
+                className={
+                  "rounded-md px-2.5 py-1 text-[11px] font-medium " +
+                  (section === n.key ? "bg-brand text-white" : "text-sidebar-foreground/70")
+                }
+              >
+                {n.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
 
@@ -922,7 +948,7 @@ function Painel() {
 
       {/* Content */}
       <div className="flex-1 min-w-0 h-full overflow-x-auto overflow-y-auto">
-        {section === "agenda" && token && (
+        {(section === "agenda" || mobileAgendaOnly) && token && (
           <>
             <SectionHeader icon={<IconCalendar />} title="Agenda" subtitle={agendaTab === "lembretes" ? "Lembretes / Confirmações" : undefined} />
             <main className="px-4 py-4">
@@ -1018,7 +1044,7 @@ function Painel() {
               {configTab === "gerais" && (
                 <GeneralSettingsTab
                   api={(path: string, opts?: RequestInit) => api(token, path, opts)}
-                  mobileAgendaLink={typeof window !== "undefined" ? `${window.location.origin}/painel?token=${token}&section=agenda` : undefined}
+                  mobileAgendaLink={typeof window !== "undefined" ? `${window.location.origin}/painel?token=${token}&section=agenda&mobile=agenda` : undefined}
                 />
               )}
               {configTab === "conta" && <AccountTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
