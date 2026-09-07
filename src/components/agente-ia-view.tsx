@@ -140,6 +140,7 @@ export function AgenteIaView({ api }: { api: Api }) {
 function FreeSetupCard({ api }: { api: Api }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [link, setLink] = useState<string | null>(null);
 
   async function handleStart() {
     setLoading(true);
@@ -147,13 +148,10 @@ function FreeSetupCard({ api }: { api: Api }) {
     try {
       const r = await api("/api/public/extension/agente-ia-free-access-link?create=1");
       if (!r?.ok || !r.action_link) throw new Error(r?.error || "Não foi possível iniciar agora.");
-      window.open(r.action_link, "_blank");
-      // Recarrega a página depois de abrir — na próxima vez que essa
-      // tela carregar, freeTenant.found já vem true e mostra o estado
-      // de "configuração em andamento" em vez da escolha de novo.
-      window.location.reload();
+      setLink(r.action_link);
     } catch (e: any) {
       setError(e?.message || "Erro ao iniciar configuração");
+    } finally {
       setLoading(false);
     }
   }
@@ -166,13 +164,33 @@ function FreeSetupCard({ api }: { api: Api }) {
         Você mesmo monta o agente, no seu ritmo, com o passo a passo dentro do sistema.
       </p>
       {error && <p className="mt-3 rounded-lg border border-red-300 bg-red-50 p-2 text-xs text-red-700">{error}</p>}
-      <button
-        onClick={handleStart}
-        disabled={loading}
-        className="mt-5 w-full rounded-xl border-2 border-neutral-200 bg-white py-2.5 text-sm font-semibold text-neutral-700 hover:border-brand hover:text-brand disabled:opacity-50"
-      >
-        {loading ? "Abrindo..." : "Começar agora"}
-      </button>
+      {link ? (
+        <div className="mt-4 space-y-2">
+          <p className="break-all rounded-lg border border-neutral-200 bg-neutral-50 p-2 text-[11px] text-neutral-600">{link}</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => navigator.clipboard.writeText(link)}
+              className="flex-1 rounded-lg border-2 border-neutral-200 bg-white py-2 text-xs font-semibold text-neutral-700 hover:border-brand hover:text-brand"
+            >
+              Copiar link
+            </button>
+            <button
+              onClick={() => window.open(link, "_blank")}
+              className="flex-1 rounded-lg bg-brand py-2 text-xs font-semibold text-white hover:bg-brand-strong"
+            >
+              Abrir link
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={handleStart}
+          disabled={loading}
+          className="mt-5 w-full rounded-xl border-2 border-neutral-200 bg-white py-2.5 text-sm font-semibold text-neutral-700 hover:border-brand hover:text-brand disabled:opacity-50"
+        >
+          {loading ? "Gerando..." : "Começar agora"}
+        </button>
+      )}
     </div>
   );
 }
@@ -180,10 +198,16 @@ function FreeSetupCard({ api }: { api: Api }) {
 /** Cliente já escolheu o caminho grátis. Se ainda não terminou o
  * onboarding lá, mostra "continuar configuração"; se já terminou,
  * mostra o acesso direto — mesmo padrão visual do AiAccessGranted
- * (pago), só que apontando pra ponte gratuita. */
+ * (pago), só que apontando pra ponte gratuita.
+ *
+ * O link fica exposto em texto (com botão de copiar) em vez de abrir
+ * sozinho — temporário, pra diagnosticar o link exato que a ponte está
+ * devolvendo enquanto o problema de redirecionamento não é resolvido
+ * de vez. */
 function FreeAiAccess({ api, onboardingCompleted }: { api: Api; onboardingCompleted: boolean }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [link, setLink] = useState<string | null>(null);
 
   async function handleAccess() {
     setLoading(true);
@@ -191,7 +215,7 @@ function FreeAiAccess({ api, onboardingCompleted }: { api: Api; onboardingComple
     try {
       const r = await api("/api/public/extension/agente-ia-free-access-link");
       if (!r?.ok || !r.action_link) throw new Error(r?.error || "Não foi possível abrir o acesso agora.");
-      window.open(r.action_link, "_blank");
+      setLink(r.action_link);
     } catch (e: any) {
       setError(e?.message || "Erro ao gerar acesso");
     } finally {
@@ -217,13 +241,33 @@ function FreeAiAccess({ api, onboardingCompleted }: { api: Api; onboardingComple
           : "Você começou a configurar seu agente, mas ainda não terminou. Continue de onde parou."}
       </p>
       {error && <p className="rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-700">{error}</p>}
-      <button
-        onClick={handleAccess}
-        disabled={loading}
-        className="w-full rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
-      >
-        {loading ? "Abrindo..." : onboardingCompleted ? "Acessar minha IA" : "Continuar configuração"}
-      </button>
+      {link ? (
+        <div className="space-y-2 text-left">
+          <p className="break-all rounded-lg border border-neutral-200 bg-neutral-50 p-2 text-[11px] text-neutral-600">{link}</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => navigator.clipboard.writeText(link)}
+              className="flex-1 rounded-lg border-2 border-neutral-200 bg-white py-2 text-xs font-semibold text-neutral-700 hover:border-brand hover:text-brand"
+            >
+              Copiar link
+            </button>
+            <button
+              onClick={() => window.open(link, "_blank")}
+              className="flex-1 rounded-lg bg-brand py-2 text-xs font-semibold text-white hover:bg-brand-strong"
+            >
+              Abrir link
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={handleAccess}
+          disabled={loading}
+          className="w-full rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
+        >
+          {loading ? "Gerando..." : onboardingCompleted ? "Acessar minha IA" : "Continuar configuração"}
+        </button>
+      )}
     </div>
   );
 }
