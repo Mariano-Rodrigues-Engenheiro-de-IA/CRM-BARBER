@@ -127,11 +127,34 @@ export const Route = createFileRoute("/api/public/extension/wa/sync")({
 
           // A coleta é um snapshot, não um acumulador. Contatos ausentes no
           // snapshot concluído deixam de compor Inbox/Listas imediatamente.
-          const { error: staleError } = await supabaseAdmin
+          //
+          // ACHADO DE BUG REAL: essa exclusão apagava TAMBÉM contatos que
+          // já estavam vinculados a um cartão de funil (funnel_cards.
+          // wa_contact_id) — e como um contato "sumido" que volta depois
+          // nasce com um ID novo, o cartão do funil ficava órfão pra
+          // sempre, apontando pro ID antigo já apagado. Isso acontecia
+          // sempre que uma barbearia trocava de número/sessão de WhatsApp
+          // (a primeira sincronização do número novo não inclui os
+          // contatos do número antigo, então eram apagados). Agora
+          // qualquer contato referenciado por um cartão de funil fica
+          // protegido dessa limpeza, mesmo que não apareça na
+          // sincronização mais recente.
+          const { data: linkedContacts } = await supabaseAdmin
+            .from("funnel_cards")
+            .select("wa_contact_id")
+            .eq("barbershop_id", shop)
+            .not("wa_contact_id", "is", null);
+          const linkedIds = Array.from(new Set((linkedContacts ?? []).map((r) => r.wa_contact_id as string)));
+
+          let staleQuery = supabaseAdmin
             .from("wa_contacts")
             .delete()
             .eq("barbershop_id", shop)
             .lt("synced_at", now);
+          if (linkedIds.length) {
+            staleQuery = staleQuery.not("id", "in", `(${linkedIds.join(",")})`);
+          }
+          const { error: staleError } = await staleQuery;
           if (staleError) {
             return jsonResponse(request, { ok: false, error: staleError.message }, { status: 500 });
           }
