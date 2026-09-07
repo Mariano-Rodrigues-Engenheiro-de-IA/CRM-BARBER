@@ -82,14 +82,20 @@ export const Route = createFileRoute("/api/public/extension/pair")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-        const { data: shop } = await supabaseAdmin
+        // ACHADO DE BUG REAL: antes usava .limit(1).maybeSingle() aqui —
+        // se por coincidência duas barbearias diferentes tivessem
+        // telefones que colidem em alguma das variações geradas acima
+        // (com/sem 9º dígito, com/sem 55), o Postgres podia devolver a
+        // barbearia ERRADA de forma não-determinística, sem erro
+        // nenhum aparecer. Foi exatamente isso que causou profissional
+        // de um cliente aparecendo no perfil de outro. Agora busca
+        // TODAS as que batem, e só segue se for exatamente uma.
+        const { data: shops } = await supabaseAdmin
           .from("barbershops")
           .select("id, name")
-          .in("owner_phone", phoneLookupCandidates(phone))
-          .limit(1)
-          .maybeSingle();
+          .in("owner_phone", phoneLookupCandidates(phone));
 
-        if (!shop) {
+        if (!shops || shops.length === 0) {
           return jsonResponse(
             request,
             {
@@ -100,6 +106,23 @@ export const Route = createFileRoute("/api/public/extension/pair")({
             { status: 404 },
           );
         }
+
+        const uniqueShops = new Map(shops.map((s) => [s.id, s]));
+        if (uniqueShops.size > 1) {
+          // Não escolhe nenhuma — melhor bloquear o pareamento do que
+          // arriscar entregar o painel de uma barbearia pra outra.
+          return jsonResponse(
+            request,
+            {
+              ok: false,
+              error: "Esse telefone bate com mais de uma conta cadastrada. Fale com o suporte pra resolver antes de parear.",
+              code: "ambiguous_phone",
+            },
+            { status: 409 },
+          );
+        }
+
+        const shop = uniqueShops.values().next().value!;
 
         const label = (parsed.data.label ?? "Chrome") + ` · ${parsed.data.install_id.slice(0, 8)}`;
 
