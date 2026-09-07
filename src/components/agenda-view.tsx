@@ -330,35 +330,45 @@ export function AgendaView({ api, businessType }: { api: Api; businessType?: str
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setDay(new Date(day.getTime() - 86400000))}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="shrink-0"
+            onClick={() => setDay(new Date(day.getTime() - 86400000))}
+          >
             ←
           </Button>
           <Input
             type="date"
             value={ymd(day)}
             onChange={(e) => setDay(new Date(`${e.target.value}T00:00:00`))}
-            className="w-40"
+            className="w-[150px] shrink-0 sm:w-40"
           />
-          <Button variant="outline" size="sm" onClick={() => setDay(new Date(day.getTime() + 86400000))}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="shrink-0"
+            onClick={() => setDay(new Date(day.getTime() + 86400000))}
+          >
             →
           </Button>
-          {isToday ? (
-            <span className="ml-2 text-sm font-medium text-neutral-700">
-              {day.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
-              <span className="ml-1 text-brand">(hoje)</span>
-            </span>
-          ) : (
-            <button
-              onClick={() => setDay(new Date())}
-              className="ml-2 text-sm font-medium text-neutral-700 hover:text-brand"
-              title="Voltar para hoje"
-            >
-              {day.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
-            </button>
-          )}
         </div>
+        {isToday ? (
+          <span className="text-sm font-medium text-neutral-700">
+            {day.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
+            <span className="ml-1 text-brand">(hoje)</span>
+          </span>
+        ) : (
+          <button
+            onClick={() => setDay(new Date())}
+            className="text-left text-sm font-medium text-neutral-700 hover:text-brand"
+            title="Voltar para hoje"
+          >
+            {day.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
+          </button>
+        )}
       </div>
 
       {!settings ? (
