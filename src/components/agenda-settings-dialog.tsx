@@ -27,7 +27,18 @@ const SLOT_OPTIONS = [10, 15, 20, 30, 40, 45, 60];
 /** Aba "Gerais" — standalone, horário de funcionamento + duração do slot.
  * Reaproveitada tanto na tela de Configurações quanto (via dialog) dentro
  * da própria Agenda. */
-export function GeneralSettingsTab({ api, onSaved }: { api: Api; onSaved?: (s: AgendaSettings) => void }) {
+export function GeneralSettingsTab({
+  api,
+  onSaved,
+  mobileAgendaLink,
+}: {
+  api: Api;
+  onSaved?: (s: AgendaSettings) => void;
+  // Link fixo (com o token já embutido) pro dono acessar a Agenda pelo
+  // celular, fora da extensão — pedido do Mariano, pra não precisar de
+  // QR code nem depender de mandar mensagem pra si mesmo.
+  mobileAgendaLink?: string;
+}) {
   const [settings, setSettings] = useState<AgendaSettings | null>(null);
   const [saving, setSaving] = useState(false);
   const [hoursOpen, setHoursOpen] = useState(false);
@@ -77,6 +88,28 @@ export function GeneralSettingsTab({ api, onSaved }: { api: Api; onSaved?: (s: A
 
   return (
     <div className="space-y-5">
+      {mobileAgendaLink && (
+        <div className="space-y-1.5 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+          <Label>Minha agenda (acesso pelo celular)</Label>
+          <p className="text-xs text-neutral-400">
+            Link fixo pra você ver e configurar sua agenda direto do navegador do celular, sem precisar da extensão. Guarde nos favoritos.
+          </p>
+          <div className="flex items-center gap-2">
+            <Input value={mobileAgendaLink} readOnly className="h-8 text-xs" />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                void navigator.clipboard.writeText(mobileAgendaLink);
+                toast.success("Link copiado");
+              }}
+            >
+              Copiar
+            </Button>
+          </div>
+        </div>
+      )}
       <div className="space-y-1.5">
         <Label>Duração de cada horário (slot)</Label>
         <Select

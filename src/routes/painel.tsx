@@ -1015,7 +1015,12 @@ function Painel() {
                   businessType={businessType}
                 />
               )}
-              {configTab === "gerais" && <GeneralSettingsTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
+              {configTab === "gerais" && (
+                <GeneralSettingsTab
+                  api={(path: string, opts?: RequestInit) => api(token, path, opts)}
+                  mobileAgendaLink={typeof window !== "undefined" ? `${window.location.origin}/painel?token=${token}&section=agenda` : undefined}
+                />
+              )}
               {configTab === "conta" && <AccountTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
             </main>
           </>
