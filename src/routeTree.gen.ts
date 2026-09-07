@@ -36,6 +36,7 @@ import { Route as ApiPublicExtensionAccountInfoRouteImport } from './routes/api/
 import { Route as ApiPublicExtensionAgendaReminderRulesRouteImport } from './routes/api/public/extension/agenda-reminder-rules'
 import { Route as ApiPublicExtensionAgendaSettingsRouteImport } from './routes/api/public/extension/agenda-settings'
 import { Route as ApiPublicExtensionAgenteIaAccessLinkRouteImport } from './routes/api/public/extension/agente-ia-access-link'
+import { Route as ApiPublicExtensionAgenteIaFreeAccessLinkRouteImport } from './routes/api/public/extension/agente-ia-free-access-link'
 import { Route as ApiPublicExtensionAgenteIaSettingsRouteImport } from './routes/api/public/extension/agente-ia-settings'
 import { Route as ApiPublicExtensionAiDemoLeadsRouteImport } from './routes/api/public/extension/ai-demo-leads'
 import { Route as ApiPublicExtensionAnamneseRouteImport } from './routes/api/public/extension/anamnese'
@@ -248,6 +249,12 @@ const ApiPublicExtensionAgenteIaAccessLinkRoute =
   ApiPublicExtensionAgenteIaAccessLinkRouteImport.update({
     id: '/api/public/extension/agente-ia-access-link',
     path: '/api/public/extension/agente-ia-access-link',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionAgenteIaFreeAccessLinkRoute =
+  ApiPublicExtensionAgenteIaFreeAccessLinkRouteImport.update({
+    id: '/api/public/extension/agente-ia-free-access-link',
+    path: '/api/public/extension/agente-ia-free-access-link',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicExtensionAgenteIaSettingsRoute =
@@ -708,6 +715,7 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/agenda-reminder-rules': typeof ApiPublicExtensionAgendaReminderRulesRouteWithChildren
   '/api/public/extension/agenda-settings': typeof ApiPublicExtensionAgendaSettingsRoute
   '/api/public/extension/agente-ia-access-link': typeof ApiPublicExtensionAgenteIaAccessLinkRoute
+  '/api/public/extension/agente-ia-free-access-link': typeof ApiPublicExtensionAgenteIaFreeAccessLinkRoute
   '/api/public/extension/agente-ia-settings': typeof ApiPublicExtensionAgenteIaSettingsRoute
   '/api/public/extension/ai-demo-leads': typeof ApiPublicExtensionAiDemoLeadsRoute
   '/api/public/extension/anamnese': typeof ApiPublicExtensionAnamneseRoute
@@ -809,6 +817,7 @@ export interface FileRoutesByTo {
   '/api/public/extension/agenda-reminder-rules': typeof ApiPublicExtensionAgendaReminderRulesRouteWithChildren
   '/api/public/extension/agenda-settings': typeof ApiPublicExtensionAgendaSettingsRoute
   '/api/public/extension/agente-ia-access-link': typeof ApiPublicExtensionAgenteIaAccessLinkRoute
+  '/api/public/extension/agente-ia-free-access-link': typeof ApiPublicExtensionAgenteIaFreeAccessLinkRoute
   '/api/public/extension/agente-ia-settings': typeof ApiPublicExtensionAgenteIaSettingsRoute
   '/api/public/extension/ai-demo-leads': typeof ApiPublicExtensionAiDemoLeadsRoute
   '/api/public/extension/anamnese': typeof ApiPublicExtensionAnamneseRoute
@@ -911,6 +920,7 @@ export interface FileRoutesById {
   '/api/public/extension/agenda-reminder-rules': typeof ApiPublicExtensionAgendaReminderRulesRouteWithChildren
   '/api/public/extension/agenda-settings': typeof ApiPublicExtensionAgendaSettingsRoute
   '/api/public/extension/agente-ia-access-link': typeof ApiPublicExtensionAgenteIaAccessLinkRoute
+  '/api/public/extension/agente-ia-free-access-link': typeof ApiPublicExtensionAgenteIaFreeAccessLinkRoute
   '/api/public/extension/agente-ia-settings': typeof ApiPublicExtensionAgenteIaSettingsRoute
   '/api/public/extension/ai-demo-leads': typeof ApiPublicExtensionAiDemoLeadsRoute
   '/api/public/extension/anamnese': typeof ApiPublicExtensionAnamneseRoute
@@ -1014,6 +1024,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/agenda-reminder-rules'
     | '/api/public/extension/agenda-settings'
     | '/api/public/extension/agente-ia-access-link'
+    | '/api/public/extension/agente-ia-free-access-link'
     | '/api/public/extension/agente-ia-settings'
     | '/api/public/extension/ai-demo-leads'
     | '/api/public/extension/anamnese'
@@ -1115,6 +1126,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/agenda-reminder-rules'
     | '/api/public/extension/agenda-settings'
     | '/api/public/extension/agente-ia-access-link'
+    | '/api/public/extension/agente-ia-free-access-link'
     | '/api/public/extension/agente-ia-settings'
     | '/api/public/extension/ai-demo-leads'
     | '/api/public/extension/anamnese'
@@ -1216,6 +1228,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/agenda-reminder-rules'
     | '/api/public/extension/agenda-settings'
     | '/api/public/extension/agente-ia-access-link'
+    | '/api/public/extension/agente-ia-free-access-link'
     | '/api/public/extension/agente-ia-settings'
     | '/api/public/extension/ai-demo-leads'
     | '/api/public/extension/anamnese'
@@ -1317,6 +1330,7 @@ export interface RootRouteChildren {
   ApiPublicExtensionAgendaReminderRulesRoute: typeof ApiPublicExtensionAgendaReminderRulesRouteWithChildren
   ApiPublicExtensionAgendaSettingsRoute: typeof ApiPublicExtensionAgendaSettingsRoute
   ApiPublicExtensionAgenteIaAccessLinkRoute: typeof ApiPublicExtensionAgenteIaAccessLinkRoute
+  ApiPublicExtensionAgenteIaFreeAccessLinkRoute: typeof ApiPublicExtensionAgenteIaFreeAccessLinkRoute
   ApiPublicExtensionAgenteIaSettingsRoute: typeof ApiPublicExtensionAgenteIaSettingsRoute
   ApiPublicExtensionAiDemoLeadsRoute: typeof ApiPublicExtensionAiDemoLeadsRoute
   ApiPublicExtensionAnamneseRoute: typeof ApiPublicExtensionAnamneseRoute
@@ -1558,6 +1572,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/extension/agente-ia-access-link'
       fullPath: '/api/public/extension/agente-ia-access-link'
       preLoaderRoute: typeof ApiPublicExtensionAgenteIaAccessLinkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/agente-ia-free-access-link': {
+      id: '/api/public/extension/agente-ia-free-access-link'
+      path: '/api/public/extension/agente-ia-free-access-link'
+      fullPath: '/api/public/extension/agente-ia-free-access-link'
+      preLoaderRoute: typeof ApiPublicExtensionAgenteIaFreeAccessLinkRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/extension/agente-ia-settings': {
@@ -2406,6 +2427,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicExtensionAgendaSettingsRoute: ApiPublicExtensionAgendaSettingsRoute,
   ApiPublicExtensionAgenteIaAccessLinkRoute:
     ApiPublicExtensionAgenteIaAccessLinkRoute,
+  ApiPublicExtensionAgenteIaFreeAccessLinkRoute:
+    ApiPublicExtensionAgenteIaFreeAccessLinkRoute,
   ApiPublicExtensionAgenteIaSettingsRoute:
     ApiPublicExtensionAgenteIaSettingsRoute,
   ApiPublicExtensionAiDemoLeadsRoute: ApiPublicExtensionAiDemoLeadsRoute,

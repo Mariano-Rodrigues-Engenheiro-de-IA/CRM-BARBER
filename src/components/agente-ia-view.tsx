@@ -17,13 +17,18 @@ const REVENUE_RANGES = [
   "Acima de R$ 60.000/mês",
 ];
 
-/** Página do Agente de IA — vitrine + agendar demonstração (não é mais
- * checkout direto: a venda acontece por contato humano, depois de
- * preencher esse formulário). Se o admin já vinculou a conta (depois da
- * compra), mostra direto o botão de acesso, sem passar pela vitrine.
+/** Página do Agente de IA — dois caminhos:
  *
- * Layout: só vídeo + botão (sem banner) — o botão abre o formulário
- * num popup centralizado, sem empurrar o resto da página. */
+ * 1) "Configurar grátis": auto-provisiona um tenant no
+ *    IA-BARBER-ATENDIMENTO (ponte crm-bridge-access-link) e manda o
+ *    cliente pro onboarding de lá, onde ele monta o próprio agente.
+ * 2) "Agendar demonstração": caminho pago/concierge que já existia —
+ *    formulário de lead, especialista entra em contato, configuração
+ *    é feita na IA-BARBER-AGENDA.
+ *
+ * Se o admin já vinculou a conta paga (accessEnabled) OU o cliente já
+ * tem tenant na ATENDIMENTO (freeTenant.found), pula a escolha e mostra
+ * direto o botão de acesso certo — nunca os dois ao mesmo tempo. */
 export function AgenteIaView({ api }: { api: Api }) {
   const [formOpen, setFormOpen] = useState(false);
   const [sent, setSent] = useState(false);
@@ -35,11 +40,21 @@ export function AgenteIaView({ api }: { api: Api }) {
     const r = await api("/api/public/extension/billing");
     return r?.ok ? Boolean(r.billing?.ai_access_enabled) : false;
   });
+  // Checagem de status do caminho grátis — sem create=1, nunca cria
+  // tenant sozinha, só pergunta "já existe alguma coisa vinculada?".
+  const { data: freeTenant, loading: loadingFreeTenant } = useCachedFetch<{ found: boolean; onboarding_completed?: boolean } | null>(
+    "agente-ia-free-status",
+    async () => {
+      const r = await api("/api/public/extension/agente-ia-free-access-link");
+      if (!r?.ok) return null;
+      return { found: !!r.found, onboarding_completed: r.onboarding_completed };
+    },
+  );
 
-  // Espera saber de verdade se o acesso já foi liberado antes de decidir
-  // qual tela mostrar — sem isso, a vitrine aparecia por um instante
-  // mesmo pra quem já tem acesso, e depois trocava de tela.
-  if (loadingAccess) {
+  // Espera saber de verdade o estado dos dois caminhos antes de decidir
+  // qual tela mostrar — sem isso, a tela errada aparece por um instante
+  // e depois troca.
+  if (loadingAccess || loadingFreeTenant) {
     return (
       <div className="flex min-h-[300px] items-center justify-center">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-brand" />
@@ -49,6 +64,10 @@ export function AgenteIaView({ api }: { api: Api }) {
 
   if (accessEnabled) {
     return <AiAccessGranted api={api} />;
+  }
+
+  if (freeTenant?.found) {
+    return <FreeAiAccess api={api} onboardingCompleted={!!freeTenant.onboarding_completed} />;
   }
 
   const embedUrl = salesVideoUrl ? youtubeEmbedUrl(salesVideoUrl) : null;
@@ -70,9 +89,9 @@ export function AgenteIaView({ api }: { api: Api }) {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">
       {embedUrl ? (
-        <div className="mx-auto aspect-video w-full overflow-hidden rounded-2xl border-2 border-brand shadow-lg">
+        <div className="mx-auto aspect-video w-full max-w-2xl overflow-hidden rounded-2xl border-2 border-brand shadow-lg">
           <iframe
             src={embedUrl}
             title="Conheça o Agente de IA"
@@ -82,18 +101,26 @@ export function AgenteIaView({ api }: { api: Api }) {
           />
         </div>
       ) : (
-        <div className="mx-auto rounded-2xl border-2 border-dashed border-neutral-300 bg-neutral-50 p-10 text-center">
+        <div className="mx-auto max-w-2xl rounded-2xl border-2 border-dashed border-neutral-300 bg-neutral-50 p-10 text-center">
           <p className="text-sm text-neutral-400">Vídeo de apresentação em breve.</p>
         </div>
       )}
 
-      <div className="text-center">
-        <button
-          onClick={() => setFormOpen(true)}
-          className="rounded-xl bg-brand px-8 py-3 text-sm font-semibold text-white shadow-lg hover:bg-brand-strong"
-        >
-          Agendar demonstração
-        </button>
+      <div className="grid gap-5 md:grid-cols-2">
+        <FreeSetupCard api={api} />
+        <div className="rounded-2xl border-2 border-brand bg-white p-6 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand">Feita pela nossa equipe</p>
+          <h3 className="mt-2 text-lg font-bold text-neutral-900">Configuração assistida</h3>
+          <p className="mt-2 text-sm text-neutral-500">
+            Um especialista configura o agente com você numa chamada, já testado e afinado pro seu tipo de negócio.
+          </p>
+          <button
+            onClick={() => setFormOpen(true)}
+            className="mt-5 w-full rounded-xl bg-brand py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-brand-strong"
+          >
+            Agendar demonstração
+          </button>
+        </div>
       </div>
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
@@ -104,6 +131,99 @@ export function AgenteIaView({ api }: { api: Api }) {
           <DemoForm api={api} onSent={() => { setFormOpen(false); setSent(true); }} />
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+/** Cartão do caminho grátis — clique já dispara a criação do tenant
+ * (create=1) e abre o onboarding numa aba nova. */
+function FreeSetupCard({ api }: { api: Api }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleStart() {
+    setLoading(true);
+    setError(null);
+    try {
+      const r = await api("/api/public/extension/agente-ia-free-access-link?create=1");
+      if (!r?.ok || !r.action_link) throw new Error(r?.error || "Não foi possível iniciar agora.");
+      window.open(r.action_link, "_blank");
+      // Recarrega a página depois de abrir — na próxima vez que essa
+      // tela carregar, freeTenant.found já vem true e mostra o estado
+      // de "configuração em andamento" em vez da escolha de novo.
+      window.location.reload();
+    } catch (e: any) {
+      setError(e?.message || "Erro ao iniciar configuração");
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Grátis</p>
+      <h3 className="mt-2 text-lg font-bold text-neutral-900">Configurar por conta própria</h3>
+      <p className="mt-2 text-sm text-neutral-500">
+        Você mesmo monta o agente, no seu ritmo, com o passo a passo dentro do sistema.
+      </p>
+      {error && <p className="mt-3 rounded-lg border border-red-300 bg-red-50 p-2 text-xs text-red-700">{error}</p>}
+      <button
+        onClick={handleStart}
+        disabled={loading}
+        className="mt-5 w-full rounded-xl border-2 border-neutral-200 bg-white py-2.5 text-sm font-semibold text-neutral-700 hover:border-brand hover:text-brand disabled:opacity-50"
+      >
+        {loading ? "Abrindo..." : "Começar agora"}
+      </button>
+    </div>
+  );
+}
+
+/** Cliente já escolheu o caminho grátis. Se ainda não terminou o
+ * onboarding lá, mostra "continuar configuração"; se já terminou,
+ * mostra o acesso direto — mesmo padrão visual do AiAccessGranted
+ * (pago), só que apontando pra ponte gratuita. */
+function FreeAiAccess({ api, onboardingCompleted }: { api: Api; onboardingCompleted: boolean }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleAccess() {
+    setLoading(true);
+    setError(null);
+    try {
+      const r = await api("/api/public/extension/agente-ia-free-access-link");
+      if (!r?.ok || !r.action_link) throw new Error(r?.error || "Não foi possível abrir o acesso agora.");
+      window.open(r.action_link, "_blank");
+    } catch (e: any) {
+      setError(e?.message || "Erro ao gerar acesso");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-lg space-y-4 rounded-2xl border border-neutral-200 bg-white p-8 text-center">
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand/10">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-brand">
+          <rect x="4" y="9" width="16" height="11" rx="2" />
+          <path d="M12 9V5" /><circle cx="12" cy="3.5" r="1.5" />
+          <circle cx="9" cy="14" r="1" /><circle cx="15" cy="14" r="1" />
+        </svg>
+      </div>
+      <h1 className="text-xl font-bold text-neutral-900">
+        {onboardingCompleted ? "Seu Agente de IA está pronto" : "Continue a configuração da sua IA"}
+      </h1>
+      <p className="text-sm text-neutral-500">
+        {onboardingCompleted
+          ? "Clique abaixo para acessar o painel da sua IA, sem precisar fazer login de novo."
+          : "Você começou a configurar seu agente, mas ainda não terminou. Continue de onde parou."}
+      </p>
+      {error && <p className="rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-700">{error}</p>}
+      <button
+        onClick={handleAccess}
+        disabled={loading}
+        className="w-full rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
+      >
+        {loading ? "Abrindo..." : onboardingCompleted ? "Acessar minha IA" : "Continuar configuração"}
+      </button>
     </div>
   );
 }
