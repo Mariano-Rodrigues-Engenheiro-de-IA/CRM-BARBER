@@ -344,7 +344,7 @@ export function AgendaView({ api, businessType }: { api: Api; businessType?: str
             type="date"
             value={ymd(day)}
             onChange={(e) => setDay(new Date(`${e.target.value}T00:00:00`))}
-            className="w-[150px] shrink-0 sm:w-40"
+            className="min-w-0 flex-1 sm:w-40 sm:flex-none"
           />
           <Button
             variant="outline"
