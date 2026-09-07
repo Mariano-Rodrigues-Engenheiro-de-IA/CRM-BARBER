@@ -9,6 +9,7 @@ import {
   testSchema,
   claimPendingSchema,
   businessTypeSchema,
+  isAdminSchema,
 } from "./admin-whatsapp.server";
 
 export const adminListShops = createServerFn({ method: "GET" }).handler(async () => {
@@ -29,6 +30,14 @@ export const adminSetBusinessType = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { setBusinessType } = await import("./admin-whatsapp.server");
     return setBusinessType(supabaseAdmin, data);
+  });
+
+export const adminSetIsAdmin = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => isAdminSchema.parse(data))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { setIsAdmin } = await import("./admin-whatsapp.server");
+    return setIsAdmin(supabaseAdmin, data);
   });
 
 export const adminSaveMetaCredentials = createServerFn({ method: "POST" })

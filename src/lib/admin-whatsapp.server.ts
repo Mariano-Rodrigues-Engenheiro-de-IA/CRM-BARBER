@@ -36,6 +36,11 @@ export const businessTypeSchema = z.object({
   business_type: z.enum(["barbearia", "odontologia", "estetica", "outros"]),
 });
 
+export const isAdminSchema = z.object({
+  barbershop_id: z.string().uuid(),
+  is_admin: z.boolean(),
+});
+
 export const claimPendingSchema = z.object({
   pending_id: z.string().uuid(),
   barbershop_id: z.string().uuid(),
@@ -63,6 +68,7 @@ export type AdminClientOverviewRow = {
   owner_phone: string | null;
   owner_email: string | null;
   business_type: string;
+  is_admin: boolean;
   provider: string | null;
   status: string | null;
   connected_phone: string | null;
@@ -74,7 +80,7 @@ export type AdminClientOverviewRow = {
 export async function listClientsOverview(supabaseAdmin: Admin): Promise<AdminClientOverviewRow[]> {
   const { data: shops, error } = await supabaseAdmin
     .from("barbershops")
-    .select("id, name, owner_phone, owner_email, business_type, created_at")
+    .select("id, name, owner_phone, owner_email, business_type, is_admin, created_at")
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
 
@@ -99,6 +105,7 @@ export async function listClientsOverview(supabaseAdmin: Admin): Promise<AdminCl
       owner_phone: s.owner_phone,
       owner_email: s.owner_email,
       business_type: s.business_type,
+      is_admin: s.is_admin,
       provider: i?.provider ?? null,
       status: i?.status ?? null,
       connected_phone: i?.phone ?? null,
@@ -118,6 +125,22 @@ export async function setBusinessType(
   const { error } = await supabaseAdmin
     .from("barbershops")
     .update({ business_type: input.business_type })
+    .eq("id", input.barbershop_id);
+  if (error) throw new Error(error.message);
+  return { ok: true };
+}
+
+/** Liga/desliga o acesso de admin (cortesia + ver dados sensíveis) de
+ * uma barbearia, direto pelo painel — substitui a variável de ambiente
+ * ADMIN_BARBERSHOP_ID, que precisava ser editada manualmente no Lovable
+ * toda vez. */
+export async function setIsAdmin(
+  supabaseAdmin: Admin,
+  input: { barbershop_id: string; is_admin: boolean },
+): Promise<{ ok: true }> {
+  const { error } = await supabaseAdmin
+    .from("barbershops")
+    .update({ is_admin: input.is_admin })
     .eq("id", input.barbershop_id);
   if (error) throw new Error(error.message);
   return { ok: true };

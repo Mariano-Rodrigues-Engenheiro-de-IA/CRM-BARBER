@@ -4,7 +4,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { FREE_LIMITS, type BillingStatus, PREMIUM_PRICE_ID, PROMO_PRICE_ID, AI_ADDON_MONTHLY_PRICE_ID, AI_ADDON_SEMESTRAL_PRICE_ID } from "@/lib/billing";
-import { isAdminBarbershop } from "@/lib/admin-guard.server";
 
 const ACTIVE_STATUSES = ["active", "trialing", "past_due"];
 
@@ -35,7 +34,7 @@ export async function getBillingStatus(
       .from("message_jobs")
       .select("id", { count: "exact", head: true })
       .eq("barbershop_id", barbershopId),
-    supabaseAdmin.from("barbershops").select("ai_access_enabled").eq("id", barbershopId).maybeSingle(),
+    supabaseAdmin.from("barbershops").select("ai_access_enabled, is_admin").eq("id", barbershopId).maybeSingle(),
   ]);
 
   const now = Date.now();
@@ -49,8 +48,11 @@ export async function getBillingStatus(
   const activeCrm = allSubs.find((row) => crmPriceIds.includes(row.price_id ?? "") && isRowActive(row, now));
   const activeAi = allSubs.find((row) => aiPriceIds.includes(row.price_id ?? "") && isRowActive(row, now));
 
-  // Barbearias admin (cortesia) têm acesso liberado sem assinatura.
-  const courtesy = isAdminBarbershop(barbershopId);
+  // Barbearias admin (cortesia) têm acesso liberado sem assinatura —
+  // controlado por is_admin no próprio registro, ligado/desligado pelo
+  // painel de Clientes (antes era uma variável de ambiente editada na
+  // mão no Lovable).
+  const courtesy = Boolean(shopRes.data?.is_admin);
 
   return {
     premium: courtesy || Boolean(activeCrm),

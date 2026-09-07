@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { adminListClientsOverview, adminSetBusinessType } from "@/lib/admin-whatsapp.functions";
+import { adminListClientsOverview, adminSetBusinessType, adminSetIsAdmin } from "@/lib/admin-whatsapp.functions";
 import { useCachedFetch } from "@/lib/api-cache";
 
 type Row = Awaited<ReturnType<typeof adminListClientsOverview>>[number];
@@ -33,6 +33,7 @@ function statusLabel(status: string | null) {
 export function AdminClientsPanel() {
   const listClients = useServerFn(adminListClientsOverview);
   const setBusinessType = useServerFn(adminSetBusinessType);
+  const setIsAdmin = useServerFn(adminSetIsAdmin);
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -53,6 +54,20 @@ export function AdminClientsPanel() {
     setSavingId(barbershop_id);
     try {
       await setBusinessType({ data: { barbershop_id, business_type } });
+    } catch (err) {
+      setRows(previous ?? []);
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function handleIsAdminToggle(barbershop_id: string, is_admin: boolean) {
+    const previous = rows;
+    setRows((current) => (current ?? []).map((r) => (r.barbershop_id === barbershop_id ? { ...r, is_admin } : r)));
+    setSavingId(barbershop_id);
+    try {
+      await setIsAdmin({ data: { barbershop_id, is_admin } });
     } catch (err) {
       setRows(previous ?? []);
       setError(err instanceof Error ? err.message : String(err));
@@ -99,18 +114,19 @@ export function AdminClientsPanel() {
               <th className="px-4 py-3 font-medium">Conexão</th>
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium">Compartilha c/ IA</th>
+              <th className="px-4 py-3 font-medium">Admin</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
             {!rows ? (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-neutral-500">
+                <td colSpan={9} className="px-4 py-8 text-center text-neutral-500">
                   Carregando...
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-neutral-500">
+                <td colSpan={9} className="px-4 py-8 text-center text-neutral-500">
                   Nenhum cliente encontrado.
                 </td>
               </tr>
@@ -153,6 +169,18 @@ export function AdminClientsPanel() {
                     ) : (
                       <span className="text-neutral-400">—</span>
                     )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      type="button"
+                      disabled={savingId === r.barbershop_id}
+                      onClick={() => handleIsAdminToggle(r.barbershop_id, !r.is_admin)}
+                      className={`rounded-full px-3 py-1 text-[11px] font-semibold transition disabled:opacity-50 ${
+                        r.is_admin ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
+                      }`}
+                    >
+                      {r.is_admin ? "Admin ✓" : "Tornar admin"}
+                    </button>
                   </td>
                 </tr>
               ))

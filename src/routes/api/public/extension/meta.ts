@@ -6,7 +6,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { jsonResponse, preflight } from "@/lib/extension-cors";
 import { authenticateExtension } from "@/lib/extension-auth";
 import { CUSTOMER_STATUSES, DEFAULT_CUSTOMER_TAGS } from "@/lib/customer-presets";
-import { isAdminBarbershop } from "@/lib/admin-guard.server";
 
 export const Route = createFileRoute("/api/public/extension/meta")({
   server: {
@@ -30,7 +29,7 @@ export const Route = createFileRoute("/api/public/extension/meta")({
             .limit(1000),
           supabaseAdmin
             .from("barbershops")
-            .select("name, logo_url")
+            .select("name, logo_url, is_admin")
             .eq("id", auth.token.barbershop_id)
             .maybeSingle(),
         ]);
@@ -44,7 +43,7 @@ export const Route = createFileRoute("/api/public/extension/meta")({
           barbershop: { id: auth.token.barbershop_id, name: shopRes.data?.name ?? "Barbearia", logo_url: shopRes.data?.logo_url ?? null },
           statuses: CUSTOMER_STATUSES,
           suggested_tags: Array.from(new Set([...DEFAULT_CUSTOMER_TAGS, ...usedTags])).sort(),
-          is_admin: isAdminBarbershop(auth.token.barbershop_id),
+          is_admin: Boolean(shopRes.data?.is_admin),
         });
 
       },
