@@ -293,6 +293,18 @@ export function TemplatesView({
       setErr("Preencha um valor de exemplo para cada variável. A Meta exige isso pra analisar o modelo.");
       return;
     }
+    // ACHADO DE BUG REAL: {{1}}, {{2}} etc (formato numerado) batem no
+    // regex de detecção de variável, mas a Meta rejeita o modelo depois
+    // — esse sistema só suporta variável NOMEADA ({{primeiro_nome}}),
+    // não numerada. Sem essa checagem, o erro só aparecia tarde, direto
+    // da API da Meta, com uma mensagem confusa ("Invalid parameter").
+    const numericVar = varNames.find((v) => /^[0-9]+$/.test(v));
+    if (numericVar) {
+      setErr(
+        `Variável "{{${numericVar}}}" não é aceita. Use um nome descritivo, tipo {{primeiro_nome}}, {{data}} ou {{hora}}, em vez de número.`,
+      );
+      return;
+    }
     if (templateType === "carousel") {
       if (category !== "MARKETING") {
         setErr("Carrossel só é suportado em modelos da categoria Marketing.");
@@ -487,6 +499,11 @@ export function TemplatesView({
                 onChange={(e) => setBodyText(e.target.value)}
                 placeholder="Olá {{nome}}, seu horário está confirmado para {{data}} às {{hora}}."
               />
+              <p className="mt-1 text-[11px] text-neutral-500">
+                Variáveis usam nome descritivo entre chaves duplas, tipo <code>{"{{primeiro_nome}}"}</code>,{" "}
+                <code>{"{{data}}"}</code> ou <code>{"{{hora}}"}</code>. Número sozinho (tipo <code>{"{{1}}"}</code>) não é
+                aceito.
+              </p>
             </div>
           )}
 
@@ -522,6 +539,11 @@ export function TemplatesView({
                   onChange={(e) => setBodyText(e.target.value)}
                   placeholder="Olá {{nome}}, seu horário está confirmado para {{data}} às {{hora}}."
                 />
+                <p className="mt-1 text-[11px] text-neutral-500">
+                  Variáveis usam nome descritivo entre chaves duplas, tipo <code>{"{{primeiro_nome}}"}</code>,{" "}
+                  <code>{"{{data}}"}</code> ou <code>{"{{hora}}"}</code>. Número sozinho (tipo <code>{"{{1}}"}</code>) não
+                  é aceito.
+                </p>
               </div>
             </>
           )}

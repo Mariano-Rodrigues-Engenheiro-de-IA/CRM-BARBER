@@ -80,6 +80,22 @@ export const Route = createFileRoute("/api/public/extension/whatsapp/templates")
         const category = typeof body?.category === "string" ? body.category.trim() : "";
         const languageCode = typeof body?.language_code === "string" ? body.language_code.trim() : "";
         const bodyText = typeof body?.body_text === "string" ? body.body_text.trim() : "";
+        // ACHADO DE BUG REAL: {{1}}, {{2}} (formato numerado) passam
+        // despercebidos até a Meta rejeitar o modelo com um erro confuso
+        // ("Invalid parameter", sem dizer qual). Esse sistema só suporta
+        // variável NOMEADA ({{primeiro_nome}}) — nunca numerada. Barrado
+        // aqui, antes de gastar uma chamada com a Meta.
+        const numericVarInBody = bodyText.match(/\{\{([0-9]+)\}\}/);
+        if (numericVarInBody) {
+          return jsonResponse(
+            request,
+            {
+              ok: false,
+              error: `Variável "{{${numericVarInBody[1]}}}" não é aceita. Use um nome descritivo, tipo {{primeiro_nome}}, {{data}} ou {{hora}}, em vez de número.`,
+            },
+            { status: 400 },
+          );
+        }
         const bodyExamples =
           body?.body_examples && typeof body.body_examples === "object" && !Array.isArray(body.body_examples)
             ? (Object.fromEntries(
