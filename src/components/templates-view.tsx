@@ -34,6 +34,17 @@ const LANGUAGE_LABEL: Record<string, string> = {
 
 /** Variáveis nomeadas disponíveis pro corpo do modelo. Clicar insere no texto. */
 const TEMPLATE_VARIABLES = ["nome", "primeiro_nome", "data", "hora", "servico", "profissional"];
+// Valor de exemplo padrão pra cada variável — pré-preenche o campo
+// assim que a pessoa insere a variável na mensagem, em vez de deixar
+// em branco esperando ela digitar do zero. Continua editável.
+const DEFAULT_VARIABLE_EXAMPLES: Record<string, string> = {
+  nome: "João Souza",
+  primeiro_nome: "João",
+  data: "15/09/2026",
+  hora: "14h30",
+  servico: "Corte de cabelo",
+  profissional: "Ana",
+};
 
 function VariableChips({ onPick }: { onPick: (v: string) => void }) {
   return (
@@ -254,6 +265,20 @@ export function TemplatesView({
   // Detecta {{nome}}, {{data}}... conforme a pessoa digita — cada uma
   // precisa de um valor de exemplo (a Meta exige isso pra aprovar).
   const varNames = Array.from(new Set(Array.from(bodyText.matchAll(/\{\{([a-z0-9_]+)\}\}/g)).map((m) => m[1])));
+
+  // Pré-preenche o valor de exemplo assim que uma variável reconhecida
+  // aparece na mensagem — só pra quem ainda não editou esse campo,
+  // nunca sobrescreve o que a pessoa já digitou.
+  useEffect(() => {
+    const missing = varNames.filter((v) => bodyExamples[v] === undefined && DEFAULT_VARIABLE_EXAMPLES[v]);
+    if (missing.length === 0) return;
+    setBodyExamples((prev) => {
+      const next = { ...prev };
+      for (const v of missing) next[v] = DEFAULT_VARIABLE_EXAMPLES[v];
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [varNames.join(",")]);
 
   // Variáveis clicáveis: insere {{nome}} na posição do cursor do campo de
   // texto (ou no fim, se o campo não estiver focado).
@@ -792,7 +817,6 @@ export function TemplatesView({
                     className={inputCls}
                     value={bodyExamples[v] ?? ""}
                     onChange={(e) => setBodyExamples((prev) => ({ ...prev, [v]: e.target.value }))}
-                    placeholder={v === "nome" ? "Maria" : v.includes("data") ? "15/03" : v.includes("hora") ? "14:30" : "exemplo"}
                   />
                 </div>
               ))}
