@@ -808,15 +808,19 @@ export function TemplatesView({
           {varNames.length > 0 && (
             <div className="space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
               <p className="text-xs font-medium text-neutral-700">Valor de exemplo</p>
+              <p className="text-[11px] text-neutral-500">
+                Preenchido automaticamente. Só serve pra Meta analisar o modelo, não afeta a mensagem real que o
+                cliente recebe.
+              </p>
               {varNames.map((v) => (
                 <div key={v} className="flex items-center gap-2">
                   <span className="w-32 shrink-0 truncate rounded bg-neutral-200 px-2 py-1 text-center text-[11px] font-mono text-neutral-700">
                     {`{{${v}}}`}
                   </span>
                   <input
-                    className={inputCls}
-                    value={bodyExamples[v] ?? ""}
-                    onChange={(e) => setBodyExamples((prev) => ({ ...prev, [v]: e.target.value }))}
+                    className={inputCls + " cursor-not-allowed bg-neutral-100 text-neutral-500"}
+                    value={bodyExamples[v] ?? DEFAULT_VARIABLE_EXAMPLES[v] ?? ""}
+                    readOnly
                   />
                 </div>
               ))}
