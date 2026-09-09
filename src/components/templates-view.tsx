@@ -39,7 +39,7 @@ function VariableChips({ onPick }: { onPick: (v: string) => void }) {
   return (
     <div className="mt-1.5 space-y-1">
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-[11px] text-neutral-500">Variáveis — clica pra inserir:</span>
+        <span className="text-[11px] text-neutral-500">Clique para inserir uma variável na mensagem:</span>
         {TEMPLATE_VARIABLES.map((v) => (
           <button
             key={v}
@@ -51,9 +51,6 @@ function VariableChips({ onPick }: { onPick: (v: string) => void }) {
           </button>
         ))}
       </div>
-      <p className="text-[11px] text-neutral-400">
-        Só essas variáveis nomeadas são aceitas — número sozinho (tipo <code>{"{{1}}"}</code>) a Meta rejeita.
-      </p>
     </div>
   );
 }
