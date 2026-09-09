@@ -32,6 +32,32 @@ const LANGUAGE_LABEL: Record<string, string> = {
   en_US: "Inglês (EUA)",
 };
 
+/** Variáveis nomeadas disponíveis pro corpo do modelo. Clicar insere no texto. */
+const TEMPLATE_VARIABLES = ["nome", "primeiro_nome", "data", "hora", "servico", "profissional"];
+
+function VariableChips({ onPick }: { onPick: (v: string) => void }) {
+  return (
+    <div className="mt-1.5 space-y-1">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-[11px] text-neutral-500">Variáveis — clica pra inserir:</span>
+        {TEMPLATE_VARIABLES.map((v) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => onPick(v)}
+            className="rounded-md bg-neutral-100 px-1.5 py-0.5 font-mono text-[11px] text-neutral-700 transition hover:bg-brand/15 hover:text-brand"
+          >
+            {`{{${v}}}`}
+          </button>
+        ))}
+      </div>
+      <p className="text-[11px] text-neutral-400">
+        Só essas variáveis nomeadas são aceitas — número sozinho (tipo <code>{"{{1}}"}</code>) a Meta rejeita.
+      </p>
+    </div>
+  );
+}
+
 /** Decodifica os componentes crus da Meta de volta pros campos do
  * formulário, pra edição — reconstrói tudo, exceto a mídia em si (o
  * cabeçalho fica mantido a menos que a pessoa escolha um arquivo novo). */
@@ -512,17 +538,14 @@ export function TemplatesView({
             <div>
               <label className="mb-1 block text-xs font-medium text-neutral-700">Texto</label>
               <textarea
+                ref={bodyRef}
                 className={inputCls}
                 rows={4}
                 value={bodyText}
                 onChange={(e) => setBodyText(e.target.value)}
                 placeholder="Olá {{nome}}, seu horário está confirmado para {{data}} às {{hora}}."
               />
-              <p className="mt-1 text-[11px] text-neutral-500">
-                Variáveis usam nome descritivo entre chaves duplas, tipo <code>{"{{primeiro_nome}}"}</code>,{" "}
-                <code>{"{{data}}"}</code> ou <code>{"{{hora}}"}</code>. Número sozinho (tipo <code>{"{{1}}"}</code>) não é
-                aceito.
-              </p>
+              <VariableChips onPick={insertVariable} />
             </div>
           )}
 
@@ -552,17 +575,14 @@ export function TemplatesView({
               <div>
                 <label className="mb-1 block text-xs font-medium text-neutral-700">Texto</label>
                 <textarea
+                  ref={bodyRef}
                   className={inputCls}
                   rows={4}
                   value={bodyText}
                   onChange={(e) => setBodyText(e.target.value)}
                   placeholder="Olá {{nome}}, seu horário está confirmado para {{data}} às {{hora}}."
                 />
-                <p className="mt-1 text-[11px] text-neutral-500">
-                  Variáveis usam nome descritivo entre chaves duplas, tipo <code>{"{{primeiro_nome}}"}</code>,{" "}
-                  <code>{"{{data}}"}</code> ou <code>{"{{hora}}"}</code>. Número sozinho (tipo <code>{"{{1}}"}</code>) não
-                  é aceito.
-                </p>
+                <VariableChips onPick={insertVariable} />
               </div>
             </>
           )}
