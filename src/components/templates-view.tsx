@@ -232,6 +232,25 @@ export function TemplatesView({
   // precisa de um valor de exemplo (a Meta exige isso pra aprovar).
   const varNames = Array.from(new Set(Array.from(bodyText.matchAll(/\{\{([a-z0-9_]+)\}\}/g)).map((m) => m[1])));
 
+  // Variáveis clicáveis: insere {{nome}} na posição do cursor do campo de
+  // texto (ou no fim, se o campo não estiver focado).
+  const bodyRef = useRef<HTMLTextAreaElement | null>(null);
+  function insertVariable(v: string) {
+    const token = `{{${v}}}`;
+    const el = bodyRef.current;
+    if (!el) {
+      setBodyText((t) => (t ? `${t} ${token}` : token));
+      return;
+    }
+    const start = el.selectionStart ?? bodyText.length;
+    const end = el.selectionEnd ?? start;
+    setBodyText(bodyText.slice(0, start) + token + bodyText.slice(end));
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + token.length, start + token.length);
+    });
+  }
+
   function resetForm() {
     setName("");
     setCategory("UTILITY");
