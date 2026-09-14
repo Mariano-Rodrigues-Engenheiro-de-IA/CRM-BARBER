@@ -25,7 +25,6 @@ import { Route as AdminWhatsappRouteImport } from './routes/admin.whatsapp'
 import { Route as AdminTokensRouteImport } from './routes/admin.tokens'
 import { Route as AdminLessonsRouteImport } from './routes/admin.lessons'
 import { Route as AdminClientsRouteImport } from './routes/admin.clients'
-import { Route as ApiPublicTmpPriceSetupRouteImport } from './routes/api/public/tmp-price-setup'
 import { Route as ApiPublicSignupRouteImport } from './routes/api/public/signup'
 import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp.webhook'
 import { Route as ApiPublicWhatsappSignupCallbackRouteImport } from './routes/api/public/whatsapp.signup-callback'
@@ -189,11 +188,6 @@ const AdminLessonsRoute = AdminLessonsRouteImport.update({
 const AdminClientsRoute = AdminClientsRouteImport.update({
   id: '/admin/clients',
   path: '/admin/clients',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicTmpPriceSetupRoute = ApiPublicTmpPriceSetupRouteImport.update({
-  id: '/api/public/tmp-price-setup',
-  path: '/api/public/tmp-price-setup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicSignupRoute = ApiPublicSignupRouteImport.update({
@@ -711,7 +705,6 @@ export interface FileRoutesByFullPath {
   '/assinar/retorno': typeof AssinarRetornoRoute
   '/admin/': typeof AdminIndexRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
-  '/api/public/tmp-price-setup': typeof ApiPublicTmpPriceSetupRoute
   '/api/public/admin/issue-token': typeof ApiPublicAdminIssueTokenRoute
   '/api/public/ai/funnels': typeof ApiPublicAiFunnelsRoute
   '/api/public/ai/move-lead': typeof ApiPublicAiMoveLeadRoute
@@ -814,7 +807,6 @@ export interface FileRoutesByTo {
   '/assinar/retorno': typeof AssinarRetornoRoute
   '/admin': typeof AdminIndexRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
-  '/api/public/tmp-price-setup': typeof ApiPublicTmpPriceSetupRoute
   '/api/public/admin/issue-token': typeof ApiPublicAdminIssueTokenRoute
   '/api/public/ai/funnels': typeof ApiPublicAiFunnelsRoute
   '/api/public/ai/move-lead': typeof ApiPublicAiMoveLeadRoute
@@ -918,7 +910,6 @@ export interface FileRoutesById {
   '/assinar/retorno': typeof AssinarRetornoRoute
   '/admin/': typeof AdminIndexRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
-  '/api/public/tmp-price-setup': typeof ApiPublicTmpPriceSetupRoute
   '/api/public/admin/issue-token': typeof ApiPublicAdminIssueTokenRoute
   '/api/public/ai/funnels': typeof ApiPublicAiFunnelsRoute
   '/api/public/ai/move-lead': typeof ApiPublicAiMoveLeadRoute
@@ -1023,7 +1014,6 @@ export interface FileRouteTypes {
     | '/assinar/retorno'
     | '/admin/'
     | '/api/public/signup'
-    | '/api/public/tmp-price-setup'
     | '/api/public/admin/issue-token'
     | '/api/public/ai/funnels'
     | '/api/public/ai/move-lead'
@@ -1126,7 +1116,6 @@ export interface FileRouteTypes {
     | '/assinar/retorno'
     | '/admin'
     | '/api/public/signup'
-    | '/api/public/tmp-price-setup'
     | '/api/public/admin/issue-token'
     | '/api/public/ai/funnels'
     | '/api/public/ai/move-lead'
@@ -1229,7 +1218,6 @@ export interface FileRouteTypes {
     | '/assinar/retorno'
     | '/admin/'
     | '/api/public/signup'
-    | '/api/public/tmp-price-setup'
     | '/api/public/admin/issue-token'
     | '/api/public/ai/funnels'
     | '/api/public/ai/move-lead'
@@ -1332,7 +1320,6 @@ export interface RootRouteChildren {
   AgenteIaRetornoRoute: typeof AgenteIaRetornoRoute
   AdminIndexRoute: typeof AdminIndexRoute
   ApiPublicSignupRoute: typeof ApiPublicSignupRoute
-  ApiPublicTmpPriceSetupRoute: typeof ApiPublicTmpPriceSetupRoute
   ApiPublicAdminIssueTokenRoute: typeof ApiPublicAdminIssueTokenRoute
   ApiPublicAiFunnelsRoute: typeof ApiPublicAiFunnelsRoute
   ApiPublicAiMoveLeadRoute: typeof ApiPublicAiMoveLeadRoute
@@ -1508,13 +1495,6 @@ declare module '@tanstack/react-router' {
       path: '/admin/clients'
       fullPath: '/admin/clients'
       preLoaderRoute: typeof AdminClientsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/tmp-price-setup': {
-      id: '/api/public/tmp-price-setup'
-      path: '/api/public/tmp-price-setup'
-      fullPath: '/api/public/tmp-price-setup'
-      preLoaderRoute: typeof ApiPublicTmpPriceSetupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/signup': {
@@ -2435,7 +2415,6 @@ const rootRouteChildren: RootRouteChildren = {
   AgenteIaRetornoRoute: AgenteIaRetornoRoute,
   AdminIndexRoute: AdminIndexRoute,
   ApiPublicSignupRoute: ApiPublicSignupRoute,
-  ApiPublicTmpPriceSetupRoute: ApiPublicTmpPriceSetupRoute,
   ApiPublicAdminIssueTokenRoute: ApiPublicAdminIssueTokenRoute,
   ApiPublicAiFunnelsRoute: ApiPublicAiFunnelsRoute,
   ApiPublicAiMoveLeadRoute: ApiPublicAiMoveLeadRoute,
