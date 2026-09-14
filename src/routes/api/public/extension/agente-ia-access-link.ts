@@ -26,7 +26,10 @@ export const Route = createFileRoute("/api/public/extension/agente-ia-access-lin
 
         try {
           const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 8000);
+          // 8s era curto demais (mesmo achado da ponte com a ATENDIMENTO)
+          // - gerar o link magico envolve mais de uma chamada do lado da
+          // AGENDA, e uma funcao "fria" pode facilmente passar de 8s.
+          const timeout = setTimeout(() => controller.abort(), 20000);
           const res = await fetch(bridgeUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-shared-secret": bridgeSecret },
