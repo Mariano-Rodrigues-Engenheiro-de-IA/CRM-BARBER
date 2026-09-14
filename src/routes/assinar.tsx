@@ -12,15 +12,17 @@ import { Label } from "@/components/ui/label";
 export const Route = createFileRoute("/assinar")({
   head: () => ({
     meta: [
-      { title: "Assinar Premium | CRM Zaylo" },
+      { title: "Zaylo CRM" },
       {
         name: "description",
-        content: "Libere contatos, disparos e gestão de equipe ilimitados no CRM da sua barbearia.",
+        content:
+          "O CRM completo com IA, disparos, follow-up automático, agenda, funis e organização total do seu atendimento.",
       },
-      { property: "og:title", content: "Assinar Premium | CRM Zaylo" },
+      { property: "og:title", content: "Zaylo CRM" },
       {
         property: "og:description",
-        content: "Libere contatos, disparos e gestão de equipe ilimitados no CRM da sua barbearia.",
+        content:
+          "O CRM completo com IA, disparos, follow-up automático, agenda, funis e organização total do seu atendimento.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -77,18 +79,18 @@ function Assinar() {
     <div className="min-h-screen bg-background">
       <PaymentTestModeBanner />
       <div className="mx-auto max-w-3xl px-4 py-10">
-        <h1 className="text-2xl font-semibold tracking-tight">Zaylo CRM Premium</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Zaylo CRM</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {plan === "promo" ? (
             <>
               Oferta especial: <strong>{PROMO_PRICE_LABEL}</strong> (valor normal{" "}
-              {PREMIUM_PRICE_LABEL}) · contatos e disparos ilimitados, IA, funis, agenda, automações
-              e gestão de equipe.
+              {PREMIUM_PRICE_LABEL}) · IA, disparos, follow-up automático, agenda, funis e
+              organização — tudo ilimitado.
             </>
           ) : (
             <>
-              {labelForPlan(plan)} · contatos e disparos ilimitados, IA, funis, agenda, automações e
-              gestão de equipe.
+              {labelForPlan(plan)} · IA, disparos, follow-up automático, agenda, funis e organização
+              — tudo ilimitado.
             </>
           )}
         </p>
