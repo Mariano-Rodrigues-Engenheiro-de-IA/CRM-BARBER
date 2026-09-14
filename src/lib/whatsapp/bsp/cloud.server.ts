@@ -376,12 +376,27 @@ export const cloudAdapter: BspAdapter = {
       // Antes isso caía direto em "connecting" sem guardar o motivo —
       // dava a impressão de conexão travada pra sempre sem nenhuma pista
       // de por quê (ex: phone_number_id errado, permissão faltando).
+      //
+      // ⚠️ Ajustado (14/09): enquanto o usuário ainda está completando o
+      // Cadastro Incorporado na aba da Meta (popup aberto), o polling desta
+      // tela (a cada 2.5s) bate aqui repetidamente e SEMPRE recebe "Object
+      // with ID '...' does not exist..." — porque o número/token ainda não
+      // está totalmente propagado, o que é esperado nesse momento, não uma
+      // falha real. Mostrar isso como `error` dava a impressão de sistema
+      // quebrado no meio de um fluxo normal. Erros transitórios desse tipo
+      // específico ficam silenciosos (status continua "connecting", sem
+      // mensagem assustadora); qualquer outro tipo de erro real continua
+      // sendo reportado normalmente.
       const errJson = (await res.json().catch(() => ({}))) as Json;
       const errMsg = (errJson.error as Json | undefined)?.message;
-      return {
-        status: "connecting",
-        error: typeof errMsg === "string" ? errMsg : `Meta Graph respondeu HTTP ${res.status} ao consultar o número.`,
-      };
+      const errMsgStr =
+        typeof errMsg === "string"
+          ? errMsg
+          : `Meta Graph respondeu HTTP ${res.status} ao consultar o número.`;
+      if (isTransientPropagationError(errMsgStr)) {
+        return { status: "connecting" };
+      }
+      return { status: "connecting", error: errMsgStr };
     }
     const json = (await res.json().catch(() => ({}))) as Json;
     const phone = str(json.display_phone_number);
