@@ -104,7 +104,7 @@ function isTransientPropagationError(message: string): boolean {
   return /does not exist|missing permissions|cannot be loaded/i.test(message);
 }
 
-async function graphJsonWithRetry(url: string, attempts = 5, delayMs = 2000): Promise<Json> {
+async function graphJsonWithRetry(url: string, attempts = 4, delayMs = 800): Promise<Json> {
   let lastError: unknown;
   for (let i = 0; i < attempts; i++) {
     try {
@@ -309,7 +309,7 @@ export const cloudAdapter: BspAdapter = {
 
     // Assina o app nos webhooks da WABA (status de mensagem, respostas etc.).
     let subscriptionRes: Response | null = null;
-    for (let attempt = 0; attempt < 5; attempt++) {
+    for (let attempt = 0; attempt < 4; attempt++) {
       subscriptionRes = await fetch(`${graphUrl(`${wabaId}/subscribed_apps`)}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -323,8 +323,8 @@ export const cloudAdapter: BspAdapter = {
       const isTransient =
         typeof subscriptionErrorCheck === "string" &&
         isTransientPropagationError(subscriptionErrorCheck);
-      if (!isTransient || attempt === 4) break;
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      if (!isTransient || attempt === 3) break;
+      await new Promise((resolve) => setTimeout(resolve, 800));
     }
     if (!subscriptionRes || !subscriptionRes.ok) {
       const subscriptionJson = ((await subscriptionRes?.json().catch(() => ({}))) as Json) ?? {};
