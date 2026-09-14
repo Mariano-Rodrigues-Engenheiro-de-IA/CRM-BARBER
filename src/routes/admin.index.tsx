@@ -7,6 +7,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { AdminClientsPanel } from "@/components/admin/clients-panel";
+import { AdminSubscriptionsPanel } from "@/components/admin/subscriptions-panel";
 import { AdminLessonsPanel } from "@/components/admin/lessons-panel";
 import { AdminModulesPanel } from "@/components/admin/modules-panel";
 import { AdminAgenteIaPanel } from "@/components/admin/agente-ia-panel";
@@ -27,10 +28,20 @@ export const Route = createFileRoute("/admin/")({
   component: AdminHome,
 });
 
-type Tab = "clientes" | "modulos" | "aulas" | "agente-ia" | "interessados" | "tokens" | "whatsapp" | "webhooks";
+type Tab =
+  | "clientes"
+  | "assinaturas"
+  | "modulos"
+  | "aulas"
+  | "agente-ia"
+  | "interessados"
+  | "tokens"
+  | "whatsapp"
+  | "webhooks";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "clientes", label: "Clientes" },
+  { key: "assinaturas", label: "Assinaturas" },
   { key: "interessados", label: "Clientes interessados" },
   { key: "modulos", label: "Módulos" },
   { key: "aulas", label: "Aulas" },
@@ -48,7 +59,9 @@ function AdminHome() {
   return (
     <div className="flex min-h-screen bg-neutral-100">
       <aside className="w-56 shrink-0 border-r border-neutral-200 bg-white p-4">
-        <p className="mb-4 px-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">Admin</p>
+        <p className="mb-4 px-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
+          Admin
+        </p>
         <nav className="space-y-0.5">
           {TABS.map((t) => (
             <button
@@ -68,6 +81,7 @@ function AdminHome() {
       <main className="flex-1 overflow-x-auto p-6">
         <div className="mx-auto max-w-6xl">
           {tab === "clientes" && <AdminClientsPanel />}
+          {tab === "assinaturas" && <AdminSubscriptionsPanel />}
           {tab === "interessados" && (
             <AdminLeadsPanel
               listLeads={() => listLeads()}

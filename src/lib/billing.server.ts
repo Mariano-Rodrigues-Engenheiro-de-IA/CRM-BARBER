@@ -3,11 +3,23 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { FREE_LIMITS, type BillingStatus, PREMIUM_PRICE_ID, PROMO_PRICE_ID, AI_ADDON_MONTHLY_PRICE_ID, AI_ADDON_SEMESTRAL_PRICE_ID } from "@/lib/billing";
+import {
+  FREE_LIMITS,
+  type BillingStatus,
+  PREMIUM_PRICE_ID,
+  PROMO_PRICE_ID,
+  PREMIUM_197_PRICE_ID,
+  PREMIUM_297_PRICE_ID,
+  AI_ADDON_MONTHLY_PRICE_ID,
+  AI_ADDON_SEMESTRAL_PRICE_ID,
+} from "@/lib/billing";
 
 const ACTIVE_STATUSES = ["active", "trialing", "past_due"];
 
-function isRowActive(row: { status: string; current_period_end: string | null }, now: number): boolean {
+function isRowActive(
+  row: { status: string; current_period_end: string | null },
+  now: number,
+): boolean {
   const endsAt = row.current_period_end ? new Date(row.current_period_end).getTime() : null;
   if (ACTIVE_STATUSES.includes(row.status)) return endsAt === null || endsAt > now;
   if (row.status === "canceled") return endsAt !== null && endsAt > now;
@@ -34,7 +46,11 @@ export async function getBillingStatus(
       .from("message_jobs")
       .select("id", { count: "exact", head: true })
       .eq("barbershop_id", barbershopId),
-    supabaseAdmin.from("barbershops").select("ai_access_enabled, is_admin").eq("id", barbershopId).maybeSingle(),
+    supabaseAdmin
+      .from("barbershops")
+      .select("ai_access_enabled, is_admin")
+      .eq("id", barbershopId)
+      .maybeSingle(),
   ]);
 
   const now = Date.now();
@@ -42,11 +58,20 @@ export async function getBillingStatus(
   // Importante: cada "produto" (Premium do CRM vs Add-on de IA) tem seus
   // próprios price_ids — sem esse filtro, uma assinatura do add-on de IA
   // seria contada por engano como Premium do CRM também.
-  const crmPriceIds = [PREMIUM_PRICE_ID, PROMO_PRICE_ID];
+  const crmPriceIds = [
+    PREMIUM_PRICE_ID,
+    PROMO_PRICE_ID,
+    PREMIUM_197_PRICE_ID,
+    PREMIUM_297_PRICE_ID,
+  ];
   const aiPriceIds = [AI_ADDON_MONTHLY_PRICE_ID, AI_ADDON_SEMESTRAL_PRICE_ID];
 
-  const activeCrm = allSubs.find((row) => crmPriceIds.includes(row.price_id ?? "") && isRowActive(row, now));
-  const activeAi = allSubs.find((row) => aiPriceIds.includes(row.price_id ?? "") && isRowActive(row, now));
+  const activeCrm = allSubs.find(
+    (row) => crmPriceIds.includes(row.price_id ?? "") && isRowActive(row, now),
+  );
+  const activeAi = allSubs.find(
+    (row) => aiPriceIds.includes(row.price_id ?? "") && isRowActive(row, now),
+  );
 
   // Barbearias admin (cortesia) têm acesso liberado sem assinatura —
   // controlado por is_admin no próprio registro, ligado/desligado pelo
@@ -70,11 +95,7 @@ export async function getBillingStatus(
 }
 
 /** Retorna mensagem de bloqueio ou null quando pode seguir (limite de base). */
-export function limitBlock(
-  status: BillingStatus,
-  kind: "customers",
-  extra: number,
-): string | null {
+export function limitBlock(status: BillingStatus, kind: "customers", extra: number): string | null {
   if (status.premium) return null;
   const total = status.usage[kind] + extra;
   if (total <= status.limits[kind]) return null;

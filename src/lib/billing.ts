@@ -8,10 +8,27 @@ export const PREMIUM_PRICE_LABEL = "R$ 97/mês";
 export const PROMO_PRICE_ID = "crm_premium_promotional";
 export const PROMO_PRICE_LABEL = "R$ 47/mês";
 
-export type PlanId = "premium" | "promo";
+/** Planos de venda direta (link mandado direto pro cliente) — mesmo
+ * acesso Premium do CRM, preço diferente. */
+export const PREMIUM_197_PRICE_ID = "crm_premium_197";
+export const PREMIUM_197_PRICE_LABEL = "R$ 197/mês";
+export const PREMIUM_297_PRICE_ID = "crm_premium_297";
+export const PREMIUM_297_PRICE_LABEL = "R$ 297/mês";
+
+export type PlanId = "premium" | "promo" | "premium_197" | "premium_297";
 
 export function priceIdForPlan(plan: PlanId): string {
-  return plan === "promo" ? PROMO_PRICE_ID : PREMIUM_PRICE_ID;
+  if (plan === "promo") return PROMO_PRICE_ID;
+  if (plan === "premium_197") return PREMIUM_197_PRICE_ID;
+  if (plan === "premium_297") return PREMIUM_297_PRICE_ID;
+  return PREMIUM_PRICE_ID;
+}
+
+export function labelForPlan(plan: PlanId): string {
+  if (plan === "promo") return PROMO_PRICE_LABEL;
+  if (plan === "premium_197") return PREMIUM_197_PRICE_LABEL;
+  if (plan === "premium_297") return PREMIUM_297_PRICE_LABEL;
+  return PREMIUM_PRICE_LABEL;
 }
 
 // Add-on do Agente de IA — independente do plano do CRM (Grátis ou

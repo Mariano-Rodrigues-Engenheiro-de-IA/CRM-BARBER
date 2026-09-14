@@ -1,7 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { type StripeEnv, createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
 import { hashToken } from "@/lib/extension-auth";
-import { priceIdForPlan, type PlanId, priceIdForAiAddonPlan, type AiAddonPlanId } from "@/lib/billing";
+import {
+  priceIdForPlan,
+  type PlanId,
+  priceIdForAiAddonPlan,
+  type AiAddonPlanId,
+} from "@/lib/billing";
 
 type CheckoutResult = { clientSecret: string } | { error: string };
 
@@ -17,7 +22,8 @@ function phoneCandidates(phone: string): string[] {
     const ddd = national.slice(0, 2);
     const local = national.slice(2);
     const with9 = local.length === 8 ? `${ddd}9${local}` : national;
-    const without9 = local.length === 9 && local.startsWith("9") ? `${ddd}${local.slice(1)}` : national;
+    const without9 =
+      local.length === 9 && local.startsWith("9") ? `${ddd}${local.slice(1)}` : national;
     [with9, without9].forEach((v) => {
       set.add(v);
       set.add(`55${v}`);
@@ -125,7 +131,7 @@ export const createPremiumCheckout = createServerFn({ method: "POST" })
       if (data.barbershopId && !/^[0-9a-fA-F-]{36}$/.test(data.barbershopId)) {
         throw new Error("Invalid barbershopId");
       }
-      if (data.plan && data.plan !== "premium" && data.plan !== "promo") {
+      if (data.plan && !["premium", "promo", "premium_197", "premium_297"].includes(data.plan)) {
         throw new Error("Invalid plan");
       }
       return data;

@@ -4,7 +4,7 @@ import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { createPremiumCheckout } from "@/utils/payments.functions";
 import { PaymentTestModeBanner } from "@/components/payment-test-mode-banner";
-import { PREMIUM_PRICE_LABEL, PROMO_PRICE_LABEL, type PlanId } from "@/lib/billing";
+import { PREMIUM_PRICE_LABEL, PROMO_PRICE_LABEL, labelForPlan, type PlanId } from "@/lib/billing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,9 +13,15 @@ export const Route = createFileRoute("/assinar")({
   head: () => ({
     meta: [
       { title: "Assinar Premium | CRM Zaylo" },
-      { name: "description", content: "Libere contatos, disparos e gestão de equipe ilimitados no CRM da sua barbearia." },
+      {
+        name: "description",
+        content: "Libere contatos, disparos e gestão de equipe ilimitados no CRM da sua barbearia.",
+      },
       { property: "og:title", content: "Assinar Premium | CRM Zaylo" },
-      { property: "og:description", content: "Libere contatos, disparos e gestão de equipe ilimitados no CRM da sua barbearia." },
+      {
+        property: "og:description",
+        content: "Libere contatos, disparos e gestão de equipe ilimitados no CRM da sua barbearia.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
@@ -26,7 +32,13 @@ export const Route = createFileRoute("/assinar")({
 
 const TOKEN_KEY = "crm_ext_token_v1";
 
-type Identity = { token?: string; barbershopId?: string; phone?: string; email?: string; name?: string };
+type Identity = {
+  token?: string;
+  barbershopId?: string;
+  phone?: string;
+  email?: string;
+  name?: string;
+};
 
 function Assinar() {
   const [plan, setPlan] = useState<PlanId>("premium");
@@ -36,11 +48,13 @@ function Assinar() {
   useEffect(() => {
     const url = new URL(window.location.href);
     const planParam = url.searchParams.get("plano");
-    // Premium (R$ 97) é o plano padrão; a promo só sai por link explícito.
-    setPlan(planParam === "promo" ? "promo" : "premium");
+    // Premium (R$ 97) é o plano padrão; os demais só saem por link explícito.
+    const validPlans: PlanId[] = ["premium", "promo", "premium_197", "premium_297"];
+    setPlan(validPlans.includes(planParam as PlanId) ? (planParam as PlanId) : "premium");
 
     const stored = localStorage.getItem(TOKEN_KEY);
-    const token = url.searchParams.get("token") ?? (stored && stored.startsWith("ext_") ? stored : undefined);
+    const token =
+      url.searchParams.get("token") ?? (stored && stored.startsWith("ext_") ? stored : undefined);
     const barbershopId = url.searchParams.get("shop") ?? undefined;
     if (token || barbershopId) setIdentity({ token: token ?? undefined, barbershopId });
   }, []);
@@ -67,13 +81,14 @@ function Assinar() {
         <p className="mt-1 text-sm text-muted-foreground">
           {plan === "promo" ? (
             <>
-              Oferta especial: <strong>{PROMO_PRICE_LABEL}</strong> (valor normal {PREMIUM_PRICE_LABEL}) · contatos e
-              disparos ilimitados, IA, funis, agenda, automações e gestão de equipe.
+              Oferta especial: <strong>{PROMO_PRICE_LABEL}</strong> (valor normal{" "}
+              {PREMIUM_PRICE_LABEL}) · contatos e disparos ilimitados, IA, funis, agenda, automações
+              e gestão de equipe.
             </>
           ) : (
             <>
-              {PREMIUM_PRICE_LABEL} · contatos e disparos ilimitados, IA, funis, agenda, automações e gestão de
-              equipe.
+              {labelForPlan(plan)} · contatos e disparos ilimitados, IA, funis, agenda, automações e
+              gestão de equipe.
             </>
           )}
         </p>
@@ -91,7 +106,11 @@ function Assinar() {
               e.preventDefault();
               const phone = form.phone.replace(/\D+/g, "");
               if (phone.length < 10) return;
-              setIdentity({ phone, email: form.email.trim() || undefined, name: form.name.trim() || undefined });
+              setIdentity({
+                phone,
+                email: form.email.trim() || undefined,
+                name: form.name.trim() || undefined,
+              });
             }}
           >
             <p className="text-sm text-muted-foreground">
@@ -99,11 +118,22 @@ function Assinar() {
             </p>
             <div className="space-y-2">
               <Label htmlFor="name">Nome da empresa</Label>
-              <Input id="name" value={form.name} maxLength={120} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+              <Input
+                id="name"
+                value={form.name}
+                maxLength={120}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>
-              <Input id="email" type="email" value={form.email} maxLength={255} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+              <Input
+                id="email"
+                type="email"
+                value={form.email}
+                maxLength={255}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">WhatsApp (com DDD)</Label>
