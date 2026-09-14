@@ -89,6 +89,36 @@ async function graphJson(url: string): Promise<Json> {
   return json;
 }
 
+// ⚠️ Adicionado (14/09): logo depois do Cadastro Incorporado fechar o
+// pop-up, a Meta às vezes ainda não propagou totalmente o vínculo (WABA,
+// token, número) — chamadas ao Graph API nesse instante podem devolver
+// "Object with ID '...' does not exist, cannot be loaded due to missing
+// permissions...", um erro transitório, não uma falha real. Antes só a
+// busca de telefone tinha retry para isso; debug_token e subscribed_apps
+// não tinham nenhum, e um erro ali derrubava a conexão inteira com uma
+// mensagem assustadora, mesmo com o usuário ainda no meio do fluxo (ex:
+// ainda escaneando o QR code de Coexistência). Caso real relatado pelo
+// usuário: "Unsupported get request. Object with ID '...' does not
+// exist...".
+function isTransientPropagationError(message: string): boolean {
+  return /does not exist|missing permissions|cannot be loaded/i.test(message);
+}
+
+async function graphJsonWithRetry(url: string, attempts = 5, delayMs = 2000): Promise<Json> {
+  let lastError: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await graphJson(url);
+    } catch (err) {
+      lastError = err;
+      const message = err instanceof Error ? err.message : String(err);
+      if (!isTransientPropagationError(message) || i === attempts - 1) throw err;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+  throw lastError;
+}
+
 /** Lê o WABA autorizado a partir dos escopos granulares do token. */
 function wabaFromScopes(debug: Json): string | null {
   const data = (debug.data ?? {}) as Json;
@@ -252,7 +282,7 @@ export const cloudAdapter: BspAdapter = {
     const debugUrl = new URL(graphUrl("debug_token"));
     debugUrl.searchParams.set("input_token", accessToken);
     debugUrl.searchParams.set("access_token", `${appId}|${appSecret}`);
-    const debug = await graphJson(debugUrl.toString());
+    const debug = await graphJsonWithRetry(debugUrl.toString());
 
     const wabaId = wabaFromScopes(debug);
     if (!wabaId) throw new Error("Nenhuma conta WhatsApp Business foi autorizada no Cadastro Incorporado.");
@@ -278,17 +308,31 @@ export const cloudAdapter: BspAdapter = {
     if (!phoneNumberId) throw new Error("A WABA autorizada ainda não tem número de telefone disponível.");
 
     // Assina o app nos webhooks da WABA (status de mensagem, respostas etc.).
-    const subscriptionRes = await fetch(`${graphUrl(`${wabaId}/subscribed_apps`)}`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (!subscriptionRes.ok) {
-      const subscriptionJson = (await subscriptionRes.json().catch(() => ({}))) as Json;
+    let subscriptionRes: Response | null = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      subscriptionRes = await fetch(`${graphUrl(`${wabaId}/subscribed_apps`)}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (subscriptionRes.ok) break;
+      const subscriptionJsonCheck = (await subscriptionRes
+        .clone()
+        .json()
+        .catch(() => ({}))) as Json;
+      const subscriptionErrorCheck = (subscriptionJsonCheck.error as Json | undefined)?.message;
+      const isTransient =
+        typeof subscriptionErrorCheck === "string" &&
+        isTransientPropagationError(subscriptionErrorCheck);
+      if (!isTransient || attempt === 4) break;
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+    if (!subscriptionRes || !subscriptionRes.ok) {
+      const subscriptionJson = ((await subscriptionRes?.json().catch(() => ({}))) as Json) ?? {};
       const subscriptionError = (subscriptionJson.error as Json | undefined)?.message;
       throw new Error(
         typeof subscriptionError === "string"
           ? `Número autorizado, mas não foi possível assinar os webhooks: ${subscriptionError}`
-          : `Número autorizado, mas a assinatura dos webhooks falhou (HTTP ${subscriptionRes.status}).`,
+          : `Número autorizado, mas a assinatura dos webhooks falhou (HTTP ${subscriptionRes?.status ?? "desconhecido"}).`,
       );
     }
 
