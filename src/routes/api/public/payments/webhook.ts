@@ -8,12 +8,55 @@ function priceIdOf(item: any): string | null {
   return item?.price?.lookup_key || item?.price?.metadata?.lovable_external_id || item?.price?.id || null;
 }
 
+// Fallback de vínculo: assinaturas antigas (ou criadas fora do fluxo do CRM)
+// chegam sem barbershop_id no metadata. Antes de descartar, tentamos achar a
+// barbearia (1) por outra assinatura do mesmo cliente Stripe e (2) pelo e-mail
+// do cliente no Stripe comparado ao owner_email da barbearia.
+async function resolveBarbershopId(subscription: any, env: StripeEnv): Promise<string | null> {
+  const fromMetadata = subscription.metadata?.barbershop_id;
+  if (fromMetadata) return fromMetadata;
+
+  const customerId =
+    typeof subscription.customer === "string" ? subscription.customer : subscription.customer?.id;
+  if (!customerId) return null;
+
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  const { data: known } = await supabaseAdmin
+    .from("shop_subscriptions")
+    .select("barbershop_id")
+    .eq("stripe_customer_id", customerId)
+    .limit(1)
+    .maybeSingle();
+  if (known?.barbershop_id) return known.barbershop_id;
+
+  try {
+    const { createStripeClient } = await import("@/lib/stripe.server");
+    const stripe = createStripeClient(env);
+    const customer: any = await stripe.customers.retrieve(customerId);
+    const email = customer?.email?.trim().toLowerCase();
+    if (!email) return null;
+    const { data: shop } = await supabaseAdmin
+      .from("barbershops")
+      .select("id")
+      .ilike("owner_email", email)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return shop?.id ?? null;
+  } catch (e) {
+    console.error("Falha ao resolver barbearia pelo e-mail do cliente Stripe", e);
+    return null;
+  }
+}
+
 async function upsertSubscription(subscription: any, env: StripeEnv) {
-  const barbershopId = subscription.metadata?.barbershop_id;
+  const barbershopId = await resolveBarbershopId(subscription, env);
   if (!barbershopId) {
     console.error("Assinatura sem barbershop_id no metadata", subscription.id);
     return;
   }
+
   const item = subscription.items?.data?.[0];
   const periodStart = item?.current_period_start ?? subscription.current_period_start;
   const periodEnd = item?.current_period_end ?? subscription.current_period_end;
