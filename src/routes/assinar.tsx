@@ -85,12 +85,12 @@ function Assinar() {
             <>
               Oferta especial: <strong>{PROMO_PRICE_LABEL}</strong> (valor normal{" "}
               {PREMIUM_PRICE_LABEL}) · IA, disparos, follow-up automático, agenda, funis e
-              organização — tudo ilimitado.
+              organização, tudo ilimitado.
             </>
           ) : (
             <>
-              {labelForPlan(plan)} · IA, disparos, follow-up automático, agenda, funis e organização
-              — tudo ilimitado.
+              {labelForPlan(plan)} · IA, disparos, follow-up automático, agenda, funis e
+              organização, tudo ilimitado.
             </>
           )}
         </p>
