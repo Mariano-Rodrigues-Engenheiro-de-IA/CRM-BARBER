@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { adminListClientsOverview, adminSetBusinessType, adminSetIsAdmin } from "@/lib/admin-whatsapp.functions";
+import { adminIssueToken } from "@/lib/admin-tokens.functions";
 import { useCachedFetch } from "@/lib/api-cache";
 
 type Row = Awaited<ReturnType<typeof adminListClientsOverview>>[number];
@@ -34,9 +35,11 @@ export function AdminClientsPanel() {
   const listClients = useServerFn(adminListClientsOverview);
   const setBusinessType = useServerFn(adminSetBusinessType);
   const setIsAdmin = useServerFn(adminSetIsAdmin);
+  const issueToken = useServerFn(adminIssueToken);
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [accessingId, setAccessingId] = useState<string | null>(null);
   const { data: rows, setData: setRows } = useCachedFetch<Row[]>("admin-clients", async () => {
     try {
       return await listClients();
@@ -73,6 +76,19 @@ export function AdminClientsPanel() {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setSavingId(null);
+    }
+  }
+
+  async function handleAccessPanel(barbershop_id: string) {
+    setAccessingId(barbershop_id);
+    setError(null);
+    try {
+      const res = await issueToken({ data: { barbershop_id } });
+      window.open(`https://crm.zayloia.com/painel?token=${res.token}`, "_blank");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setAccessingId(null);
     }
   }
 
@@ -115,18 +131,19 @@ export function AdminClientsPanel() {
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium">Compartilha c/ IA</th>
               <th className="px-4 py-3 font-medium">Admin</th>
+              <th className="px-4 py-3 font-medium">Acesso</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
             {!rows ? (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-neutral-500">
+                <td colSpan={10} className="px-4 py-8 text-center text-neutral-500">
                   Carregando...
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-neutral-500">
+                <td colSpan={10} className="px-4 py-8 text-center text-neutral-500">
                   Nenhum cliente encontrado.
                 </td>
               </tr>
@@ -180,6 +197,16 @@ export function AdminClientsPanel() {
                       }`}
                     >
                       {r.is_admin ? "Admin ✓" : "Tornar admin"}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      type="button"
+                      disabled={accessingId === r.barbershop_id}
+                      onClick={() => handleAccessPanel(r.barbershop_id)}
+                      className="rounded-full bg-brand/10 px-3 py-1 text-[11px] font-semibold text-brand transition hover:bg-brand/20 disabled:opacity-50"
+                    >
+                      {accessingId === r.barbershop_id ? "Gerando..." : "Acessar painel"}
                     </button>
                   </td>
                 </tr>
