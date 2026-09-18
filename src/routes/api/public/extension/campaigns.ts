@@ -177,7 +177,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
           (paceLo + Math.floor(Math.random() * (paceHi - paceLo + 1))) * 1000;
 
         // Resolve alvo → lista de customers {id, phone}
-        let targets: Array<{ id: string; phone: string }> = [];
+        let targets: Array<{ id: string; phone: string; name: string | null }> = [];
 
         if (phone_targets && phone_targets.length > 0) {
           // Disparo vindo dos funis: cada telefone/wa_id vira (ou reaproveita) um customer.
@@ -194,12 +194,12 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
           if (phones.length > 0) {
             const { data: existing } = await supabaseAdmin
               .from("customers")
-              .select("id, phone")
+              .select("id, phone, name")
               .eq("barbershop_id", barbershopId)
               .is("archived_at", null)
               .in("phone", phones);
-            const byPhone = new Map<string, { id: string; phone: string }>(
-              (existing ?? []).map((c) => [String(c.phone), { id: c.id, phone: String(c.phone) }]),
+            const byPhone = new Map<string, { id: string; phone: string; name: string | null }>(
+              (existing ?? []).map((c) => [String(c.phone), { id: c.id, phone: String(c.phone), name: c.name }]),
             );
             const missing = phones.filter((p) => !byPhone.has(p));
             if (missing.length > 0) {
@@ -214,19 +214,19 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
                     source: "funil",
                   })),
                 )
-                .select("id, phone");
+                .select("id, phone, name");
               if (insErr) {
                 return jsonResponse(request, { ok: false, error: insErr.message }, { status: 500 });
               }
               for (const c of created ?? [])
-                byPhone.set(String(c.phone), { id: c.id, phone: String(c.phone) });
+                byPhone.set(String(c.phone), { id: c.id, phone: String(c.phone), name: c.name });
             }
             targets = phones.map((p) => byPhone.get(p)).filter(Boolean) as typeof targets;
           }
         } else {
           let customersQ = supabaseAdmin
             .from("customers")
-            .select("id, phone")
+            .select("id, phone, name")
             .eq("barbershop_id", barbershopId)
             .is("archived_at", null);
 
@@ -249,7 +249,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
               const p = String(t.phone ?? "");
               return p.includes("@") || /^\d{10,25}$/.test(p);
             })
-            .map((t) => ({ id: t.id, phone: String(t.phone) }));
+            .map((t) => ({ id: t.id, phone: String(t.phone), name: t.name }));
         }
 
         if (targets.length === 0) {
@@ -269,6 +269,48 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
             { ok: false, error: blockedMsg, code: "limit_reached", billing },
             { status: 402 },
           );
+        }
+
+        // ⚠️ Adicionado (18/09): nem todo modelo tem variável de nome no
+        // corpo — mandar template_body_params pra um que não tem faz a
+        // Meta rejeitar o envio (quantidade de parâmetros não bate).
+        // Detecta isso de verdade, olhando o modelo aprovado (não
+        // assume que sempre tem), antes de decidir se preenche a
+        // variável em cada job.
+        let templateHasBodyVariable = false;
+        if (template_name) {
+          try {
+            const { data: instance } = await supabaseAdmin
+              .from("whatsapp_instances")
+              .select("provider, waba_id, meta_access_token")
+              .eq("barbershop_id", barbershopId)
+              .maybeSingle();
+            if (instance?.provider === "meta" && instance.waba_id && instance.meta_access_token) {
+              const { getWhatsAppProviderByName } = await import("@/lib/whatsapp/provider.server");
+              const provider = getWhatsAppProviderByName("meta");
+              if (provider.listTemplates) {
+                const result = await provider.listTemplates({
+                  instance_token: instance.meta_access_token,
+                  waba_id: instance.waba_id,
+                });
+                if (result.ok) {
+                  const match = result.templates.find(
+                    (t) => t.name === template_name && (!template_language || t.language === template_language),
+                  );
+                  const bodyComponent = match?.components?.find(
+                    (c): c is { type: string; text?: string } =>
+                      typeof c === "object" && c !== null && (c as Record<string, unknown>).type === "BODY",
+                  );
+                  templateHasBodyVariable = /\{\{[^}]+\}\}/.test(bodyComponent?.text ?? "");
+                }
+              }
+            }
+          } catch (e) {
+            // Falha ao checar não deve travar o disparo — segue sem
+            // variável (mais seguro: risco de faltar o nome, não de
+            // travar o envio inteiro por causa de uma parcela extra).
+            console.error("[campaigns] falha ao checar variável do modelo:", e);
+          }
         }
 
         const { data: campaign, error: cErr } = await supabaseAdmin
@@ -308,6 +350,13 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
           if (template_name) {
             // Disparo via modelo aprovado — sem texto livre nem ações,
             // o worker do lado do servidor manda o template pronto.
+            // ⚠️ Adicionado (18/09): a variável {{1}} do corpo do modelo
+            // (quando o modelo tiver uma) precisa vir preenchida com o
+            // primeiro nome do contato — mesmo padrão já usado em outras
+            // partes do sistema para variável de nome. Funciona igual
+            // pra qualquer origem do público (planilha, assinantes,
+            // filtro por tag/status) porque todas passam por aqui.
+            const firstName = (t.name || "").trim().split(/\s+/)[0] || null;
             return {
               barbershop_id: barbershopId,
               campaign_id: campaign.id,
@@ -318,6 +367,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
               template_language: template_language ?? "pt_BR",
               template_header_media_path: template_header_media_path ?? null,
               template_carousel_media_paths: template_carousel_media_paths ?? null,
+              template_body_params: templateHasBodyVariable && firstName ? [firstName] : null,
               status: "pending" as const,
               scheduled_for: new Date(cursor).toISOString(),
               expires_at: expiresAt,

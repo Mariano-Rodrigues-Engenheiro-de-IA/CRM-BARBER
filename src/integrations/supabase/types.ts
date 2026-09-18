@@ -1570,6 +1570,7 @@ export type Database = {
           sent_at: string | null
           status: string
           template_carousel_media_paths: string[] | null
+          template_body_params: string[] | null
           template_header_media_path: string | null
           template_language: string | null
           template_name: string | null
@@ -1600,6 +1601,7 @@ export type Database = {
           status?: string
           template_carousel_media_paths?: string[] | null
           template_header_media_path?: string | null
+          template_body_params?: string[] | null
           template_language?: string | null
           template_name?: string | null
           updated_at?: string
@@ -1630,6 +1632,7 @@ export type Database = {
           template_carousel_media_paths?: string[] | null
           template_header_media_path?: string | null
           template_language?: string | null
+          template_body_params?: string[] | null
           template_name?: string | null
           updated_at?: string
         }

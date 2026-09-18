@@ -103,7 +103,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
           // silenciosamente jobs com campaign_id nulo, se algum existir.)
           const { data: jobs } = await supabaseAdmin
             .from("message_jobs")
-            .select("id, customer_id, rendered_body, message_actions, template_name, template_language, template_header_media_path, template_carousel_media_paths, campaign_id, attempts, agenda_reminder_rule_id, appointment_id, funnel_followup_step_id")
+            .select("id, customer_id, rendered_body, message_actions, template_name, template_language, template_header_media_path, template_carousel_media_paths, template_body_params, campaign_id, attempts, agenda_reminder_rule_id, appointment_id, funnel_followup_step_id")
             .eq("barbershop_id", inst.barbershop_id)
             .eq("status", "pending")
             // Jobs marcados force_extension nunca passam pela API oficial
@@ -241,6 +241,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
                     to: phone,
                     template_name: job.template_name,
                     language_code: job.template_language ?? "pt_BR",
+                    body_params: job.template_body_params ?? undefined,
                     header_image_url: headerImageUrl,
                     carousel_card_image_urls: carouselCardImageUrls,
                   })
