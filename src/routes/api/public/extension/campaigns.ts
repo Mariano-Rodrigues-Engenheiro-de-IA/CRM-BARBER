@@ -273,43 +273,76 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
 
         // ⚠️ Adicionado (18/09): nem todo modelo tem variável de nome no
         // corpo — mandar template_body_params pra um que não tem faz a
-        // Meta rejeitar o envio (quantidade de parâmetros não bate).
-        // Detecta isso de verdade, olhando o modelo aprovado (não
-        // assume que sempre tem), antes de decidir se preenche a
-        // variável em cada job.
-        let templateHasBodyVariable = false;
+        // Meta rejeitar o envio (quantidade de parâmetros não bate). E,
+        // quando tem, o NOME da variável decide o que mandar:
+        // {{primeiro_nome}} → só o primeiro nome; {{nome}} → nome
+        // completo (cadastrado na planilha/WhatsApp) — são coisas
+        // diferentes de propósito, por isso os dois existem. Qualquer
+        // outra variável no corpo não é suportada aqui (não tem como
+        // saber o que preencher) — bloqueia a criação da campanha com
+        // erro claro, em vez de mandar o modelo quebrado pra Meta.
+        let nameSource: "primeiro_nome" | "nome" | null = null;
         if (template_name) {
-          try {
-            const { data: instance } = await supabaseAdmin
-              .from("whatsapp_instances")
-              .select("provider, waba_id, meta_access_token")
-              .eq("barbershop_id", barbershopId)
-              .maybeSingle();
-            if (instance?.provider === "meta" && instance.waba_id && instance.meta_access_token) {
-              const { getWhatsAppProviderByName } = await import("@/lib/whatsapp/provider.server");
-              const provider = getWhatsAppProviderByName("meta");
-              if (provider.listTemplates) {
-                const result = await provider.listTemplates({
+          const { data: instance } = await supabaseAdmin
+            .from("whatsapp_instances")
+            .select("provider, waba_id, meta_access_token")
+            .eq("barbershop_id", barbershopId)
+            .maybeSingle();
+          if (instance?.provider === "meta" && instance.waba_id && instance.meta_access_token) {
+            const { getWhatsAppProviderByName } = await import("@/lib/whatsapp/provider.server");
+            const provider = getWhatsAppProviderByName("meta");
+            if (provider.listTemplates) {
+              let result: Awaited<ReturnType<NonNullable<typeof provider.listTemplates>>> | null = null;
+              try {
+                result = await provider.listTemplates({
                   instance_token: instance.meta_access_token,
                   waba_id: instance.waba_id,
                 });
-                if (result.ok) {
-                  const match = result.templates.find(
-                    (t) => t.name === template_name && (!template_language || t.language === template_language),
+              } catch (e) {
+                // Falha de rede ao checar não deve travar o disparo —
+                // segue sem variável (mais seguro: risco de faltar o
+                // nome, não de travar o envio inteiro).
+                console.error("[campaigns] falha ao checar variável do modelo:", e);
+              }
+              if (result?.ok) {
+                const match = result.templates.find(
+                  (t) => t.name === template_name && (!template_language || t.language === template_language),
+                );
+                const bodyComponent = match?.components?.find(
+                  (c): c is { type: string; text?: string } =>
+                    typeof c === "object" && c !== null && (c as Record<string, unknown>).type === "BODY",
+                );
+                const bodyText = bodyComponent?.text ?? "";
+                const varNames = [...bodyText.matchAll(/\{\{([^}]+)\}\}/g)].map((m) => m[1].trim());
+                if (varNames.length > 1) {
+                  return jsonResponse(
+                    request,
+                    {
+                      ok: false,
+                      error: `O modelo "${template_name}" tem mais de uma variável no corpo (${varNames.join(", ")}) — disparo em massa só suporta um modelo com no máximo uma variável, {{primeiro_nome}} ou {{nome}}.`,
+                    },
+                    { status: 400 },
                   );
-                  const bodyComponent = match?.components?.find(
-                    (c): c is { type: string; text?: string } =>
-                      typeof c === "object" && c !== null && (c as Record<string, unknown>).type === "BODY",
-                  );
-                  templateHasBodyVariable = /\{\{[^}]+\}\}/.test(bodyComponent?.text ?? "");
+                }
+                if (varNames.length === 1) {
+                  if (varNames[0] === "primeiro_nome") nameSource = "primeiro_nome";
+                  else if (varNames[0] === "nome") nameSource = "nome";
+                  else {
+                    return jsonResponse(
+                      request,
+                      {
+                        ok: false,
+                        error: `O modelo "${template_name}" usa a variável {{${varNames[0]}}}, que o disparo em massa não sabe preencher — use {{primeiro_nome}} ou {{nome}}.`,
+                      },
+                      { status: 400 },
+                    );
+                  }
                 }
               }
+              // Se a checagem falhar por erro da API (result.ok === false),
+              // não bloqueia o disparo — segue sem variável (mais seguro:
+              // risco de faltar o nome, não de travar o envio inteiro).
             }
-          } catch (e) {
-            // Falha ao checar não deve travar o disparo — segue sem
-            // variável (mais seguro: risco de faltar o nome, não de
-            // travar o envio inteiro por causa de uma parcela extra).
-            console.error("[campaigns] falha ao checar variável do modelo:", e);
           }
         }
 
@@ -350,13 +383,16 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
           if (template_name) {
             // Disparo via modelo aprovado — sem texto livre nem ações,
             // o worker do lado do servidor manda o template pronto.
-            // ⚠️ Adicionado (18/09): a variável {{1}} do corpo do modelo
-            // (quando o modelo tiver uma) precisa vir preenchida com o
-            // primeiro nome do contato — mesmo padrão já usado em outras
-            // partes do sistema para variável de nome. Funciona igual
-            // pra qualquer origem do público (planilha, assinantes,
-            // filtro por tag/status) porque todas passam por aqui.
-            const firstName = (t.name || "").trim().split(/\s+/)[0] || null;
+            // ⚠️ Adicionado (18/09): a variável do corpo do modelo
+            // (quando o modelo tiver uma reconhecida) precisa vir
+            // preenchida — {{primeiro_nome}} com só o primeiro nome,
+            // {{nome}} com o nome completo cadastrado (planilha ou
+            // WhatsApp). Funciona igual pra qualquer origem do público
+            // (planilha, assinantes, filtro por tag/status) porque
+            // todas passam por aqui.
+            const fullName = (t.name || "").trim() || null;
+            const firstName = fullName?.split(/\s+/)[0] ?? null;
+            const nameValue = nameSource === "primeiro_nome" ? firstName : nameSource === "nome" ? fullName : null;
             return {
               barbershop_id: barbershopId,
               campaign_id: campaign.id,
@@ -367,7 +403,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
               template_language: template_language ?? "pt_BR",
               template_header_media_path: template_header_media_path ?? null,
               template_carousel_media_paths: template_carousel_media_paths ?? null,
-              template_body_params: templateHasBodyVariable && firstName ? [firstName] : null,
+              template_body_params: nameValue ? [nameValue] : null,
               status: "pending" as const,
               scheduled_for: new Date(cursor).toISOString(),
               expires_at: expiresAt,
