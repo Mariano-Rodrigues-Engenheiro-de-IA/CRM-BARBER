@@ -9,8 +9,7 @@
 // O conteúdo (mensagem manual ou resposta rápida), o ritmo e o termo de uso
 // são idênticos para os três públicos.
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { isRealPhone } from "@/lib/wa-actions";
+import { useEffect, useRef, useState } from "react";
 import {
   actionLabel,
   QUICK_REPLY_ACTION_TYPES,
@@ -20,16 +19,23 @@ import {
   type QuickReplyActionType,
 } from "@/lib/quick-replies";
 import type { Funnel, WaContact, WaLabel } from "@/lib/funnels";
-import { fileToContacts, type SheetContact } from "@/lib/sheet-contacts";
+import { AudienceStep } from "@/components/dispatch-step-audience";
+import { MessagePreview, TemplatePreview } from "@/components/dispatch-message-preview";
+import type { AudienceContact, DispatchCustomer } from "@/lib/dispatch-audience";
+export type { DispatchCustomer } from "@/lib/dispatch-audience";
 
 type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
 
-export type DispatchCustomer = { id: string; name: string; phone: string; status: string };
-
-type Audience = "assinantes" | "funis" | "planilha";
 type MessageMode = "custom" | "quick";
 type DispatchType = "message" | "template";
-type TemplateOption = { name: string; language: string; status: string; hasImageHeader: boolean; carouselCardCount: number };
+type TemplateOption = {
+  name: string;
+  language: string;
+  status: string;
+  hasImageHeader: boolean;
+  carouselCardCount: number;
+  bodyText: string;
+};
 
 const inputCls =
   "w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-neutral-900";
@@ -76,24 +82,22 @@ export function DispatchCenter({
   // esse kanban. Achado de bug real reportado pelo Mariano.
   isBarbearia: boolean;
 }) {
-  const [audience, setAudience] = useState<Audience>(isBarbearia ? "assinantes" : "funis");
-
-  // Assinantes
-  const [status, setStatus] = useState<string>(cols[0]?.key ?? "all");
   // Funis
   const [funnels, setFunnels] = useState<Funnel[]>([]);
-  const [funnelId, setFunnelId] = useState("");
-  const [stageId, setStageId] = useState("");
   // Contatos e etiquetas do WhatsApp sincronizados — necessários pra calcular
   // corretamente o público de funis do tipo "label" (Listas), já que os
   // cards dessas colunas não ficam persistidos em funnel_cards; eles são
   // recalculados na hora, igual em funnels-view.tsx (stageCards).
   const [contacts, setContacts] = useState<WaContact[]>([]);
   const [labels, setLabels] = useState<WaLabel[]>([]);
-  // Planilha importada (Nome + Telefone) usada como público avulso.
-  const [sheetContacts, setSheetContacts] = useState<SheetContact[]>([]);
-  const [sheetName, setSheetName] = useState("");
-  const [sheetErr, setSheetErr] = useState<string | null>(null);
+
+  // ⚠️ Adicionado (19/09): wizard em etapas — etapa 1 é a nova seleção de
+  // público (AudienceStep, com inclusão/exclusão por fonte + lista
+  // nominal). Etapas 2/3 (mensagem, ritmo, termos) ainda usam a UI
+  // existente por enquanto — redesenho delas fica pra uma próxima parte
+  // do trabalho, combinada com o usuário.
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [finalAudience, setFinalAudience] = useState<AudienceContact[]>([]);
 
   const [name, setName] = useState("");
   const [variants, setVariants] = useState<string[]>([""]);
@@ -131,9 +135,7 @@ export function DispatchCenter({
         api("/api/public/extension/whatsapp/status"),
       ]);
       if (f?.ok) {
-        const list = (f.funnels as Funnel[]) || [];
-        setFunnels(list);
-        setFunnelId((cur) => cur || list[0]?.id || "");
+        setFunnels((f.funnels as Funnel[]) || []);
       }
       if (q?.ok) setReplies((q.quick_replies as QuickReply[]) || []);
       if (w?.ok) {
@@ -150,18 +152,31 @@ export function DispatchCenter({
               name: string;
               language: string;
               status: string;
-              components?: Array<{ type?: string; format?: string; cards?: unknown[] }>;
+              components?: Array<{
+                type?: string;
+                format?: string;
+                text?: string;
+                cards?: unknown[];
+              }>;
             }>) || []
           ).map((tpl) => {
-            const carouselComp = (tpl.components || []).find((c) => String(c.type).toUpperCase() === "CAROUSEL");
+            const carouselComp = (tpl.components || []).find(
+              (c) => String(c.type).toUpperCase() === "CAROUSEL",
+            );
+            const bodyComp = (tpl.components || []).find(
+              (c) => String(c.type).toUpperCase() === "BODY",
+            );
             return {
               name: tpl.name,
               language: tpl.language,
               status: tpl.status,
               hasImageHeader: (tpl.components || []).some(
-                (c) => String(c.type).toUpperCase() === "HEADER" && String(c.format).toUpperCase() === "IMAGE",
+                (c) =>
+                  String(c.type).toUpperCase() === "HEADER" &&
+                  String(c.format).toUpperCase() === "IMAGE",
               ),
               carouselCardCount: Array.isArray(carouselComp?.cards) ? carouselComp.cards.length : 0,
+              bodyText: bodyComp?.text || "",
             };
           }),
         );
@@ -180,45 +195,7 @@ export function DispatchCenter({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const funnel = funnels.find((f) => f.id === funnelId) || null;
-
-  const sendableSubs = useMemo(() => customers.filter((c) => isRealPhone(c.phone)), [customers]);
-  const subsCount = (key: string) =>
-    key === "all" ? sendableSubs.length : sendableSubs.filter((c) => c.status === key).length;
-
-  const funnelTargets = useMemo(() => {
-    if (!funnel) return [];
-    // Funis do tipo "label" (Listas) não têm cards persistidos em
-    // funnel_cards — precisam ser recalculados a partir dos contatos
-    // sincronizados e da etiqueta correspondente à coluna selecionada,
-    // igual em funnels-view.tsx (stageCards).
-    if (funnel.mode === "label") {
-      const relevantStages = stageId
-        ? funnel.stages.filter((s) => s.id === stageId)
-        : funnel.stages;
-      const wantedLabelIds = new Set(
-        relevantStages
-          .map((s) => labels.find((l) => l.name === s.name)?.wa_label_id)
-          .filter((x): x is string => Boolean(x)),
-      );
-      return contacts
-        .filter((c) => !c.is_group && c.label_ids.some((id) => wantedLabelIds.has(id)))
-        .map((c) => ({ phone: (c.phone || c.wa_id) as string, name: c.name || c.phone || c.wa_id }));
-    }
-    return funnel.cards
-      .filter((c) => (stageId ? c.stage_id === stageId : true))
-      // Aceita telefone real OU wa_id (contato "desconhecido" ainda é um
-      // destinatário válido — a extensão já sabe mandar mensagem por wa_id).
-      .filter((c) => isRealPhone(c.phone) || c.wa_id)
-      .map((c) => ({ phone: (c.phone || c.wa_id) as string, name: c.title }));
-  }, [funnel, stageId, contacts, labels]);
-
-  const total =
-    audience === "assinantes"
-      ? subsCount(status)
-      : audience === "planilha"
-        ? sheetContacts.length
-        : funnelTargets.length;
+  const total = finalAudience.length;
 
   function pickReply(id: string) {
     setReplyId(id);
@@ -245,7 +222,11 @@ export function DispatchCenter({
       const dataUrl = await fileToBase64(file);
       const r = await api("/api/public/extension/quick-replies/upload", {
         method: "POST",
-        body: JSON.stringify({ filename: file.name, mime: file.type || "image/jpeg", data_base64: dataUrl }),
+        body: JSON.stringify({
+          filename: file.name,
+          mime: file.type || "image/jpeg",
+          data_base64: dataUrl,
+        }),
       });
       if (!r?.ok) {
         setErr((r?.error as string) || "Falha ao enviar a imagem do cabeçalho.");
@@ -268,7 +249,11 @@ export function DispatchCenter({
       const dataUrl = await fileToBase64(file);
       const r = await api("/api/public/extension/quick-replies/upload", {
         method: "POST",
-        body: JSON.stringify({ filename: file.name, mime: file.type || "image/jpeg", data_base64: dataUrl }),
+        body: JSON.stringify({
+          filename: file.name,
+          mime: file.type || "image/jpeg",
+          data_base64: dataUrl,
+        }),
       });
       if (!r?.ok) {
         setErr((r?.error as string) || `Falha ao enviar a imagem do cartão ${index + 1}.`);
@@ -304,7 +289,9 @@ export function DispatchCenter({
       }
       const cardCount = templates.find((x) => x.name === selectedTemplate)?.carouselCardCount ?? 0;
       if (cardCount > 0 && carouselPaths.filter(Boolean).length < cardCount) {
-        setErr(`Esse modelo é um carrossel de ${cardCount} cartões — envie a imagem de todos antes de disparar.`);
+        setErr(
+          `Esse modelo é um carrossel de ${cardCount} cartões — envie a imagem de todos antes de disparar.`,
+        );
         return;
       }
       if (!accepted) {
@@ -334,13 +321,11 @@ export function DispatchCenter({
         pace_seconds_min: Math.min(paceMin, paceMax),
         pace_seconds_max: Math.max(paceMin, paceMax),
       };
-      const body =
-        audience === "assinantes"
-          ? { ...base, scope: "assinaturas", filter: status === "all" ? {} : { status } }
-          : audience === "planilha"
-            ? { ...base, scope: "funil", phone_targets: sheetContacts }
-            : { ...base, scope: "funil", phone_targets: funnelTargets };
-      const r = await api("/api/public/extension/campaigns", { method: "POST", body: JSON.stringify(body) });
+      const body = { ...base, scope: "funil", phone_targets: finalAudience };
+      const r = await api("/api/public/extension/campaigns", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
       setBusy(false);
       if (!r?.ok) {
         setErr((r?.error as string) || "Erro ao criar o disparo");
@@ -389,12 +374,7 @@ export function DispatchCenter({
       pace_seconds_min: Math.min(paceMin, paceMax),
       pace_seconds_max: Math.max(paceMin, paceMax),
     };
-    const body =
-      audience === "assinantes"
-        ? { ...base, scope: "assinaturas", filter: status === "all" ? {} : { status } }
-        : audience === "planilha"
-          ? { ...base, scope: "funil", phone_targets: sheetContacts }
-          : { ...base, scope: "funil", phone_targets: funnelTargets };
+    const body = { ...base, scope: "funil", phone_targets: finalAudience };
 
     const r = await api("/api/public/extension/campaigns", {
       method: "POST",
@@ -409,338 +389,319 @@ export function DispatchCenter({
     onDone();
   }
 
-  const audienceOptions: Array<{ key: Audience; label: string }> = [
-    ...(isBarbearia ? [{ key: "assinantes" as Audience, label: "Assinantes" }] : []),
-    { key: "funis", label: "Funis de vendas" },
-    { key: "planilha", label: "Importar planilha" },
-  ];
-
   return (
-    <form
-      onSubmit={submit}
-      className="mx-auto w-full max-w-xl space-y-5 rounded-xl border border-neutral-300 bg-white p-6 shadow-sm"
-    >
-      <h2 className="text-center text-lg font-semibold text-neutral-900">Novo disparo</h2>
+    <div className="mx-auto w-full max-w-xl">
+      <h2 className="mb-4 text-center text-lg font-semibold text-neutral-900">Novo disparo</h2>
 
-      <div>
-        <Label>Público</Label>
-        <div className={"grid gap-2 " + (audienceOptions.length === 3 ? "grid-cols-3" : "grid-cols-2")}>
-          {audienceOptions.map((o) => (
-            <button
-              key={o.key}
-              type="button"
-              onClick={() => setAudience(o.key)}
-              className={
-                "rounded-xl border px-3 py-2.5 text-sm font-semibold transition " +
-                (audience === o.key
-                  ? "border-brand bg-brand text-white"
-                  : "border-neutral-300 bg-white text-neutral-800 hover:border-neutral-500")
-              }
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {audience === "assinantes" && (
-        <div>
-          <Label>Kanban de assinantes</Label>
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
-            {cols.map((c) => (
-              <option key={c.key} value={c.key}>
-                {c.label} ({subsCount(c.key)})
-              </option>
-            ))}
-            <option value="all">Todos ({subsCount("all")})</option>
-          </select>
-        </div>
-      )}
-
-      {audience === "funis" && (
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label>Funil</Label>
-            <select
-              value={funnelId}
-              onChange={(e) => {
-                setFunnelId(e.target.value);
-                setStageId("");
-              }}
-              className={inputCls}
-            >
-              {funnels.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Label>Coluna</Label>
-            <select
-              value={stageId}
-              onChange={(e) => setStageId(e.target.value)}
-              className={inputCls}
-            >
-              <option value="">Todas as colunas</option>
-              {(funnel?.stages ?? []).map((st) => (
-                <option key={st.id} value={st.id}>
-                  {st.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      )}
-
-      {audience === "planilha" && (
-        <div>
-          <Label>Planilha (.xlsx, .xls ou .csv) com as colunas Nome e Telefone</Label>
-          <input
-            type="file"
-            accept=".xlsx,.xls,.csv,.tsv,.txt"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              setSheetErr(null);
-              try {
-                const rows = await fileToContacts(file);
-                if (!rows.length) {
-                  setSheetContacts([]);
-                  setSheetErr("Nenhum contato válido. A planilha precisa ter Nome e Telefone.");
-                  return;
-                }
-                setSheetContacts(rows);
-                setSheetName(file.name);
-                if (!name.trim()) setName(file.name.replace(/\.[^.]+$/, ""));
-              } catch {
-                setSheetContacts([]);
-                setSheetErr("Não consegui ler esse arquivo.");
-              }
+      {step === 1 ? (
+        <div className="space-y-5 rounded-xl border border-neutral-300 bg-white p-6 shadow-sm">
+          <AudienceStep
+            funnels={funnels}
+            contacts={contacts}
+            labels={labels}
+            customers={customers}
+            cols={cols}
+            isBarbearia={isBarbearia}
+            onNext={(list) => {
+              setFinalAudience(list);
+              setStep(2);
             }}
-            className="w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-800 file:mr-3 file:rounded-md file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white"
           />
-          {sheetName && sheetContacts.length > 0 && (
-            <p className="mt-1 text-xs text-neutral-500">
-              {sheetName}: {sheetContacts.length} contato(s) prontos para disparo.
-            </p>
-          )}
-          {sheetErr && <p className="mt-1 text-xs text-red-500">{sheetErr}</p>}
-        </div>
-      )}
-
-      <p className="text-xs text-neutral-500">{total} contato(s) com telefone válido</p>
-
-      <div>
-        <Label>Nome do disparo</Label>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className={inputCls}
-          placeholder="Ex.: Cobrança julho"
-        />
-      </div>
-
-      <div>
-        <Label>Tipo de disparo</Label>
-        <p className="mt-1 text-sm font-medium text-neutral-800">
-          {isMetaProvider ? "Modelo aprovado" : "Mensagem personalizada"}
-        </p>
-      </div>
-
-      {isMetaProvider ? (
-        <div>
-          <Label>Modelo</Label>
-          {!templatesLoaded ? (
-            <p className="text-sm text-neutral-500">Carregando modelos…</p>
-          ) : templates.filter((t) => t.status === "APPROVED").length === 0 ? (
-            <p className="text-sm text-neutral-500">
-              Nenhum modelo aprovado ainda. Cria um na aba "Modelos" e espera a Meta aprovar.
-            </p>
-          ) : (
-            <select
-              value={selectedTemplate}
-              onChange={(e) => {
-                setSelectedTemplate(e.target.value);
-                // Trocar de modelo invalida a imagem escolhida antes —
-                // cada modelo tem seu próprio cabeçalho (ou nenhum).
-                setTemplateHeaderPath(null);
-                setTemplateHeaderPreview(null);
-                const tpl = templates.find((t) => t.name === e.target.value);
-                setCarouselPaths(new Array(tpl?.carouselCardCount || 0).fill(null));
-                setCarouselPreviews(new Array(tpl?.carouselCardCount || 0).fill(null));
-              }}
-              className={inputCls}
-            >
-              <option value="">Escolha um modelo…</option>
-              {templates
-                .filter((t) => t.status === "APPROVED")
-                .map((t) => (
-                  <option key={t.name} value={t.name}>
-                    {t.name}
-                    {t.hasImageHeader ? " (tem imagem)" : ""}
-                    {t.carouselCardCount > 0 ? ` (carrossel, ${t.carouselCardCount} cartões)` : ""}
-                  </option>
-                ))}
-            </select>
-          )}
-          {isMetaProvider && templates.find((t) => t.name === selectedTemplate)?.hasImageHeader && (
-            <div className="mt-3 rounded-xl border border-neutral-300 bg-neutral-50 p-3">
-              <Label>Imagem do cabeçalho</Label>
-              <p className="mb-2 text-xs text-neutral-500">
-                Esse modelo tem imagem no cabeçalho — a Meta exige uma imagem em todo envio (mesma pra todos os
-                contatos desse disparo).
-              </p>
-              {templateHeaderPreview && (
-                <img
-                  src={templateHeaderPreview}
-                  alt="Prévia do cabeçalho"
-                  className="mb-2 max-h-32 rounded-lg border border-neutral-200 object-cover"
-                />
-              )}
-              <input
-                type="file"
-                accept="image/*"
-                disabled={templateHeaderUploading}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void handleTemplateHeaderFile(file);
-                }}
-                className="block w-full text-sm text-neutral-600"
-              />
-              {templateHeaderUploading && <p className="mt-1 text-xs text-neutral-500">Enviando imagem…</p>}
-            </div>
-          )}
-          {isMetaProvider && (templates.find((t) => t.name === selectedTemplate)?.carouselCardCount ?? 0) > 0 && (
-            <div className="mt-3 rounded-xl border border-neutral-300 bg-neutral-50 p-3">
-              <Label>Imagens do carrossel</Label>
-              <p className="mb-2 text-xs text-neutral-500">
-                Esse modelo é um carrossel — a Meta exige uma imagem por cartão em todo envio (mesmas imagens pra
-                todos os contatos desse disparo).
-              </p>
-              <div className="space-y-3">
-                {Array.from({ length: templates.find((t) => t.name === selectedTemplate)?.carouselCardCount ?? 0 }).map(
-                  (_, i) => (
-                    <div key={i} className="rounded-lg border border-neutral-200 bg-white p-2">
-                      <p className="mb-1 text-xs font-medium text-neutral-600">Cartão {i + 1}</p>
-                      {carouselPreviews[i] && (
-                        <img
-                          src={carouselPreviews[i] as string}
-                          alt={`Prévia do cartão ${i + 1}`}
-                          className="mb-2 max-h-28 rounded-lg border border-neutral-200 object-cover"
-                        />
-                      )}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        disabled={carouselUploadingIndex === i}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) void handleCarouselCardFile(i, file);
-                        }}
-                        className="block w-full text-sm text-neutral-600"
-                      />
-                      {carouselUploadingIndex === i && <p className="mt-1 text-xs text-neutral-500">Enviando imagem…</p>}
-                    </div>
-                  ),
-                )}
-              </div>
-            </div>
-          )}
         </div>
       ) : (
-      <div>
-        <Label>Mensagem</Label>
-        <button
-          type="button"
-          onClick={() => setMessageOpen(true)}
-          className="flex w-full items-center justify-between rounded-xl border border-neutral-300 bg-white px-3 py-3 text-left text-sm text-neutral-900 hover:border-neutral-500"
+        <form
+          onSubmit={submit}
+          className="space-y-5 rounded-xl border border-neutral-300 bg-white p-6 shadow-sm"
         >
-          <span className="min-w-0 truncate">
-            {replyId
-              ? replies.find((reply) => reply.id === replyId)?.title
-              : actions.some((action) => action.type !== "text") ||
-                  variants.some((variant) => variant.trim())
-                ? `${actions.length} ação(ões) definida(s)`
-                : "Definir mensagem"}
-          </span>
-          <span aria-hidden="true" className="text-neutral-400">
-            ›
-          </span>
-        </button>
-      </div>
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setStep(step === 3 ? 2 : 1)}
+              className="text-sm font-medium text-neutral-500 hover:text-neutral-800"
+            >
+              ← Voltar
+            </button>
+            <p className="text-sm font-medium text-neutral-700">
+              {total} destinatário(s) selecionado(s)
+            </p>
+          </div>
+
+          {step === 2 && (
+            <>
+              <div>
+                <Label>Nome do disparo</Label>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className={inputCls}
+                  placeholder="Ex.: Cobrança julho"
+                />
+              </div>
+
+              <div>
+                <Label>Tipo de disparo</Label>
+                <p className="mt-1 text-sm font-medium text-neutral-800">
+                  {isMetaProvider ? "Modelo aprovado" : "Mensagem personalizada"}
+                </p>
+              </div>
+
+              {isMetaProvider ? (
+                <div>
+                  <Label>Modelo</Label>
+                  {!templatesLoaded ? (
+                    <p className="text-sm text-neutral-500">Carregando modelos…</p>
+                  ) : templates.filter((t) => t.status === "APPROVED").length === 0 ? (
+                    <p className="text-sm text-neutral-500">
+                      Nenhum modelo aprovado ainda. Cria um na aba "Modelos" e espera a Meta
+                      aprovar.
+                    </p>
+                  ) : (
+                    <select
+                      value={selectedTemplate}
+                      onChange={(e) => {
+                        setSelectedTemplate(e.target.value);
+                        // Trocar de modelo invalida a imagem escolhida antes —
+                        // cada modelo tem seu próprio cabeçalho (ou nenhum).
+                        setTemplateHeaderPath(null);
+                        setTemplateHeaderPreview(null);
+                        const tpl = templates.find((t) => t.name === e.target.value);
+                        setCarouselPaths(new Array(tpl?.carouselCardCount || 0).fill(null));
+                        setCarouselPreviews(new Array(tpl?.carouselCardCount || 0).fill(null));
+                      }}
+                      className={inputCls}
+                    >
+                      <option value="">Escolha um modelo…</option>
+                      {templates
+                        .filter((t) => t.status === "APPROVED")
+                        .map((t) => (
+                          <option key={t.name} value={t.name}>
+                            {t.name}
+                            {t.hasImageHeader ? " (tem imagem)" : ""}
+                            {t.carouselCardCount > 0
+                              ? ` (carrossel, ${t.carouselCardCount} cartões)`
+                              : ""}
+                          </option>
+                        ))}
+                    </select>
+                  )}
+                  {isMetaProvider &&
+                    templates.find((t) => t.name === selectedTemplate)?.hasImageHeader && (
+                      <div className="mt-3 rounded-xl border border-neutral-300 bg-neutral-50 p-3">
+                        <Label>Imagem do cabeçalho</Label>
+                        <p className="mb-2 text-xs text-neutral-500">
+                          Esse modelo tem imagem no cabeçalho — a Meta exige uma imagem em todo
+                          envio (mesma pra todos os contatos desse disparo).
+                        </p>
+                        {templateHeaderPreview && (
+                          <img
+                            src={templateHeaderPreview}
+                            alt="Prévia do cabeçalho"
+                            className="mb-2 max-h-32 rounded-lg border border-neutral-200 object-cover"
+                          />
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={templateHeaderUploading}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) void handleTemplateHeaderFile(file);
+                          }}
+                          className="block w-full text-sm text-neutral-600"
+                        />
+                        {templateHeaderUploading && (
+                          <p className="mt-1 text-xs text-neutral-500">Enviando imagem…</p>
+                        )}
+                      </div>
+                    )}
+                  {isMetaProvider &&
+                    (templates.find((t) => t.name === selectedTemplate)?.carouselCardCount ?? 0) >
+                      0 && (
+                      <div className="mt-3 rounded-xl border border-neutral-300 bg-neutral-50 p-3">
+                        <Label>Imagens do carrossel</Label>
+                        <p className="mb-2 text-xs text-neutral-500">
+                          Esse modelo é um carrossel — a Meta exige uma imagem por cartão em todo
+                          envio (mesmas imagens pra todos os contatos desse disparo).
+                        </p>
+                        <div className="space-y-3">
+                          {Array.from({
+                            length:
+                              templates.find((t) => t.name === selectedTemplate)
+                                ?.carouselCardCount ?? 0,
+                          }).map((_, i) => (
+                            <div
+                              key={i}
+                              className="rounded-lg border border-neutral-200 bg-white p-2"
+                            >
+                              <p className="mb-1 text-xs font-medium text-neutral-600">
+                                Cartão {i + 1}
+                              </p>
+                              {carouselPreviews[i] && (
+                                <img
+                                  src={carouselPreviews[i] as string}
+                                  alt={`Prévia do cartão ${i + 1}`}
+                                  className="mb-2 max-h-28 rounded-lg border border-neutral-200 object-cover"
+                                />
+                              )}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                disabled={carouselUploadingIndex === i}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) void handleCarouselCardFile(i, file);
+                                }}
+                                className="block w-full text-sm text-neutral-600"
+                              />
+                              {carouselUploadingIndex === i && (
+                                <p className="mt-1 text-xs text-neutral-500">Enviando imagem…</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                </div>
+              ) : (
+                <div>
+                  <Label>Mensagem</Label>
+                  <button
+                    type="button"
+                    onClick={() => setMessageOpen(true)}
+                    className="flex w-full items-center justify-between rounded-xl border border-neutral-300 bg-white px-3 py-3 text-left text-sm text-neutral-900 hover:border-neutral-500"
+                  >
+                    <span className="min-w-0 truncate">
+                      {replyId
+                        ? replies.find((reply) => reply.id === replyId)?.title
+                        : actions.some((action) => action.type !== "text") ||
+                            variants.some((variant) => variant.trim())
+                          ? `${actions.length} ação(ões) definida(s)`
+                          : "Definir mensagem"}
+                    </span>
+                    <span aria-hidden="true" className="text-neutral-400">
+                      ›
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {isMetaProvider ? (
+                <TemplatePreview
+                  bodyText={templates.find((t) => t.name === selectedTemplate)?.bodyText || ""}
+                  headerImageUrl={templateHeaderPreview}
+                  carouselImageUrls={carouselPreviews}
+                />
+              ) : (
+                <MessagePreview actions={actions} variantPreview={variants[0]} />
+              )}
+
+              <button
+                type="button"
+                disabled={
+                  isMetaProvider
+                    ? !name.trim() || !selectedTemplate
+                    : !name.trim() ||
+                      !actions.some(
+                        (a) =>
+                          (a.type === "text" && (a.text?.trim() || variants[0]?.trim())) ||
+                          (a.type !== "text" &&
+                            a.type !== "funnel_add" &&
+                            a.type !== "funnel_remove" &&
+                            a.path),
+                      )
+                }
+                onClick={() => setStep(3)}
+                className="w-full rounded-lg bg-brand px-4 py-3 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
+              >
+                Próxima etapa
+              </button>
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm text-neutral-700">
+                <p className="font-semibold text-neutral-900">{name || "Sem nome"}</p>
+                <p>
+                  {isMetaProvider ? `Modelo: ${selectedTemplate || "—"}` : "Mensagem personalizada"}{" "}
+                  · {total} destinatário(s)
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Ritmo mínimo (seg)</Label>
+                  <input
+                    type="number"
+                    min={5}
+                    max={600}
+                    value={paceMin}
+                    onChange={(e) => setPaceMin(Number(e.target.value))}
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <Label>Ritmo máximo (seg)</Label>
+                  <input
+                    type="number"
+                    min={5}
+                    max={600}
+                    value={paceMax}
+                    onChange={(e) => setPaceMax(Number(e.target.value))}
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+                <p className="text-sm font-semibold text-neutral-900">Termo de uso</p>
+                <p className="mt-2 text-sm leading-relaxed text-neutral-700">
+                  A pratica de envios em massa ou spam podem ocasionar o banimento do seu número por
+                  parte do WhatsApp. Envie mensagens apenas para pessoas que gostariam de receber
+                  sua mensagem.
+                </p>
+                <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-neutral-900">
+                  <input
+                    type="checkbox"
+                    checked={accepted}
+                    onChange={(e) => setAccepted(e.target.checked)}
+                    className="h-4 w-4 rounded border-neutral-400"
+                  />
+                  Eu entendo e aceito os termos de uso.
+                </label>
+              </div>
+
+              {err && <p className="text-sm text-red-500">{err}</p>}
+
+              <button
+                disabled={busy || !accepted}
+                className="w-full rounded-lg bg-brand px-4 py-3 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
+              >
+                {busy ? "Criando..." : "Disparar"}
+              </button>
+            </>
+          )}
+
+          {messageOpen && (
+            <MessageComposer
+              api={api}
+              funnels={funnels}
+              replies={replies}
+              mode={messageMode}
+              replyId={replyId}
+              actions={actions}
+              variants={variants}
+              onClose={() => setMessageOpen(false)}
+              onMode={setMessageMode}
+              onPickReply={pickReply}
+              onActions={setActions}
+              onVariants={setVariants}
+              onClearReply={() => setReplyId("")}
+            />
+          )}
+        </form>
       )}
-
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label>Ritmo mínimo (seg)</Label>
-          <input
-            type="number"
-            min={5}
-            max={600}
-            value={paceMin}
-            onChange={(e) => setPaceMin(Number(e.target.value))}
-            className={inputCls}
-          />
-        </div>
-        <div>
-          <Label>Ritmo máximo (seg)</Label>
-          <input
-            type="number"
-            min={5}
-            max={600}
-            value={paceMax}
-            onChange={(e) => setPaceMax(Number(e.target.value))}
-            className={inputCls}
-          />
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
-        <p className="text-sm font-semibold text-neutral-900">Termo de uso</p>
-        <p className="mt-2 text-sm leading-relaxed text-neutral-700">
-          A pratica de envios em massa ou spam podem ocasionar o banimento do seu número por parte
-          do WhatsApp. Envie mensagens apenas para pessoas que gostariam de receber sua mensagem.
-        </p>
-        <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-neutral-900">
-          <input
-            type="checkbox"
-            checked={accepted}
-            onChange={(e) => setAccepted(e.target.checked)}
-            className="h-4 w-4 rounded border-neutral-400"
-          />
-          Eu entendo e aceito os termos de uso.
-        </label>
-      </div>
-
-      {err && <p className="text-sm text-red-500">{err}</p>}
-
-      <button
-        disabled={busy || !accepted}
-        className="w-full rounded-lg bg-brand px-4 py-3 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
-      >
-        {busy ? "Criando..." : "Disparar"}
-      </button>
-
-      {messageOpen && (
-        <MessageComposer
-          api={api}
-          funnels={funnels}
-          replies={replies}
-          mode={messageMode}
-          replyId={replyId}
-          actions={actions}
-          variants={variants}
-          onClose={() => setMessageOpen(false)}
-          onMode={setMessageMode}
-          onPickReply={pickReply}
-          onActions={setActions}
-          onVariants={setVariants}
-          onClearReply={() => setReplyId("")}
-        />
-      )}
-    </form>
+    </div>
   );
 }
 
