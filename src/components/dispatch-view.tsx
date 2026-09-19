@@ -21,7 +21,7 @@ import {
 import type { Funnel, WaContact, WaLabel } from "@/lib/funnels";
 import { AudienceStep } from "@/components/dispatch-step-audience";
 import { MessagePreview, TemplatePreview } from "@/components/dispatch-message-preview";
-import type { AudienceContact, DispatchCustomer } from "@/lib/dispatch-audience";
+import type { AudienceContact, AudienceSource, DispatchCustomer } from "@/lib/dispatch-audience";
 export type { DispatchCustomer } from "@/lib/dispatch-audience";
 
 type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
@@ -91,12 +91,18 @@ export function DispatchCenter({
   const [contacts, setContacts] = useState<WaContact[]>([]);
   const [labels, setLabels] = useState<WaLabel[]>([]);
 
-  // ⚠️ Adicionado (19/09): wizard em etapas — etapa 1 é a nova seleção de
-  // público (AudienceStep, com inclusão/exclusão por fonte + lista
-  // nominal). Etapas 2/3 (mensagem, ritmo, termos) ainda usam a UI
-  // existente por enquanto — redesenho delas fica pra uma próxima parte
-  // do trabalho, combinada com o usuário.
+  // ⚠️ Wizard em etapas (19/09, reescrito no mesmo dia a partir de
+  // feedback real de uso): source/selected da Etapa 1 vivem AQUI, no
+  // componente pai, não dentro de AudienceStep — se fosse estado local,
+  // se perderia toda vez que o wizard saísse da Etapa 1 (React desmonta
+  // o componente ao trocar de step), fazendo a configuração "desaparecer"
+  // ao voltar. Modelo de seleção acumulativa: origem é só um filtro de
+  // exibição, a seleção real cresce/diminui via "Adicionar todos" /
+  // "Remover todos" na origem exibida, ou toque individual, e persiste
+  // ao trocar de origem.
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [audienceSource, setAudienceSource] = useState<AudienceSource>({ kind: "inbox" });
+  const [selectedAudience, setSelectedAudience] = useState<Map<string, string>>(new Map());
   const [finalAudience, setFinalAudience] = useState<AudienceContact[]>([]);
 
   const [name, setName] = useState("");
@@ -284,13 +290,13 @@ export function DispatchCenter({
       }
       const tplNeedsHeader = templates.find((x) => x.name === selectedTemplate)?.hasImageHeader;
       if (tplNeedsHeader && !templateHeaderPath) {
-        setErr("Esse modelo tem imagem no cabeçalho — envie uma imagem antes de disparar.");
+        setErr("Esse modelo tem imagem no cabeçalho, envie uma imagem antes de disparar.");
         return;
       }
       const cardCount = templates.find((x) => x.name === selectedTemplate)?.carouselCardCount ?? 0;
       if (cardCount > 0 && carouselPaths.filter(Boolean).length < cardCount) {
         setErr(
-          `Esse modelo é um carrossel de ${cardCount} cartões — envie a imagem de todos antes de disparar.`,
+          `Esse modelo é um carrossel de ${cardCount} cartões, envie a imagem de todos antes de disparar.`,
         );
         return;
       }
@@ -402,6 +408,10 @@ export function DispatchCenter({
             customers={customers}
             cols={cols}
             isBarbearia={isBarbearia}
+            source={audienceSource}
+            onSourceChange={setAudienceSource}
+            selected={selectedAudience}
+            onSelectedChange={setSelectedAudience}
             onNext={(list) => {
               setFinalAudience(list);
               setStep(2);
@@ -489,8 +499,8 @@ export function DispatchCenter({
                       <div className="mt-3 rounded-xl border border-neutral-300 bg-neutral-50 p-3">
                         <Label>Imagem do cabeçalho</Label>
                         <p className="mb-2 text-xs text-neutral-500">
-                          Esse modelo tem imagem no cabeçalho — a Meta exige uma imagem em todo
-                          envio (mesma pra todos os contatos desse disparo).
+                          Esse modelo tem imagem no cabeçalho, a Meta exige uma imagem em todo envio
+                          (mesma pra todos os contatos desse disparo).
                         </p>
                         {templateHeaderPreview && (
                           <img
@@ -520,7 +530,7 @@ export function DispatchCenter({
                       <div className="mt-3 rounded-xl border border-neutral-300 bg-neutral-50 p-3">
                         <Label>Imagens do carrossel</Label>
                         <p className="mb-2 text-xs text-neutral-500">
-                          Esse modelo é um carrossel — a Meta exige uma imagem por cartão em todo
+                          Esse modelo é um carrossel, a Meta exige uma imagem por cartão em todo
                           envio (mesmas imagens pra todos os contatos desse disparo).
                         </p>
                         <div className="space-y-3">
@@ -623,7 +633,7 @@ export function DispatchCenter({
               <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm text-neutral-700">
                 <p className="font-semibold text-neutral-900">{name || "Sem nome"}</p>
                 <p>
-                  {isMetaProvider ? `Modelo: ${selectedTemplate || "—"}` : "Mensagem personalizada"}{" "}
+                  {isMetaProvider ? `Modelo: ${selectedTemplate || "-"}` : "Mensagem personalizada"}{" "}
                   · {total} destinatário(s)
                 </p>
               </div>

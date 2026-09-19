@@ -1,9 +1,9 @@
 // Lógica de resolução de público para a Etapa 1 do wizard de disparo
 // (DispatchCenter). Separado do componente visual porque a mesma lógica
-// serve tanto pra fonte de INCLUSÃO quanto pras fontes de EXCLUSÃO — uma
+// serve tanto pro botão "Adicionar todos" quanto "Remover todos" — uma
 // fonte é só uma fonte, resolver ela numa lista de contatos é sempre a
-// mesma operação, independente de estar somando ou subtraindo da lista
-// final.
+// mesma operação, independente de estar somando ou subtraindo da seleção
+// acumulada (que é o que realmente vai receber o disparo).
 
 import { isRealPhone } from "@/lib/wa-actions";
 import type { Funnel, WaContact, WaLabel } from "@/lib/funnels";
@@ -117,26 +117,25 @@ export function resolveAudienceSource(
   }
 }
 
-/** Lista final = fonte de inclusão MENOS a união de todas as fontes de
- * exclusão, deduplicada por telefone (uma pessoa pode aparecer em mais de
- * uma etapa/etiqueta, mas só deve receber a mensagem 1 vez). */
-export function resolveFinalAudience(
-  include: AudienceSource | null,
-  excludeList: AudienceSource[],
+/** Primeira opção disponível pra cada tipo de fonte que precisa de um
+ * sub-parâmetro (funil/lista) — usado pra nunca deixar a tela de contatos
+ * vazia quando o usuário troca de origem: ao trocar, já pré-seleciona a
+ * primeira opção e mostra os contatos dela na hora, em vez de esperar uma
+ * escolha manual. */
+export function firstAvailableSource(
+  kind: AudienceSourceKind,
   data: AudienceResolveData,
-): AudienceContact[] {
-  if (!include) return [];
-  const included = resolveAudienceSource(include, data);
-  const excludedPhones = new Set(
-    excludeList.flatMap((src) => resolveAudienceSource(src, data).map((c) => c.phone)),
-  );
-  const seen = new Set<string>();
-  const result: AudienceContact[] = [];
-  for (const c of included) {
-    if (excludedPhones.has(c.phone)) continue;
-    if (seen.has(c.phone)) continue;
-    seen.add(c.phone);
-    result.push(c);
+): AudienceSource {
+  if (kind === "labels") {
+    const first = data.funnels.find((f) => f.mode === "label");
+    return { kind, funnelId: first?.id ?? "", stageId: "" };
   }
-  return result;
+  if (kind === "funnel") {
+    const first = data.funnels.find((f) => f.mode !== "label");
+    return { kind, funnelId: first?.id ?? "", stageId: "" };
+  }
+  if (kind === "subscribers") {
+    return { kind, subscriberStatus: "all" };
+  }
+  return { kind };
 }

@@ -1,19 +1,32 @@
 // Etapa 1 do wizard de disparo: escolher o público.
 //
-// Fluxo: escolhe 1 fonte de INCLUSÃO (obrigatória) → opcionalmente
-// adiciona 1+ fontes de EXCLUSÃO (ex: "todo o Inbox, exceto quem está no
-// Funil X") → a lista final (inclusão menos exclusão, deduplicada por
-// telefone) aparece nominalmente, com uma bolinha por pessoa pra remover
-// manualmente quem não deveria receber.
+// Modelo de seleção ACUMULATIVA (reescrito 19/09, a partir de feedback
+// real de uso): a origem (Inbox, Lista, Funil, Assinantes, Planilha) é só
+// um FILTRO de exibição, não define a lista final por si só. A seleção
+// real é um conjunto de contatos que cresce e diminui conforme o usuário
+// usa "Adicionar todos" / "Remover todos" na origem que estiver olhando
+// no momento, ou marca/desmarca contatos individualmente. Trocar de
+// origem NUNCA apaga a seleção já feita, só muda quem está sendo
+// exibido pra adicionar ou remover em massa.
 //
-// Grupos do WhatsApp ficam de fora por enquanto (pedido explícito do
-// usuário, 19/09 — "deixa os grupos pra depois").
+// Isso substitui o modelo anterior (fonte de inclusão + lista de fontes
+// de exclusão), que era confuso e tinha um fluxo de exclusão separado e
+// pouco intuitivo. Agora "excluir" é só usar "Remover todos" na origem
+// errada, não existe mais um modo separado pra isso.
+//
+// Estado (source, selected) é CONTROLADO pelo componente pai
+// (DispatchCenter), não vive aqui dentro. Isso é proposital: se fosse
+// estado local, ele se perderia toda vez que o wizard saísse da Etapa 1
+// (React desmonta o componente ao trocar de etapa), fazendo a
+// configuração "desaparecer" ao voltar, bug real reportado pelo usuário.
 
 import { useMemo, useState } from "react";
+import * as XLSX from "xlsx";
 import { fileToContacts } from "@/lib/sheet-contacts";
 import type { Funnel, WaContact, WaLabel } from "@/lib/funnels";
 import {
-  resolveFinalAudience,
+  resolveAudienceSource,
+  firstAvailableSource,
   type AudienceContact,
   type AudienceSource,
   type AudienceSourceKind,
@@ -32,12 +45,37 @@ const SOURCE_LABELS: Record<AudienceSourceKind, string> = {
   labels: "Etiquetas",
   funnel: "Funil",
   subscribers: "Assinantes",
-  sheet: "Contatos (planilha)",
+  sheet: "Importar planilha",
 };
 
-/** Seletor de UMA fonte (usado tanto pra inclusão quanto exclusão) —
- * escolhe o tipo e, dependendo do tipo, mostra os campos extras
- * (funil+etapa, status de assinante, upload de planilha). */
+/** Bolinha de seleção, precisa deixar muito claro, à primeira vista, que
+ * é um controle clicável (feedback real: "quase não dá pra perceber que
+ * é possível selecionar"). Selecionado: preenchida com a cor da marca e
+ * um check visível. Não selecionado: vazia, com borda grossa e
+ * contrastante. */
+function SelectionDot({ selected }: { selected: boolean }) {
+  return (
+    <span
+      className={
+        "flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 transition " +
+        (selected
+          ? "border-brand bg-brand text-white"
+          : "border-neutral-400 bg-white text-transparent")
+      }
+    >
+      <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+        <path
+          fillRule="evenodd"
+          d="M16.7 5.3a1 1 0 010 1.4l-7.4 7.4a1 1 0 01-1.4 0L3.3 9.5a1 1 0 111.4-1.4l3.9 3.9 6.7-6.7a1 1 0 011.4 0z"
+          clipRule="evenodd"
+        />
+      </svg>
+    </span>
+  );
+}
+
+/** Seletor da origem sendo exibida no momento, o tipo, e o sub-parâmetro
+ * (funil, lista, status de assinante, planilha), quando aplicável. */
 function SourcePicker({
   value,
   onChange,
@@ -156,7 +194,7 @@ function SourcePicker({
               try {
                 const rows = await fileToContacts(file);
                 if (!rows.length) {
-                  setSheetErr("Nenhum contato válido. A planilha precisa ter Nome e Telefone.");
+                  setSheetErr("Nenhum contato válido, a planilha precisa ter Nome e Telefone.");
                   return;
                 }
                 onChange({ ...value, sheetContacts: rows });
@@ -185,6 +223,10 @@ export function AudienceStep({
   customers,
   cols,
   isBarbearia,
+  source,
+  onSourceChange,
+  selected,
+  onSelectedChange,
   onNext,
 }: {
   funnels: Funnel[];
@@ -193,64 +235,87 @@ export function AudienceStep({
   customers: DispatchCustomer[];
   cols: Array<{ key: string; label: string }>;
   isBarbearia: boolean;
+  // Controlado pelo pai, ver comentário no topo do arquivo.
+  source: AudienceSource;
+  onSourceChange: (next: AudienceSource) => void;
+  selected: Map<string, string>;
+  onSelectedChange: (next: Map<string, string>) => void;
   onNext: (finalList: AudienceContact[]) => void;
 }) {
   const availableKinds: AudienceSourceKind[] = isBarbearia
     ? ["inbox", "labels", "funnel", "subscribers", "sheet"]
     : ["inbox", "labels", "funnel", "sheet"];
 
-  const [include, setInclude] = useState<AudienceSource>({ kind: availableKinds[0] });
-  const [excludeList, setExcludeList] = useState<AudienceSource[]>([]);
-  // Removidos manualmente da lista final, por telefone — reseta sempre
-  // que a fonte de inclusão ou exclusão muda (a lista final é outra,
-  // manter remoções antigas não faria sentido).
-  const [manuallyRemoved, setManuallyRemoved] = useState<Set<string>>(new Set());
-
   const data = useMemo(
     () => ({ contacts, labels, funnels, customers }),
     [contacts, labels, funnels, customers],
   );
 
-  const finalList = useMemo(
-    () => resolveFinalAudience(include, excludeList, data),
-    [include, excludeList, data],
-  );
-  const visibleList = useMemo(
-    () => finalList.filter((c) => !manuallyRemoved.has(c.phone)),
-    [finalList, manuallyRemoved],
-  );
+  // Lista exibida agora, pra origem atual, NÃO é a seleção final, é só o
+  // que está sendo mostrado pra adicionar/remover em massa ou marcar
+  // individualmente.
+  const displayed = useMemo(() => resolveAudienceSource(source, data), [source, data]);
 
-  function updateInclude(next: AudienceSource) {
-    setInclude(next);
-    setManuallyRemoved(new Set());
+  function changeKind(kind: AudienceSourceKind) {
+    // Sempre pré-seleciona a primeira opção disponível (primeiro funil,
+    // primeira lista) e já mostra os contatos dela na hora, nunca deixa
+    // a área de contatos vazia esperando uma escolha manual.
+    onSourceChange(firstAvailableSource(kind, data));
   }
-  function updateExclude(index: number, next: AudienceSource) {
-    setExcludeList((list) => list.map((s, i) => (i === index ? next : s)));
-    setManuallyRemoved(new Set());
+
+  function addAllDisplayed() {
+    const next = new Map(selected);
+    for (const c of displayed) next.set(c.phone, c.name);
+    onSelectedChange(next);
   }
-  function addExclude() {
-    setExcludeList((list) => [...list, { kind: availableKinds[0] }]);
+  function removeAllDisplayed() {
+    const next = new Map(selected);
+    for (const c of displayed) next.delete(c.phone);
+    onSelectedChange(next);
   }
-  function removeExclude(index: number) {
-    setExcludeList((list) => list.filter((_, i) => i !== index));
-    setManuallyRemoved(new Set());
+  function toggleOne(c: AudienceContact) {
+    const next = new Map(selected);
+    if (next.has(c.phone)) next.delete(c.phone);
+    else next.set(c.phone, c.name);
+    onSelectedChange(next);
   }
-  function toggleRemoved(phone: string) {
-    setManuallyRemoved((set) => {
-      const next = new Set(set);
-      if (next.has(phone)) next.delete(phone);
-      else next.add(phone);
-      return next;
-    });
+
+  /** Exporta os contatos da origem sendo exibida agora, não a seleção
+   * final, ex: escolhe um funil, exporta os contatos daquele funil,
+   * independente de estarem marcados ou não na seleção do disparo. */
+  function exportDisplayedAsSheet() {
+    const rows = displayed.map((c) => ({ Nome: c.name, Telefone: c.phone }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Contatos");
+    const sourceLabel = SOURCE_LABELS[source.kind]
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-");
+    XLSX.writeFile(wb, `contatos-${sourceLabel}.xlsx`);
   }
+
+  const selectedList = useMemo(
+    () => Array.from(selected, ([phone, name]) => ({ phone, name })),
+    [selected],
+  );
+  const allDisplayedSelected =
+    displayed.length > 0 && displayed.every((c) => selected.has(c.phone));
 
   return (
     <div className="space-y-5">
       <div>
-        <Label>Enviar para</Label>
+        <Label>Origem</Label>
         <SourcePicker
-          value={include}
-          onChange={updateInclude}
+          value={source}
+          onChange={(next) => {
+            // Só o tipo muda de verdade a origem (com auto-seleção da 1ª
+            // opção), mudanças de funil/lista/etapa dentro do mesmo tipo
+            // vêm direto do SourcePicker.
+            if (next.kind !== source.kind) changeKind(next.kind);
+            else onSourceChange(next);
+          }}
           funnels={funnels}
           cols={cols}
           isBarbearia={isBarbearia}
@@ -258,81 +323,56 @@ export function AudienceStep({
         />
       </div>
 
-      <div>
-        <div className="mb-1 flex items-center justify-between">
-          <Label>Exceto (opcional)</Label>
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={addExclude}
-            className="text-xs font-semibold text-brand hover:underline"
+            onClick={addAllDisplayed}
+            disabled={displayed.length === 0 || allDisplayedSelected}
+            className="rounded-lg border border-brand bg-brand/10 px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/20 disabled:opacity-40"
           >
-            + Adicionar exclusão
+            Adicionar todos ({displayed.length})
+          </button>
+          <button
+            type="button"
+            onClick={removeAllDisplayed}
+            disabled={displayed.length === 0}
+            className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:border-red-400 hover:text-red-600 disabled:opacity-40"
+          >
+            Remover todos
+          </button>
+          <button
+            type="button"
+            onClick={exportDisplayedAsSheet}
+            disabled={displayed.length === 0}
+            className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:border-neutral-500 disabled:opacity-40"
+          >
+            Exportar planilha
           </button>
         </div>
-        {excludeList.length === 0 ? (
-          <p className="text-xs text-neutral-400">
-            Nenhuma exclusão — todos da fonte acima vão receber.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {excludeList.map((src, i) => (
-              <div key={i} className="flex items-start gap-2">
-                <div className="flex-1">
-                  <SourcePicker
-                    value={src}
-                    onChange={(next) => updateExclude(i, next)}
-                    funnels={funnels}
-                    cols={cols}
-                    isBarbearia={isBarbearia}
-                    availableKinds={availableKinds}
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeExclude(i)}
-                  className="mt-1 rounded-lg border border-neutral-300 px-2 py-1 text-xs text-neutral-600 hover:border-red-400 hover:text-red-600"
-                >
-                  Remover
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+        <p className="text-xs text-neutral-500">{selected.size} selecionado(s) no total</p>
       </div>
 
       <div>
-        <div className="mb-1 flex items-center justify-between">
-          <Label>Destinatários ({visibleList.length})</Label>
-          {manuallyRemoved.size > 0 && (
-            <span className="text-xs text-neutral-500">
-              {manuallyRemoved.size} removido(s) manualmente
-            </span>
-          )}
-        </div>
-        {finalList.length === 0 ? (
-          <p className="text-sm text-neutral-500">Nenhum contato encontrado com essa fonte.</p>
+        {displayed.length === 0 ? (
+          <p className="text-sm text-neutral-500">Nenhum contato encontrado nessa origem.</p>
         ) : (
           <div className="max-h-64 overflow-y-auto rounded-xl border border-neutral-200">
-            {finalList.map((c) => {
-              const removed = manuallyRemoved.has(c.phone);
+            {displayed.map((c) => {
+              const isSelected = selected.has(c.phone);
               return (
                 <button
                   key={c.phone}
                   type="button"
-                  onClick={() => toggleRemoved(c.phone)}
+                  onClick={() => toggleOne(c)}
                   className={
-                    "flex w-full items-center gap-2 border-b border-neutral-100 px-3 py-2 text-left text-sm last:border-b-0 " +
-                    (removed
-                      ? "bg-neutral-50 text-neutral-400 line-through"
-                      : "text-neutral-800 hover:bg-neutral-50")
+                    "flex w-full items-center gap-3 border-b border-neutral-100 px-3 py-2.5 text-left text-sm last:border-b-0 " +
+                    (isSelected
+                      ? "bg-brand/5 text-neutral-900"
+                      : "text-neutral-700 hover:bg-neutral-50")
                   }
                 >
-                  <span
-                    className={
-                      "h-4 w-4 flex-shrink-0 rounded-full border-2 " +
-                      (removed ? "border-neutral-300" : "border-brand bg-brand")
-                    }
-                  />
+                  <SelectionDot selected={isSelected} />
                   <span className="min-w-0 truncate">{c.name || c.phone}</span>
                 </button>
               );
@@ -343,11 +383,11 @@ export function AudienceStep({
 
       <button
         type="button"
-        disabled={visibleList.length === 0}
-        onClick={() => onNext(visibleList)}
+        disabled={selected.size === 0}
+        onClick={() => onNext(selectedList)}
         className="w-full rounded-lg bg-brand px-4 py-3 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
       >
-        Próxima etapa
+        Próxima etapa, {selected.size} destinatário(s)
       </button>
     </div>
   );
