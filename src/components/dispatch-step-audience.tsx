@@ -15,22 +15,20 @@
 // (React desmonta o componente ao trocar de etapa), fazendo a
 // configuração "desaparecer" ao voltar, bug real reportado pelo usuário.
 //
-// Terceira leva de ajustes (19/09, mesmo dia), a partir de feedback de
+// Quarta leva de ajustes (19/09, mesmo dia), a partir de feedback de
 // uso real:
-// - Listas e Funil: sem etapa intermediária (Selecione, Todas as
-//   listas), clicar na origem já mostra as opções disponíveis pra
-//   escolher diretamente (chips clicáveis, não select). Funil mantém
-//   2 níveis (funil, depois etapa), Listas tem só 1 (a lista em si).
-// - Assinantes: mesma lógica de chips, com Todos já selecionado por
-//   padrão (mostra contatos na hora).
-// - Importar planilha: reposicionada no canto inferior da barra lateral,
-//   visualmente separada das outras 4 origens (função adicional, não
-//   mais uma opção de seleção normal). Antes de importar, não mostra
-//   área de contatos vazia, só um botão central de importar. Depois de
-//   importar, os contatos aparecem normalmente.
-// - Adicionar todos / Remover todos viraram um único botão que alterna
-//   de acordo com o estado (todos já selecionados = mostra Remover
-//   todos, senão = Adicionar todos).
+// - Listas, Funil e Assinantes voltam a usar select (não mais chips
+//   lado a lado, que o usuário considerou errado pro caso de Funil
+//   especificamente), com largura MÉDIA (nem minúscula, nem esticada),
+//   classe própria (mediumSelectCls).
+// - Listas: 1 select, sem "Todas as listas" (mantém o comportamento da
+//   leva anterior, só muda a representação visual pra select).
+// - Funil: 2 selects (funil, depois etapa).
+// - Assinantes: 1 select (Todos + abas), com Todos pré-selecionado.
+// - Importar planilha volta pro grupo normal da sidebar (Inbox, Listas,
+//   Funil, Assinantes, Importar planilha). Quem fica deslocado embaixo,
+//   separado, é EXPORTAR planilha (não mais Importar, isso tinha
+//   ficado invertido na leva anterior).
 
 import { useMemo, useState } from "react";
 import * as XLSX from "xlsx";
@@ -44,6 +42,12 @@ import {
   type AudienceSourceKind,
   type DispatchCustomer,
 } from "@/lib/dispatch-audience";
+
+// Seletor de tamanho MÉDIO, nem minúsculo (do tamanho do texto), nem
+// esticado (w-full). Largura fixa confortável pra clicar e ler a opção
+// escolhida.
+const mediumSelectCls =
+  "w-56 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-900";
 
 const SOURCE_LABELS: Record<AudienceSourceKind, string> = {
   inbox: "Inbox",
@@ -74,42 +78,9 @@ function SelectionDot({ selected }: { selected: boolean }) {
   );
 }
 
-/** Chip clicável genérico, usado pra escolher lista, funil, etapa ou
- * aba de assinante. Sem select, sem placeholder Selecione: as opções
- * já aparecem visíveis assim que a origem é escolhida. */
-function OptionChips({
-  options,
-  value,
-  onChange,
-}: {
-  options: Array<{ value: string; label: string }>;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  if (options.length === 0) {
-    return <p className="text-sm text-neutral-500">Nenhuma opção disponível.</p>;
-  }
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          onClick={() => onChange(o.value)}
-          className={
-            "rounded-full border px-3 py-1.5 text-sm font-medium transition " +
-            (value === o.value
-              ? "border-brand bg-brand text-white"
-              : "border-neutral-300 bg-white text-neutral-700 hover:border-neutral-500")
-          }
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
+/** Sub-filtro da origem escolhida: o(s) select(s) específico(s) de cada
+ * tipo. Não inclui a escolha do TIPO em si (isso é a sidebar) nem a
+ * parte de planilha (fica numa área própria, ver AudienceStep). */
 function SourceSubFilter({
   value,
   onChange,
@@ -131,12 +102,19 @@ function SourceSubFilter({
   if (value.kind === "labels") {
     return (
       <div>
-        <p className="mb-1.5 text-xs font-medium text-neutral-500">Escolha a lista</p>
-        <OptionChips
-          options={labelFunnels.map((f) => ({ value: f.id, label: f.name }))}
+        <p className="mb-1 text-xs font-medium text-neutral-500">Lista</p>
+        <select
           value={value.funnelId ?? ""}
-          onChange={(funnelId) => onChange({ ...value, funnelId })}
-        />
+          onChange={(e) => onChange({ ...value, funnelId: e.target.value })}
+          className={mediumSelectCls}
+        >
+          <option value="">Escolha uma lista</option>
+          {labelFunnels.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.name}
+            </option>
+          ))}
+        </select>
       </div>
     );
   }
@@ -144,28 +122,38 @@ function SourceSubFilter({
   if (value.kind === "funnel") {
     const chosenFunnel = normalFunnels.find((f) => f.id === value.funnelId);
     return (
-      <div className="space-y-3">
+      <div className="flex flex-wrap gap-4">
         <div>
-          <p className="mb-1.5 text-xs font-medium text-neutral-500">Escolha o funil</p>
-          <OptionChips
-            options={normalFunnels.map((f) => ({ value: f.id, label: f.name }))}
+          <p className="mb-1 text-xs font-medium text-neutral-500">Funil</p>
+          <select
             value={value.funnelId ?? ""}
-            onChange={(funnelId) => onChange({ ...value, funnelId, stageId: "" })}
-          />
+            onChange={(e) => onChange({ ...value, funnelId: e.target.value, stageId: "" })}
+            className={mediumSelectCls}
+          >
+            <option value="">Escolha o funil</option>
+            {normalFunnels.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+          </select>
         </div>
-        {chosenFunnel && (
-          <div>
-            <p className="mb-1.5 text-xs font-medium text-neutral-500">Escolha a etapa</p>
-            <OptionChips
-              options={[
-                { value: "", label: "Todas as etapas" },
-                ...chosenFunnel.stages.map((s) => ({ value: s.id, label: s.name })),
-              ]}
-              value={value.stageId ?? ""}
-              onChange={(stageId) => onChange({ ...value, stageId })}
-            />
-          </div>
-        )}
+        <div>
+          <p className="mb-1 text-xs font-medium text-neutral-500">Etapa/Aba</p>
+          <select
+            value={value.stageId ?? ""}
+            onChange={(e) => onChange({ ...value, stageId: e.target.value })}
+            disabled={!chosenFunnel}
+            className={mediumSelectCls + " disabled:opacity-50"}
+          >
+            <option value="">Todas as etapas</option>
+            {(chosenFunnel?.stages ?? []).map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
     );
   }
@@ -173,15 +161,19 @@ function SourceSubFilter({
   if (value.kind === "subscribers" && isBarbearia) {
     return (
       <div>
-        <p className="mb-1.5 text-xs font-medium text-neutral-500">Escolha o grupo</p>
-        <OptionChips
-          options={[
-            { value: "all", label: "Todos" },
-            ...cols.map((c) => ({ value: c.key, label: c.label })),
-          ]}
+        <p className="mb-1 text-xs font-medium text-neutral-500">Assinantes</p>
+        <select
           value={value.subscriberStatus ?? "all"}
-          onChange={(subscriberStatus) => onChange({ ...value, subscriberStatus })}
-        />
+          onChange={(e) => onChange({ ...value, subscriberStatus: e.target.value })}
+          className={mediumSelectCls}
+        >
+          <option value="all">Todos os assinantes</option>
+          {cols.map((c) => (
+            <option key={c.key} value={c.key}>
+              {c.label}
+            </option>
+          ))}
+        </select>
       </div>
     );
   }
@@ -189,58 +181,59 @@ function SourceSubFilter({
   return null;
 }
 
-/** Menu lateral com os tipos de origem. Importar planilha fica separada
- * das outras 4, deslocada pra baixo, pedido explícito do usuário: dar
- * a impressão de função adicional, diferente das opções normais. */
+/** Menu lateral com os tipos de origem. Importar planilha fica no grupo
+ * normal (é uma origem de contatos igual às outras 4). Exportar
+ * planilha é uma AÇÃO, não uma origem, fica deslocada embaixo,
+ * separada, dando a impressão de função adicional. */
 function SourceSidebar({
   value,
   onChange,
   availableKinds,
+  onExport,
+  exportDisabled,
 }: {
   value: AudienceSourceKind;
   onChange: (kind: AudienceSourceKind) => void;
   availableKinds: AudienceSourceKind[];
+  onExport: () => void;
+  exportDisabled: boolean;
 }) {
-  const normalKinds = availableKinds.filter((k) => k !== "sheet");
-  const hasSheet = availableKinds.includes("sheet");
-
-  function ItemButton({ k }: { k: AudienceSourceKind }) {
-    return (
-      <button
-        type="button"
-        onClick={() => onChange(k)}
-        className={
-          "block w-full rounded-lg px-3 py-2 text-left text-sm font-semibold transition " +
-          (value === k ? "bg-brand text-white" : "text-neutral-700 hover:bg-neutral-100")
-        }
-      >
-        {SOURCE_LABELS[k]}
-      </button>
-    );
-  }
-
   return (
     <div className="flex w-36 flex-shrink-0 flex-col justify-between">
       <div className="space-y-1">
-        {normalKinds.map((k) => (
-          <ItemButton key={k} k={k} />
+        {availableKinds.map((k) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => onChange(k)}
+            className={
+              "block w-full rounded-lg px-3 py-2 text-left text-sm font-semibold transition " +
+              (value === k ? "bg-brand text-white" : "text-neutral-700 hover:bg-neutral-100")
+            }
+          >
+            {SOURCE_LABELS[k]}
+          </button>
         ))}
       </div>
-      {hasSheet && (
-        <div className="mt-8 border-t border-neutral-200 pt-3">
-          <ItemButton k="sheet" />
-        </div>
-      )}
+      <div className="mt-8 border-t border-neutral-200 pt-3">
+        <button
+          type="button"
+          onClick={onExport}
+          disabled={exportDisabled}
+          className="block w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100 disabled:opacity-40"
+        >
+          Exportar planilha
+        </button>
+      </div>
     </div>
   );
 }
 
 /** Área de importar planilha, antes de qualquer arquivo escolhido: só um
- * botão central de importar, sem área de contatos vazia por baixo
- * (pedido explícito: não faz sentido mostrar contatos vazios antes de
- * importar qualquer coisa). Botão estilizado no lugar do input nativo,
- * pra não depender do texto "Nenhum arquivo escolhido" do sistema
- * operacional, que estava aparecendo cortado. */
+ * botão central de importar, sem área de contatos vazia por baixo.
+ * Botão estilizado no lugar do input nativo, pra não depender do texto
+ * "Nenhum arquivo escolhido" do sistema operacional, que aparecia
+ * cortado. */
 function SheetImportPrompt({ onImported }: { onImported: (rows: SheetContact[]) => void }) {
   const [err, setErr] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -375,7 +368,13 @@ export function AudienceStep({
     // ocupar o espaço vertical disponível.
     <div className="flex" style={{ height: "calc(100vh - 260px)", minHeight: 360 }}>
       <div className="flex min-h-0 flex-1 gap-4">
-        <SourceSidebar value={source.kind} onChange={changeKind} availableKinds={availableKinds} />
+        <SourceSidebar
+          value={source.kind}
+          onChange={changeKind}
+          availableKinds={availableKinds}
+          onExport={exportDisplayedAsSheet}
+          exportDisabled={displayed.length === 0}
+        />
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
           <SourceSubFilter
@@ -405,14 +404,6 @@ export function AudienceStep({
                   }
                 >
                   {allDisplayedSelected ? "Remover todos" : `Adicionar todos (${displayed.length})`}
-                </button>
-                <button
-                  type="button"
-                  onClick={exportDisplayedAsSheet}
-                  disabled={displayed.length === 0}
-                  className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:border-neutral-500 disabled:opacity-40"
-                >
-                  Exportar planilha
                 </button>
                 <span className="ml-auto text-xs text-neutral-500">
                   {selected.size} selecionado(s) no total

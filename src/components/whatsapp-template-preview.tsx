@@ -147,42 +147,59 @@ export function TemplatePreview({
 
       {/* Fundo do WhatsApp por trás do card — sem moldura de celular (isso
          ficou artificial), só o "papel de parede" do chat mesmo, igual a
-         própria Meta mostra na tela de criação de modelo dela. Card usa
-         w-full (em vez de largura fixa) pra sempre caber certinho dentro
-         do espaçamento, sem ficar desalinhado. */}
-      <div className="rounded-xl bg-[#e5ddd5] p-5">
-        <div className="relative mx-auto w-full max-w-[320px]">
-          <div className="overflow-hidden rounded-lg bg-white shadow-md">
-            {(templateType === "image" ||
-              templateType === "video" ||
-              templateType === "document") && <MediaBox file={mediaFile} kind={templateType} />}
-            <div className="px-2.5 pb-1.5 pt-2">
-              <p className="whitespace-pre-wrap text-[12px] leading-snug text-neutral-800">
-                {renderBody(bodyText)}
-              </p>
-              {footerText && <p className="mt-1 text-[10.5px] text-neutral-400">{footerText}</p>}
-              <p className="mt-1 text-right text-[9.5px] text-neutral-400">
-                {new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-              </p>
-            </div>
-            {templateType !== "carousel" && buttons.length > 0 && (
-              <div className="border-t border-neutral-100">
-                {buttons.map((b, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-center gap-1.5 border-t border-neutral-100 py-1.5 text-[12px] text-blue-600 first:border-t-0"
-                  >
-                    <ButtonIcon type={b.type} />
-                    {b.text || "Botão"}
-                  </div>
-                ))}
+         própria Meta mostra na tela de criação de modelo dela.
+         ⚠️ Corrigido (19/09, terceira correção): a "tela do celular"
+         (largura fixa, simula o viewport de um telefone) e a BOLHA da
+         mensagem em si são camadas diferentes agora — antes eram o
+         MESMO elemento, fazendo a bolha SEMPRE esticar até a largura
+         máxima, mesmo pra mensagens de 1 palavra (bug real: "mensagem
+         curta ficando artificialmente larga"). Bolhas de texto puro
+         agora encolhem pro conteúdo (w-fit) até um teto de 85% da tela
+         simulada — igual o WhatsApp real faz; bolhas com mídia
+         (imagem/vídeo/documento) esticam até esse mesmo teto, já que
+         a mídia justifica a largura. */}
+      <div className="rounded-xl bg-[#e5ddd5] p-4">
+        <div className="mx-auto w-full max-w-[340px]">
+          <div className="flex justify-start">
+            <div
+              className={
+                "relative overflow-hidden rounded-lg bg-white shadow-md " +
+                (templateType === "image" || templateType === "video" || templateType === "document"
+                  ? "w-full max-w-[85%]"
+                  : "w-fit max-w-[85%]")
+              }
+            >
+              {(templateType === "image" ||
+                templateType === "video" ||
+                templateType === "document") && <MediaBox file={mediaFile} kind={templateType} />}
+              <div className="px-2.5 pb-1.5 pt-2">
+                <p className="whitespace-pre-wrap text-[13px] leading-snug text-neutral-800">
+                  {renderBody(bodyText)}
+                </p>
+                {footerText && <p className="mt-1 text-[10.5px] text-neutral-400">{footerText}</p>}
+                <p className="mt-1 text-right text-[9.5px] text-neutral-400">
+                  {new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                </p>
               </div>
-            )}
+              {templateType !== "carousel" && buttons.length > 0 && (
+                <div className="border-t border-neutral-100">
+                  {buttons.map((b, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-center gap-1.5 border-t border-neutral-100 py-1.5 text-[12px] text-blue-600 first:border-t-0"
+                    >
+                      <ButtonIcon type={b.type} />
+                      {b.text || "Botão"}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {templateType === "carousel" && (
-          <div className="mx-auto mt-2 flex w-full max-w-[320px] gap-2 overflow-x-auto pb-1">
+          <div className="mx-auto mt-2 flex w-full max-w-[340px] gap-2 overflow-x-auto pb-1">
             {carouselCards.map((card, i) => (
               <div key={i} className="w-28 shrink-0 overflow-hidden rounded-lg bg-white shadow-sm">
                 <MediaBox file={card.file} kind="image" />

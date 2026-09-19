@@ -10,13 +10,26 @@
 
 import type { QuickReplyAction } from "@/lib/quick-replies";
 
-function Bubble({ children }: { children: React.ReactNode }) {
+// ⚠️ Corrigido (19/09, terceira correção): antes cada bolha SEMPRE
+// esticava até a largura máxima do container, mesmo mensagens de 1
+// palavra (bug real: "mensagem curta ficando artificialmente larga").
+// Agora bolhas de texto/áudio encolhem pro conteúdo (w-fit) até um teto
+// de 85% da largura da "tela simulada"; bolhas com mídia (imagem/vídeo)
+// esticam até esse mesmo teto, já que a mídia justifica a largura.
+function Bubble({ children, hasMedia }: { children: React.ReactNode; hasMedia?: boolean }) {
   return (
-    <div className="overflow-hidden rounded-lg bg-white px-2.5 pb-1.5 pt-2 shadow-md">
-      {children}
-      <p className="mt-1 text-right text-[9.5px] text-neutral-400">
-        {new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-      </p>
+    <div className="flex justify-start">
+      <div
+        className={
+          "overflow-hidden rounded-lg bg-white px-2.5 pb-1.5 pt-2 shadow-md max-w-[85%] " +
+          (hasMedia ? "w-full" : "w-fit")
+        }
+      >
+        {children}
+        <p className="mt-1 text-right text-[9.5px] text-neutral-400">
+          {new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+        </p>
+      </div>
     </div>
   );
 }
@@ -41,7 +54,7 @@ export function MessagePreview({
     <div>
       <p className="mb-2 text-sm font-semibold text-neutral-900">Prévia da mensagem</p>
       <div className="rounded-xl bg-[#e5ddd5] p-5">
-        <div className="mx-auto w-full max-w-[320px] space-y-2">
+        <div className="mx-auto w-full max-w-[340px] space-y-2">
           {!hasContent ? (
             <p className="px-1 text-[12px] text-neutral-500">
               Defina a mensagem para ver a prévia.
@@ -54,7 +67,7 @@ export function MessagePreview({
                 if (!text?.trim()) return null;
                 return (
                   <Bubble key={i}>
-                    <p className="whitespace-pre-wrap text-[12px] leading-snug text-neutral-800">
+                    <p className="whitespace-pre-wrap text-[13px] leading-snug text-neutral-800">
                       {text}
                     </p>
                   </Bubble>
@@ -62,14 +75,14 @@ export function MessagePreview({
               }
               if (action.type === "image" && action.url) {
                 return (
-                  <Bubble key={i}>
+                  <Bubble key={i} hasMedia>
                     <img
                       src={action.url}
                       alt=""
                       className="-mx-2.5 -mt-2 mb-1 block w-[calc(100%+20px)]"
                     />
                     {action.caption && (
-                      <p className="whitespace-pre-wrap text-[12px] leading-snug text-neutral-800">
+                      <p className="whitespace-pre-wrap text-[13px] leading-snug text-neutral-800">
                         {action.caption}
                       </p>
                     )}
@@ -78,14 +91,14 @@ export function MessagePreview({
               }
               if (action.type === "video" && action.url) {
                 return (
-                  <Bubble key={i}>
+                  <Bubble key={i} hasMedia>
                     <video
                       src={action.url}
                       className="-mx-2.5 -mt-2 mb-1 block w-[calc(100%+20px)] bg-black"
                       controls
                     />
                     {action.caption && (
-                      <p className="whitespace-pre-wrap text-[12px] leading-snug text-neutral-800">
+                      <p className="whitespace-pre-wrap text-[13px] leading-snug text-neutral-800">
                         {action.caption}
                       </p>
                     )}
