@@ -20,7 +20,8 @@ import {
 } from "@/lib/quick-replies";
 import type { Funnel, WaContact, WaLabel } from "@/lib/funnels";
 import { AudienceStep } from "@/components/dispatch-step-audience";
-import { MessagePreview, TemplatePreview } from "@/components/dispatch-message-preview";
+import { MessagePreview } from "@/components/dispatch-message-preview";
+import { TemplatePreview } from "@/components/whatsapp-template-preview";
 import type { AudienceContact, AudienceSource, DispatchCustomer } from "@/lib/dispatch-audience";
 export type { DispatchCustomer } from "@/lib/dispatch-audience";
 
@@ -596,11 +597,40 @@ export function DispatchCenter({
               )}
 
               {isMetaProvider ? (
-                <TemplatePreview
-                  bodyText={templates.find((t) => t.name === selectedTemplate)?.bodyText || ""}
-                  headerImageUrl={templateHeaderPreview}
-                  carouselImageUrls={carouselPreviews}
-                />
+                (() => {
+                  const tpl = templates.find((t) => t.name === selectedTemplate);
+                  const templateType: "text" | "image" | "carousel" =
+                    (tpl?.carouselCardCount ?? 0) > 0
+                      ? "carousel"
+                      : tpl?.hasImageHeader
+                        ? "image"
+                        : "text";
+                  return (
+                    <TemplatePreview
+                      templateType={templateType}
+                      mediaFile={
+                        templateHeaderPreview
+                          ? {
+                              dataUrl: templateHeaderPreview,
+                              mime: "image/jpeg",
+                              filename: "cabecalho.jpg",
+                            }
+                          : null
+                      }
+                      bodyText={tpl?.bodyText || ""}
+                      bodyExamples={{}}
+                      footerText=""
+                      buttons={[]}
+                      carouselCards={carouselPreviews.map((url) => ({
+                        file: url
+                          ? { dataUrl: url, mime: "image/jpeg", filename: "cartao.jpg" }
+                          : null,
+                        bodyText: "",
+                      }))}
+                      carouselButtons={[]}
+                    />
+                  );
+                })()
               ) : (
                 <MessagePreview actions={actions} variantPreview={variants[0]} />
               )}

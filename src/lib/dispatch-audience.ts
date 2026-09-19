@@ -48,17 +48,17 @@ function resolveInbox(data: AudienceResolveData): AudienceContact[] {
     .filter((c) => isRealPhone(c.phone));
 }
 
-/** Funis do tipo "label" (Listas/etiquetas) — mesma lógica de
- * funnelTargets já usada no disparo atual e em funnels-view.tsx
- * (stageCards), só que reaproveitável tanto pra inclusão quanto exclusão. */
+/** Listas (funis do tipo "label"). Simplificado (19/09, pedido do
+ * usuário): um único nível de escolha agora, a lista em si, sem um
+ * segundo seletor pra etiqueta específica dentro dela. Sem funnelId
+ * informado = todas as listas juntas. */
 function resolveLabelFunnel(source: AudienceSource, data: AudienceResolveData): AudienceContact[] {
-  const funnel = data.funnels.find((f) => f.id === source.funnelId);
-  if (!funnel) return [];
-  const relevantStages = source.stageId
-    ? funnel.stages.filter((s) => s.id === source.stageId)
-    : funnel.stages;
+  const relevantFunnels = source.funnelId
+    ? data.funnels.filter((f) => f.id === source.funnelId)
+    : data.funnels.filter((f) => f.mode === "label");
   const wantedLabelIds = new Set(
-    relevantStages
+    relevantFunnels
+      .flatMap((f) => f.stages)
       .map((s) => data.labels.find((l) => l.name === s.name)?.wa_label_id)
       .filter((x): x is string => Boolean(x)),
   );
@@ -127,8 +127,9 @@ export function firstAvailableSource(
   data: AudienceResolveData,
 ): AudienceSource {
   if (kind === "labels") {
-    const first = data.funnels.find((f) => f.mode === "label");
-    return { kind, funnelId: first?.id ?? "", stageId: "" };
+    // "Todas as listas" por padrão, simples e já mostra contatos na
+    // hora, sem forçar escolher uma lista específica primeiro.
+    return { kind };
   }
   if (kind === "funnel") {
     const first = data.funnels.find((f) => f.mode !== "label");

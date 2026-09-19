@@ -1,27 +1,33 @@
-// Preview visual de como a mensagem vai chegar pro destinatário — bolha
-// de chat estilo WhatsApp, pedido explícito do usuário (19/09), inspirado
-// na pré-visualização que a Meta já mostra na criação de modelos.
+// Preview de uma mensagem de texto livre ou resposta rápida (não-modelo
+// aprovado). Usa o MESMO estilo visual do TemplatePreview real (ver
+// whatsapp-template-preview.tsx, reaproveitado na Etapa 2 do wizard de
+// disparo para modelos aprovados), pedido explícito do usuário: manter
+// consistência visual, sem ter duas prévias diferentes para a mesma
+// coisa. Como mensagem livre tem uma estrutura de dados bem diferente
+// de um modelo (várias ações em sequência em vez de um único corpo +
+// mídia + botões), esse é um componente próprio, mas com o mesmo fundo,
+// moldura de card, tamanho e tipografia.
 
 import type { QuickReplyAction } from "@/lib/quick-replies";
 
 function Bubble({ children }: { children: React.ReactNode }) {
   return (
-    <div className="max-w-[85%] rounded-lg rounded-tl-none bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm">
+    <div className="overflow-hidden rounded-lg bg-white px-2.5 pb-1.5 pt-2 shadow-md">
       {children}
+      <p className="mt-1 text-right text-[9.5px] text-neutral-400">
+        {new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+      </p>
     </div>
   );
 }
 
-/** Preview de uma mensagem de texto livre ou resposta rápida (não-template) —
- * uma bolha por ação (texto, imagem, vídeo, áudio; ações de funil não geram
- * bolha visível pro cliente). */
 export function MessagePreview({
   actions,
   variantPreview,
 }: {
   actions: QuickReplyAction[];
   // Primeira variação de texto (quando há mais de uma, mostra ela como
-  // exemplo — as outras são sorteadas aleatoriamente por contato no envio
+  // exemplo, as outras são sorteadas aleatoriamente por contato no envio
   // real, não dá pra prever qual cada um vai receber).
   variantPreview?: string;
 }) {
@@ -32,96 +38,72 @@ export function MessagePreview({
   );
 
   return (
-    <div className="rounded-xl border border-neutral-200 bg-[#e5ded8] p-4">
-      <p className="mb-2 text-xs font-medium text-neutral-500">Como vai chegar</p>
-      {!hasContent ? (
-        <p className="text-sm text-neutral-500">Defina a mensagem para ver a prévia.</p>
-      ) : (
-        <div className="space-y-2">
-          {actions.map((action, i) => {
-            if (action.type === "funnel_add" || action.type === "funnel_remove") return null;
-            if (action.type === "text") {
-              const text = i === 0 && variantPreview?.trim() ? variantPreview : action.text;
-              if (!text?.trim()) return null;
-              return (
-                <Bubble key={i}>
-                  <p className="whitespace-pre-wrap">{text}</p>
-                </Bubble>
-              );
-            }
-            if (action.type === "image" && action.url) {
-              return (
-                <Bubble key={i}>
-                  <img src={action.url} alt="" className="mb-1 max-h-40 rounded object-cover" />
-                  {action.caption && <p className="whitespace-pre-wrap">{action.caption}</p>}
-                </Bubble>
-              );
-            }
-            if (action.type === "video" && action.url) {
-              return (
-                <Bubble key={i}>
-                  <video src={action.url} className="mb-1 max-h-40 rounded" controls />
-                  {action.caption && <p className="whitespace-pre-wrap">{action.caption}</p>}
-                </Bubble>
-              );
-            }
-            if (action.type === "audio" && action.url) {
-              return (
-                <Bubble key={i}>
-                  <audio src={action.url} controls className="max-w-full" />
-                </Bubble>
-              );
-            }
-            return null;
-          })}
+    <div>
+      <p className="mb-2 text-sm font-semibold text-neutral-900">Prévia da mensagem</p>
+      <div className="rounded-xl bg-[#e5ddd5] p-5">
+        <div className="mx-auto w-full max-w-[240px] space-y-2">
+          {!hasContent ? (
+            <p className="px-1 text-[12px] text-neutral-500">
+              Defina a mensagem para ver a prévia.
+            </p>
+          ) : (
+            actions.map((action, i) => {
+              if (action.type === "funnel_add" || action.type === "funnel_remove") return null;
+              if (action.type === "text") {
+                const text = i === 0 && variantPreview?.trim() ? variantPreview : action.text;
+                if (!text?.trim()) return null;
+                return (
+                  <Bubble key={i}>
+                    <p className="whitespace-pre-wrap text-[12px] leading-snug text-neutral-800">
+                      {text}
+                    </p>
+                  </Bubble>
+                );
+              }
+              if (action.type === "image" && action.url) {
+                return (
+                  <Bubble key={i}>
+                    <img
+                      src={action.url}
+                      alt=""
+                      className="-mx-2.5 -mt-2 mb-1 block w-[calc(100%+20px)]"
+                    />
+                    {action.caption && (
+                      <p className="whitespace-pre-wrap text-[12px] leading-snug text-neutral-800">
+                        {action.caption}
+                      </p>
+                    )}
+                  </Bubble>
+                );
+              }
+              if (action.type === "video" && action.url) {
+                return (
+                  <Bubble key={i}>
+                    <video
+                      src={action.url}
+                      className="-mx-2.5 -mt-2 mb-1 block w-[calc(100%+20px)] bg-black"
+                      controls
+                    />
+                    {action.caption && (
+                      <p className="whitespace-pre-wrap text-[12px] leading-snug text-neutral-800">
+                        {action.caption}
+                      </p>
+                    )}
+                  </Bubble>
+                );
+              }
+              if (action.type === "audio" && action.url) {
+                return (
+                  <Bubble key={i}>
+                    <audio src={action.url} controls className="max-w-full" />
+                  </Bubble>
+                );
+              }
+              return null;
+            })
+          )}
         </div>
-      )}
-    </div>
-  );
-}
-
-/** Preview de um modelo aprovado (Meta) — corpo do template com as
- * variáveis substituídas por exemplo, mais cabeçalho de imagem/carrossel
- * quando existir. */
-export function TemplatePreview({
-  bodyText,
-  headerImageUrl,
-  carouselImageUrls,
-}: {
-  bodyText: string;
-  headerImageUrl?: string | null;
-  carouselImageUrls?: (string | null)[];
-}) {
-  return (
-    <div className="rounded-xl border border-neutral-200 bg-[#e5ded8] p-4">
-      <p className="mb-2 text-xs font-medium text-neutral-500">Como vai chegar</p>
-      <Bubble>
-        {headerImageUrl && (
-          <img src={headerImageUrl} alt="" className="mb-1 max-h-40 w-full rounded object-cover" />
-        )}
-        {carouselImageUrls && carouselImageUrls.length > 0 && (
-          <div className="mb-1 flex gap-1 overflow-x-auto">
-            {carouselImageUrls.map((url, i) =>
-              url ? (
-                <img
-                  key={i}
-                  src={url}
-                  alt=""
-                  className="h-20 w-20 flex-shrink-0 rounded object-cover"
-                />
-              ) : (
-                <div
-                  key={i}
-                  className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded bg-neutral-200 text-xs text-neutral-400"
-                >
-                  Cartão {i + 1}
-                </div>
-              ),
-            )}
-          </div>
-        )}
-        <p className="whitespace-pre-wrap">{bodyText || "Escolha um modelo para ver a prévia."}</p>
-      </Bubble>
+      </div>
     </div>
   );
 }

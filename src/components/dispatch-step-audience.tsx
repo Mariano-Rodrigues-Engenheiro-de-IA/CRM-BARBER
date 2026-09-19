@@ -19,6 +19,13 @@
 // estado local, ele se perderia toda vez que o wizard saísse da Etapa 1
 // (React desmonta o componente ao trocar de etapa), fazendo a
 // configuração "desaparecer" ao voltar, bug real reportado pelo usuário.
+//
+// Segunda leva de ajustes (19/09, mesmo dia), a partir de feedback de
+// uso real: "Listas" simplificado pra um único seletor compacto (sem
+// segundo nível de etiqueta específica); seletores compactos em vez de
+// esticados (w-full) em toda a tela; botão inferior grande trocado por
+// uma seta discreta na lateral; lista de contatos com altura responsiva
+// ao tamanho da tela, em vez de uma altura fixa pequena.
 
 import { useMemo, useState } from "react";
 import * as XLSX from "xlsx";
@@ -33,12 +40,15 @@ import {
   type DispatchCustomer,
 } from "@/lib/dispatch-audience";
 
-const inputCls =
-  "w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-neutral-900";
+// Seletor COMPACTO — largura pelo conteúdo, não esticado (feedback real:
+// "o seletor de Assinantes ficou gigantesco"). max-w evita que um nome
+// muito longo estique demais mesmo assim.
+const compactSelectCls =
+  "w-auto max-w-[220px] rounded-lg border border-neutral-300 bg-white px-2.5 py-1.5 text-sm text-neutral-900 outline-none focus:border-neutral-900";
 
 const SOURCE_LABELS: Record<AudienceSourceKind, string> = {
   inbox: "Inbox",
-  labels: "Etiquetas",
+  labels: "Listas",
   funnel: "Funil",
   subscribers: "Assinantes",
   sheet: "Importar planilha",
@@ -70,10 +80,10 @@ function SelectionDot({ selected }: { selected: boolean }) {
   );
 }
 
-/** Sub-filtro da origem escolhida, o funil/lista específico, coluna do
+/** Sub-filtro da origem escolhida: o funil/lista específico, coluna do
  * Kanban, ou upload de planilha. Não inclui mais a escolha do TIPO em
- * si (isso agora é a sidebar, ver AudienceStep) — só o que é específico
- * de cada tipo. */
+ * si (isso é a sidebar, ver AudienceStep) — só o que é específico de
+ * cada tipo. */
 function SourceSubFilter({
   value,
   onChange,
@@ -94,78 +104,81 @@ function SourceSubFilter({
   if (value.kind === "inbox") return null;
 
   return (
-    <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+    <div className="flex flex-wrap items-end gap-4">
+      {/* Listas: um único seletor compacto (todas ou uma específica) —
+         antes tinha um segundo nível pra etiqueta dentro da lista, que
+         o usuário não considerou necessário. */}
       {value.kind === "labels" && (
-        <div className="grid grid-cols-2 gap-2">
+        <div>
+          <p className="mb-1 text-xs font-medium text-neutral-500">Lista</p>
           <select
             value={value.funnelId ?? ""}
-            onChange={(e) => onChange({ ...value, funnelId: e.target.value, stageId: "" })}
-            className={inputCls}
+            onChange={(e) => onChange({ ...value, funnelId: e.target.value })}
+            className={compactSelectCls}
           >
-            <option value="">Escolha a lista</option>
+            <option value="">Todas as listas</option>
             {labelFunnels.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.name}
               </option>
             ))}
           </select>
-          <select
-            value={value.stageId ?? ""}
-            onChange={(e) => onChange({ ...value, stageId: e.target.value })}
-            className={inputCls}
-          >
-            <option value="">Todas as etiquetas</option>
-            {(labelFunnels.find((f) => f.id === value.funnelId)?.stages ?? []).map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
         </div>
       )}
 
+      {/* Funil: mantém os 2 níveis (funil, depois etapa/coluna), aqui
+         são realmente necessários. */}
       {value.kind === "funnel" && (
-        <div className="grid grid-cols-2 gap-2">
-          <select
-            value={value.funnelId ?? ""}
-            onChange={(e) => onChange({ ...value, funnelId: e.target.value, stageId: "" })}
-            className={inputCls}
-          >
-            <option value="">Escolha o funil</option>
-            {normalFunnels.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={value.stageId ?? ""}
-            onChange={(e) => onChange({ ...value, stageId: e.target.value })}
-            className={inputCls}
-          >
-            <option value="">Todas as colunas</option>
-            {(normalFunnels.find((f) => f.id === value.funnelId)?.stages ?? []).map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <>
+          <div>
+            <p className="mb-1 text-xs font-medium text-neutral-500">Escolha o funil</p>
+            <select
+              value={value.funnelId ?? ""}
+              onChange={(e) => onChange({ ...value, funnelId: e.target.value, stageId: "" })}
+              className={compactSelectCls}
+            >
+              <option value="">Selecione</option>
+              {normalFunnels.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <p className="mb-1 text-xs font-medium text-neutral-500">Escolha a etapa</p>
+            <select
+              value={value.stageId ?? ""}
+              onChange={(e) => onChange({ ...value, stageId: e.target.value })}
+              className={compactSelectCls}
+            >
+              <option value="">Todas as etapas</option>
+              {(normalFunnels.find((f) => f.id === value.funnelId)?.stages ?? []).map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </>
       )}
 
       {value.kind === "subscribers" && isBarbearia && (
-        <select
-          value={value.subscriberStatus ?? "all"}
-          onChange={(e) => onChange({ ...value, subscriberStatus: e.target.value })}
-          className={inputCls}
-        >
-          <option value="all">Todos</option>
-          {cols.map((c) => (
-            <option key={c.key} value={c.key}>
-              {c.label}
-            </option>
-          ))}
-        </select>
+        <div>
+          <p className="mb-1 text-xs font-medium text-neutral-500">Kanban</p>
+          <select
+            value={value.subscriberStatus ?? "all"}
+            onChange={(e) => onChange({ ...value, subscriberStatus: e.target.value })}
+            className={compactSelectCls}
+          >
+            <option value="all">Todos</option>
+            {cols.map((c) => (
+              <option key={c.key} value={c.key}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </div>
       )}
 
       {value.kind === "sheet" && (
@@ -188,7 +201,7 @@ function SourceSubFilter({
                 setSheetErr("Não consegui ler esse arquivo.");
               }
             }}
-            className="w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-800 file:mr-3 file:rounded-md file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white"
+            className="text-sm text-neutral-800 file:mr-3 file:rounded-md file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white"
           />
           {value.sheetContacts && value.sheetContacts.length > 0 && (
             <p className="mt-1 text-xs text-neutral-500">
@@ -277,8 +290,8 @@ export function AudienceStep({
 
   function changeKind(kind: AudienceSourceKind) {
     // Sempre pré-seleciona a primeira opção disponível (primeiro funil,
-    // primeira lista) e já mostra os contatos dela na hora, nunca deixa
-    // a área de contatos vazia esperando uma escolha manual.
+    // "todas as listas") e já mostra os contatos dela na hora, nunca
+    // deixa a área de contatos vazia esperando uma escolha manual.
     onSourceChange(firstAvailableSource(kind, data));
   }
 
@@ -321,13 +334,18 @@ export function AudienceStep({
   );
   const allDisplayedSelected =
     displayed.length > 0 && displayed.every((c) => selected.has(c.phone));
+  const canAdvance = selected.size > 0;
 
   return (
-    <div className="space-y-5">
-      <div className="flex gap-4">
+    // Altura relativa à tela do usuário (feedback real: "hoje existe
+    // muito espaço vazio embaixo") — a lista de contatos cresce pra
+    // ocupar o espaço vertical disponível, telas maiores mostram mais
+    // contatos de uma vez, sem precisar rolar tanto.
+    <div className="flex" style={{ height: "calc(100vh - 260px)", minHeight: 360 }}>
+      <div className="flex min-h-0 flex-1 gap-4">
         <SourceSidebar value={source.kind} onChange={changeKind} availableKinds={availableKinds} />
 
-        <div className="min-w-0 flex-1 space-y-3">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
           <SourceSubFilter
             value={source}
             onChange={onSourceChange}
@@ -336,74 +354,92 @@ export function AudienceStep({
             isBarbearia={isBarbearia}
           />
 
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={addAllDisplayed}
-                disabled={displayed.length === 0 || allDisplayedSelected}
-                className="rounded-lg border border-brand bg-brand/10 px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/20 disabled:opacity-40"
-              >
-                Adicionar todos ({displayed.length})
-              </button>
-              <button
-                type="button"
-                onClick={removeAllDisplayed}
-                disabled={displayed.length === 0}
-                className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:border-red-400 hover:text-red-600 disabled:opacity-40"
-              >
-                Remover todos
-              </button>
-              <button
-                type="button"
-                onClick={exportDisplayedAsSheet}
-                disabled={displayed.length === 0}
-                className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:border-neutral-500 disabled:opacity-40"
-              >
-                Exportar planilha
-              </button>
-            </div>
-            <p className="text-xs text-neutral-500">{selected.size} selecionado(s) no total</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={addAllDisplayed}
+              disabled={displayed.length === 0 || allDisplayedSelected}
+              className="rounded-lg border border-brand bg-brand/10 px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/20 disabled:opacity-40"
+            >
+              Adicionar todos ({displayed.length})
+            </button>
+            <button
+              type="button"
+              onClick={removeAllDisplayed}
+              disabled={displayed.length === 0}
+              className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:border-red-400 hover:text-red-600 disabled:opacity-40"
+            >
+              Remover todos
+            </button>
+            <button
+              type="button"
+              onClick={exportDisplayedAsSheet}
+              disabled={displayed.length === 0}
+              className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:border-neutral-500 disabled:opacity-40"
+            >
+              Exportar planilha
+            </button>
+            <span className="ml-auto text-xs text-neutral-500">
+              {selected.size} selecionado(s) no total
+            </span>
           </div>
 
-          <div>
+          {/* flex-1 + min-h-0: a lista ocupa todo o espaço vertical que
+             sobrar dentro da altura calculada acima, em vez de uma
+             altura fixa pequena. */}
+          <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-neutral-200">
             {displayed.length === 0 ? (
-              <p className="text-sm text-neutral-500">Nenhum contato encontrado nessa origem.</p>
+              <p className="p-3 text-sm text-neutral-500">
+                Nenhum contato encontrado nessa origem.
+              </p>
             ) : (
-              <div className="max-h-64 overflow-y-auto rounded-xl border border-neutral-200">
-                {displayed.map((c) => {
-                  const isSelected = selected.has(c.phone);
-                  return (
-                    <button
-                      key={c.phone}
-                      type="button"
-                      onClick={() => toggleOne(c)}
-                      className={
-                        "flex w-full items-center gap-3 border-b border-neutral-100 px-3 py-2.5 text-left text-sm last:border-b-0 " +
-                        (isSelected
-                          ? "bg-brand/5 text-neutral-900"
-                          : "text-neutral-700 hover:bg-neutral-50")
-                      }
-                    >
-                      <SelectionDot selected={isSelected} />
-                      <span className="min-w-0 truncate">{c.name || c.phone}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              displayed.map((c) => {
+                const isSelected = selected.has(c.phone);
+                return (
+                  <button
+                    key={c.phone}
+                    type="button"
+                    onClick={() => toggleOne(c)}
+                    className={
+                      "flex w-full items-center gap-3 border-b border-neutral-100 px-3 py-2.5 text-left text-sm last:border-b-0 " +
+                      (isSelected
+                        ? "bg-brand/5 text-neutral-900"
+                        : "text-neutral-700 hover:bg-neutral-50")
+                    }
+                  >
+                    <SelectionDot selected={isSelected} />
+                    <span className="min-w-0 truncate">{c.name || c.phone}</span>
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
       </div>
 
-      <button
-        type="button"
-        disabled={selected.size === 0}
-        onClick={() => onNext(selectedList)}
-        className="w-full rounded-lg bg-brand px-4 py-3 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
-      >
-        Próxima etapa, {selected.size} destinatário(s)
-      </button>
+      {/* Seta de navegação discreta, em vez do botão grande esticado
+         (feedback real: "o botão foi esticado e ficou muito grande"). */}
+      <div className="flex flex-shrink-0 items-center pl-3">
+        <button
+          type="button"
+          disabled={!canAdvance}
+          onClick={() => onNext(selectedList)}
+          title={
+            canAdvance
+              ? `Próxima etapa, ${selected.size} destinatário(s)`
+              : "Selecione pelo menos 1 contato"
+          }
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-300 text-neutral-600 transition hover:border-brand hover:bg-brand hover:text-white disabled:opacity-30 disabled:hover:border-neutral-300 disabled:hover:bg-transparent disabled:hover:text-neutral-600"
+        >
+          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+            <path
+              fillRule="evenodd"
+              d="M7.3 14.7a1 1 0 010-1.4L10.6 10 7.3 6.7a1 1 0 011.4-1.4l4 4a1 1 0 010 1.4l-4 4a1 1 0 01-1.4 0z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </button>
+      </div>
     </div>
   );
 }
