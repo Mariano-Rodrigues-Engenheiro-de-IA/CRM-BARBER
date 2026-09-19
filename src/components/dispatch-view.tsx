@@ -157,12 +157,13 @@ export function DispatchCenter({
   const [carouselPaths, setCarouselPaths] = useState<(string | null)[]>([]);
   const [carouselPreviews, setCarouselPreviews] = useState<(string | null)[]>([]);
   const [carouselUploadingIndex, setCarouselUploadingIndex] = useState<number | null>(null);
-  const [paceMin, setPaceMin] = useState(20);
+  const [paceMin, setPaceMin] = useState(30);
   const [paceMax, setPaceMax] = useState(60);
   // Pausa maior e periódica, a cada N contatos - diferente do ritmo
-  // acima (intervalo entre CADA mensagem). 0 = desativado.
-  const [pauseEveryContacts, setPauseEveryContacts] = useState(0);
-  const [pauseSeconds, setPauseSeconds] = useState(0);
+  // acima (intervalo entre CADA mensagem). Padrão pré-definido a
+  // pedido do usuário (19/09): 20 contatos / 30s.
+  const [pauseEveryContacts, setPauseEveryContacts] = useState(20);
+  const [pauseSeconds, setPauseSeconds] = useState(30);
   const [accepted, setAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
