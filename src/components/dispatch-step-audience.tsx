@@ -37,6 +37,7 @@ import type { Funnel, WaContact, WaLabel } from "@/lib/funnels";
 import {
   resolveAudienceSource,
   firstAvailableSource,
+  phoneMatchKey,
   type AudienceContact,
   type AudienceSource,
   type AudienceSourceKind,
@@ -61,13 +62,13 @@ function SelectionDot({ selected }: { selected: boolean }) {
   return (
     <span
       className={
-        "flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 transition " +
+        "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition " +
         (selected
           ? "border-brand bg-brand text-white"
           : "border-neutral-400 bg-white text-transparent")
       }
     >
-      <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+      <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3">
         <path
           fillRule="evenodd"
           d="M16.7 5.3a1 1 0 010 1.4l-7.4 7.4a1 1 0 01-1.4 0L3.3 9.5a1 1 0 111.4-1.4l3.9 3.9 6.7-6.7a1 1 0 011.4 0z"
@@ -296,8 +297,8 @@ export function AudienceStep({
   // Controlado pelo pai, ver comentário no topo do arquivo.
   source: AudienceSource;
   onSourceChange: (next: AudienceSource) => void;
-  selected: Map<string, string>;
-  onSelectedChange: (next: Map<string, string>) => void;
+  selected: Map<string, AudienceContact>;
+  onSelectedChange: (next: Map<string, AudienceContact>) => void;
   onNext: (finalList: AudienceContact[]) => void;
 }) {
   const availableKinds: AudienceSourceKind[] = isBarbearia
@@ -319,21 +320,22 @@ export function AudienceStep({
   }
 
   const allDisplayedSelected =
-    displayed.length > 0 && displayed.every((c) => selected.has(c.phone));
+    displayed.length > 0 && displayed.every((c) => selected.has(phoneMatchKey(c.phone)));
 
   function toggleAllDisplayed() {
     const next = new Map(selected);
     if (allDisplayedSelected) {
-      for (const c of displayed) next.delete(c.phone);
+      for (const c of displayed) next.delete(phoneMatchKey(c.phone));
     } else {
-      for (const c of displayed) next.set(c.phone, c.name);
+      for (const c of displayed) next.set(phoneMatchKey(c.phone), c);
     }
     onSelectedChange(next);
   }
   function toggleOne(c: AudienceContact) {
     const next = new Map(selected);
-    if (next.has(c.phone)) next.delete(c.phone);
-    else next.set(c.phone, c.name);
+    const key = phoneMatchKey(c.phone);
+    if (next.has(key)) next.delete(key);
+    else next.set(key, c);
     onSelectedChange(next);
   }
 
@@ -352,10 +354,7 @@ export function AudienceStep({
     XLSX.writeFile(wb, `contatos-${sourceLabel}.xlsx`);
   }
 
-  const selectedList = useMemo(
-    () => Array.from(selected, ([phone, name]) => ({ phone, name })),
-    [selected],
-  );
+  const selectedList = useMemo(() => Array.from(selected.values()), [selected]);
   const canAdvance = selected.size > 0;
 
   // Planilha antes de qualquer arquivo importado: nada pra mostrar como
@@ -421,7 +420,7 @@ export function AudienceStep({
                   </p>
                 ) : (
                   displayed.map((c) => {
-                    const isSelected = selected.has(c.phone);
+                    const isSelected = selected.has(phoneMatchKey(c.phone));
                     return (
                       <button
                         key={c.phone}

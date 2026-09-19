@@ -103,7 +103,7 @@ export function DispatchCenter({
   // ao trocar de origem.
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [audienceSource, setAudienceSource] = useState<AudienceSource>({ kind: "inbox" });
-  const [selectedAudience, setSelectedAudience] = useState<Map<string, string>>(new Map());
+  const [selectedAudience, setSelectedAudience] = useState<Map<string, AudienceContact>>(new Map());
   const [finalAudience, setFinalAudience] = useState<AudienceContact[]>([]);
 
   const [name, setName] = useState("");

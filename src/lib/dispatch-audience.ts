@@ -34,6 +34,37 @@ export type AudienceResolveData = {
   customers: DispatchCustomer[];
 };
 
+/** Garante o código do país no telefone que será REALMENTE ENVIADO —
+ * sem código do país (DDD + número BR, 10 ou 11 dígitos), adiciona 55.
+ * Não mexe em mais nada (preserva o "9" como veio da fonte original):
+ * remover informação de um número que precisava dela quebraria o envio
+ * de verdade, diferente da chave de comparação abaixo, que só decide
+ * SE duas entradas são a mesma pessoa, nunca é o valor mandado pra API. */
+function normalizePhoneForSend(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 10 || digits.length === 11) return "55" + digits;
+  return digits;
+}
+
+/** Chave de comparação, usada só pra decidir se duas entradas de fontes
+ * diferentes são a MESMA pessoa (nunca o valor enviado pra API).
+ * ⚠️ Adicionado (19/09), a partir de teste real do usuário cruzando
+ * origens: contatos cadastrados manualmente (Assinantes, Planilha)
+ * costumam vir sem o código do país, enquanto contatos sincronizados
+ * do WhatsApp (Inbox, Lista, Funil) sempre vêm com — sem tratar isso, a
+ * mesma pessoa em fontes diferentes seria vista como duas pessoas,
+ * quebrando a seleção cruzada. Também tolera o "9" extra do celular
+ * (mesma lógica já usada e testada no backend do CelCash,
+ * tolerantPhoneMatch, evaluate-celcash-billing) — "5511987654321" e
+ * "551187654321" precisam cair na mesma chave. */
+export function phoneMatchKey(phone: string): string {
+  let digits = normalizePhoneForSend(phone);
+  if (digits.length === 13 && digits.startsWith("55")) {
+    digits = digits.slice(0, 4) + digits.slice(5);
+  }
+  return digits;
+}
+
 /** Contatos sincronizados que não são grupo e ainda não viraram lead em
  * nenhum funil — mesmo conceito de "Inbox" da aba Funis (funnels-view.tsx,
  * inboxContacts). Mantido em paridade proposital: qualquer ajuste lá
@@ -44,7 +75,10 @@ function resolveInbox(data: AudienceResolveData): AudienceContact[] {
   );
   return data.contacts
     .filter((c) => !c.is_group && !contactIdsInFunnels.has(c.id))
-    .map((c) => ({ phone: (c.phone || c.wa_id) as string, name: c.name || c.phone || c.wa_id }))
+    .map((c) => ({
+      phone: normalizePhoneForSend((c.phone || c.wa_id) as string),
+      name: c.name || c.phone || c.wa_id,
+    }))
     .filter((c) => isRealPhone(c.phone));
 }
 
@@ -62,7 +96,10 @@ function resolveLabelFunnel(source: AudienceSource, data: AudienceResolveData): 
   );
   return data.contacts
     .filter((c) => !c.is_group && c.label_ids.some((id) => wantedLabelIds.has(id)))
-    .map((c) => ({ phone: (c.phone || c.wa_id) as string, name: c.name || c.phone || c.wa_id }))
+    .map((c) => ({
+      phone: normalizePhoneForSend((c.phone || c.wa_id) as string),
+      name: c.name || c.phone || c.wa_id,
+    }))
     .filter((c) => isRealPhone(c.phone));
 }
 
@@ -74,7 +111,7 @@ function resolveNormalFunnel(source: AudienceSource, data: AudienceResolveData):
   return funnel.cards
     .filter((c) => (source.stageId ? c.stage_id === source.stageId : true))
     .filter((c) => isRealPhone(c.phone) || c.wa_id)
-    .map((c) => ({ phone: (c.phone || c.wa_id) as string, name: c.title }));
+    .map((c) => ({ phone: normalizePhoneForSend((c.phone || c.wa_id) as string), name: c.title }));
 }
 
 function resolveSubscribers(source: AudienceSource, data: AudienceResolveData): AudienceContact[] {
@@ -83,13 +120,13 @@ function resolveSubscribers(source: AudienceSource, data: AudienceResolveData): 
     !source.subscriberStatus || source.subscriberStatus === "all"
       ? sendable
       : sendable.filter((c) => c.status === source.subscriberStatus);
-  return filtered.map((c) => ({ phone: c.phone, name: c.name }));
+  return filtered.map((c) => ({ phone: normalizePhoneForSend(c.phone), name: c.name }));
 }
 
 function resolveSheet(source: AudienceSource): AudienceContact[] {
   return (source.sheetContacts ?? [])
     .filter((c) => isRealPhone(c.phone))
-    .map((c) => ({ phone: c.phone, name: c.name || c.phone }));
+    .map((c) => ({ phone: normalizePhoneForSend(c.phone), name: c.name || c.phone }));
 }
 
 /** Resolve QUALQUER fonte (inclusão ou exclusão) numa lista de contatos.
