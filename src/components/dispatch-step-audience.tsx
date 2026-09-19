@@ -62,13 +62,13 @@ function SelectionDot({ selected }: { selected: boolean }) {
   return (
     <span
       className={
-        "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition " +
+        "flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border-2 transition " +
         (selected
           ? "border-brand bg-brand text-white"
           : "border-neutral-400 bg-white text-transparent")
       }
     >
-      <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3">
+      <svg viewBox="0 0 20 20" fill="currentColor" className="h-2.5 w-2.5">
         <path
           fillRule="evenodd"
           d="M16.7 5.3a1 1 0 010 1.4l-7.4 7.4a1 1 0 01-1.4 0L3.3 9.5a1 1 0 111.4-1.4l3.9 3.9 6.7-6.7a1 1 0 011.4 0z"
