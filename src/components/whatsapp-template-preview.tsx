@@ -5,6 +5,8 @@
 // mesmo componente visual em ambos os lugares, não duas prévias
 // diferentes para a mesma coisa.
 
+import { WHATSAPP_WALLPAPER_STYLE } from "@/lib/whatsapp-wallpaper";
+
 export function TemplatePreview({
   templateType,
   mediaFile,
@@ -158,7 +160,7 @@ export function TemplatePreview({
          simulada — igual o WhatsApp real faz; bolhas com mídia
          (imagem/vídeo/documento) esticam até esse mesmo teto, já que
          a mídia justifica a largura. */}
-      <div className="rounded-xl bg-[#e5ddd5] p-4">
+      <div className="rounded-xl p-4" style={WHATSAPP_WALLPAPER_STYLE}>
         <div className="mx-auto w-full max-w-[340px]">
           <div className="flex justify-start">
             <div

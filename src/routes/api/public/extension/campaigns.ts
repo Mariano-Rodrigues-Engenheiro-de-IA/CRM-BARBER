@@ -40,6 +40,11 @@ const bodySchema = z
     pace_seconds: z.number().int().min(5).max(600).optional(),
     pace_seconds_min: z.number().int().min(5).max(600).optional(),
     pace_seconds_max: z.number().int().min(5).max(600).optional(),
+    // Pausa maior e periódica, baseada em contagem de contatos —
+    // diferente do ritmo (pace_seconds_min/max), que é o intervalo
+    // aleatório entre CADA mensagem.
+    pause_every_contacts: z.number().int().min(0).max(1000).optional(),
+    pause_seconds: z.number().int().min(0).max(500).optional(),
     customer_ids: z.array(z.string().uuid()).max(2000).optional(),
     // Disparo a partir dos funis: lista de telefones (contatos do Inbox,
     // etiquetas ou colunas do kanban). Vira/reaproveita customers.
@@ -125,6 +130,8 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
           pace_seconds,
           pace_seconds_min,
           pace_seconds_max,
+          pause_every_contacts,
+          pause_seconds,
           customer_ids,
           phone_targets,
           filter,
@@ -199,7 +206,10 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
               .is("archived_at", null)
               .in("phone", phones);
             const byPhone = new Map<string, { id: string; phone: string; name: string | null }>(
-              (existing ?? []).map((c) => [String(c.phone), { id: c.id, phone: String(c.phone), name: c.name }]),
+              (existing ?? []).map((c) => [
+                String(c.phone),
+                { id: c.id, phone: String(c.phone), name: c.name },
+              ]),
             );
             const missing = phones.filter((p) => !byPhone.has(p));
             if (missing.length > 0) {
@@ -292,7 +302,8 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
             const { getWhatsAppProviderByName } = await import("@/lib/whatsapp/provider.server");
             const provider = getWhatsAppProviderByName("meta");
             if (provider.listTemplates) {
-              let result: Awaited<ReturnType<NonNullable<typeof provider.listTemplates>>> | null = null;
+              let result: Awaited<ReturnType<NonNullable<typeof provider.listTemplates>>> | null =
+                null;
               try {
                 result = await provider.listTemplates({
                   instance_token: instance.meta_access_token,
@@ -306,11 +317,15 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
               }
               if (result?.ok) {
                 const match = result.templates.find(
-                  (t) => t.name === template_name && (!template_language || t.language === template_language),
+                  (t) =>
+                    t.name === template_name &&
+                    (!template_language || t.language === template_language),
                 );
                 const bodyComponent = match?.components?.find(
                   (c): c is { type: string; text?: string } =>
-                    typeof c === "object" && c !== null && (c as Record<string, unknown>).type === "BODY",
+                    typeof c === "object" &&
+                    c !== null &&
+                    (c as Record<string, unknown>).type === "BODY",
                 );
                 const bodyText = bodyComponent?.text ?? "";
                 const varNames = [...bodyText.matchAll(/\{\{([^}]+)\}\}/g)].map((m) => m[1].trim());
@@ -355,6 +370,8 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
             pace_seconds: paceLo,
             pace_seconds_min: paceLo,
             pace_seconds_max: paceHi,
+            pause_every_contacts: pause_every_contacts ?? null,
+            pause_seconds: pause_seconds ?? null,
             message_variants: variants,
             message_actions: message_actions ?? [],
             template_header_media_path: template_header_media_path ?? null,
@@ -379,6 +396,17 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
         let cursor = now;
         const jobs = targets.map((t, i) => {
           if (i > 0) cursor += nextDelayMs();
+          // Pausa maior e periódica, a cada N contatos já agendados
+          // (i é 0-indexed — i > 0 && i % N === 0 dispara exatamente
+          // depois do contato de número N, do 2N, etc).
+          if (
+            pause_every_contacts &&
+            pause_every_contacts > 0 &&
+            i > 0 &&
+            i % pause_every_contacts === 0
+          ) {
+            cursor += (pause_seconds ?? 0) * 1000;
+          }
 
           if (template_name) {
             // Disparo via modelo aprovado — sem texto livre nem ações,
@@ -392,7 +420,8 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
             // todas passam por aqui.
             const fullName = (t.name || "").trim() || null;
             const firstName = fullName?.split(/\s+/)[0] ?? null;
-            const nameValue = nameSource === "primeiro_nome" ? firstName : nameSource === "nome" ? fullName : null;
+            const nameValue =
+              nameSource === "primeiro_nome" ? firstName : nameSource === "nome" ? fullName : null;
             return {
               barbershop_id: barbershopId,
               campaign_id: campaign.id,

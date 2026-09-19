@@ -9,6 +9,7 @@
 // moldura de card, tamanho e tipografia.
 
 import type { QuickReplyAction } from "@/lib/quick-replies";
+import { WHATSAPP_WALLPAPER_STYLE } from "@/lib/whatsapp-wallpaper";
 
 // ⚠️ Corrigido (19/09, terceira correção): antes cada bolha SEMPRE
 // esticava até a largura máxima do container, mesmo mensagens de 1
@@ -53,7 +54,7 @@ export function MessagePreview({
   return (
     <div>
       <p className="mb-2 text-sm font-semibold text-neutral-900">Prévia da mensagem</p>
-      <div className="rounded-xl bg-[#e5ddd5] p-5">
+      <div className="rounded-xl p-5" style={WHATSAPP_WALLPAPER_STYLE}>
         <div className="mx-auto w-full max-w-[340px] space-y-2">
           {!hasContent ? (
             <p className="px-1 text-[12px] text-neutral-500">

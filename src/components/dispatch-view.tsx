@@ -50,6 +50,50 @@ function Label({ children }: { children: React.ReactNode }) {
   return <label className="mb-1 block text-xs font-medium text-neutral-600">{children}</label>;
 }
 
+/** Barra deslizante com o valor atual sempre visível enquanto o usuário
+ * arrasta — pedido explícito do usuário pras configurações de ritmo e
+ * pausa, no lugar de campos numéricos simples. */
+function SliderField({
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  unit,
+  helpText,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  unit: string;
+  helpText?: string;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <Label>{label}</Label>
+        <span className="text-sm font-semibold text-neutral-900">
+          {value} {unit}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full accent-brand"
+      />
+      {helpText && <p className="mt-1 text-xs text-neutral-500">{helpText}</p>}
+    </div>
+  );
+}
+
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -128,6 +172,10 @@ export function DispatchCenter({
   const [carouselUploadingIndex, setCarouselUploadingIndex] = useState<number | null>(null);
   const [paceMin, setPaceMin] = useState(20);
   const [paceMax, setPaceMax] = useState(60);
+  // Pausa maior e periódica, a cada N contatos - diferente do ritmo
+  // acima (intervalo entre CADA mensagem). 0 = desativado.
+  const [pauseEveryContacts, setPauseEveryContacts] = useState(0);
+  const [pauseSeconds, setPauseSeconds] = useState(0);
   const [accepted, setAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -327,6 +375,9 @@ export function DispatchCenter({
         ...(cardCount > 0 ? { template_carousel_media_paths: carouselPaths } : {}),
         pace_seconds_min: Math.min(paceMin, paceMax),
         pace_seconds_max: Math.max(paceMin, paceMax),
+        ...(pauseEveryContacts > 0
+          ? { pause_every_contacts: pauseEveryContacts, pause_seconds: pauseSeconds }
+          : {}),
       };
       const body = { ...base, scope: "funil", phone_targets: finalAudience };
       const r = await api("/api/public/extension/campaigns", {
@@ -380,6 +431,9 @@ export function DispatchCenter({
       message_actions: cleanActions,
       pace_seconds_min: Math.min(paceMin, paceMax),
       pace_seconds_max: Math.max(paceMin, paceMax),
+      ...(pauseEveryContacts > 0
+        ? { pause_every_contacts: pauseEveryContacts, pause_seconds: pauseSeconds }
+        : {}),
     };
     const body = { ...base, scope: "funil", phone_targets: finalAudience };
 
@@ -668,29 +722,44 @@ export function DispatchCenter({
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Ritmo mínimo (seg)</Label>
-                  <input
-                    type="number"
-                    min={5}
-                    max={600}
-                    value={paceMin}
-                    onChange={(e) => setPaceMin(Number(e.target.value))}
-                    className={inputCls}
-                  />
-                </div>
-                <div>
-                  <Label>Ritmo máximo (seg)</Label>
-                  <input
-                    type="number"
-                    min={5}
-                    max={600}
-                    value={paceMax}
-                    onChange={(e) => setPaceMax(Number(e.target.value))}
-                    className={inputCls}
-                  />
-                </div>
+              <div className="space-y-4">
+                <SliderField
+                  label="Ritmo mínimo"
+                  value={paceMin}
+                  min={5}
+                  max={600}
+                  unit="seg"
+                  onChange={setPaceMin}
+                />
+                <SliderField
+                  label="Ritmo máximo"
+                  value={paceMax}
+                  min={5}
+                  max={600}
+                  unit="seg"
+                  onChange={setPaceMax}
+                  helpText="A mensagem será enviada aleatoriamente entre o ritmo mínimo e o ritmo máximo definido."
+                />
+                <SliderField
+                  label="Pausa a cada"
+                  value={pauseEveryContacts}
+                  min={0}
+                  max={1000}
+                  step={10}
+                  unit="contatos"
+                  onChange={setPauseEveryContacts}
+                  helpText="Define a cada quantos contatos o sistema deverá realizar uma pausa. Deixe em 0 para não pausar."
+                />
+                <SliderField
+                  label="Tempo de pausa"
+                  value={pauseSeconds}
+                  min={0}
+                  max={500}
+                  step={5}
+                  unit="seg"
+                  onChange={setPauseSeconds}
+                  helpText="Define quanto tempo o sistema ficará pausado antes de continuar os envios."
+                />
               </div>
 
               <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">

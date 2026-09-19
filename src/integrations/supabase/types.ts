@@ -560,6 +560,8 @@ export type Database = {
           pace_seconds: number
           pace_seconds_max: number | null
           pace_seconds_min: number | null
+          pause_every_contacts: number | null
+          pause_seconds: number | null
           scheduled_for: string | null
           status: string
           template_carousel_media_paths: string[] | null
@@ -579,6 +581,8 @@ export type Database = {
           pace_seconds?: number
           pace_seconds_max?: number | null
           pace_seconds_min?: number | null
+          pause_every_contacts?: number | null
+          pause_seconds?: number | null
           scheduled_for?: string | null
           status?: string
           template_carousel_media_paths?: string[] | null
@@ -598,6 +602,8 @@ export type Database = {
           pace_seconds?: number
           pace_seconds_max?: number | null
           pace_seconds_min?: number | null
+          pause_every_contacts?: number | null
+          pause_seconds?: number | null
           scheduled_for?: string | null
           status?: string
           template_carousel_media_paths?: string[] | null
