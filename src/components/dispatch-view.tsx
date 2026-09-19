@@ -701,9 +701,16 @@ export function DispatchCenter({
                         )
                   }
                   onClick={() => setStep(3)}
-                  className="rounded-lg border border-neutral-300 px-5 py-2.5 text-sm font-semibold text-neutral-700 hover:border-brand hover:text-brand disabled:opacity-50"
+                  title="Próxima etapa"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-300 text-neutral-600 transition hover:border-brand hover:bg-brand hover:text-white disabled:opacity-30 disabled:hover:border-neutral-300 disabled:hover:bg-transparent disabled:hover:text-neutral-600"
                 >
-                  Próximo
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+                    <path
+                      fillRule="evenodd"
+                      d="M7.3 14.7a1 1 0 010-1.4L10.6 10 7.3 6.7a1 1 0 011.4-1.4l4 4a1 1 0 010 1.4l-4 4a1 1 0 01-1.4 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
                 </button>
               </div>
             </>
@@ -782,7 +789,7 @@ export function DispatchCenter({
               <div className="flex justify-center">
                 <button
                   disabled={busy || !accepted}
-                  className="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
+                  className="rounded-lg bg-brand px-8 py-3 text-base font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
                 >
                   {busy ? "Criando..." : "Disparar"}
                 </button>

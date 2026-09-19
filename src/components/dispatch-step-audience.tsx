@@ -454,11 +454,20 @@ export function AudienceStep({
           type="button"
           disabled={!canAdvance}
           onClick={() => onNext(selectedList)}
-          className="rounded-lg border border-neutral-300 px-5 py-2.5 text-sm font-semibold text-neutral-700 hover:border-brand hover:text-brand disabled:opacity-50"
+          title={
+            canAdvance
+              ? `Próxima etapa, ${selected.size} destinatário(s)`
+              : "Selecione pelo menos 1 contato"
+          }
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-300 text-neutral-600 transition hover:border-brand hover:bg-brand hover:text-white disabled:opacity-30 disabled:hover:border-neutral-300 disabled:hover:bg-transparent disabled:hover:text-neutral-600"
         >
-          {canAdvance
-            ? `Próximo, ${selected.size} destinatário(s)`
-            : "Selecione pelo menos 1 contato"}
+          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+            <path
+              fillRule="evenodd"
+              d="M7.3 14.7a1 1 0 010-1.4L10.6 10 7.3 6.7a1 1 0 011.4-1.4l4 4a1 1 0 010 1.4l-4 4a1 1 0 01-1.4 0z"
+              clipRule="evenodd"
+            />
+          </svg>
         </button>
       </div>
     </>
