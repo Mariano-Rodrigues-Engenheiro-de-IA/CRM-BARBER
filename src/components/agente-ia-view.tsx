@@ -257,7 +257,9 @@ function FreeAiAccess({ api, onboardingCompleted }: { api: Api; onboardingComple
         </svg>
       </div>
       <h1 className="text-xl font-bold text-neutral-900">
-        {onboardingCompleted ? "Seu Agente de IA está pronto" : "Continue a configuração da sua IA"}
+        {onboardingCompleted
+          ? "Seu Agente de IA está pronto 🎉"
+          : "Continue a configuração da sua IA"}
       </h1>
       <p className="text-sm text-neutral-500">
         {onboardingCompleted
@@ -414,7 +416,7 @@ function AiAccessGranted({ api }: { api: Api }) {
           <circle cx="15" cy="14" r="1" />
         </svg>
       </div>
-      <h1 className="text-xl font-bold text-neutral-900">Seu Agente de IA está pronto</h1>
+      <h1 className="text-xl font-bold text-neutral-900">Seu Agente de IA está pronto 🎉</h1>
       <p className="text-sm text-neutral-500">Clique abaixo para acessar o painel da sua IA.</p>
       {error && (
         <p className="rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-700">
