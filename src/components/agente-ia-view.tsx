@@ -2,7 +2,13 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { youtubeEmbedUrl } from "@/lib/youtube";
 import { useCachedFetch } from "@/lib/api-cache";
@@ -36,24 +42,27 @@ export function AgenteIaView({ api }: { api: Api }) {
     const r = await api("/api/public/extension/agente-ia-settings");
     return r?.ok ? r.sales_video_url : null;
   });
-  const { data: accessEnabled, loading: loadingAccess } = useCachedFetch<boolean>("agente-ia-access", async () => {
-    const r = await api("/api/public/extension/billing");
-    return r?.ok ? Boolean(r.billing?.ai_access_enabled) : false;
-  });
+  const { data: accessEnabled, loading: loadingAccess } = useCachedFetch<boolean>(
+    "agente-ia-access",
+    async () => {
+      const r = await api("/api/public/extension/billing");
+      return r?.ok ? Boolean(r.billing?.ai_access_enabled) : false;
+    },
+  );
   // Checagem de status do caminho grátis — sem create=1, nunca cria
   // tenant sozinha, só pergunta "já existe alguma coisa vinculada?".
   // status=1 garante que a ponte NUNCA gera um link de verdade aqui
   // (achado de bug real: gerar link nessa checagem invalidava o link
   // que o cliente tinha acabado de copiar/clicar, já que o Supabase
   // mata o link anterior toda vez que um novo é emitido).
-  const { data: freeTenant, loading: loadingFreeTenant } = useCachedFetch<{ found: boolean; onboarding_completed?: boolean } | null>(
-    "agente-ia-free-status",
-    async () => {
-      const r = await api("/api/public/extension/agente-ia-free-access-link?status=1");
-      if (!r?.ok) return null;
-      return { found: !!r.found, onboarding_completed: r.onboarding_completed };
-    },
-  );
+  const { data: freeTenant, loading: loadingFreeTenant } = useCachedFetch<{
+    found: boolean;
+    onboarding_completed?: boolean;
+  } | null>("agente-ia-free-status", async () => {
+    const r = await api("/api/public/extension/agente-ia-free-access-link?status=1");
+    if (!r?.ok) return null;
+    return { found: !!r.found, onboarding_completed: r.onboarding_completed };
+  });
 
   // Espera saber de verdade o estado dos dois caminhos antes de decidir
   // qual tela mostrar — sem isso, a tela errada aparece por um instante
@@ -80,7 +89,16 @@ export function AgenteIaView({ api }: { api: Api }) {
     return (
       <div className="mx-auto max-w-lg rounded-2xl border border-neutral-200 bg-white p-8 text-center">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50">
-          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            viewBox="0 0 24 24"
+            width="28"
+            height="28"
+            fill="none"
+            stroke="#059669"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M20 6 9 17l-5-5" />
           </svg>
         </div>
@@ -113,14 +131,17 @@ export function AgenteIaView({ api }: { api: Api }) {
       <div className="grid gap-5 md:grid-cols-2">
         <FreeSetupCard api={api} />
         <div className="rounded-2xl border-2 border-brand bg-white p-6 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-brand">Feita pela nossa equipe</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand">
+            Feita pela nossa equipe
+          </p>
           <h3 className="mt-2 text-lg font-bold text-neutral-900">Configuração assistida</h3>
           <p className="mt-2 text-sm text-neutral-500">
-            Um especialista configura o agente com você numa chamada, já testado e afinado pro seu tipo de negócio.
+            Um especialista configura o agente com você numa chamada, já testado e afinado pro seu
+            tipo de negócio.
           </p>
           <button
             onClick={() => setFormOpen(true)}
-            className="mt-5 w-full rounded-xl bg-brand py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-brand-strong"
+            className="mt-5 block rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-brand-strong mx-auto"
           >
             Agendar demonstração
           </button>
@@ -132,7 +153,13 @@ export function AgenteIaView({ api }: { api: Api }) {
           <DialogHeader>
             <DialogTitle>Agendar demonstração</DialogTitle>
           </DialogHeader>
-          <DemoForm api={api} onSent={() => { setFormOpen(false); setSent(true); }} />
+          <DemoForm
+            api={api}
+            onSent={() => {
+              setFormOpen(false);
+              setSent(true);
+            }}
+          />
         </DialogContent>
       </Dialog>
     </div>
@@ -169,11 +196,15 @@ function FreeSetupCard({ api }: { api: Api }) {
       <p className="mt-2 text-sm text-neutral-500">
         Você mesmo monta o agente, no seu ritmo, com o passo a passo dentro do sistema.
       </p>
-      {error && <p className="mt-3 rounded-lg border border-red-300 bg-red-50 p-2 text-xs text-red-700">{error}</p>}
+      {error && (
+        <p className="mt-3 rounded-lg border border-red-300 bg-red-50 p-2 text-xs text-red-700">
+          {error}
+        </p>
+      )}
       <button
         onClick={handleStart}
         disabled={loading}
-        className="mt-5 w-full rounded-xl border-2 border-neutral-200 bg-white py-2.5 text-sm font-semibold text-neutral-700 hover:border-brand hover:text-brand disabled:opacity-50"
+        className="mt-5 block rounded-xl border-2 border-neutral-200 bg-white px-6 py-2.5 text-sm font-semibold text-neutral-700 hover:border-brand hover:text-brand disabled:opacity-50 mx-auto"
       >
         {loading ? "Abrindo..." : "Começar agora"}
       </button>
@@ -194,7 +225,8 @@ function FreeAiAccess({ api, onboardingCompleted }: { api: Api; onboardingComple
     setError(null);
     try {
       const r = await api("/api/public/extension/agente-ia-free-access-link");
-      if (!r?.ok || !r.action_link) throw new Error(r?.error || "Não foi possível abrir o acesso agora.");
+      if (!r?.ok || !r.action_link)
+        throw new Error(r?.error || "Não foi possível abrir o acesso agora.");
       window.open(r.action_link, "_blank");
     } catch (e: any) {
       setError(e?.message || "Erro ao gerar acesso");
@@ -206,10 +238,22 @@ function FreeAiAccess({ api, onboardingCompleted }: { api: Api; onboardingComple
   return (
     <div className="mx-auto max-w-lg space-y-4 rounded-2xl border border-neutral-200 bg-white p-8 text-center">
       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand/10">
-        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-brand">
+        <svg
+          viewBox="0 0 24 24"
+          width="28"
+          height="28"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-brand"
+        >
           <rect x="4" y="9" width="16" height="11" rx="2" />
-          <path d="M12 9V5" /><circle cx="12" cy="3.5" r="1.5" />
-          <circle cx="9" cy="14" r="1" /><circle cx="15" cy="14" r="1" />
+          <path d="M12 9V5" />
+          <circle cx="12" cy="3.5" r="1.5" />
+          <circle cx="9" cy="14" r="1" />
+          <circle cx="15" cy="14" r="1" />
         </svg>
       </div>
       <h1 className="text-xl font-bold text-neutral-900">
@@ -217,16 +261,24 @@ function FreeAiAccess({ api, onboardingCompleted }: { api: Api; onboardingComple
       </h1>
       <p className="text-sm text-neutral-500">
         {onboardingCompleted
-          ? "Clique abaixo para acessar o painel da sua IA, sem precisar fazer login de novo."
+          ? "Clique abaixo para acessar o painel da sua IA."
           : "Você começou a configurar seu agente, mas ainda não terminou. Continue de onde parou."}
       </p>
-      {error && <p className="rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-700">{error}</p>}
+      {error && (
+        <p className="rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-700">
+          {error}
+        </p>
+      )}
       <button
         onClick={handleAccess}
         disabled={loading}
-        className="w-full rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
+        className="block rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50 mx-auto"
       >
-        {loading ? "Abrindo..." : onboardingCompleted ? "Acessar minha IA" : "Continuar configuração"}
+        {loading
+          ? "Abrindo..."
+          : onboardingCompleted
+            ? "Acessar minha IA"
+            : "Continuar configuração"}
       </button>
     </div>
   );
@@ -267,7 +319,9 @@ function DemoForm({ api, onSent }: { api: Api; onSent: () => void }) {
 
   return (
     <div className="space-y-4">
-      {err && <p className="rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-700">{err}</p>}
+      {err && (
+        <p className="rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-700">{err}</p>
+      )}
       <div className="space-y-1.5">
         <Label>Nome</Label>
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="" />
@@ -297,15 +351,22 @@ function DemoForm({ api, onSent }: { api: Api; onSent: () => void }) {
       </div>
       <div className="space-y-1.5">
         <Label>Descreva como você quer usar a IA/agente</Label>
-        <Textarea value={usage} onChange={(e) => setUsage(e.target.value)} rows={4} placeholder="" />
+        <Textarea
+          value={usage}
+          onChange={(e) => setUsage(e.target.value)}
+          rows={4}
+          placeholder=""
+        />
       </div>
-      <button
-        onClick={handleSubmit}
-        disabled={!name.trim() || !phone.trim() || saving}
-        className="w-full rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
-      >
-        {saving ? "Enviando..." : "Enviar"}
-      </button>
+      <div className="flex justify-end">
+        <button
+          onClick={handleSubmit}
+          disabled={!name.trim() || !phone.trim() || saving}
+          className="rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
+        >
+          {saving ? "Enviando..." : "Enviar"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -322,7 +383,8 @@ function AiAccessGranted({ api }: { api: Api }) {
     setError(null);
     try {
       const r = await api("/api/public/extension/agente-ia-access-link");
-      if (!r?.ok || !r.action_link) throw new Error(r?.error || "Não foi possível abrir o acesso agora.");
+      if (!r?.ok || !r.action_link)
+        throw new Error(r?.error || "Não foi possível abrir o acesso agora.");
       window.open(r.action_link, "_blank");
     } catch (e: any) {
       setError(e?.message || "Erro ao gerar acesso");
@@ -334,19 +396,35 @@ function AiAccessGranted({ api }: { api: Api }) {
   return (
     <div className="mx-auto max-w-lg space-y-4 rounded-2xl border border-neutral-200 bg-white p-8 text-center">
       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand/10">
-        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-brand">
+        <svg
+          viewBox="0 0 24 24"
+          width="28"
+          height="28"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-brand"
+        >
           <rect x="4" y="9" width="16" height="11" rx="2" />
-          <path d="M12 9V5" /><circle cx="12" cy="3.5" r="1.5" />
-          <circle cx="9" cy="14" r="1" /><circle cx="15" cy="14" r="1" />
+          <path d="M12 9V5" />
+          <circle cx="12" cy="3.5" r="1.5" />
+          <circle cx="9" cy="14" r="1" />
+          <circle cx="15" cy="14" r="1" />
         </svg>
       </div>
       <h1 className="text-xl font-bold text-neutral-900">Seu Agente de IA está pronto</h1>
-      <p className="text-sm text-neutral-500">Clique abaixo para acessar o painel da sua IA, sem precisar fazer login de novo.</p>
-      {error && <p className="rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-700">{error}</p>}
+      <p className="text-sm text-neutral-500">Clique abaixo para acessar o painel da sua IA.</p>
+      {error && (
+        <p className="rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-700">
+          {error}
+        </p>
+      )}
       <button
         onClick={handleAccess}
         disabled={loading}
-        className="w-full rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
+        className="block rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50 mx-auto"
       >
         {loading ? "Abrindo..." : "Acessar minha IA"}
       </button>
