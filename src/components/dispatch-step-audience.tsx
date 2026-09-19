@@ -37,6 +37,7 @@ import type { Funnel, WaContact, WaLabel } from "@/lib/funnels";
 import {
   resolveAudienceSource,
   firstAvailableSource,
+  contactMatchKeys,
   phoneMatchKey,
   type AudienceContact,
   type AudienceSource,
@@ -319,23 +320,43 @@ export function AudienceStep({
     onSourceChange(firstAvailableSource(kind));
   }
 
+  /** Um contato é "selecionado" se QUALQUER UMA das suas chaves (id ou
+   * telefone) já estiver no Map — ver contactMatchKeys em
+   * dispatch-audience.ts pra entender por que um contato pode ter mais
+   * de uma chave. */
+  function isContactSelected(c: AudienceContact, map: Map<string, AudienceContact>): boolean {
+    return contactMatchKeys(c).some((key) => map.has(key));
+  }
+  /** Adiciona o contato sob TODAS as suas chaves — assim ele fica
+   * "encontrável" tanto por id (Inbox/Lista/Funil) quanto por telefone
+   * (Assinantes/Planilha), sem depender de qual fonte foi usada pra
+   * adicioná-lo primeiro. */
+  function addContact(c: AudienceContact, map: Map<string, AudienceContact>) {
+    for (const key of contactMatchKeys(c)) map.set(key, c);
+  }
+  /** Remove o contato de TODAS as suas chaves possíveis, não só da que
+   * foi usada pra adicionar — senão sobraria uma chave "órfã" ainda
+   * apontando pro contato removido. */
+  function removeContact(c: AudienceContact, map: Map<string, AudienceContact>) {
+    for (const key of contactMatchKeys(c)) map.delete(key);
+  }
+
   const allDisplayedSelected =
-    displayed.length > 0 && displayed.every((c) => selected.has(phoneMatchKey(c.phone)));
+    displayed.length > 0 && displayed.every((c) => isContactSelected(c, selected));
 
   function toggleAllDisplayed() {
     const next = new Map(selected);
     if (allDisplayedSelected) {
-      for (const c of displayed) next.delete(phoneMatchKey(c.phone));
+      for (const c of displayed) removeContact(c, next);
     } else {
-      for (const c of displayed) next.set(phoneMatchKey(c.phone), c);
+      for (const c of displayed) addContact(c, next);
     }
     onSelectedChange(next);
   }
   function toggleOne(c: AudienceContact) {
     const next = new Map(selected);
-    const key = phoneMatchKey(c.phone);
-    if (next.has(key)) next.delete(key);
-    else next.set(key, c);
+    if (isContactSelected(c, next)) removeContact(c, next);
+    else addContact(c, next);
     onSelectedChange(next);
   }
 
@@ -354,7 +375,20 @@ export function AudienceStep({
     XLSX.writeFile(wb, `contatos-${sourceLabel}.xlsx`);
   }
 
-  const selectedList = useMemo(() => Array.from(selected.values()), [selected]);
+  // Cada contato pode estar gravado sob mais de uma chave (id e
+  // telefone, ver contactMatchKeys) — dedupilica por telefone antes de
+  // montar a lista final que vai ser enviada.
+  const selectedList = useMemo(() => {
+    const seen = new Set<string>();
+    const result: AudienceContact[] = [];
+    for (const c of selected.values()) {
+      const key = phoneMatchKey(c.phone);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      result.push(c);
+    }
+    return result;
+  }, [selected]);
   const canAdvance = selected.size > 0;
 
   // Planilha antes de qualquer arquivo importado: nada pra mostrar como
@@ -408,7 +442,7 @@ export function AudienceStep({
                       : `Adicionar todos (${displayed.length})`}
                   </button>
                   <span className="ml-auto text-xs text-neutral-500">
-                    {selected.size} selecionado(s) no total
+                    {selectedList.length} selecionado(s) no total
                   </span>
                 </div>
 
@@ -423,7 +457,7 @@ export function AudienceStep({
                     </p>
                   ) : (
                     displayed.map((c) => {
-                      const isSelected = selected.has(phoneMatchKey(c.phone));
+                      const isSelected = isContactSelected(c, selected);
                       return (
                         <button
                           key={c.phone}
@@ -456,7 +490,7 @@ export function AudienceStep({
           onClick={() => onNext(selectedList)}
           title={
             canAdvance
-              ? `Próxima etapa, ${selected.size} destinatário(s)`
+              ? `Próxima etapa, ${selectedList.length} destinatário(s)`
               : "Selecione pelo menos 1 contato"
           }
           className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-300 text-neutral-600 transition hover:border-brand hover:bg-brand hover:text-white disabled:opacity-30 disabled:hover:border-neutral-300 disabled:hover:bg-transparent disabled:hover:text-neutral-600"

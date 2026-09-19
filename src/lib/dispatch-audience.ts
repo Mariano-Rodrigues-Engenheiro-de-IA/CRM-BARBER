@@ -25,7 +25,15 @@ export type AudienceSource = {
   sheetContacts?: SheetContact[];
 };
 
-export type AudienceContact = { phone: string; name: string };
+export type AudienceContact = {
+  phone: string;
+  name: string;
+  // Identidade interna estável (WaContact.id), quando a fonte vem do
+  // WhatsApp (Inbox, Listas, Funil) — usada como chave de match
+  // PRIORITÁRIA em vez do telefone. Assinantes e Planilha não têm essa
+  // referência (não vêm do WhatsApp), continuam usando telefone.
+  id?: string;
+};
 
 export type AudienceResolveData = {
   contacts: WaContact[];
@@ -46,23 +54,32 @@ function normalizePhoneForSend(phone: string): string {
   return digits;
 }
 
-/** Chave de comparação, usada só pra decidir se duas entradas de fontes
- * diferentes são a MESMA pessoa (nunca o valor enviado pra API).
- * ⚠️ Adicionado (19/09), a partir de teste real do usuário cruzando
- * origens: contatos cadastrados manualmente (Assinantes, Planilha)
- * costumam vir sem o código do país, enquanto contatos sincronizados
- * do WhatsApp (Inbox, Lista, Funil) sempre vêm com — sem tratar isso, a
- * mesma pessoa em fontes diferentes seria vista como duas pessoas,
- * quebrando a seleção cruzada. Também tolera o "9" extra do celular
- * (mesma lógica já usada e testada no backend do CelCash,
- * tolerantPhoneMatch, evaluate-celcash-billing) — "5511987654321" e
- * "551187654321" precisam cair na mesma chave. */
+/** Chave de comparação por telefone — usada como FALLBACK quando não há
+ * identidade interna (id) disponível (Assinantes, Planilha). Tolera
+ * código do país ausente e o "9" extra do celular (mesma lógica já
+ * usada e testada no backend do CelCash, tolerantPhoneMatch,
+ * evaluate-celcash-billing). */
 export function phoneMatchKey(phone: string): string {
   let digits = normalizePhoneForSend(phone);
   if (digits.length === 13 && digits.startsWith("55")) {
     digits = digits.slice(0, 4) + digits.slice(5);
   }
   return digits;
+}
+
+/** Chaves de match de um contato — pode ter MAIS de uma (id e telefone
+ * juntos), nunca só uma escolhida "ou ou". ⚠️ Corrigido (19/09, mesma
+ * correção): se cada contato tivesse só 1 chave (id OU telefone), um
+ * contato do Inbox (tem id) nunca cruzaria com o mesmo contato vindo
+ * de Assinantes (sem id, só telefone) — mesmo sendo a mesma pessoa com
+ * o mesmo telefone, ficariam em "grupos" de chave diferentes.
+ * Retornando as duas chaves possíveis (quando aplicável), o contato
+ * fica "encontrável" tanto por id quanto por telefone — cruza
+ * corretamente com QUALQUER fonte, tenha ela id ou não. */
+export function contactMatchKeys(c: AudienceContact): string[] {
+  const keys = [`phone:${phoneMatchKey(c.phone)}`];
+  if (c.id) keys.push(`id:${c.id}`);
+  return keys;
 }
 
 /** Contatos sincronizados que não são grupo e ainda não viraram lead em
@@ -76,6 +93,7 @@ function resolveInbox(data: AudienceResolveData): AudienceContact[] {
   return data.contacts
     .filter((c) => !c.is_group && !contactIdsInFunnels.has(c.id))
     .map((c) => ({
+      id: c.id,
       phone: normalizePhoneForSend((c.phone || c.wa_id) as string),
       name: c.name || c.phone || c.wa_id,
     }))
@@ -97,6 +115,7 @@ function resolveLabelFunnel(source: AudienceSource, data: AudienceResolveData): 
   return data.contacts
     .filter((c) => !c.is_group && c.label_ids.some((id) => wantedLabelIds.has(id)))
     .map((c) => ({
+      id: c.id,
       phone: normalizePhoneForSend((c.phone || c.wa_id) as string),
       name: c.name || c.phone || c.wa_id,
     }))
@@ -104,14 +123,20 @@ function resolveLabelFunnel(source: AudienceSource, data: AudienceResolveData): 
 }
 
 /** Funis normais (cards persistidos) — mesma lógica de funnelTargets já
- * usada no disparo atual. */
+ * usada no disparo atual. id = wa_contact_id, que aponta pro mesmo
+ * WaContact.id usado em resolveInbox/resolveLabelFunnel — garante o
+ * cruzamento correto mesmo quando o card não tem phone preenchido. */
 function resolveNormalFunnel(source: AudienceSource, data: AudienceResolveData): AudienceContact[] {
   const funnel = data.funnels.find((f) => f.id === source.funnelId);
   if (!funnel) return [];
   return funnel.cards
     .filter((c) => (source.stageId ? c.stage_id === source.stageId : true))
     .filter((c) => isRealPhone(c.phone) || c.wa_id)
-    .map((c) => ({ phone: normalizePhoneForSend((c.phone || c.wa_id) as string), name: c.title }));
+    .map((c) => ({
+      id: c.wa_contact_id ?? undefined,
+      phone: normalizePhoneForSend((c.phone || c.wa_id) as string),
+      name: c.title,
+    }));
 }
 
 function resolveSubscribers(source: AudienceSource, data: AudienceResolveData): AudienceContact[] {
