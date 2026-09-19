@@ -101,7 +101,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
           // válidas esperando atrás na fila. (Evitamos filtrar campaign_id
           // direto na query com NOT IN porque, em SQL, isso excluiria
           // silenciosamente jobs com campaign_id nulo, se algum existir.)
-          const { data: jobs } = await supabaseAdmin
+          const { data: jobs, error: jobsError } = await supabaseAdmin
             .from("message_jobs")
             .select("id, customer_id, rendered_body, message_actions, template_name, template_language, template_header_media_path, template_carousel_media_paths, template_body_params, campaign_id, attempts, agenda_reminder_rule_id, appointment_id, funnel_followup_step_id")
             .eq("barbershop_id", inst.barbershop_id)
@@ -113,6 +113,16 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
             .lte("scheduled_for", nowIso)
             .order("scheduled_for", { ascending: true })
             .limit(200);
+
+          // ⚠️ Adicionado (19/09): antes, um erro aqui (ex: coluna ausente
+          // por migration não aplicada) ficava indistinguível de "sem jobs
+          // pendentes" — jobs vinha undefined e a rodada só seguia pra
+          // próxima barbearia, sem nenhum log ou sinal visível. Caso real:
+          // ficou assim por horas, afetando uma barbearia inteira, até
+          // alguém notar manualmente que os disparos tinham parado.
+          if (jobsError) {
+            console.error(`[dispatch-jobs] Falha ao buscar jobs para barbearia ${inst.barbershop_id}: ${jobsError.message}`);
+          }
 
           if (!jobs || jobs.length === 0) continue;
 
