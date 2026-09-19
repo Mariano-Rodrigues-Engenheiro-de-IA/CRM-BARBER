@@ -168,32 +168,18 @@ export function MessageComposerStep({
                 </button>
               </div>
               {action.type === "text" ? (
-                <div className="mt-2 space-y-2">
-                  {variants.map((variant, variantIndex) => (
-                    <textarea
-                      key={variantIndex}
-                      value={variant}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        onVariants((list) =>
-                          list.map((item, current) => (current === variantIndex ? value : item)),
-                        );
-                        if (variantIndex === 0) updateAction(index, { text: value });
-                      }}
-                      rows={3}
-                      placeholder={`Variação ${variantIndex + 1}`}
-                      className={inputCls}
-                    />
-                  ))}
-                  {variants.length < 3 && (
-                    <button
-                      type="button"
-                      onClick={() => onVariants((list) => [...list, ""])}
-                      className="text-xs font-medium text-neutral-700"
-                    >
-                      + Adicionar variação
-                    </button>
-                  )}
+                <div className="mt-2">
+                  <textarea
+                    value={variants[0] ?? ""}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      onVariants([value]);
+                      updateAction(index, { text: value });
+                    }}
+                    rows={3}
+                    placeholder="Escreva a mensagem"
+                    className={inputCls}
+                  />
                 </div>
               ) : action.type === "funnel_add" || action.type === "funnel_remove" ? (
                 <div className="mt-2 grid gap-2 sm:grid-cols-2">
