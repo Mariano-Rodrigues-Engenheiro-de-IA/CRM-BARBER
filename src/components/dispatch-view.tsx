@@ -553,16 +553,19 @@ export function DispatchCenter({
                                 className="mb-2 max-h-32 rounded-lg border border-neutral-200 object-cover"
                               />
                             )}
-                            <input
-                              type="file"
-                              accept="image/*"
-                              disabled={templateHeaderUploading}
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) void handleTemplateHeaderFile(file);
-                              }}
-                              className="block w-full text-sm text-neutral-600"
-                            />
+                            <label className="flex w-full cursor-pointer items-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-600 hover:border-brand">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                disabled={templateHeaderUploading}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) void handleTemplateHeaderFile(file);
+                                }}
+                                className="hidden"
+                              />
+                              {templateHeaderPreview ? "Trocar imagem" : "Escolher imagem"}
+                            </label>
                             {templateHeaderUploading && (
                               <p className="mt-1 text-xs text-neutral-500">Enviando imagem…</p>
                             )}
@@ -597,16 +600,19 @@ export function DispatchCenter({
                                       className="mb-2 max-h-28 rounded-lg border border-neutral-200 object-cover"
                                     />
                                   )}
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    disabled={carouselUploadingIndex === i}
-                                    onChange={(e) => {
-                                      const file = e.target.files?.[0];
-                                      if (file) void handleCarouselCardFile(i, file);
-                                    }}
-                                    className="block w-full text-sm text-neutral-600"
-                                  />
+                                  <label className="flex w-full cursor-pointer items-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-600 hover:border-brand">
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      disabled={carouselUploadingIndex === i}
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) void handleCarouselCardFile(i, file);
+                                      }}
+                                      className="hidden"
+                                    />
+                                    {carouselPreviews[i] ? "Trocar imagem" : "Escolher imagem"}
+                                  </label>
                                   {carouselUploadingIndex === i && (
                                     <p className="mt-1 text-xs text-neutral-500">
                                       Enviando imagem…
@@ -678,7 +684,7 @@ export function DispatchCenter({
                 </div>
               </div>
 
-              <div className="flex justify-end">
+              <div className="mt-2 flex justify-end">
                 <button
                   type="button"
                   disabled={
@@ -695,16 +701,9 @@ export function DispatchCenter({
                         )
                   }
                   onClick={() => setStep(3)}
-                  title="Próxima etapa"
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-300 text-neutral-600 transition hover:border-brand hover:bg-brand hover:text-white disabled:opacity-30 disabled:hover:border-neutral-300 disabled:hover:bg-transparent disabled:hover:text-neutral-600"
+                  className="rounded-lg border border-neutral-300 px-5 py-2.5 text-sm font-semibold text-neutral-700 hover:border-brand hover:text-brand disabled:opacity-50"
                 >
-                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-                    <path
-                      fillRule="evenodd"
-                      d="M7.3 14.7a1 1 0 010-1.4L10.6 10 7.3 6.7a1 1 0 011.4-1.4l4 4a1 1 0 010 1.4l-4 4a1 1 0 01-1.4 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
+                  Próximo
                 </button>
               </div>
             </>
@@ -780,12 +779,14 @@ export function DispatchCenter({
 
               {err && <p className="text-sm text-red-500">{err}</p>}
 
-              <button
-                disabled={busy || !accepted}
-                className="w-full rounded-lg bg-brand px-4 py-3 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
-              >
-                {busy ? "Criando..." : "Disparar"}
-              </button>
+              <div className="flex justify-center">
+                <button
+                  disabled={busy || !accepted}
+                  className="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
+                >
+                  {busy ? "Criando..." : "Disparar"}
+                </button>
+              </div>
             </>
           )}
         </form>

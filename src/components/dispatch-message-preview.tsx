@@ -134,7 +134,9 @@ export function MessagePreview({
       <div className="rounded-xl bg-[#e5ddd5] p-5">
         <div className="mx-auto w-full max-w-[340px] space-y-2">
           {!hasContent ? (
-            <p className="px-1 text-[12px] text-white">Defina a mensagem para ver a prévia.</p>
+            <p className="px-1 text-[12px] text-neutral-500">
+              Defina a mensagem para ver a prévia.
+            </p>
           ) : (
             actions.map((action, i) => {
               if (action.type === "funnel_add" || action.type === "funnel_remove") return null;

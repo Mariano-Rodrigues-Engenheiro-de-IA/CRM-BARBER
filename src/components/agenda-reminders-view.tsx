@@ -5,7 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Bell, MessageSquareCheck, Plus, Trash2, Pencil, X } from "lucide-react";
 import { useConfirm } from "@/components/confirm-dialog";
@@ -36,7 +42,14 @@ type ReminderRule = {
   active: boolean;
 };
 
-type TemplateOption = { name: string; language: string; status: string; hasQuickReplyButtons: boolean; buttonTexts: string[]; hasImageHeader: boolean };
+type TemplateOption = {
+  name: string;
+  language: string;
+  status: string;
+  hasQuickReplyButtons: boolean;
+  buttonTexts: string[];
+  hasImageHeader: boolean;
+};
 
 const STATUS_LABELS: Record<string, string> = {
   scheduled: "Aguardando confirmação",
@@ -84,11 +97,19 @@ export function AgendaRemindersView({ api }: { api: Api }) {
               name: string;
               language: string;
               status: string;
-              components?: Array<{ type?: string; format?: string; buttons?: Array<{ type?: string; text?: string }> }>;
+              components?: Array<{
+                type?: string;
+                format?: string;
+                buttons?: Array<{ type?: string; text?: string }>;
+              }>;
             }>) || []
           ).map((tpl) => {
-            const buttonsComp = (tpl.components || []).find((c) => String(c.type).toUpperCase() === "BUTTONS");
-            const quickReplies = (buttonsComp?.buttons || []).filter((b) => String(b.type).toUpperCase() === "QUICK_REPLY");
+            const buttonsComp = (tpl.components || []).find(
+              (c) => String(c.type).toUpperCase() === "BUTTONS",
+            );
+            const quickReplies = (buttonsComp?.buttons || []).filter(
+              (b) => String(b.type).toUpperCase() === "QUICK_REPLY",
+            );
             return {
               name: tpl.name,
               language: tpl.language,
@@ -96,7 +117,9 @@ export function AgendaRemindersView({ api }: { api: Api }) {
               hasQuickReplyButtons: quickReplies.length > 0,
               buttonTexts: quickReplies.map((b) => b.text || "").filter(Boolean),
               hasImageHeader: (tpl.components || []).some(
-                (c) => String(c.type).toUpperCase() === "HEADER" && String(c.format).toUpperCase() === "IMAGE",
+                (c) =>
+                  String(c.type).toUpperCase() === "HEADER" &&
+                  String(c.format).toUpperCase() === "IMAGE",
               ),
             };
           }),
@@ -112,7 +135,9 @@ export function AgendaRemindersView({ api }: { api: Api }) {
       body: JSON.stringify({ active: !rule.active }),
     });
     if (r?.ok) {
-      setRules((list) => (list ?? []).map((x) => (x.id === rule.id ? { ...x, active: !rule.active } : x)));
+      setRules((list) =>
+        (list ?? []).map((x) => (x.id === rule.id ? { ...x, active: !rule.active } : x)),
+      );
     } else {
       toast.error((r?.error as string) || "Não consegui atualizar.");
     }
@@ -121,12 +146,15 @@ export function AgendaRemindersView({ api }: { api: Api }) {
   async function removeRule(rule: ReminderRule) {
     const ok = await confirm({
       title: `Excluir "${rule.name}"?`,
-      description: "Essa regra vai parar de disparar. Agendamentos já processados não são afetados.",
+      description:
+        "Essa regra vai parar de disparar. Agendamentos já processados não são afetados.",
       confirmLabel: "Excluir",
       destructive: true,
     });
     if (!ok) return;
-    const r = await api(`/api/public/extension/agenda-reminder-rules/${rule.id}`, { method: "DELETE" });
+    const r = await api(`/api/public/extension/agenda-reminder-rules/${rule.id}`, {
+      method: "DELETE",
+    });
     if (r?.ok) {
       setRules((list) => (list ?? []).filter((x) => x.id !== rule.id));
       toast.success("Regra excluída.");
@@ -148,7 +176,9 @@ export function AgendaRemindersView({ api }: { api: Api }) {
         <p className="text-sm text-neutral-500">Carregando…</p>
       ) : rules.length === 0 ? (
         <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-8 text-center">
-          <p className="text-sm text-neutral-500">Nenhuma regra ainda. Cria a primeira pra começar a automatizar.</p>
+          <p className="text-sm text-neutral-500">
+            Nenhuma regra ainda. Cria a primeira pra começar a automatizar.
+          </p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -159,14 +189,20 @@ export function AgendaRemindersView({ api }: { api: Api }) {
                 key={rule.id}
                 className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-white p-3 shadow-sm"
               >
-                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${rule.kind === "confirmation" ? "bg-sky-100 text-sky-700" : "bg-amber-100 text-amber-700"}`}>
-                  {rule.kind === "confirmation" ? <MessageSquareCheck className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
+                <div
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${rule.kind === "confirmation" ? "bg-sky-100 text-sky-700" : "bg-amber-100 text-amber-700"}`}
+                >
+                  {rule.kind === "confirmation" ? (
+                    <MessageSquareCheck className="h-4 w-4" />
+                  ) : (
+                    <Bell className="h-4 w-4" />
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-neutral-900">{rule.name}</p>
                   <p className="truncate text-xs text-neutral-500">
-                    {rule.kind === "confirmation" ? "Confirmação" : "Lembrete"}, {value} {unit} antes,{" "}
-                    {rule.applies_to_statuses.map((s) => STATUS_LABELS[s] || s).join(", ")}
+                    {rule.kind === "confirmation" ? "Confirmação" : "Lembrete"}, {value} {unit}{" "}
+                    antes, {rule.applies_to_statuses.map((s) => STATUS_LABELS[s] || s).join(", ")}
                   </p>
                 </div>
                 <Switch checked={rule.active} onCheckedChange={() => void toggleActive(rule)} />
@@ -219,10 +255,14 @@ function ReminderRuleForm({
   const initial = minutesToValueUnit(rule?.offset_minutes ?? 24 * 60);
   const [offsetValue, setOffsetValue] = useState(initial.value);
   const [offsetUnit, setOffsetUnit] = useState<"minutos" | "horas" | "dias">(initial.unit);
-  const [statuses, setStatuses] = useState<string[]>(rule?.applies_to_statuses || ["scheduled", "confirmed"]);
+  const [statuses, setStatuses] = useState<string[]>(
+    rule?.applies_to_statuses || ["scheduled", "confirmed"],
+  );
   const [messageText, setMessageText] = useState(rule?.message_text || "");
   const [templateName, setTemplateName] = useState(rule?.template_name || "");
-  const [headerMediaPath, setHeaderMediaPath] = useState<string | null>(rule?.template_header_media_path || null);
+  const [headerMediaPath, setHeaderMediaPath] = useState<string | null>(
+    rule?.template_header_media_path || null,
+  );
   const [headerPreview, setHeaderPreview] = useState<string | null>(null);
   const [uploadingHeader, setUploadingHeader] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -245,7 +285,11 @@ function ReminderRuleForm({
       const dataUrl = await fileToBase64(file);
       const r = await api("/api/public/extension/quick-replies/upload", {
         method: "POST",
-        body: JSON.stringify({ filename: file.name, mime: file.type || "image/jpeg", data_base64: dataUrl }),
+        body: JSON.stringify({
+          filename: file.name,
+          mime: file.type || "image/jpeg",
+          data_base64: dataUrl,
+        }),
       });
       if (!r?.ok) {
         toast.error((r?.error as string) || "Falha ao enviar a imagem.");
@@ -276,11 +320,18 @@ function ReminderRuleForm({
       message_text: usesTemplate ? null : messageText.trim(),
       template_name: usesTemplate ? templateName : null,
       template_language: usesTemplate ? selectedTemplate?.language || "pt_BR" : null,
-      template_header_media_path: usesTemplate && selectedTemplate?.hasImageHeader ? headerMediaPath : null,
+      template_header_media_path:
+        usesTemplate && selectedTemplate?.hasImageHeader ? headerMediaPath : null,
     };
     const r = rule
-      ? await api(`/api/public/extension/agenda-reminder-rules/${rule.id}`, { method: "PATCH", body: JSON.stringify(body) })
-      : await api("/api/public/extension/agenda-reminder-rules", { method: "POST", body: JSON.stringify(body) });
+      ? await api(`/api/public/extension/agenda-reminder-rules/${rule.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(body),
+        })
+      : await api("/api/public/extension/agenda-reminder-rules", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
     setSaving(false);
     if (r?.ok) {
       toast.success(rule ? "Regra atualizada." : "Regra criada.");
@@ -291,14 +342,22 @@ function ReminderRuleForm({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
       <div
         className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-neutral-900">{rule ? "Editar regra" : "Nova regra"}</h3>
-          <button onClick={onClose} className="rounded-md p-1 text-neutral-400 hover:bg-neutral-100">
+          <h3 className="text-base font-semibold text-neutral-900">
+            {rule ? "Editar regra" : "Nova regra"}
+          </h3>
+          <button
+            onClick={onClose}
+            className="rounded-md p-1 text-neutral-400 hover:bg-neutral-100"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -306,7 +365,11 @@ function ReminderRuleForm({
         <div className="space-y-4">
           <div>
             <Label>Nome da regra</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Lembrete 1 dia antes" />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ex: Lembrete 1 dia antes"
+            />
           </div>
 
           <div>
@@ -367,7 +430,9 @@ function ReminderRuleForm({
                     key={value}
                     type="button"
                     onClick={() =>
-                      setStatuses((prev) => (checked ? prev.filter((s) => s !== value) : [...prev, value]))
+                      setStatuses((prev) =>
+                        checked ? prev.filter((s) => s !== value) : [...prev, value],
+                      )
                     }
                     className={`rounded-full border px-3 py-1 text-xs font-medium transition ${checked ? "border-brand bg-brand text-white" : "border-neutral-300 text-neutral-600 hover:bg-neutral-50"}`}
                   >
@@ -385,7 +450,9 @@ function ReminderRuleForm({
                 value={messageText}
                 onChange={(e) => setMessageText(e.target.value)}
                 rows={4}
-                placeholder={"Oi {primeiro_nome}! Passando pra lembrar do seu horário dia {data} às {hora}."}
+                placeholder={
+                  "Oi {primeiro_nome}! Passando pra lembrar do seu horário dia {data} às {hora}."
+                }
               />
               <p className="mt-1 text-xs text-neutral-500">
                 Variáveis: <code className="rounded bg-neutral-100 px-1">{"{nome}"}</code>{" "}
@@ -399,24 +466,36 @@ function ReminderRuleForm({
           ) : (
             <div className="space-y-3">
               <p className="text-xs text-neutral-500">
-                Seu número está conectado via Meta, então {kind === "confirmation" ? "a confirmação precisa" : "o lembrete precisa"} de um modelo aprovado.
+                Seu número está conectado via Meta, então{" "}
+                {kind === "confirmation" ? "a confirmação precisa" : "o lembrete precisa"} de um
+                modelo aprovado.
               </p>
               <div>
                 <Label>Modelo aprovado{kind === "confirmation" ? " com botões" : ""}</Label>
                 {templateOptions.length === 0 ? (
                   <p className="mt-1 text-xs text-amber-600">
-                    Nenhum modelo aprovado{kind === "confirmation" ? " com botões de resposta rápida" : ""} encontrado.
-                    Cria um na aba Modelos{kind === "confirmation" ? ' com botões tipo "Confirmar" e "Cancelar"' : ""}.
+                    Nenhum modelo aprovado
+                    {kind === "confirmation" ? " com botões de resposta rápida" : ""} encontrado.
+                    Cria um na aba Modelos
+                    {kind === "confirmation" ? ' com botões tipo "Confirmar" e "Cancelar"' : ""}.
                   </p>
                 ) : (
-                  <Select value={templateName} onValueChange={(v) => { setTemplateName(v); setHeaderMediaPath(null); setHeaderPreview(null); }}>
+                  <Select
+                    value={templateName}
+                    onValueChange={(v) => {
+                      setTemplateName(v);
+                      setHeaderMediaPath(null);
+                      setHeaderPreview(null);
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Escolha um modelo…" />
                     </SelectTrigger>
                     <SelectContent>
                       {templateOptions.map((t) => (
                         <SelectItem key={t.name} value={t.name}>
-                          {t.name}{t.hasImageHeader ? " (tem imagem)" : ""}
+                          {t.name}
+                          {t.hasImageHeader ? " (tem imagem)" : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -427,18 +506,29 @@ function ReminderRuleForm({
                 <div className="rounded-xl border border-neutral-300 bg-neutral-50 p-3">
                   <Label>Imagem do cabeçalho</Label>
                   <p className="mb-2 text-xs text-neutral-500">
-                    Esse modelo tem imagem no cabeçalho, precisa enviar a imagem que vai junto em todo disparo.
+                    Esse modelo tem imagem no cabeçalho, precisa enviar a imagem que vai junto em
+                    todo disparo.
                   </p>
                   {headerPreview && (
-                    <img src={headerPreview} alt="Prévia" className="mb-2 max-h-28 rounded-lg border border-neutral-200 object-cover" />
+                    <img
+                      src={headerPreview}
+                      alt="Prévia"
+                      className="mb-2 max-h-28 rounded-lg border border-neutral-200 object-cover"
+                    />
                   )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    disabled={uploadingHeader}
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleHeaderFile(f); }}
-                    className="block w-full text-sm text-neutral-600"
-                  />
+                  <label className="flex w-full cursor-pointer items-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-600 hover:border-brand">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={uploadingHeader}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) void handleHeaderFile(f);
+                      }}
+                      className="hidden"
+                    />
+                    {headerPreview ? "Trocar imagem" : "Escolher imagem"}
+                  </label>
                   {uploadingHeader && <p className="mt-1 text-xs text-neutral-500">Enviando…</p>}
                 </div>
               )}

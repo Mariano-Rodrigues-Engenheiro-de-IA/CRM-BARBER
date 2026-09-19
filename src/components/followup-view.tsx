@@ -9,7 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus, Trash2, Clock, ChevronRight, FileText, X } from "lucide-react";
 import { useConfirm } from "@/components/confirm-dialog";
@@ -49,7 +55,14 @@ function valueUnitToMinutes(value: number, unit: "minutos" | "horas" | "dias") {
 }
 
 function emptyStep(): FollowupStep {
-  return { delay_minutes: 60 * 24 * 3, actions: [{ type: "text", text: "" }], template_name: null, template_language: null, template_header_media_path: null, skip_if_replied: true };
+  return {
+    delay_minutes: 60 * 24 * 3,
+    actions: [{ type: "text", text: "" }],
+    template_name: null,
+    template_language: null,
+    template_header_media_path: null,
+    skip_if_replied: true,
+  };
 }
 
 export function FollowupView({ api }: { api: Api }) {
@@ -89,7 +102,9 @@ export function FollowupView({ api }: { api: Api }) {
             language: tpl.language,
             status: tpl.status,
             hasImageHeader: (tpl.components || []).some(
-              (c) => String(c.type).toUpperCase() === "HEADER" && String(c.format).toUpperCase() === "IMAGE",
+              (c) =>
+                String(c.type).toUpperCase() === "HEADER" &&
+                String(c.format).toUpperCase() === "IMAGE",
             ),
           })),
         );
@@ -109,7 +124,9 @@ export function FollowupView({ api }: { api: Api }) {
 
   const activeFunnel = funnels?.find((f) => f.id === funnelId) || null;
   const editingStage = activeFunnel?.stages.find((s) => s.id === editingStageId) || null;
-  const editingRule = editingStageId ? rules.find((r) => r.stage_id === editingStageId) || null : null;
+  const editingRule = editingStageId
+    ? rules.find((r) => r.stage_id === editingStageId) || null
+    : null;
 
   return (
     <div className="space-y-4">
@@ -122,7 +139,9 @@ export function FollowupView({ api }: { api: Api }) {
         <p className="text-sm text-neutral-500">Carregando…</p>
       ) : funnels.length === 0 ? (
         <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-8 text-center">
-          <p className="text-sm text-neutral-500">Nenhum funil criado ainda. Cria um na aba Funis de Vendas primeiro.</p>
+          <p className="text-sm text-neutral-500">
+            Nenhum funil criado ainda. Cria um na aba Funis de Vendas primeiro.
+          </p>
         </div>
       ) : (
         <>
@@ -202,9 +221,14 @@ export function FollowupView({ api }: { api: Api }) {
 }
 
 function FollowupReportModal({ api, onClose }: { api: Api; onClose: () => void }) {
-  const [entries, setEntries] = useState<
-    Array<{ id: string; card_title: string; phone: string; funnel_name: string; stage_name: string; sent_at: string }> | null
-  >(null);
+  const [entries, setEntries] = useState<Array<{
+    id: string;
+    card_title: string;
+    phone: string;
+    funnel_name: string;
+    stage_name: string;
+    sent_at: string;
+  }> | null>(null);
 
   useEffect(() => {
     api("/api/public/extension/funnel-followup-report").then((r) => {
@@ -215,7 +239,10 @@ function FollowupReportModal({ api, onClose }: { api: Api; onClose: () => void }
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
       <div
         className="max-h-[85vh] w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
@@ -223,9 +250,14 @@ function FollowupReportModal({ api, onClose }: { api: Api; onClose: () => void }
         <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-4">
           <div>
             <h3 className="text-base font-semibold text-neutral-900">Relatório de follow-up</h3>
-            <p className="text-xs text-neutral-500">Todas as mensagens já enviadas pela sequência, mais recentes primeiro.</p>
+            <p className="text-xs text-neutral-500">
+              Todas as mensagens já enviadas pela sequência, mais recentes primeiro.
+            </p>
           </div>
-          <button onClick={onClose} className="rounded-md p-1 text-neutral-400 hover:bg-neutral-100">
+          <button
+            onClick={onClose}
+            className="rounded-md p-1 text-neutral-400 hover:bg-neutral-100"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -233,7 +265,9 @@ function FollowupReportModal({ api, onClose }: { api: Api; onClose: () => void }
           {entries === null ? (
             <p className="p-5 text-sm text-neutral-500">Carregando…</p>
           ) : entries.length === 0 ? (
-            <p className="p-5 text-sm text-neutral-500">Nenhuma mensagem de follow-up enviada ainda.</p>
+            <p className="p-5 text-sm text-neutral-500">
+              Nenhuma mensagem de follow-up enviada ainda.
+            </p>
           ) : (
             <table className="w-full text-left text-sm">
               <thead className="sticky top-0 bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
@@ -256,7 +290,12 @@ function FollowupReportModal({ api, onClose }: { api: Api; onClose: () => void }
                       <span className="text-xs text-neutral-500">{e.stage_name}</span>
                     </td>
                     <td className="px-3 py-2.5 whitespace-nowrap text-neutral-700">
-                      {new Date(e.sent_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      {new Date(e.sent_at).toLocaleString("pt-BR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </td>
                   </tr>
                 ))}
@@ -291,7 +330,9 @@ function StageFollowupEditor({
   onSaved: () => void;
 }) {
   const [active, setActive] = useState(rule?.active ?? true);
-  const [steps, setSteps] = useState<FollowupStep[]>(rule?.steps.length ? rule.steps : [emptyStep()]);
+  const [steps, setSteps] = useState<FollowupStep[]>(
+    rule?.steps.length ? rule.steps : [emptyStep()],
+  );
   const [saving, setSaving] = useState(false);
   const [headerPreviews, setHeaderPreviews] = useState<Record<number, string>>({});
   const [uploadingHeaderIndex, setUploadingHeaderIndex] = useState<number | null>(null);
@@ -320,7 +361,11 @@ function StageFollowupEditor({
       });
       const r = await api("/api/public/extension/quick-replies/upload", {
         method: "POST",
-        body: JSON.stringify({ filename: file.name, mime: file.type || "image/jpeg", data_base64: dataUrl }),
+        body: JSON.stringify({
+          filename: file.name,
+          mime: file.type || "image/jpeg",
+          data_base64: dataUrl,
+        }),
       });
       if (!r?.ok) {
         toast.error((r?.error as string) || "Falha ao enviar a imagem.");
@@ -334,15 +379,23 @@ function StageFollowupEditor({
   }
 
   async function submit() {
-    const cleaned = steps.filter((s) => (isMetaProvider ? !!s.template_name : s.actions[0]?.text?.trim()));
+    const cleaned = steps.filter((s) =>
+      isMetaProvider ? !!s.template_name : s.actions[0]?.text?.trim(),
+    );
     if (!cleaned.length) {
-      return toast.error(isMetaProvider ? "Escolhe um modelo em pelo menos um passo." : "Escreve pelo menos uma mensagem.");
+      return toast.error(
+        isMetaProvider
+          ? "Escolhe um modelo em pelo menos um passo."
+          : "Escreve pelo menos uma mensagem.",
+      );
     }
     if (isMetaProvider) {
       for (const s of cleaned) {
         const tpl = templates.find((t) => t.name === s.template_name);
         if (tpl?.hasImageHeader && !s.template_header_media_path) {
-          return toast.error(`O modelo do passo com "${tpl.name}" tem imagem no cabeçalho, envie a imagem antes de salvar.`);
+          return toast.error(
+            `O modelo do passo com "${tpl.name}" tem imagem no cabeçalho, envie a imagem antes de salvar.`,
+          );
         }
       }
     }
@@ -381,7 +434,9 @@ function StageFollowupEditor({
       destructive: true,
     });
     if (!ok) return;
-    const r = await api(`/api/public/extension/funnel-followup-rules/${rule.id}`, { method: "DELETE" });
+    const r = await api(`/api/public/extension/funnel-followup-rules/${rule.id}`, {
+      method: "DELETE",
+    });
     if (r?.ok) {
       toast.success("Follow-up removido.");
       onSaved();
@@ -391,7 +446,10 @@ function StageFollowupEditor({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
       {dialog}
       <div
         className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"
@@ -423,11 +481,21 @@ function StageFollowupEditor({
                       min={0}
                       value={value}
                       onChange={(e) =>
-                        updateStep(i, { delay_minutes: valueUnitToMinutes(Math.max(0, Number(e.target.value) || 0), unit) })
+                        updateStep(i, {
+                          delay_minutes: valueUnitToMinutes(
+                            Math.max(0, Number(e.target.value) || 0),
+                            unit,
+                          ),
+                        })
                       }
                       className="h-7 w-16 px-2"
                     />
-                    <Select value={unit} onValueChange={(v) => updateStep(i, { delay_minutes: valueUnitToMinutes(value, v as any) })}>
+                    <Select
+                      value={unit}
+                      onValueChange={(v) =>
+                        updateStep(i, { delay_minutes: valueUnitToMinutes(value, v as any) })
+                      }
+                    >
                       <SelectTrigger className="h-7 w-24 px-2 text-xs">
                         <SelectValue />
                       </SelectTrigger>
@@ -440,7 +508,10 @@ function StageFollowupEditor({
                     parado(a) aqui
                   </div>
                   {steps.length > 1 && (
-                    <button onClick={() => removeStep(i)} className="rounded-md p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600">
+                    <button
+                      onClick={() => removeStep(i)}
+                      className="rounded-md p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600"
+                    >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   )}
@@ -455,7 +526,9 @@ function StageFollowupEditor({
                     <>
                       <Select
                         value={step.template_name || ""}
-                        onValueChange={(v) => updateStep(i, { template_name: v, template_header_media_path: null })}
+                        onValueChange={(v) =>
+                          updateStep(i, { template_name: v, template_header_media_path: null })
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Escolha um modelo…" />
@@ -463,25 +536,40 @@ function StageFollowupEditor({
                         <SelectContent>
                           {approvedTemplates.map((t) => (
                             <SelectItem key={t.name} value={t.name}>
-                              {t.name}{t.hasImageHeader ? " (tem imagem)" : ""}
+                              {t.name}
+                              {t.hasImageHeader ? " (tem imagem)" : ""}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                       {templates.find((t) => t.name === step.template_name)?.hasImageHeader && (
                         <div className="mt-2 rounded-lg border border-neutral-200 bg-white p-2">
-                          <p className="mb-1 text-xs font-medium text-neutral-600">Imagem do cabeçalho</p>
+                          <p className="mb-1 text-xs font-medium text-neutral-600">
+                            Imagem do cabeçalho
+                          </p>
                           {headerPreviews[i] && (
-                            <img src={headerPreviews[i]} alt="Prévia" className="mb-2 max-h-24 rounded-lg border border-neutral-200 object-cover" />
+                            <img
+                              src={headerPreviews[i]}
+                              alt="Prévia"
+                              className="mb-2 max-h-24 rounded-lg border border-neutral-200 object-cover"
+                            />
                           )}
-                          <input
-                            type="file"
-                            accept="image/*"
-                            disabled={uploadingHeaderIndex === i}
-                            onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleStepHeaderFile(i, f); }}
-                            className="block w-full text-sm text-neutral-600"
-                          />
-                          {uploadingHeaderIndex === i && <p className="mt-1 text-xs text-neutral-500">Enviando…</p>}
+                          <label className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-dashed border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-600 hover:border-brand">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              disabled={uploadingHeaderIndex === i}
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) void handleStepHeaderFile(i, f);
+                              }}
+                              className="hidden"
+                            />
+                            {headerPreviews[i] ? "Trocar imagem" : "Escolher imagem"}
+                          </label>
+                          {uploadingHeaderIndex === i && (
+                            <p className="mt-1 text-xs text-neutral-500">Enviando…</p>
+                          )}
                         </div>
                       )}
                     </>
@@ -489,7 +577,9 @@ function StageFollowupEditor({
                 ) : (
                   <Textarea
                     value={step.actions[0]?.text || ""}
-                    onChange={(e) => updateStep(i, { actions: [{ type: "text", text: e.target.value }] })}
+                    onChange={(e) =>
+                      updateStep(i, { actions: [{ type: "text", text: e.target.value }] })
+                    }
                     rows={2}
                     placeholder="Mensagem que será enviada…"
                   />
@@ -518,7 +608,10 @@ function StageFollowupEditor({
 
         <div className="mt-5 flex items-center justify-between border-t border-neutral-100 pt-4">
           {rule ? (
-            <button onClick={() => void removeRule()} className="flex items-center gap-1.5 text-sm text-red-600 hover:underline">
+            <button
+              onClick={() => void removeRule()}
+              className="flex items-center gap-1.5 text-sm text-red-600 hover:underline"
+            >
               <Trash2 className="h-3.5 w-3.5" /> Remover follow-up
             </button>
           ) : (

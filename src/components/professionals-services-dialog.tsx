@@ -3,9 +3,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useConfirm } from "@/components/confirm-dialog";
@@ -56,8 +68,14 @@ export type Product = {
   observacoes_regras_especiais?: string | null;
 };
 
-type Faixa = { quantidade_min: number; quantidade_max: number; variacoes: { nome: string; valor: number }[] };
-type TabelaPrecos = { faixas: { quantidade_min: number; quantidade_max: number; variacoes: Record<string, number> }[] };
+type Faixa = {
+  quantidade_min: number;
+  quantidade_max: number;
+  variacoes: { nome: string; valor: number }[];
+};
+type TabelaPrecos = {
+  faixas: { quantidade_min: number; quantidade_max: number; variacoes: Record<string, number> }[];
+};
 type Adicional = { nome: string; valor: number; aplica_apenas_se?: string };
 type FormulaCalculo = {
   valor_m2: number;
@@ -77,19 +95,41 @@ async function fileToSquareDataUrl(file: File, size = 160): Promise<string> {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Não consegui processar a imagem");
   const side = Math.min(bitmap.width, bitmap.height);
-  ctx.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, size, size);
+  ctx.drawImage(
+    bitmap,
+    (bitmap.width - side) / 2,
+    (bitmap.height - side) / 2,
+    side,
+    side,
+    0,
+    0,
+    size,
+    size,
+  );
   return canvas.toDataURL("image/jpeg", 0.82);
 }
 
 /** Bolinha do profissional: foto quando existe, senão a cor de identificação. */
-export function ProfessionalAvatar({ professional, size = 24 }: { professional: { name: string; color: string; avatar_url?: string | null }; size?: number }) {
+export function ProfessionalAvatar({
+  professional,
+  size = 24,
+}: {
+  professional: { name: string; color: string; avatar_url?: string | null };
+  size?: number;
+}) {
   if (professional.avatar_url) {
     return (
       <img
         src={professional.avatar_url}
         alt={`Foto de ${professional.name}`}
         className="shrink-0 rounded-full object-cover"
-        style={{ width: size, height: size, borderColor: professional.color, borderWidth: 2, borderStyle: "solid" }}
+        style={{
+          width: size,
+          height: size,
+          borderColor: professional.color,
+          borderWidth: 2,
+          borderStyle: "solid",
+        }}
       />
     );
   }
@@ -187,10 +227,18 @@ export function ProfessionalsTab({ api, onChanged }: { api: Api; onChanged?: () 
       ) : (
         <div className="space-y-2">
           {professionals.map((p) => (
-            <div key={p.id} className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3">
+            <div
+              key={p.id}
+              className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3"
+            >
               <ProfessionalAvatar professional={p} size={32} />
               <div className="min-w-0 flex-1">
-                <p className={"truncate text-sm font-medium " + (p.active ? "text-neutral-900" : "text-neutral-400 line-through")}>
+                <p
+                  className={
+                    "truncate text-sm font-medium " +
+                    (p.active ? "text-neutral-900" : "text-neutral-400 line-through")
+                  }
+                >
                   {p.name}
                 </p>
                 <p className="truncate text-xs text-neutral-400">
@@ -219,7 +267,16 @@ export function ProfessionalsTab({ api, onChanged }: { api: Api; onChanged?: () 
                 onClick={() => void deleteProfessional(p)}
                 title="Excluir"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.9"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d="M3 6h18" />
                   <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                   <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
@@ -295,8 +352,14 @@ function ProfessionalFormDialog({
         avatar_url: avatarUrl,
       };
       const r = editing
-        ? await api(`/api/public/extension/professionals/${editing.id}`, { method: "PATCH", body: JSON.stringify(payload) })
-        : await api("/api/public/extension/professionals", { method: "POST", body: JSON.stringify(payload) });
+        ? await api(`/api/public/extension/professionals/${editing.id}`, {
+            method: "PATCH",
+            body: JSON.stringify(payload),
+          })
+        : await api("/api/public/extension/professionals", {
+            method: "POST",
+            body: JSON.stringify(payload),
+          });
       if (!r?.ok) throw new Error(r?.error || "Erro ao salvar");
       toast.success(editing ? "Profissional atualizado" : "Profissional adicionado");
       onOpenChange(false);
@@ -317,12 +380,20 @@ function ProfessionalFormDialog({
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label>Nome</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do profissional" />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Nome do profissional"
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Telefone (opcional)</Label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Ex: 44991234567" />
+              <Input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Ex: 44991234567"
+              />
             </div>
             <div className="space-y-1.5">
               <Label>E-mail (opcional)</Label>
@@ -332,22 +403,28 @@ function ProfessionalFormDialog({
           <div className="space-y-1.5">
             <Label>Foto (opcional)</Label>
             <div className="flex items-center gap-3">
-              <ProfessionalAvatar professional={{ name: name || "?", color, avatar_url: avatarUrl }} size={56} />
+              <ProfessionalAvatar
+                professional={{ name: name || "?", color, avatar_url: avatarUrl }}
+                size={56}
+              />
               <div className="flex gap-2">
-                <Input
-                  type="file"
-                  accept="image/*"
-                  className="max-w-[220px]"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    try {
-                      setAvatarUrl(await fileToSquareDataUrl(file));
-                    } catch {
-                      toast.error("Não consegui usar essa imagem.");
-                    }
-                  }}
-                />
+                <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-600 hover:border-brand">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      try {
+                        setAvatarUrl(await fileToSquareDataUrl(file));
+                      } catch {
+                        toast.error("Não consegui usar essa imagem.");
+                      }
+                    }}
+                  />
+                  {avatarUrl ? "Trocar foto" : "Escolher foto"}
+                </label>
                 {avatarUrl && (
                   <Button variant="outline" size="sm" onClick={() => setAvatarUrl(null)}>
                     Remover
@@ -355,16 +432,29 @@ function ProfessionalFormDialog({
                 )}
               </div>
             </div>
-            <p className="text-[11px] text-neutral-400">A foto aparece na agenda no lugar da bolinha colorida.</p>
+            <p className="text-[11px] text-neutral-400">
+              A foto aparece na agenda no lugar da bolinha colorida.
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label>Especialidades (opcional)</Label>
-            <Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={2} placeholder="Ex: especialista em degradê e barba" />
+            <Textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              rows={2}
+              placeholder="Ex: especialista em degradê e barba"
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Comissão % (opcional)</Label>
-              <Input type="number" min={0} max={100} value={commission} onChange={(e) => setCommission(e.target.value)} />
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                value={commission}
+                onChange={(e) => setCommission(e.target.value)}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Cor na agenda</Label>
@@ -373,7 +463,10 @@ function ProfessionalFormDialog({
                   <button
                     key={c}
                     onClick={() => setColor(c)}
-                    className={"h-7 w-7 rounded-full border-2 " + (color === c ? "border-neutral-900" : "border-transparent")}
+                    className={
+                      "h-7 w-7 rounded-full border-2 " +
+                      (color === c ? "border-neutral-900" : "border-transparent")
+                    }
                     style={{ backgroundColor: c }}
                   />
                 ))}
@@ -431,7 +524,12 @@ export function ServicesTab({ api, onChanged }: { api: Api; onChanged?: () => vo
 
   function professionalNames(ids?: string[]) {
     if (!ids || ids.length === 0) return "Todos os profissionais";
-    return ids.map((id) => professionals.find((p) => p.id === id)?.name).filter(Boolean).join(", ") || "—";
+    return (
+      ids
+        .map((id) => professionals.find((p) => p.id === id)?.name)
+        .filter(Boolean)
+        .join(", ") || "—"
+    );
   }
 
   return (
@@ -456,18 +554,32 @@ export function ServicesTab({ api, onChanged }: { api: Api; onChanged?: () => vo
       ) : (
         <div className="space-y-2">
           {services.map((s) => (
-            <div key={s.id} className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3">
+            <div
+              key={s.id}
+              className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3"
+            >
               <div className="min-w-0 flex-1">
-                <p className={"truncate text-sm font-medium " + (s.active ? "text-neutral-900" : "text-neutral-400 line-through")}>
+                <p
+                  className={
+                    "truncate text-sm font-medium " +
+                    (s.active ? "text-neutral-900" : "text-neutral-400 line-through")
+                  }
+                >
                   {s.name}
-                  {s.category && <span className="ml-2 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-500">{s.category}</span>}
+                  {s.category && (
+                    <span className="ml-2 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-500">
+                      {s.category}
+                    </span>
+                  )}
                 </p>
                 <p className="truncate text-xs text-neutral-400">
                   {s.duration_minutes}min{s.price ? ` · R$ ${s.price.toFixed(2)}` : ""}
                   {s.description ? ` · ${s.description}` : ""}
                 </p>
                 {professionals.length > 0 && (
-                  <p className="truncate text-[11px] text-brand">{professionalNames(s.professional_ids)}</p>
+                  <p className="truncate text-[11px] text-brand">
+                    {professionalNames(s.professional_ids)}
+                  </p>
                 )}
               </div>
               <Button
@@ -554,8 +666,14 @@ function ServiceFormDialog({
         professional_ids: selectedPros,
       };
       const r = editing
-        ? await api(`/api/public/extension/services/${editing.id}`, { method: "PATCH", body: JSON.stringify(payload) })
-        : await api("/api/public/extension/services", { method: "POST", body: JSON.stringify(payload) });
+        ? await api(`/api/public/extension/services/${editing.id}`, {
+            method: "PATCH",
+            body: JSON.stringify(payload),
+          })
+        : await api("/api/public/extension/services", {
+            method: "POST",
+            body: JSON.stringify(payload),
+          });
       if (!r?.ok) throw new Error(r?.error || "Erro ao salvar");
       toast.success(editing ? "Serviço atualizado" : "Serviço adicionado");
       onOpenChange(false);
@@ -576,30 +694,57 @@ function ServiceFormDialog({
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label>Nome do serviço</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Corte masculino" />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ex: Corte masculino"
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Categoria (opcional)</Label>
-            <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Ex: Cabelo, Barba, Combo" />
+            <Input
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              placeholder="Ex: Cabelo, Barba, Combo"
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Descrição (opcional)</Label>
-            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Duração (min)</Label>
-              <Input type="number" min={5} step={5} value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
+              <Input
+                type="number"
+                min={5}
+                step={5}
+                value={duration}
+                onChange={(e) => setDuration(Number(e.target.value))}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Preço (opcional)</Label>
-              <Input type="number" min={0} step={0.01} placeholder="R$" value={price} onChange={(e) => setPrice(e.target.value)} />
+              <Input
+                type="number"
+                min={0}
+                step={0.01}
+                placeholder="R$"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+              />
             </div>
           </div>
           {professionals.length > 0 && (
             <div className="space-y-1.5">
               <Label>Quem realiza esse serviço</Label>
-              <p className="text-xs text-neutral-400">Deixe todos desmarcados para liberar pra qualquer profissional.</p>
+              <p className="text-xs text-neutral-400">
+                Deixe todos desmarcados para liberar pra qualquer profissional.
+              </p>
               <div className="flex flex-wrap gap-2">
                 {professionals.map((p) => (
                   <button
@@ -646,7 +791,8 @@ function priceSummary(p: Product): string | null {
   }
   if (p.tipo_precificacao === "tabela_faixa" && p.tabela_precos?.faixas?.length) {
     const valores = p.tabela_precos.faixas.flatMap((f) => Object.values(f.variacoes ?? {}));
-    if (valores.length > 0) return `Tabela por faixa · a partir de R$ ${Math.min(...valores).toFixed(2)}`;
+    if (valores.length > 0)
+      return `Tabela por faixa · a partir de R$ ${Math.min(...valores).toFixed(2)}`;
     return "Tabela por faixa";
   }
   if (p.price != null) return `R$ ${p.price.toFixed(2)}`;
@@ -703,13 +849,27 @@ export function ProductsTab({ api, onChanged }: { api: Api; onChanged?: () => vo
       ) : (
         <div className="space-y-2">
           {products.map((p) => (
-            <div key={p.id} className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3">
+            <div
+              key={p.id}
+              className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3"
+            >
               <div className="min-w-0 flex-1">
-                <p className={"truncate text-sm font-medium " + (p.active ? "text-neutral-900" : "text-neutral-400 line-through")}>
+                <p
+                  className={
+                    "truncate text-sm font-medium " +
+                    (p.active ? "text-neutral-900" : "text-neutral-400 line-through")
+                  }
+                >
                   {p.name}
-                  {p.category && <span className="ml-2 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-500">{p.category}</span>}
+                  {p.category && (
+                    <span className="ml-2 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-500">
+                      {p.category}
+                    </span>
+                  )}
                 </p>
-                {priceSummary(p) && <p className="truncate text-xs text-neutral-400">{priceSummary(p)}</p>}
+                {priceSummary(p) && (
+                  <p className="truncate text-xs text-neutral-400">{priceSummary(p)}</p>
+                )}
               </div>
               <Button
                 variant="ghost"
@@ -821,7 +981,9 @@ function ProductFormDialog({
   const [palavrasNegativas, setPalavrasNegativas] = useState<string[]>([]);
 
   // Precificação
-  const [tipoPrecificacao, setTipoPrecificacao] = useState<"fixo" | "tabela_faixa" | "formula_area">("fixo");
+  const [tipoPrecificacao, setTipoPrecificacao] = useState<
+    "fixo" | "tabela_faixa" | "formula_area"
+  >("fixo");
   const [faixas, setFaixas] = useState<Faixa[]>([]);
   const [valorM2, setValorM2] = useState("");
   const [pedidoMinimoValor, setPedidoMinimoValor] = useState("");
@@ -861,14 +1023,18 @@ function ProductFormDialog({
 
     const formula = editing?.formula_calculo;
     setValorM2(formula?.valor_m2 != null ? String(formula.valor_m2) : "");
-    setPedidoMinimoValor(formula?.pedido_minimo_valor != null ? String(formula.pedido_minimo_valor) : "");
+    setPedidoMinimoValor(
+      formula?.pedido_minimo_valor != null ? String(formula.pedido_minimo_valor) : "",
+    );
     setSangraCm(formula?.sangra_cm != null ? String(formula.sangra_cm) : "");
     setAdicionais(formula?.adicionais ?? []);
     setSoldaAtiva(!!formula?.regra_solda);
     setSoldaAplicaSe(formula?.regra_solda?.aplica_se ?? "largura > 1.75 E altura > 1.75");
-    setSoldaValor(formula?.regra_solda?.valor_por_metro_linear_menor_medida != null
-      ? String(formula.regra_solda.valor_por_metro_linear_menor_medida)
-      : "");
+    setSoldaValor(
+      formula?.regra_solda?.valor_por_metro_linear_menor_medida != null
+        ? String(formula.regra_solda.valor_por_metro_linear_menor_medida)
+        : "",
+    );
 
     setVariaveisObrigatorias(editing?.variaveis_obrigatorias ?? []);
     setRoteiro(editing?.roteiro_atendimento ?? []);
@@ -881,7 +1047,10 @@ function ProductFormDialog({
   }, [open, editing]);
 
   function addFaixa() {
-    setFaixas((prev) => [...prev, { quantidade_min: 0, quantidade_max: 0, variacoes: [{ nome: "padrao", valor: 0 }] }]);
+    setFaixas((prev) => [
+      ...prev,
+      { quantidade_min: 0, quantidade_max: 0, variacoes: [{ nome: "padrao", valor: 0 }] },
+    ]);
   }
   function addAdicional() {
     setAdicionais((prev) => [...prev, { nome: "", valor: 0, aplica_apenas_se: "" }]);
@@ -899,9 +1068,10 @@ function ProductFormDialog({
         palavras_chave_negativas: palavrasNegativas,
         tipo_precificacao: tipoPrecificacao,
         variaveis_obrigatorias: variaveisObrigatorias,
-        roteiro_atendimento: roteiro.filter((r) => r.campo.trim() && r.pergunta.trim()).length > 0
-          ? roteiro.filter((r) => r.campo.trim() && r.pergunta.trim())
-          : null,
+        roteiro_atendimento:
+          roteiro.filter((r) => r.campo.trim() && r.pergunta.trim()).length > 0
+            ? roteiro.filter((r) => r.campo.trim() && r.pergunta.trim())
+            : null,
         pedido_minimo: pedidoMinimo.trim() || null,
         sempre_escalar_humano: sempreEscalarHumano,
         motivo_escalar: sempreEscalarHumano ? motivoEscalar.trim() || null : null,
@@ -915,7 +1085,9 @@ function ProductFormDialog({
           faixas: faixas.map((f) => ({
             quantidade_min: f.quantidade_min,
             quantidade_max: f.quantidade_max,
-            variacoes: Object.fromEntries(f.variacoes.filter((v) => v.nome.trim()).map((v) => [v.nome.trim(), v.valor])),
+            variacoes: Object.fromEntries(
+              f.variacoes.filter((v) => v.nome.trim()).map((v) => [v.nome.trim(), v.valor]),
+            ),
           })),
         };
         payload.formula_calculo = null;
@@ -924,13 +1096,18 @@ function ProductFormDialog({
           valor_m2: Number(valorM2) || 0,
           pedido_minimo_valor: pedidoMinimoValor ? Number(pedidoMinimoValor) : undefined,
           sangra_cm: sangraCm ? Number(sangraCm) : undefined,
-          adicionais: adicionais.filter((a) => a.nome.trim()).map((a) => ({
-            nome: a.nome.trim(),
-            valor: a.valor,
-            aplica_apenas_se: a.aplica_apenas_se?.trim() || undefined,
-          })),
+          adicionais: adicionais
+            .filter((a) => a.nome.trim())
+            .map((a) => ({
+              nome: a.nome.trim(),
+              valor: a.valor,
+              aplica_apenas_se: a.aplica_apenas_se?.trim() || undefined,
+            })),
           regra_solda: soldaAtiva
-            ? { aplica_se: soldaAplicaSe.trim(), valor_por_metro_linear_menor_medida: Number(soldaValor) || 0 }
+            ? {
+                aplica_se: soldaAplicaSe.trim(),
+                valor_por_metro_linear_menor_medida: Number(soldaValor) || 0,
+              }
             : undefined,
         };
         payload.tabela_precos = null;
@@ -940,8 +1117,14 @@ function ProductFormDialog({
       }
 
       const r = editing
-        ? await api(`/api/public/extension/products/${editing.id}`, { method: "PATCH", body: JSON.stringify(payload) })
-        : await api("/api/public/extension/products", { method: "POST", body: JSON.stringify(payload) });
+        ? await api(`/api/public/extension/products/${editing.id}`, {
+            method: "PATCH",
+            body: JSON.stringify(payload),
+          })
+        : await api("/api/public/extension/products", {
+            method: "POST",
+            body: JSON.stringify(payload),
+          });
       if (!r?.ok) throw new Error(r?.error || "Erro ao salvar");
       toast.success(editing ? "Produto atualizado" : "Produto adicionado");
       onOpenChange(false);
@@ -971,15 +1154,27 @@ function ProductFormDialog({
           <TabsContent value="basico" className="space-y-3 pt-3">
             <div className="space-y-1.5">
               <Label>Nome do produto</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Banner com acabamento em madeira" />
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ex: Banner com acabamento em madeira"
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Categoria (opcional)</Label>
-              <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Ex: Comunicação Visual, Papelaria" />
+              <Input
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                placeholder="Ex: Comunicação Visual, Papelaria"
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Link do catálogo do WhatsApp (opcional)</Label>
-              <Input value={linkCatalogo} onChange={(e) => setLinkCatalogo(e.target.value)} placeholder="https://wa.me/p/..." />
+              <Input
+                value={linkCatalogo}
+                onChange={(e) => setLinkCatalogo(e.target.value)}
+                placeholder="https://wa.me/p/..."
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Mensagem de apresentação (opcional)</Label>
@@ -994,11 +1189,16 @@ function ProductFormDialog({
 
           <TabsContent value="identificacao" className="space-y-4 pt-3">
             <p className="text-xs text-neutral-500">
-              Essas palavras ajudam a IA a reconhecer quando o cliente está pedindo este produto, e a não confundir com produtos parecidos.
+              Essas palavras ajudam a IA a reconhecer quando o cliente está pedindo este produto, e
+              a não confundir com produtos parecidos.
             </p>
             <div className="space-y-1.5">
               <Label>Palavras-chave (sinônimos que o cliente usaria)</Label>
-              <TagListEditor values={palavrasPositivas} onChange={setPalavrasPositivas} placeholder="Digite e aperte Enter (ex: banner, faixa promocional)" />
+              <TagListEditor
+                values={palavrasPositivas}
+                onChange={setPalavrasPositivas}
+                placeholder="Digite e aperte Enter (ex: banner, faixa promocional)"
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Palavras que NÃO são este produto (evita confusão com produto parecido)</Label>
@@ -1011,14 +1211,19 @@ function ProductFormDialog({
             </div>
             <div className="space-y-1.5">
               <Label>Dados que a IA precisa perguntar ao cliente antes de calcular</Label>
-              <TagListEditor values={variaveisObrigatorias} onChange={setVariaveisObrigatorias} placeholder="Digite e aperte Enter (ex: tamanho, quantidade, tipo_impressao)" />
+              <TagListEditor
+                values={variaveisObrigatorias}
+                onChange={setVariaveisObrigatorias}
+                placeholder="Digite e aperte Enter (ex: tamanho, quantidade, tipo_impressao)"
+              />
             </div>
 
             <div className="space-y-2 rounded-lg border border-neutral-200 p-3">
               <div>
                 <Label>Roteiro de atendimento (opcional, mas recomendado)</Label>
                 <p className="text-xs text-neutral-500">
-                  Defina a ordem exata das perguntas e o texto exato que a IA deve usar para este produto. Se deixar vazio, a IA formula a pergunta sozinha a partir da lista acima.
+                  Defina a ordem exata das perguntas e o texto exato que a IA deve usar para este
+                  produto. Se deixar vazio, a IA formula a pergunta sozinha a partir da lista acima.
                 </p>
               </div>
               {roteiro.map((passo, pi) => (
@@ -1028,13 +1233,21 @@ function ProductFormDialog({
                     <Input
                       placeholder="Campo (ex: largura_m)"
                       value={passo.campo}
-                      onChange={(e) => setRoteiro((prev) => prev.map((p, i) => (i === pi ? { ...p, campo: e.target.value } : p)))}
+                      onChange={(e) =>
+                        setRoteiro((prev) =>
+                          prev.map((p, i) => (i === pi ? { ...p, campo: e.target.value } : p)),
+                        )
+                      }
                     />
                     <Textarea
                       rows={2}
                       placeholder="Pergunta exata (ex: Qual a largura, em metros?)"
                       value={passo.pergunta}
-                      onChange={(e) => setRoteiro((prev) => prev.map((p, i) => (i === pi ? { ...p, pergunta: e.target.value } : p)))}
+                      onChange={(e) =>
+                        setRoteiro((prev) =>
+                          prev.map((p, i) => (i === pi ? { ...p, pergunta: e.target.value } : p)),
+                        )
+                      }
                     />
                   </div>
                   <button
@@ -1046,7 +1259,12 @@ function ProductFormDialog({
                   </button>
                 </div>
               ))}
-              <Button type="button" variant="outline" size="sm" onClick={() => setRoteiro((prev) => [...prev, { campo: "", pergunta: "" }])}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setRoteiro((prev) => [...prev, { campo: "", pergunta: "" }])}
+              >
                 + Adicionar passo do roteiro
               </Button>
             </div>
@@ -1055,7 +1273,10 @@ function ProductFormDialog({
           <TabsContent value="preco" className="space-y-4 pt-3">
             <div className="space-y-1.5">
               <Label>Como esse produto é precificado</Label>
-              <Select value={tipoPrecificacao} onValueChange={(v) => setTipoPrecificacao(v as typeof tipoPrecificacao)}>
+              <Select
+                value={tipoPrecificacao}
+                onValueChange={(v) => setTipoPrecificacao(v as typeof tipoPrecificacao)}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -1070,7 +1291,14 @@ function ProductFormDialog({
             {tipoPrecificacao === "fixo" && (
               <div className="space-y-1.5">
                 <Label>Preço unitário</Label>
-                <Input type="number" min={0} step={0.01} placeholder="R$" value={price} onChange={(e) => setPrice(e.target.value)} />
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  placeholder="R$"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                />
               </div>
             )}
 
@@ -1095,7 +1323,11 @@ function ProductFormDialog({
                           type="number"
                           value={faixa.quantidade_min}
                           onChange={(e) =>
-                            setFaixas((prev) => prev.map((f, i) => (i === fi ? { ...f, quantidade_min: Number(e.target.value) } : f)))
+                            setFaixas((prev) =>
+                              prev.map((f, i) =>
+                                i === fi ? { ...f, quantidade_min: Number(e.target.value) } : f,
+                              ),
+                            )
                           }
                         />
                       </div>
@@ -1105,12 +1337,18 @@ function ProductFormDialog({
                           type="number"
                           value={faixa.quantidade_max}
                           onChange={(e) =>
-                            setFaixas((prev) => prev.map((f, i) => (i === fi ? { ...f, quantidade_max: Number(e.target.value) } : f)))
+                            setFaixas((prev) =>
+                              prev.map((f, i) =>
+                                i === fi ? { ...f, quantidade_max: Number(e.target.value) } : f,
+                              ),
+                            )
                           }
                         />
                       </div>
                     </div>
-                    <Label className="text-xs">Variações e valores (ex: 4x0, 4x1, 4x4, ou "padrao" se só tiver um valor)</Label>
+                    <Label className="text-xs">
+                      Variações e valores (ex: 4x0, 4x1, 4x4, ou "padrao" se só tiver um valor)
+                    </Label>
                     {faixa.variacoes.map((v, vi) => (
                       <div key={vi} className="flex items-center gap-2">
                         <Input
@@ -1120,7 +1358,14 @@ function ProductFormDialog({
                           onChange={(e) =>
                             setFaixas((prev) =>
                               prev.map((f, i) =>
-                                i === fi ? { ...f, variacoes: f.variacoes.map((vv, vvi) => (vvi === vi ? { ...vv, nome: e.target.value } : vv)) } : f,
+                                i === fi
+                                  ? {
+                                      ...f,
+                                      variacoes: f.variacoes.map((vv, vvi) =>
+                                        vvi === vi ? { ...vv, nome: e.target.value } : vv,
+                                      ),
+                                    }
+                                  : f,
                               ),
                             )
                           }
@@ -1135,7 +1380,12 @@ function ProductFormDialog({
                             setFaixas((prev) =>
                               prev.map((f, i) =>
                                 i === fi
-                                  ? { ...f, variacoes: f.variacoes.map((vv, vvi) => (vvi === vi ? { ...vv, valor: Number(e.target.value) } : vv)) }
+                                  ? {
+                                      ...f,
+                                      variacoes: f.variacoes.map((vv, vvi) =>
+                                        vvi === vi ? { ...vv, valor: Number(e.target.value) } : vv,
+                                      ),
+                                    }
                                   : f,
                               ),
                             )
@@ -1144,7 +1394,13 @@ function ProductFormDialog({
                         <button
                           type="button"
                           onClick={() =>
-                            setFaixas((prev) => prev.map((f, i) => (i === fi ? { ...f, variacoes: f.variacoes.filter((_, vvi) => vvi !== vi) } : f)))
+                            setFaixas((prev) =>
+                              prev.map((f, i) =>
+                                i === fi
+                                  ? { ...f, variacoes: f.variacoes.filter((_, vvi) => vvi !== vi) }
+                                  : f,
+                              ),
+                            )
                           }
                           className="text-neutral-400 hover:text-red-600"
                         >
@@ -1155,7 +1411,13 @@ function ProductFormDialog({
                     <button
                       type="button"
                       onClick={() =>
-                        setFaixas((prev) => prev.map((f, i) => (i === fi ? { ...f, variacoes: [...f.variacoes, { nome: "", valor: 0 }] } : f)))
+                        setFaixas((prev) =>
+                          prev.map((f, i) =>
+                            i === fi
+                              ? { ...f, variacoes: [...f.variacoes, { nome: "", valor: 0 }] }
+                              : f,
+                          ),
+                        )
                       }
                       className="text-xs text-brand hover:underline"
                     >
@@ -1174,16 +1436,34 @@ function ProductFormDialog({
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1.5">
                     <Label>Valor por m²</Label>
-                    <Input type="number" step={0.01} placeholder="R$" value={valorM2} onChange={(e) => setValorM2(e.target.value)} />
+                    <Input
+                      type="number"
+                      step={0.01}
+                      placeholder="R$"
+                      value={valorM2}
+                      onChange={(e) => setValorM2(e.target.value)}
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Pedido mínimo (R$, opcional)</Label>
-                    <Input type="number" step={0.01} placeholder="R$" value={pedidoMinimoValor} onChange={(e) => setPedidoMinimoValor(e.target.value)} />
+                    <Input
+                      type="number"
+                      step={0.01}
+                      placeholder="R$"
+                      value={pedidoMinimoValor}
+                      onChange={(e) => setPedidoMinimoValor(e.target.value)}
+                    />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Sangra em cm (opcional, só pra peças pequenas)</Label>
-                  <Input type="number" step={0.1} placeholder="Ex: 0.2" value={sangraCm} onChange={(e) => setSangraCm(e.target.value)} />
+                  <Input
+                    type="number"
+                    step={0.1}
+                    placeholder="Ex: 0.2"
+                    value={sangraCm}
+                    onChange={(e) => setSangraCm(e.target.value)}
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -1194,7 +1474,11 @@ function ProductFormDialog({
                         className="flex-1"
                         placeholder="Nome (ex: ilhos_4_pontas)"
                         value={ad.nome}
-                        onChange={(e) => setAdicionais((prev) => prev.map((a, i) => (i === ai ? { ...a, nome: e.target.value } : a)))}
+                        onChange={(e) =>
+                          setAdicionais((prev) =>
+                            prev.map((a, i) => (i === ai ? { ...a, nome: e.target.value } : a)),
+                          )
+                        }
                       />
                       <Input
                         className="w-24"
@@ -1202,13 +1486,25 @@ function ProductFormDialog({
                         step={0.01}
                         placeholder="R$"
                         value={ad.valor}
-                        onChange={(e) => setAdicionais((prev) => prev.map((a, i) => (i === ai ? { ...a, valor: Number(e.target.value) } : a)))}
+                        onChange={(e) =>
+                          setAdicionais((prev) =>
+                            prev.map((a, i) =>
+                              i === ai ? { ...a, valor: Number(e.target.value) } : a,
+                            ),
+                          )
+                        }
                       />
                       <Input
                         className="flex-1"
-                        placeholder='Condição (ex: acabamento = madeira)'
+                        placeholder="Condição (ex: acabamento = madeira)"
                         value={ad.aplica_apenas_se ?? ""}
-                        onChange={(e) => setAdicionais((prev) => prev.map((a, i) => (i === ai ? { ...a, aplica_apenas_se: e.target.value } : a)))}
+                        onChange={(e) =>
+                          setAdicionais((prev) =>
+                            prev.map((a, i) =>
+                              i === ai ? { ...a, aplica_apenas_se: e.target.value } : a,
+                            ),
+                          )
+                        }
                       />
                       <button
                         type="button"
@@ -1233,11 +1529,20 @@ function ProductFormDialog({
                     <>
                       <div className="space-y-1">
                         <Label className="text-xs">Quando aplica</Label>
-                        <Input value={soldaAplicaSe} onChange={(e) => setSoldaAplicaSe(e.target.value)} />
+                        <Input
+                          value={soldaAplicaSe}
+                          onChange={(e) => setSoldaAplicaSe(e.target.value)}
+                        />
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs">Valor por metro linear (da menor medida)</Label>
-                        <Input type="number" step={0.01} placeholder="R$" value={soldaValor} onChange={(e) => setSoldaValor(e.target.value)} />
+                        <Input
+                          type="number"
+                          step={0.01}
+                          placeholder="R$"
+                          value={soldaValor}
+                          onChange={(e) => setSoldaValor(e.target.value)}
+                        />
                       </div>
                     </>
                   )}
@@ -1249,12 +1554,18 @@ function ProductFormDialog({
           <TabsContent value="regras" className="space-y-4 pt-3">
             <div className="space-y-1.5">
               <Label>Pedido mínimo (texto livre, opcional)</Label>
-              <Input value={pedidoMinimo} onChange={(e) => setPedidoMinimo(e.target.value)} placeholder="Ex: 10 unidades" />
+              <Input
+                value={pedidoMinimo}
+                onChange={(e) => setPedidoMinimo(e.target.value)}
+                placeholder="Ex: 10 unidades"
+              />
             </div>
             <div className="flex items-center justify-between rounded-lg border border-neutral-200 p-3">
               <div>
                 <Label>Sempre escalar para atendente humano</Label>
-                <p className="text-xs text-neutral-500">A IA nunca calcula nem informa preço deste produto sozinha.</p>
+                <p className="text-xs text-neutral-500">
+                  A IA nunca calcula nem informa preço deste produto sozinha.
+                </p>
               </div>
               <Switch checked={sempreEscalarHumano} onCheckedChange={setSempreEscalarHumano} />
             </div>
@@ -1293,7 +1604,6 @@ function ProductFormDialog({
     </Dialog>
   );
 }
-
 
 /** Dialog com as duas abas juntas — atalho rápido a partir da Agenda. */
 export function ProfessionalsServicesDialog({

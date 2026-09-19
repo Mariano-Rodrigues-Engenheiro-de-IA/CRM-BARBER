@@ -363,109 +363,104 @@ export function AudienceStep({
   const showSheetPrompt = source.kind === "sheet" && !source.sheetContacts?.length;
 
   return (
-    // Altura relativa à tela do usuário, a lista de contatos cresce pra
-    // ocupar o espaço vertical disponível.
-    <div className="flex" style={{ height: "calc(100vh - 260px)", minHeight: 360 }}>
-      <div className="flex min-h-0 flex-1 gap-4">
-        <SourceSidebar
-          value={source.kind}
-          onChange={changeKind}
-          availableKinds={availableKinds}
-          onExport={exportDisplayedAsSheet}
-          exportDisabled={displayed.length === 0}
-        />
-
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
-          <SourceSubFilter
-            value={source}
-            onChange={onSourceChange}
-            funnels={funnels}
-            cols={cols}
-            isBarbearia={isBarbearia}
+    <>
+      {/* Altura relativa à tela do usuário, a lista de contatos cresce pra
+         ocupar o espaço vertical disponível. */}
+      <div className="flex" style={{ height: "calc(100vh - 260px)", minHeight: 360 }}>
+        <div className="flex min-h-0 flex-1 gap-4">
+          <SourceSidebar
+            value={source.kind}
+            onChange={changeKind}
+            availableKinds={availableKinds}
+            onExport={exportDisplayedAsSheet}
+            exportDisabled={displayed.length === 0}
           />
 
-          {showSheetPrompt ? (
-            <SheetImportPrompt
-              onImported={(rows) => onSourceChange({ ...source, sheetContacts: rows })}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+            <SourceSubFilter
+              value={source}
+              onChange={onSourceChange}
+              funnels={funnels}
+              cols={cols}
+              isBarbearia={isBarbearia}
             />
-          ) : (
-            <>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={toggleAllDisplayed}
-                  disabled={displayed.length === 0}
-                  className={
-                    "rounded-lg border px-3 py-1.5 text-xs font-semibold disabled:opacity-40 " +
-                    (allDisplayedSelected
-                      ? "border-neutral-300 bg-white text-neutral-700 hover:border-red-400 hover:text-red-600"
-                      : "border-brand bg-brand/10 text-brand hover:bg-brand/20")
-                  }
-                >
-                  {allDisplayedSelected ? "Remover todos" : `Adicionar todos (${displayed.length})`}
-                </button>
-                <span className="ml-auto text-xs text-neutral-500">
-                  {selected.size} selecionado(s) no total
-                </span>
-              </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-neutral-200">
-                {displayed.length === 0 ? (
-                  <p className="p-3 text-sm text-neutral-500">
-                    {source.kind === "labels" && !source.funnelId
-                      ? "Escolha uma lista acima."
-                      : source.kind === "funnel" && !source.funnelId
-                        ? "Escolha um funil acima."
-                        : "Nenhum contato encontrado nessa origem."}
-                  </p>
-                ) : (
-                  displayed.map((c) => {
-                    const isSelected = selected.has(phoneMatchKey(c.phone));
-                    return (
-                      <button
-                        key={c.phone}
-                        type="button"
-                        onClick={() => toggleOne(c)}
-                        className={
-                          "flex w-full items-center gap-3 border-b border-neutral-100 px-3 py-2.5 text-left text-sm last:border-b-0 " +
-                          (isSelected
-                            ? "bg-brand/5 text-neutral-900"
-                            : "text-neutral-700 hover:bg-neutral-50")
-                        }
-                      >
-                        <SelectionDot selected={isSelected} />
-                        <span className="min-w-0 truncate">{c.name || c.phone}</span>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </>
-          )}
+            {showSheetPrompt ? (
+              <SheetImportPrompt
+                onImported={(rows) => onSourceChange({ ...source, sheetContacts: rows })}
+              />
+            ) : (
+              <>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={toggleAllDisplayed}
+                    disabled={displayed.length === 0}
+                    className={
+                      "rounded-lg border px-3 py-1.5 text-xs font-semibold disabled:opacity-40 " +
+                      (allDisplayedSelected
+                        ? "border-neutral-300 bg-white text-neutral-700 hover:border-red-400 hover:text-red-600"
+                        : "border-brand bg-brand/10 text-brand hover:bg-brand/20")
+                    }
+                  >
+                    {allDisplayedSelected
+                      ? "Remover todos"
+                      : `Adicionar todos (${displayed.length})`}
+                  </button>
+                  <span className="ml-auto text-xs text-neutral-500">
+                    {selected.size} selecionado(s) no total
+                  </span>
+                </div>
+
+                <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-neutral-200">
+                  {displayed.length === 0 ? (
+                    <p className="p-3 text-sm text-neutral-500">
+                      {source.kind === "labels" && !source.funnelId
+                        ? "Escolha uma lista acima."
+                        : source.kind === "funnel" && !source.funnelId
+                          ? "Escolha um funil acima."
+                          : "Nenhum contato encontrado nessa origem."}
+                    </p>
+                  ) : (
+                    displayed.map((c) => {
+                      const isSelected = selected.has(phoneMatchKey(c.phone));
+                      return (
+                        <button
+                          key={c.phone}
+                          type="button"
+                          onClick={() => toggleOne(c)}
+                          className={
+                            "flex w-full items-center gap-3 border-b border-neutral-100 px-3 py-2.5 text-left text-sm last:border-b-0 " +
+                            (isSelected
+                              ? "bg-brand/5 text-neutral-900"
+                              : "text-neutral-700 hover:bg-neutral-50")
+                          }
+                        >
+                          <SelectionDot selected={isSelected} />
+                          <span className="min-w-0 truncate">{c.name || c.phone}</span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="flex flex-shrink-0 items-center pl-3">
+      <div className="mt-3 flex justify-end">
         <button
           type="button"
           disabled={!canAdvance}
           onClick={() => onNext(selectedList)}
-          title={
-            canAdvance
-              ? `Próxima etapa, ${selected.size} destinatário(s)`
-              : "Selecione pelo menos 1 contato"
-          }
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-300 text-neutral-600 transition hover:border-brand hover:bg-brand hover:text-white disabled:opacity-30 disabled:hover:border-neutral-300 disabled:hover:bg-transparent disabled:hover:text-neutral-600"
+          className="rounded-lg border border-neutral-300 px-5 py-2.5 text-sm font-semibold text-neutral-700 hover:border-brand hover:text-brand disabled:opacity-50"
         >
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-            <path
-              fillRule="evenodd"
-              d="M7.3 14.7a1 1 0 010-1.4L10.6 10 7.3 6.7a1 1 0 011.4-1.4l4 4a1 1 0 010 1.4l-4 4a1 1 0 01-1.4 0z"
-              clipRule="evenodd"
-            />
-          </svg>
+          {canAdvance
+            ? `Próximo, ${selected.size} destinatário(s)`
+            : "Selecione pelo menos 1 contato"}
         </button>
       </div>
-    </div>
+    </>
   );
 }
