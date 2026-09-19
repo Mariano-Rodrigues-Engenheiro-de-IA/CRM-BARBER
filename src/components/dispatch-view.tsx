@@ -396,7 +396,7 @@ export function DispatchCenter({
   }
 
   return (
-    <div className="mx-auto w-full max-w-xl">
+    <div className={"mx-auto w-full " + (step === 1 ? "max-w-3xl" : "max-w-xl")}>
       <h2 className="mb-4 text-center text-lg font-semibold text-neutral-900">Novo disparo</h2>
 
       {step === 1 ? (

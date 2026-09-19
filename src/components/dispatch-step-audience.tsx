@@ -36,10 +36,6 @@ import {
 const inputCls =
   "w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-neutral-900";
 
-function Label({ children }: { children: React.ReactNode }) {
-  return <label className="mb-1 block text-xs font-medium text-neutral-600">{children}</label>;
-}
-
 const SOURCE_LABELS: Record<AudienceSourceKind, string> = {
   inbox: "Inbox",
   labels: "Etiquetas",
@@ -74,41 +70,31 @@ function SelectionDot({ selected }: { selected: boolean }) {
   );
 }
 
-/** Seletor da origem sendo exibida no momento, o tipo, e o sub-parâmetro
- * (funil, lista, status de assinante, planilha), quando aplicável. */
-function SourcePicker({
+/** Sub-filtro da origem escolhida, o funil/lista específico, coluna do
+ * Kanban, ou upload de planilha. Não inclui mais a escolha do TIPO em
+ * si (isso agora é a sidebar, ver AudienceStep) — só o que é específico
+ * de cada tipo. */
+function SourceSubFilter({
   value,
   onChange,
   funnels,
   cols,
   isBarbearia,
-  availableKinds,
 }: {
   value: AudienceSource;
   onChange: (next: AudienceSource) => void;
   funnels: Funnel[];
   cols: Array<{ key: string; label: string }>;
   isBarbearia: boolean;
-  availableKinds: AudienceSourceKind[];
 }) {
   const labelFunnels = funnels.filter((f) => f.mode === "label");
   const normalFunnels = funnels.filter((f) => f.mode !== "label");
   const [sheetErr, setSheetErr] = useState<string | null>(null);
 
-  return (
-    <div className="space-y-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3">
-      <select
-        value={value.kind}
-        onChange={(e) => onChange({ kind: e.target.value as AudienceSourceKind })}
-        className={inputCls}
-      >
-        {availableKinds.map((k) => (
-          <option key={k} value={k}>
-            {SOURCE_LABELS[k]}
-          </option>
-        ))}
-      </select>
+  if (value.kind === "inbox") return null;
 
+  return (
+    <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
       {value.kind === "labels" && (
         <div className="grid grid-cols-2 gap-2">
           <select
@@ -216,6 +202,39 @@ function SourcePicker({
   );
 }
 
+/** Menu lateral fixo com os tipos de origem, pedido explícito do usuário
+ * (19/09): antes a origem ficava escondida num dropdown que precisava
+ * reabrir pra lembrar de onde já tinha puxado contato, deixando fácil se
+ * perder ao combinar várias origens. Com a origem sempre visível do
+ * lado, fica claro onde já mexeu e onde ainda não. */
+function SourceSidebar({
+  value,
+  onChange,
+  availableKinds,
+}: {
+  value: AudienceSourceKind;
+  onChange: (kind: AudienceSourceKind) => void;
+  availableKinds: AudienceSourceKind[];
+}) {
+  return (
+    <div className="w-36 flex-shrink-0 space-y-1">
+      {availableKinds.map((k) => (
+        <button
+          key={k}
+          type="button"
+          onClick={() => onChange(k)}
+          className={
+            "block w-full rounded-lg px-3 py-2 text-left text-sm font-semibold transition " +
+            (value === k ? "bg-brand text-white" : "text-neutral-700 hover:bg-neutral-100")
+          }
+        >
+          {SOURCE_LABELS[k]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function AudienceStep({
   funnels,
   contacts,
@@ -305,80 +324,76 @@ export function AudienceStep({
 
   return (
     <div className="space-y-5">
-      <div>
-        <Label>Origem</Label>
-        <SourcePicker
-          value={source}
-          onChange={(next) => {
-            // Só o tipo muda de verdade a origem (com auto-seleção da 1ª
-            // opção), mudanças de funil/lista/etapa dentro do mesmo tipo
-            // vêm direto do SourcePicker.
-            if (next.kind !== source.kind) changeKind(next.kind);
-            else onSourceChange(next);
-          }}
-          funnels={funnels}
-          cols={cols}
-          isBarbearia={isBarbearia}
-          availableKinds={availableKinds}
-        />
-      </div>
+      <div className="flex gap-4">
+        <SourceSidebar value={source.kind} onChange={changeKind} availableKinds={availableKinds} />
 
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={addAllDisplayed}
-            disabled={displayed.length === 0 || allDisplayedSelected}
-            className="rounded-lg border border-brand bg-brand/10 px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/20 disabled:opacity-40"
-          >
-            Adicionar todos ({displayed.length})
-          </button>
-          <button
-            type="button"
-            onClick={removeAllDisplayed}
-            disabled={displayed.length === 0}
-            className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:border-red-400 hover:text-red-600 disabled:opacity-40"
-          >
-            Remover todos
-          </button>
-          <button
-            type="button"
-            onClick={exportDisplayedAsSheet}
-            disabled={displayed.length === 0}
-            className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:border-neutral-500 disabled:opacity-40"
-          >
-            Exportar planilha
-          </button>
-        </div>
-        <p className="text-xs text-neutral-500">{selected.size} selecionado(s) no total</p>
-      </div>
+        <div className="min-w-0 flex-1 space-y-3">
+          <SourceSubFilter
+            value={source}
+            onChange={onSourceChange}
+            funnels={funnels}
+            cols={cols}
+            isBarbearia={isBarbearia}
+          />
 
-      <div>
-        {displayed.length === 0 ? (
-          <p className="text-sm text-neutral-500">Nenhum contato encontrado nessa origem.</p>
-        ) : (
-          <div className="max-h-64 overflow-y-auto rounded-xl border border-neutral-200">
-            {displayed.map((c) => {
-              const isSelected = selected.has(c.phone);
-              return (
-                <button
-                  key={c.phone}
-                  type="button"
-                  onClick={() => toggleOne(c)}
-                  className={
-                    "flex w-full items-center gap-3 border-b border-neutral-100 px-3 py-2.5 text-left text-sm last:border-b-0 " +
-                    (isSelected
-                      ? "bg-brand/5 text-neutral-900"
-                      : "text-neutral-700 hover:bg-neutral-50")
-                  }
-                >
-                  <SelectionDot selected={isSelected} />
-                  <span className="min-w-0 truncate">{c.name || c.phone}</span>
-                </button>
-              );
-            })}
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={addAllDisplayed}
+                disabled={displayed.length === 0 || allDisplayedSelected}
+                className="rounded-lg border border-brand bg-brand/10 px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/20 disabled:opacity-40"
+              >
+                Adicionar todos ({displayed.length})
+              </button>
+              <button
+                type="button"
+                onClick={removeAllDisplayed}
+                disabled={displayed.length === 0}
+                className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:border-red-400 hover:text-red-600 disabled:opacity-40"
+              >
+                Remover todos
+              </button>
+              <button
+                type="button"
+                onClick={exportDisplayedAsSheet}
+                disabled={displayed.length === 0}
+                className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:border-neutral-500 disabled:opacity-40"
+              >
+                Exportar planilha
+              </button>
+            </div>
+            <p className="text-xs text-neutral-500">{selected.size} selecionado(s) no total</p>
           </div>
-        )}
+
+          <div>
+            {displayed.length === 0 ? (
+              <p className="text-sm text-neutral-500">Nenhum contato encontrado nessa origem.</p>
+            ) : (
+              <div className="max-h-64 overflow-y-auto rounded-xl border border-neutral-200">
+                {displayed.map((c) => {
+                  const isSelected = selected.has(c.phone);
+                  return (
+                    <button
+                      key={c.phone}
+                      type="button"
+                      onClick={() => toggleOne(c)}
+                      className={
+                        "flex w-full items-center gap-3 border-b border-neutral-100 px-3 py-2.5 text-left text-sm last:border-b-0 " +
+                        (isSelected
+                          ? "bg-brand/5 text-neutral-900"
+                          : "text-neutral-700 hover:bg-neutral-50")
+                      }
+                    >
+                      <SelectionDot selected={isSelected} />
+                      <span className="min-w-0 truncate">{c.name || c.phone}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <button
