@@ -439,8 +439,6 @@ export function DispatchCenter({
 
   return (
     <div className={"mx-auto w-full " + (step === 1 || step === 2 ? "max-w-3xl" : "max-w-xl")}>
-      <h2 className="mb-4 text-center text-lg font-semibold text-neutral-900">Novo disparo</h2>
-
       {step === 1 ? (
         <div className="space-y-5 rounded-xl border border-neutral-300 bg-white p-6 shadow-sm">
           <AudienceStep
