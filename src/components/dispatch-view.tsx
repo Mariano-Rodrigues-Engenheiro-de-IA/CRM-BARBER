@@ -765,9 +765,9 @@ export function DispatchCenter({
               <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
                 <p className="text-sm font-semibold text-neutral-900">Termo de uso</p>
                 <p className="mt-2 text-sm leading-relaxed text-neutral-700">
-                  A pratica de envios em massa ou spam podem ocasionar o banimento do seu número por
-                  parte do WhatsApp. Envie mensagens apenas para pessoas que gostariam de receber
-                  sua mensagem.
+                  {isMetaProvider
+                    ? "Mandar mensagens pra quem não te autorizou contato antes, ou receber muitas denúncias, pode reduzir o limite diário de mensagens da sua conta, ou levar a Meta a restringir o uso. Envie mensagens apenas para pessoas que gostariam de receber sua mensagem."
+                    : "A prática de envios em massa ou spam pode ocasionar o banimento do seu número por parte do WhatsApp. Envie mensagens apenas para pessoas que gostariam de receber sua mensagem."}
                 </p>
                 <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-neutral-900">
                   <input
