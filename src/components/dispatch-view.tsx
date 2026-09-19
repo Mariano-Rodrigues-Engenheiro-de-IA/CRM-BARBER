@@ -14,6 +14,7 @@ import { type QuickReply, type QuickReplyAction } from "@/lib/quick-replies";
 import type { Funnel, WaContact, WaLabel } from "@/lib/funnels";
 import { AudienceStep } from "@/components/dispatch-step-audience";
 import { MessageComposerStep } from "@/components/dispatch-step-message";
+import { MessagePreview } from "@/components/dispatch-message-preview";
 import { TemplatePreview } from "@/components/whatsapp-template-preview";
 import type { AudienceContact, AudienceSource, DispatchCustomer } from "@/lib/dispatch-audience";
 export type { DispatchCustomer } from "@/lib/dispatch-audience";
@@ -496,196 +497,216 @@ export function DispatchCenter({
                 </p>
               </div>
 
-              {isMetaProvider ? (
+              <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <Label>Modelo</Label>
-                  {!templatesLoaded ? (
-                    <p className="text-sm text-neutral-500">Carregando modelos…</p>
-                  ) : templates.filter((t) => t.status === "APPROVED").length === 0 ? (
-                    <p className="text-sm text-neutral-500">
-                      Nenhum modelo aprovado ainda. Cria um na aba "Modelos" e espera a Meta
-                      aprovar.
-                    </p>
-                  ) : (
-                    <select
-                      value={selectedTemplate}
-                      onChange={(e) => {
-                        setSelectedTemplate(e.target.value);
-                        // Trocar de modelo invalida a imagem escolhida antes —
-                        // cada modelo tem seu próprio cabeçalho (ou nenhum).
-                        setTemplateHeaderPath(null);
-                        setTemplateHeaderPreview(null);
-                        const tpl = templates.find((t) => t.name === e.target.value);
-                        setCarouselPaths(new Array(tpl?.carouselCardCount || 0).fill(null));
-                        setCarouselPreviews(new Array(tpl?.carouselCardCount || 0).fill(null));
-                      }}
-                      className={inputCls}
-                    >
-                      <option value="">Escolha um modelo…</option>
-                      {templates
-                        .filter((t) => t.status === "APPROVED")
-                        .map((t) => (
-                          <option key={t.name} value={t.name}>
-                            {t.name}
-                            {t.hasImageHeader ? " (tem imagem)" : ""}
-                            {t.carouselCardCount > 0
-                              ? ` (carrossel, ${t.carouselCardCount} cartões)`
-                              : ""}
-                          </option>
-                        ))}
-                    </select>
-                  )}
-                  {isMetaProvider &&
-                    templates.find((t) => t.name === selectedTemplate)?.hasImageHeader && (
-                      <div className="mt-3 rounded-xl border border-neutral-300 bg-neutral-50 p-3">
-                        <Label>Imagem do cabeçalho</Label>
-                        <p className="mb-2 text-xs text-neutral-500">
-                          Esse modelo tem imagem no cabeçalho, a Meta exige uma imagem em todo envio
-                          (mesma pra todos os contatos desse disparo).
+                  {isMetaProvider ? (
+                    <div>
+                      <Label>Modelo</Label>
+                      {!templatesLoaded ? (
+                        <p className="text-sm text-neutral-500">Carregando modelos…</p>
+                      ) : templates.filter((t) => t.status === "APPROVED").length === 0 ? (
+                        <p className="text-sm text-neutral-500">
+                          Nenhum modelo aprovado ainda. Cria um na aba "Modelos" e espera a Meta
+                          aprovar.
                         </p>
-                        {templateHeaderPreview && (
-                          <img
-                            src={templateHeaderPreview}
-                            alt="Prévia do cabeçalho"
-                            className="mb-2 max-h-32 rounded-lg border border-neutral-200 object-cover"
-                          />
-                        )}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          disabled={templateHeaderUploading}
+                      ) : (
+                        <select
+                          value={selectedTemplate}
                           onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) void handleTemplateHeaderFile(file);
+                            setSelectedTemplate(e.target.value);
+                            // Trocar de modelo invalida a imagem escolhida antes —
+                            // cada modelo tem seu próprio cabeçalho (ou nenhum).
+                            setTemplateHeaderPath(null);
+                            setTemplateHeaderPreview(null);
+                            const tpl = templates.find((t) => t.name === e.target.value);
+                            setCarouselPaths(new Array(tpl?.carouselCardCount || 0).fill(null));
+                            setCarouselPreviews(new Array(tpl?.carouselCardCount || 0).fill(null));
                           }}
-                          className="block w-full text-sm text-neutral-600"
-                        />
-                        {templateHeaderUploading && (
-                          <p className="mt-1 text-xs text-neutral-500">Enviando imagem…</p>
-                        )}
-                      </div>
-                    )}
-                  {isMetaProvider &&
-                    (templates.find((t) => t.name === selectedTemplate)?.carouselCardCount ?? 0) >
-                      0 && (
-                      <div className="mt-3 rounded-xl border border-neutral-300 bg-neutral-50 p-3">
-                        <Label>Imagens do carrossel</Label>
-                        <p className="mb-2 text-xs text-neutral-500">
-                          Esse modelo é um carrossel, a Meta exige uma imagem por cartão em todo
-                          envio (mesmas imagens pra todos os contatos desse disparo).
-                        </p>
-                        <div className="space-y-3">
-                          {Array.from({
-                            length:
-                              templates.find((t) => t.name === selectedTemplate)
-                                ?.carouselCardCount ?? 0,
-                          }).map((_, i) => (
-                            <div
-                              key={i}
-                              className="rounded-lg border border-neutral-200 bg-white p-2"
-                            >
-                              <p className="mb-1 text-xs font-medium text-neutral-600">
-                                Cartão {i + 1}
-                              </p>
-                              {carouselPreviews[i] && (
-                                <img
-                                  src={carouselPreviews[i] as string}
-                                  alt={`Prévia do cartão ${i + 1}`}
-                                  className="mb-2 max-h-28 rounded-lg border border-neutral-200 object-cover"
-                                />
-                              )}
-                              <input
-                                type="file"
-                                accept="image/*"
-                                disabled={carouselUploadingIndex === i}
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) void handleCarouselCardFile(i, file);
-                                }}
-                                className="block w-full text-sm text-neutral-600"
+                          className={inputCls}
+                        >
+                          <option value="">Escolha um modelo…</option>
+                          {templates
+                            .filter((t) => t.status === "APPROVED")
+                            .map((t) => (
+                              <option key={t.name} value={t.name}>
+                                {t.name}
+                                {t.hasImageHeader ? " (tem imagem)" : ""}
+                                {t.carouselCardCount > 0
+                                  ? ` (carrossel, ${t.carouselCardCount} cartões)`
+                                  : ""}
+                              </option>
+                            ))}
+                        </select>
+                      )}
+                      {isMetaProvider &&
+                        templates.find((t) => t.name === selectedTemplate)?.hasImageHeader && (
+                          <div className="mt-3 rounded-xl border border-neutral-300 bg-neutral-50 p-3">
+                            <Label>Imagem do cabeçalho</Label>
+                            <p className="mb-2 text-xs text-neutral-500">
+                              Esse modelo tem imagem no cabeçalho, a Meta exige uma imagem em todo
+                              envio (mesma pra todos os contatos desse disparo).
+                            </p>
+                            {templateHeaderPreview && (
+                              <img
+                                src={templateHeaderPreview}
+                                alt="Prévia do cabeçalho"
+                                className="mb-2 max-h-32 rounded-lg border border-neutral-200 object-cover"
                               />
-                              {carouselUploadingIndex === i && (
-                                <p className="mt-1 text-xs text-neutral-500">Enviando imagem…</p>
-                              )}
+                            )}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              disabled={templateHeaderUploading}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) void handleTemplateHeaderFile(file);
+                              }}
+                              className="block w-full text-sm text-neutral-600"
+                            />
+                            {templateHeaderUploading && (
+                              <p className="mt-1 text-xs text-neutral-500">Enviando imagem…</p>
+                            )}
+                          </div>
+                        )}
+                      {isMetaProvider &&
+                        (templates.find((t) => t.name === selectedTemplate)?.carouselCardCount ??
+                          0) > 0 && (
+                          <div className="mt-3 rounded-xl border border-neutral-300 bg-neutral-50 p-3">
+                            <Label>Imagens do carrossel</Label>
+                            <p className="mb-2 text-xs text-neutral-500">
+                              Esse modelo é um carrossel, a Meta exige uma imagem por cartão em todo
+                              envio (mesmas imagens pra todos os contatos desse disparo).
+                            </p>
+                            <div className="space-y-3">
+                              {Array.from({
+                                length:
+                                  templates.find((t) => t.name === selectedTemplate)
+                                    ?.carouselCardCount ?? 0,
+                              }).map((_, i) => (
+                                <div
+                                  key={i}
+                                  className="rounded-lg border border-neutral-200 bg-white p-2"
+                                >
+                                  <p className="mb-1 text-xs font-medium text-neutral-600">
+                                    Cartão {i + 1}
+                                  </p>
+                                  {carouselPreviews[i] && (
+                                    <img
+                                      src={carouselPreviews[i] as string}
+                                      alt={`Prévia do cartão ${i + 1}`}
+                                      className="mb-2 max-h-28 rounded-lg border border-neutral-200 object-cover"
+                                    />
+                                  )}
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    disabled={carouselUploadingIndex === i}
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) void handleCarouselCardFile(i, file);
+                                    }}
+                                    className="block w-full text-sm text-neutral-600"
+                                  />
+                                  {carouselUploadingIndex === i && (
+                                    <p className="mt-1 text-xs text-neutral-500">
+                                      Enviando imagem…
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                </div>
-              ) : (
-                <MessageComposerStep
-                  api={api}
-                  funnels={funnels}
-                  replies={replies}
-                  mode={messageMode}
-                  replyId={replyId}
-                  actions={actions}
-                  variants={variants}
-                  onMode={setMessageMode}
-                  onPickReply={pickReply}
-                  onActions={setActions}
-                  onVariants={setVariants}
-                  onClearReply={() => setReplyId("")}
-                />
-              )}
-
-              {isMetaProvider &&
-                (() => {
-                  const tpl = templates.find((t) => t.name === selectedTemplate);
-                  const templateType: "text" | "image" | "carousel" =
-                    (tpl?.carouselCardCount ?? 0) > 0
-                      ? "carousel"
-                      : tpl?.hasImageHeader
-                        ? "image"
-                        : "text";
-                  return (
-                    <TemplatePreview
-                      templateType={templateType}
-                      mediaFile={
-                        templateHeaderPreview
-                          ? {
-                              dataUrl: templateHeaderPreview,
-                              mime: "image/jpeg",
-                              filename: "cabecalho.jpg",
-                            }
-                          : null
-                      }
-                      bodyText={tpl?.bodyText || ""}
-                      bodyExamples={{}}
-                      footerText=""
-                      buttons={[]}
-                      carouselCards={carouselPreviews.map((url) => ({
-                        file: url
-                          ? { dataUrl: url, mime: "image/jpeg", filename: "cartao.jpg" }
-                          : null,
-                        bodyText: "",
-                      }))}
-                      carouselButtons={[]}
+                          </div>
+                        )}
+                    </div>
+                  ) : (
+                    <MessageComposerStep
+                      api={api}
+                      funnels={funnels}
+                      replies={replies}
+                      mode={messageMode}
+                      replyId={replyId}
+                      actions={actions}
+                      variants={variants}
+                      onMode={setMessageMode}
+                      onPickReply={pickReply}
+                      onActions={setActions}
+                      onVariants={setVariants}
+                      onClearReply={() => setReplyId("")}
                     />
-                  );
-                })()}
+                  )}
+                </div>
 
-              <button
-                type="button"
-                disabled={
-                  isMetaProvider
-                    ? !name.trim() || !selectedTemplate
-                    : !name.trim() ||
-                      !actions.some(
-                        (a) =>
-                          (a.type === "text" && (a.text?.trim() || variants[0]?.trim())) ||
-                          (a.type !== "text" &&
-                            a.type !== "funnel_add" &&
-                            a.type !== "funnel_remove" &&
-                            a.path),
-                      )
-                }
-                onClick={() => setStep(3)}
-                className="w-full rounded-lg bg-brand px-4 py-3 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
-              >
-                Próxima etapa
-              </button>
+                <div>
+                  {isMetaProvider ? (
+                    (() => {
+                      const tpl = templates.find((t) => t.name === selectedTemplate);
+                      const templateType: "text" | "image" | "carousel" =
+                        (tpl?.carouselCardCount ?? 0) > 0
+                          ? "carousel"
+                          : tpl?.hasImageHeader
+                            ? "image"
+                            : "text";
+                      return (
+                        <TemplatePreview
+                          templateType={templateType}
+                          mediaFile={
+                            templateHeaderPreview
+                              ? {
+                                  dataUrl: templateHeaderPreview,
+                                  mime: "image/jpeg",
+                                  filename: "cabecalho.jpg",
+                                }
+                              : null
+                          }
+                          bodyText={tpl?.bodyText || ""}
+                          bodyExamples={{}}
+                          footerText=""
+                          buttons={[]}
+                          carouselCards={carouselPreviews.map((url) => ({
+                            file: url
+                              ? { dataUrl: url, mime: "image/jpeg", filename: "cartao.jpg" }
+                              : null,
+                            bodyText: "",
+                          }))}
+                          carouselButtons={[]}
+                        />
+                      );
+                    })()
+                  ) : (
+                    <MessagePreview actions={actions} variantPreview={variants[0]} />
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  disabled={
+                    isMetaProvider
+                      ? !name.trim() || !selectedTemplate
+                      : !name.trim() ||
+                        !actions.some(
+                          (a) =>
+                            (a.type === "text" && (a.text?.trim() || variants[0]?.trim())) ||
+                            (a.type !== "text" &&
+                              a.type !== "funnel_add" &&
+                              a.type !== "funnel_remove" &&
+                              a.path),
+                        )
+                  }
+                  onClick={() => setStep(3)}
+                  title="Próxima etapa"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-300 text-neutral-600 transition hover:border-brand hover:bg-brand hover:text-white disabled:opacity-30 disabled:hover:border-neutral-300 disabled:hover:bg-transparent disabled:hover:text-neutral-600"
+                >
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+                    <path
+                      fillRule="evenodd"
+                      d="M7.3 14.7a1 1 0 010-1.4L10.6 10 7.3 6.7a1 1 0 011.4-1.4l4 4a1 1 0 010 1.4l-4 4a1 1 0 01-1.4 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button>
+              </div>
             </>
           )}
 
