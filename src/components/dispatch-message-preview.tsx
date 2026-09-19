@@ -18,15 +18,15 @@ import type { QuickReplyAction } from "@/lib/quick-replies";
 // esticam até esse mesmo teto, já que a mídia justifica a largura.
 function Bubble({ children, hasMedia }: { children: React.ReactNode; hasMedia?: boolean }) {
   return (
-    <div className="flex justify-start">
+    <div className="flex justify-end">
       <div
         className={
-          "overflow-hidden rounded-lg bg-white px-2.5 pb-1.5 pt-2 shadow-md max-w-[85%] " +
+          "overflow-hidden rounded-lg bg-[#d9fdd3] px-2.5 pb-1.5 pt-2 shadow-md max-w-[85%] " +
           (hasMedia ? "w-full" : "w-fit")
         }
       >
         {children}
-        <p className="mt-1 text-right text-[9.5px] text-neutral-400">
+        <p className="mt-1 text-right text-[9.5px] text-neutral-500">
           {new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
         </p>
       </div>
@@ -79,7 +79,7 @@ export function MessagePreview({
                     <img
                       src={action.url}
                       alt=""
-                      className="-mx-2.5 -mt-2 mb-1 block w-[calc(100%+20px)]"
+                      className="-mx-2.5 -mt-2 mb-1 block max-h-[280px] w-[calc(100%+20px)] object-cover"
                     />
                     {action.caption && (
                       <p className="whitespace-pre-wrap text-[13px] leading-snug text-neutral-800">
@@ -90,13 +90,31 @@ export function MessagePreview({
                 );
               }
               if (action.type === "video" && action.url) {
+                // Player nativo com "controls" pode falhar silenciosamente
+                // em alguns formatos/navegadores (caso real reportado:
+                // "coloquei o vídeo, não apareceu"). O WhatsApp de
+                // verdade também não toca o vídeo direto na bolha —
+                // mostra uma miniatura com botão de play, só reproduz ao
+                // tocar. Replicando esse comportamento: mais fiel E mais
+                // confiável (o <video> só mostra o primeiro frame como
+                // pôster, não precisa decodificar/tocar o arquivo).
                 return (
                   <Bubble key={i} hasMedia>
-                    <video
-                      src={action.url}
-                      className="-mx-2.5 -mt-2 mb-1 block w-[calc(100%+20px)] bg-black"
-                      controls
-                    />
+                    <div className="relative -mx-2.5 -mt-2 mb-1">
+                      <video
+                        src={action.url}
+                        className="block max-h-[280px] w-[calc(100%+20px)] bg-black object-cover"
+                        preload="metadata"
+                        muted
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/45">
+                          <svg viewBox="0 0 24 24" fill="white" className="ml-0.5 h-6 w-6">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
                     {action.caption && (
                       <p className="whitespace-pre-wrap text-[13px] leading-snug text-neutral-800">
                         {action.caption}
@@ -108,7 +126,14 @@ export function MessagePreview({
               if (action.type === "audio" && action.url) {
                 return (
                   <Bubble key={i}>
-                    <audio src={action.url} controls className="max-w-full" />
+                    <div className="flex min-w-[220px] items-center gap-2">
+                      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-brand text-white">
+                        <svg viewBox="0 0 24 24" fill="currentColor" className="ml-0.5 h-4 w-4">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </div>
+                      <audio src={action.url} controls className="h-9 w-full min-w-0" />
+                    </div>
                   </Bubble>
                 );
               }

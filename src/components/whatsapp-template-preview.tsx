@@ -85,7 +85,11 @@ export function TemplatePreview({
   }) {
     if (kind === "image") {
       return file ? (
-        <img src={file.dataUrl} alt="" className="block w-full rounded-t-lg" />
+        <img
+          src={file.dataUrl}
+          alt=""
+          className="block max-h-[280px] w-full rounded-t-lg object-cover"
+        />
       ) : (
         <div className="flex h-40 w-full items-center justify-center rounded-t-lg bg-neutral-200 text-neutral-400">
           <svg
@@ -104,8 +108,29 @@ export function TemplatePreview({
       );
     }
     if (kind === "video") {
+      // Player nativo com "controls" pode falhar silenciosamente em
+      // alguns formatos/navegadores (caso real: "coloquei o vídeo, não
+      // apareceu"). O WhatsApp de verdade também não toca o vídeo
+      // direto na bolha — mostra uma miniatura com botão de play, só
+      // reproduz ao tocar. Replicando esse comportamento aqui: mais
+      // fiel E mais confiável (o <video> só precisa mostrar o primeiro
+      // frame como pôster, não decodificar/tocar o arquivo inteiro).
       return file ? (
-        <video src={file.dataUrl} className="block w-full rounded-t-lg bg-black" controls />
+        <div className="relative">
+          <video
+            src={file.dataUrl}
+            className="block max-h-[280px] w-full rounded-t-lg bg-black object-cover"
+            preload="metadata"
+            muted
+          />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/45">
+              <svg viewBox="0 0 24 24" fill="white" className="ml-0.5 h-6 w-6">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
+          </div>
+        </div>
       ) : (
         <div className="flex h-40 w-full items-center justify-center rounded-t-lg bg-neutral-200 text-neutral-400">
           <svg
@@ -160,10 +185,10 @@ export function TemplatePreview({
          a mídia justifica a largura. */}
       <div className="rounded-xl bg-[#e5ddd5] p-4">
         <div className="mx-auto w-full max-w-[340px]">
-          <div className="flex justify-start">
+          <div className="flex justify-end">
             <div
               className={
-                "relative overflow-hidden rounded-lg bg-white shadow-md " +
+                "relative overflow-hidden rounded-lg bg-[#d9fdd3] shadow-md " +
                 (templateType === "image" || templateType === "video" || templateType === "document"
                   ? "w-full max-w-[85%]"
                   : "w-fit max-w-[85%]")

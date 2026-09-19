@@ -127,7 +127,7 @@ export function MessageComposerStep({
             onClick={() => onMode("quick")}
             className={`rounded-lg border px-3 py-2 text-sm font-semibold ${mode === "quick" ? "border-brand bg-brand text-white" : "border-neutral-300 text-neutral-700"}`}
           >
-            Resposta rápida
+            Usar resposta rápida
           </button>
         </div>
 
