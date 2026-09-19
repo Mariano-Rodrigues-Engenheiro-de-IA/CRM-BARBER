@@ -48,17 +48,15 @@ function resolveInbox(data: AudienceResolveData): AudienceContact[] {
     .filter((c) => isRealPhone(c.phone));
 }
 
-/** Listas (funis do tipo "label"). Simplificado (19/09, pedido do
- * usuário): um único nível de escolha agora, a lista em si, sem um
- * segundo seletor pra etiqueta específica dentro dela. Sem funnelId
- * informado = todas as listas juntas. */
+/** Listas (funis do tipo "label"). Exige uma lista específica escolhida
+ * (19/09, revertido no mesmo dia: não existe mais "todas as listas" —
+ * o usuário escolhe ativamente qual lista antes de ver contatos). */
 function resolveLabelFunnel(source: AudienceSource, data: AudienceResolveData): AudienceContact[] {
-  const relevantFunnels = source.funnelId
-    ? data.funnels.filter((f) => f.id === source.funnelId)
-    : data.funnels.filter((f) => f.mode === "label");
+  if (!source.funnelId) return [];
+  const funnel = data.funnels.find((f) => f.id === source.funnelId && f.mode === "label");
+  if (!funnel) return [];
   const wantedLabelIds = new Set(
-    relevantFunnels
-      .flatMap((f) => f.stages)
+    funnel.stages
       .map((s) => data.labels.find((l) => l.name === s.name)?.wa_label_id)
       .filter((x): x is string => Boolean(x)),
   );
@@ -117,24 +115,12 @@ export function resolveAudienceSource(
   }
 }
 
-/** Primeira opção disponível pra cada tipo de fonte que precisa de um
- * sub-parâmetro (funil/lista) — usado pra nunca deixar a tela de contatos
- * vazia quando o usuário troca de origem: ao trocar, já pré-seleciona a
- * primeira opção e mostra os contatos dela na hora, em vez de esperar uma
- * escolha manual. */
-export function firstAvailableSource(
-  kind: AudienceSourceKind,
-  data: AudienceResolveData,
-): AudienceSource {
-  if (kind === "labels") {
-    // "Todas as listas" por padrão, simples e já mostra contatos na
-    // hora, sem forçar escolher uma lista específica primeiro.
-    return { kind };
-  }
-  if (kind === "funnel") {
-    const first = data.funnels.find((f) => f.mode !== "label");
-    return { kind, funnelId: first?.id ?? "", stageId: "" };
-  }
+/** Primeira opção disponível pra cada tipo de fonte. Assinantes continua
+ * pré-selecionando "Todos" (mostra contatos na hora). Listas e Funil
+ * agora NÃO pré-selecionam nada (pedido explícito do usuário, 19/09):
+ * o usuário escolhe ativamente uma lista ou funil específico antes de
+ * ver contatos, não existe mais "todas as listas" como opção. */
+export function firstAvailableSource(kind: AudienceSourceKind): AudienceSource {
   if (kind === "subscribers") {
     return { kind, subscriberStatus: "all" };
   }

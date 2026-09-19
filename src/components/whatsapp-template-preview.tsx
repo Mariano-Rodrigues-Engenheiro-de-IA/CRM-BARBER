@@ -151,7 +151,7 @@ export function TemplatePreview({
          w-full (em vez de largura fixa) pra sempre caber certinho dentro
          do espaçamento, sem ficar desalinhado. */}
       <div className="rounded-xl bg-[#e5ddd5] p-5">
-        <div className="relative mx-auto w-full max-w-[240px]">
+        <div className="relative mx-auto w-full max-w-[320px]">
           <div className="overflow-hidden rounded-lg bg-white shadow-md">
             {(templateType === "image" ||
               templateType === "video" ||
@@ -182,7 +182,7 @@ export function TemplatePreview({
         </div>
 
         {templateType === "carousel" && (
-          <div className="mx-auto mt-2 flex w-full max-w-[240px] gap-2 overflow-x-auto pb-1">
+          <div className="mx-auto mt-2 flex w-full max-w-[320px] gap-2 overflow-x-auto pb-1">
             {carouselCards.map((card, i) => (
               <div key={i} className="w-28 shrink-0 overflow-hidden rounded-lg bg-white shadow-sm">
                 <MediaBox file={card.file} kind="image" />
