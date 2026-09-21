@@ -465,11 +465,13 @@ export function AudienceStep({
                 <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-neutral-200">
                   {displayed.length === 0 ? (
                     <p className="p-3 text-sm text-neutral-500">
-                      {source.kind === "labels" && !source.funnelId
+                      {source.kind === "labels" && !source.stageId
                         ? "Escolha uma lista acima."
                         : source.kind === "funnel" && !source.funnelId
                           ? "Escolha um funil acima."
-                          : "Nenhum contato encontrado nessa origem."}
+                          : source.kind === "subscribers" && !source.subscriberStatus
+                            ? "Escolha uma coluna acima."
+                            : "Nenhum contato encontrado nessa origem."}
                     </p>
                   ) : (
                     displayed.map((c) => {
