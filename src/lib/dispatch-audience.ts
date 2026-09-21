@@ -107,15 +107,13 @@ function resolveLabelFunnel(source: AudienceSource, data: AudienceResolveData): 
   if (!source.funnelId) return [];
   const funnel = data.funnels.find((f) => f.id === source.funnelId && f.mode === "label");
   if (!funnel) return [];
-  // ⚠️ Corrigido (19/09, bug real reportado pelo usuário: "não consigo
-  // disparar pra uma lista específica"): antes SEMPRE juntava as
-  // etiquetas de TODAS as etapas do funil, ignorando source.stageId —
-  // mesmo escolhendo uma lista específica na Etapa 1, vinha todo mundo
-  // de todas as listas junto. Agora, quando uma etapa (lista) específica
-  // é escolhida, filtra só ela; sem escolha = todas juntas (padrão).
-  const stages = source.stageId
-    ? funnel.stages.filter((s) => s.id === source.stageId)
-    : funnel.stages;
+  // ⚠️ Corrigido (19/09): sem uma lista específica escolhida, NÃO mostra
+  // ninguém — pedido explícito do usuário, mesmo padrão de Funil e
+  // Assinantes: evita que alguém selecione tudo por engano achando que
+  // está vendo uma lista específica e dispare pra base inteira sem
+  // querer.
+  if (!source.stageId) return [];
+  const stages = funnel.stages.filter((s) => s.id === source.stageId);
   const wantedLabelIds = new Set(
     stages
       .map((s) => data.labels.find((l) => l.name === s.name)?.wa_label_id)
@@ -149,9 +147,13 @@ function resolveNormalFunnel(source: AudienceSource, data: AudienceResolveData):
 }
 
 function resolveSubscribers(source: AudienceSource, data: AudienceResolveData): AudienceContact[] {
+  // ⚠️ Corrigido (19/09): sem status escolhido ativamente, NÃO mostra
+  // ninguém — mesmo motivo de Listas e Funil (evita disparo em massa
+  // por engano). "all" só conta quando escolhido de propósito.
+  if (!source.subscriberStatus) return [];
   const sendable = data.customers.filter((c) => isRealPhone(c.phone));
   const filtered =
-    !source.subscriberStatus || source.subscriberStatus === "all"
+    source.subscriberStatus === "all"
       ? sendable
       : sendable.filter((c) => c.status === source.subscriberStatus);
   return filtered.map((c) => ({ phone: normalizePhoneForSend(c.phone), name: c.name }));
@@ -186,14 +188,12 @@ export function resolveAudienceSource(
   }
 }
 
-/** Primeira opção disponível pra cada tipo de fonte. Assinantes continua
- * pré-selecionando "Todos" (mostra contatos na hora). Listas e Funil
- * agora NÃO pré-selecionam nada (pedido explícito do usuário, 19/09):
- * o usuário escolhe ativamente uma lista ou funil específico antes de
- * ver contatos, não existe mais "todas as listas" como opção. */
+/** Primeira opção disponível pra cada tipo de fonte. Nenhum tipo
+ * pré-seleciona nada (pedido explícito do usuário, 19/09): o usuário
+ * escolhe ativamente uma lista, funil ou status de assinante antes de
+ * ver contatos — evita disparo em massa por engano (ex: escolher
+ * "Listas" sem querer e mandar pra todo mundo achando que era uma
+ * lista específica). */
 export function firstAvailableSource(kind: AudienceSourceKind): AudienceSource {
-  if (kind === "subscribers") {
-    return { kind, subscriberStatus: "all" };
-  }
   return { kind };
 }

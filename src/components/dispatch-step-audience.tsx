@@ -15,16 +15,14 @@
 // (React desmonta o componente ao trocar de etapa), fazendo a
 // configuração "desaparecer" ao voltar, bug real reportado pelo usuário.
 //
-// Quarta leva de ajustes (19/09, mesmo dia), a partir de feedback de
+// Quinta leva de ajustes (19/09, mesmo dia), a partir de feedback de
 // uso real:
-// - Listas, Funil e Assinantes voltam a usar select (não mais chips
-//   lado a lado, que o usuário considerou errado pro caso de Funil
-//   especificamente), com largura MÉDIA (nem minúscula, nem esticada),
-//   classe própria (mediumSelectCls).
-// - Listas: 1 select, sem "Todas as listas" (mantém o comportamento da
-//   leva anterior, só muda a representação visual pra select).
-// - Funil: 2 selects (funil, depois etapa).
-// - Assinantes: 1 select (Todos + abas), com Todos pré-selecionado.
+// - Listas agora escolhe a ETAPA/etiqueta específica dentro do único
+//   funil "Listas" (antes escolhia entre funis, mas só existe 1 —
+//   ver lib/label-funnel-sync.ts).
+// - Nenhuma origem pré-seleciona nada: Listas, Funil e Assinantes
+//   exigem escolha ativa antes de mostrar qualquer contato — evita
+//   disparo em massa por engano.
 // - Importar planilha volta pro grupo normal da sidebar (Inbox, Listas,
 //   Funil, Assinantes, Importar planilha). Quem fica deslocado embaixo,
 //   separado, é EXPORTAR planilha (não mais Importar, isso tinha
@@ -118,7 +116,7 @@ function SourceSubFilter({
           className={mediumSelectCls}
           disabled={!listasFunnel}
         >
-          <option value="">Todas as listas</option>
+          <option value="">Escolha a lista</option>
           {(listasFunnel?.stages ?? []).map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
@@ -173,10 +171,11 @@ function SourceSubFilter({
       <div>
         <p className="mb-1 text-xs font-medium text-neutral-500">Assinantes</p>
         <select
-          value={value.subscriberStatus ?? "all"}
+          value={value.subscriberStatus ?? ""}
           onChange={(e) => onChange({ ...value, subscriberStatus: e.target.value })}
           className={mediumSelectCls}
         >
+          <option value="">Escolha o status</option>
           <option value="all">Todos os assinantes</option>
           {cols.map((c) => (
             <option key={c.key} value={c.key}>
