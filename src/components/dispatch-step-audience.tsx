@@ -33,6 +33,13 @@ import * as XLSX from "xlsx";
 import { fileToContacts, type SheetContact } from "@/lib/sheet-contacts";
 import type { Funnel, WaContact, WaLabel } from "@/lib/funnels";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   resolveAudienceSource,
   firstAvailableSource,
   contactMatchKeys,
@@ -108,21 +115,28 @@ function SourceSubFilter({
     return (
       <div>
         <p className="mb-1 text-xs font-medium text-neutral-500">Lista</p>
-        <select
+        <Select
           value={value.stageId ?? ""}
-          onChange={(e) =>
-            onChange({ ...value, funnelId: listasFunnel?.id, stageId: e.target.value })
-          }
-          className={mediumSelectCls}
+          onValueChange={(v) => onChange({ ...value, funnelId: listasFunnel?.id, stageId: v })}
           disabled={!listasFunnel}
         >
-          <option value="">Escolha a lista</option>
-          {(listasFunnel?.stages ?? []).map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className={mediumSelectCls}>
+            <SelectValue placeholder="Escolha a lista" />
+          </SelectTrigger>
+          <SelectContent>
+            {(listasFunnel?.stages ?? []).map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                <span className="flex items-center gap-2">
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: s.color || "#a3a3a3" }}
+                  />
+                  {s.name}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     );
   }
