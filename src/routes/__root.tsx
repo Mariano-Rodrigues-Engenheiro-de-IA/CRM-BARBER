@@ -114,11 +114,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       // nome próprios (em vez de um atalho genérico) — pedido do
       // usuário, pro link "Minha agenda" (e o app como um todo) ficar
       // com cara de app de verdade no celular do cliente.
+      //
+      // ⚠️ Ajustado (19/09, depois de varias tentativas reais sem
+      // sucesso): removidas as tags que forcavam o modo "tela cheia,
+      // sem barra do navegador" (mobile-web-app-capable,
+      // apple-mobile-web-app-capable, apple-mobile-web-app-status-bar-style).
+      // Esse modo tem historico de isolar o armazenamento local do
+      // navegador normal em iOS, e mesmo depois de varias correcoes
+      // (manifest, formato da URL do token) o problema de acesso
+      // bloqueado continuou. Priorizando funcionar de verdade sobre a
+      // aparencia sem barra de navegador — usuario topou esse trade-off
+      // explicitamente. Mantido: nome customizado (aparece mesmo com a
+      // barra do navegador visivel) e o icone (via manifest + apple-touch-icon).
       { name: "theme-color", content: "#0f172a" },
-      { name: "mobile-web-app-capable", content: "yes" },
-      { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-title", content: "Zaylo" },
-      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
     ],
     links: [
       {
