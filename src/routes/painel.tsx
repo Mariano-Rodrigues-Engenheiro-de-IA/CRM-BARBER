@@ -24,18 +24,20 @@ import { FollowupView } from "@/components/followup-view";
 import { PatientsView } from "@/components/patients-view";
 import { AulasView } from "@/components/aulas-view";
 import { AgenteIaView } from "@/components/agente-ia-view";
-import { ServicesTab, ProfessionalsTab, ProductsTab } from "@/components/professionals-services-dialog";
+import {
+  ServicesTab,
+  ProfessionalsTab,
+  ProductsTab,
+} from "@/components/professionals-services-dialog";
 import { GeneralSettingsTab } from "@/components/agenda-settings-dialog";
 import { AccountTab } from "@/components/account-tab";
 import { CustomersTab } from "@/components/customers-tab";
 import { isClinicNiche } from "@/lib/business-niche";
 import { toast } from "sonner";
 
-
 import {
   SUBSCRIPTION_SYSTEMS,
   parseSubscriptionSheet,
-
   planFromTags,
   type SubscriptionSystemId,
 } from "@/lib/subscription-systems";
@@ -50,7 +52,6 @@ import {
   normalizePlanName,
   type Plan,
 } from "@/lib/shop-settings";
-
 
 export const Route = createFileRoute("/painel")({
   head: () => ({
@@ -77,7 +78,6 @@ type Customer = {
   is_subscriber?: boolean;
   archived_at: string | null;
   notes?: string | null;
-
 };
 
 type Campaign = {
@@ -97,7 +97,6 @@ type CampaignJobRow = {
   error: string | null;
 };
 
-
 type Col = { key: string; label: string };
 
 const COLUMNS: Col[] = [
@@ -110,7 +109,9 @@ const COLUMNS: Col[] = [
 
 // Kanbans da barbearia: NÃO existem colunas padrão. Elas nascem da planilha
 // importada (uma coluna por status encontrado) ou da criação manual.
-function colsKey(shopId: string) { return `crm_cols_${shopId || "default"}`; }
+function colsKey(shopId: string) {
+  return `crm_cols_${shopId || "default"}`;
+}
 
 /** Colunas visíveis: só as criadas pelo usuário/importação. */
 function visibleColumns(shopId: string): Col[] {
@@ -119,7 +120,9 @@ function visibleColumns(shopId: string): Col[] {
     const raw = localStorage.getItem(colsKey(shopId));
     const parsed = raw ? (JSON.parse(raw) as Col[]) : null;
     if (Array.isArray(parsed)) return parsed.filter((c) => c && c.key && c.label);
-  } catch { /* ignora json inválido */ }
+  } catch {
+    /* ignora json inválido */
+  }
   return [];
 }
 
@@ -131,7 +134,10 @@ function writeColumns(shopId: string, cols: Col[]) {
 function statusLabel(key: string) {
   const known = COLUMNS.find((c) => c.key === key);
   if (known) return known.label;
-  return key.replace(/^custom_/, "").replace(/_/g, " ").replace(/^./, (m) => m.toUpperCase());
+  return key
+    .replace(/^custom_/, "")
+    .replace(/_/g, " ")
+    .replace(/^./, (m) => m.toUpperCase());
 }
 
 /**
@@ -143,8 +149,6 @@ function syncColumnsFromSheet(shopId: string, statusKeys: string[]) {
   if (cols.length) writeColumns(shopId, cols);
   return cols;
 }
-
-
 
 /** Cache entre navegações: voltar pra Assinantes não pisca "Carregando...". */
 let customersCache: Customer[] | null = null;
@@ -159,9 +163,20 @@ function getToken(): string | null {
   if (typeof window === "undefined") return null;
   const url = new URL(window.location.href);
   const q = url.searchParams.get("token");
+  // Link dedicado "Minha agenda" (Configurações > Gerais), pensado pra
+  // ser salvo como atalho na tela de início do celular — o token
+  // PRECISA continuar na URL depois do carregamento, senão um atalho
+  // salvo alguns instantes depois de abrir (quando a limpeza abaixo já
+  // rodou) fica sem credencial nenhuma, e ao reabrir o ícone mais tarde
+  // depende do localStorage ter persistido nesse mesmo contexto — o que
+  // nem sempre acontece, dando tela branca. Caso real reportado pelo
+  // usuário (19/09).
+  const isMobileAgendaLink = url.searchParams.get("mobile") === "agenda";
   if (q) {
-    url.searchParams.delete("token");
-    window.history.replaceState({}, "", url.toString());
+    if (!isMobileAgendaLink) {
+      url.searchParams.delete("token");
+      window.history.replaceState({}, "", url.toString());
+    }
     if (q === EXTENSION_BRIDGE_TOKEN) {
       localStorage.removeItem(TOKEN_KEY);
       return null;
@@ -194,7 +209,10 @@ async function apiViaExtension(path: string, opts: RequestInit = {}): Promise<Ap
     const timeout = setTimeout(() => {
       window.removeEventListener("message", onMessage);
       console.warn("[CRM painel] bridge timeout", method, path, id);
-      resolve({ ok: false, error: `Extensão não respondeu em 20s (${method} ${path}). Recarregue o WhatsApp Web e tente de novo.` });
+      resolve({
+        ok: false,
+        error: `Extensão não respondeu em 20s (${method} ${path}). Recarregue o WhatsApp Web e tente de novo.`,
+      });
     }, 20000);
     function onMessage(event: MessageEvent) {
       if (event.source !== window) return;
@@ -203,19 +221,24 @@ async function apiViaExtension(path: string, opts: RequestInit = {}): Promise<Ap
       clearTimeout(timeout);
       window.removeEventListener("message", onMessage);
       console.info("[CRM painel] bridge ←", method, path, id, data.payload);
-      resolve(data.payload ?? { ok: false, error: data.error || "Erro na extensão (payload vazio)" });
+      resolve(
+        data.payload ?? { ok: false, error: data.error || "Erro na extensão (payload vazio)" },
+      );
     }
     window.addEventListener("message", onMessage);
-    window.postMessage({
-      __crm: EXTENSION_API_REQUEST,
-      id,
-      path,
-      opts: {
-        method,
-        headers: opts.headers || {},
-        body: typeof opts.body === "string" ? opts.body : undefined,
+    window.postMessage(
+      {
+        __crm: EXTENSION_API_REQUEST,
+        id,
+        path,
+        opts: {
+          method,
+          headers: opts.headers || {},
+          body: typeof opts.body === "string" ? opts.body : undefined,
+        },
       },
-    }, window.location.origin);
+      window.location.origin,
+    );
   });
 }
 
@@ -248,7 +271,19 @@ function nudgeExtensionPoll() {
   window.postMessage({ __crm: "poll_now_v180" }, window.location.origin);
 }
 
-type Section = "agenda" | "agente-ia" | "treinamento" | "configuracoes" | "assinantes" | "funis" | "follow-up" | "disparo" | "equipe" | "conexao" | "templates" | "pacientes";
+type Section =
+  | "agenda"
+  | "agente-ia"
+  | "treinamento"
+  | "configuracoes"
+  | "assinantes"
+  | "funis"
+  | "follow-up"
+  | "disparo"
+  | "equipe"
+  | "conexao"
+  | "templates"
+  | "pacientes";
 
 /** Sub-abas da sanfona de Assinaturas. */
 type AssinTab = "visao" | "assinantes";
@@ -260,7 +295,16 @@ type AgendaTab = "agenda" | "lembretes";
 /** Selo de assinante ativo — assinatura/fidelidade, sem usar ícone de pessoas. */
 function IconBadgeCheck() {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <circle cx="12" cy="12" r="9" />
       <path d="M8.5 12.3 11 14.8l4.5-5" />
     </svg>
@@ -269,7 +313,16 @@ function IconBadgeCheck() {
 /** Barras ascendentes — ranking de vendas (não amarrado a "barbeiro"/troféu). */
 function IconRankingBars() {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect x="3.5" y="13" width="4.5" height="7" rx="1" />
       <rect x="9.75" y="9" width="4.5" height="11" rx="1" />
       <rect x="16" y="4.5" width="4.5" height="15.5" rx="1" />
@@ -278,7 +331,16 @@ function IconRankingBars() {
 }
 function IconUsers() {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
       <circle cx="9" cy="7" r="4" />
       <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
@@ -288,7 +350,16 @@ function IconUsers() {
 }
 function IconTrophy() {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M8 21h8" />
       <path d="M12 17v4" />
       <path d="M7 4h10v5a5 5 0 0 1-10 0V4z" />
@@ -299,7 +370,16 @@ function IconTrophy() {
 }
 function IconGear({ size = 18 }: { size?: number }) {
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
     </svg>
@@ -309,15 +389,36 @@ function IconGear({ size = 18 }: { size?: number }) {
  * de cada conversa, pra ficar padronizado em todo o sistema. */
 function IconChart() {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 20V10" /><path d="M10 20V4" /><path d="M16 20v-7" /><path d="M22 20H2" />
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 20V10" />
+      <path d="M10 20V4" />
+      <path d="M16 20v-7" />
+      <path d="M22 20H2" />
     </svg>
   );
 }
 function IconChevron({ className = "" }: { className?: string }) {
-
   return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={"transition " + className}>
+    <svg
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={"transition " + className}
+    >
       <path d="M9 6l6 6-6 6" />
     </svg>
   );
@@ -328,7 +429,16 @@ function IconChevron({ className = "" }: { className?: string }) {
 /** Ícone de cadeado — usado só dentro do modal de upgrade, no selo colorido do topo. */
 function IconLock() {
   return (
-    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      width="26"
+      height="26"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect x="5" y="11" width="14" height="10" rx="2" />
       <path d="M8 11V7a4 4 0 0 1 8 0v4" />
     </svg>
@@ -343,7 +453,13 @@ function IconLock() {
  * premium (criar, salvar), não quando só entra na aba. Texto mínimo, sem
  * explicar o "porquê" — só avisa e dá o caminho, pra não travar a
  * experiência de quem só está espiando. */
-function PremiumInlinePopup({ onClose, onUpgrade }: { onClose: () => void; onUpgrade: () => void }) {
+function PremiumInlinePopup({
+  onClose,
+  onUpgrade,
+}: {
+  onClose: () => void;
+  onUpgrade: () => void;
+}) {
   return (
     <div
       className="fixed inset-0 z-[100] flex items-end justify-center bg-black/10 p-4 sm:items-center"
@@ -356,7 +472,9 @@ function PremiumInlinePopup({ onClose, onUpgrade }: { onClose: () => void; onUpg
         <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-600 text-white shadow-md shadow-teal-600/25">
           <IconLock />
         </div>
-        <p className="mt-2.5 text-[13px] text-neutral-600">Para usar esse recurso, compre a versão Premium.</p>
+        <p className="mt-2.5 text-[13px] text-neutral-600">
+          Para usar esse recurso, compre a versão Premium.
+        </p>
         <button
           onClick={onUpgrade}
           className="mt-3 w-full rounded-xl bg-teal-600 py-2.5 text-xs font-extrabold uppercase tracking-wide text-white transition hover:bg-teal-700"
@@ -430,15 +548,35 @@ function SectionHeader({
 /** Aviãozinho de disparo — o clássico ícone de "enviar em massa". */
 function IconSend() {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4Z" />
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M22 2 11 13" />
+      <path d="M22 2 15 22l-4-9-9-4Z" />
     </svg>
   );
 }
 function IconCalendar() {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
     </svg>
   );
 }
@@ -449,7 +587,16 @@ function IconPlug() {
   // conexão com o WhatsApp. Não uso o logo oficial do WhatsApp aqui (é
   // uma marca registrada da Meta), só um celular genérico mesmo.
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect x="6.5" y="2.5" width="11" height="19" rx="2.2" />
       <path d="M10.5 18.2h3" />
     </svg>
@@ -458,7 +605,16 @@ function IconPlug() {
 
 function IconGraduationCap() {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M23 9 12 3 1 9l11 6 11-6Z" />
       <path d="M5 11.5v5c0 1.8 3.1 3.5 7 3.5s7-1.7 7-3.5v-5" />
       <path d="M23 9v7" />
@@ -468,30 +624,46 @@ function IconGraduationCap() {
 
 function IconRobot() {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect x="3" y="8.5" width="18" height="12.5" rx="2.5" />
-      <path d="M12 8.5V4" /><circle cx="12" cy="2.5" r="1.6" />
-      <circle cx="8.5" cy="14.5" r="1.2" /><circle cx="15.5" cy="14.5" r="1.2" />
+      <path d="M12 8.5V4" />
+      <circle cx="12" cy="2.5" r="1.6" />
+      <circle cx="8.5" cy="14.5" r="1.2" />
+      <circle cx="15.5" cy="14.5" r="1.2" />
       <path d="M1 12.5v4M23 12.5v4" />
     </svg>
   );
 }
 
-
-
 type Brand = { name?: string; logo?: string };
-function brandKey(shopId: string) { return `crm_brand_${shopId || "default"}`; }
+function brandKey(shopId: string) {
+  return `crm_brand_${shopId || "default"}`;
+}
 function readBrand(shopId: string): Brand {
   if (typeof window === "undefined") return {};
-  try { return JSON.parse(localStorage.getItem(brandKey(shopId)) || "{}") || {}; }
-  catch { return {}; }
+  try {
+    return JSON.parse(localStorage.getItem(brandKey(shopId)) || "{}") || {};
+  } catch {
+    return {};
+  }
 }
 function writeBrand(shopId: string, data: Brand) {
   localStorage.setItem(brandKey(shopId), JSON.stringify(data));
 }
 
 // Sistema de assinatura escolhido na configuração inicial (por barbearia).
-function systemKey(shopId: string) { return `crm_subsystem_${shopId || "default"}`; }
+function systemKey(shopId: string) {
+  return `crm_subsystem_${shopId || "default"}`;
+}
 function readSystem(shopId: string): SubscriptionSystemId | null {
   if (typeof window === "undefined") return null;
   const v = localStorage.getItem(systemKey(shopId));
@@ -502,9 +674,6 @@ function writeSystem(shopId: string, id: SubscriptionSystemId) {
   localStorage.setItem(systemKey(shopId), id);
 }
 
-
-
-
 function Painel() {
   const [token, setToken] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -514,7 +683,20 @@ function Painel() {
   const initialSection: Section = (() => {
     if (typeof window === "undefined") return "agenda";
     const s = new URLSearchParams(window.location.search).get("section");
-    if (s === "agenda" || s === "agente-ia" || s === "treinamento" || s === "configuracoes" || s === "equipe" || s === "conexao" || s === "funis" || s === "follow-up" || s === "disparo" || s === "templates" || s === "pacientes") return s;
+    if (
+      s === "agenda" ||
+      s === "agente-ia" ||
+      s === "treinamento" ||
+      s === "configuracoes" ||
+      s === "equipe" ||
+      s === "conexao" ||
+      s === "funis" ||
+      s === "follow-up" ||
+      s === "disparo" ||
+      s === "templates" ||
+      s === "pacientes"
+    )
+      return s;
     return "agenda";
   })();
   const [section, setSection] = useState<Section>(initialSection);
@@ -523,7 +705,8 @@ function Painel() {
   // menu inteiro do sistema. Detectado uma vez, não muda durante a
   // sessão (não precisa ser state).
   const mobileAgendaOnly =
-    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("mobile") === "agenda";
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("mobile") === "agenda";
   const [assinTab, setAssinTab] = useState<AssinTab>("assinantes");
   const [configTab, setConfigTab] = useState<ConfigTab>("servicos");
   const [agendaTab, setAgendaTab] = useState<AgendaTab>("agenda");
@@ -557,7 +740,9 @@ function Painel() {
   // ao lado do título, liberando altura pros kanbans.
   const [assinHeaderEl, setAssinHeaderEl] = useState<HTMLDivElement | null>(null);
   const [equipeHeaderEl, setEquipeHeaderEl] = useState<HTMLDivElement | null>(null);
-  const [shop, setShop] = useState<{ id: string; name: string; logo_url?: string | null } | null>(null);
+  const [shop, setShop] = useState<{ id: string; name: string; logo_url?: string | null } | null>(
+    null,
+  );
   const [isAdmin, setIsAdmin] = useState(() => {
     // Cache leve em sessionStorage — sem isso, a aba "Modelos" só aparece
     // depois de duas chamadas de rede resolverem (essa e a de baixo),
@@ -590,7 +775,6 @@ function Painel() {
   const [showTemplateCreatePopup, setShowTemplateCreatePopup] = useState(false);
   const [brand, setBrand] = useState<Brand>({});
 
-
   useEffect(() => {
     const storedToken = getToken();
     if (storedToken) {
@@ -604,8 +788,6 @@ function Painel() {
       })
       .finally(() => setReady(true));
   }, []);
-
-
 
   async function reload(silent = false) {
     if (!token) return;
@@ -677,7 +859,6 @@ function Painel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessType]);
 
-
   // Refresh silencioso ao voltar pra seção assinantes — sem "Carregando..." piscando entre abas.
   useEffect(() => {
     if (token && section === "assinantes") reload(true);
@@ -692,8 +873,8 @@ function Painel() {
         <div className="max-w-md rounded-lg border border-yellow-500/30 bg-neutral-900 p-8 text-center">
           <h1 className="text-2xl font-bold text-yellow-400">Painel bloqueado</h1>
           <p className="mt-3 text-sm text-neutral-300">
-            Abra este painel pela extensão do CRM no WhatsApp Web. O botão manda
-            você pra cá já autenticado.
+            Abra este painel pela extensão do CRM no WhatsApp Web. O botão manda você pra cá já
+            autenticado.
           </p>
         </div>
       </div>
@@ -703,7 +884,11 @@ function Painel() {
   const shopName =
     brand.name ||
     shop?.name ||
-    (isClinicNiche(businessType) ? "Sua clínica" : businessType === "barbearia" ? "Sua barbearia" : "Seu negócio");
+    (isClinicNiche(businessType)
+      ? "Sua clínica"
+      : businessType === "barbearia"
+        ? "Sua barbearia"
+        : "Seu negócio");
 
   /** Abre o checkout do Premium em nova aba, já identificando a barbearia. */
   function openCheckout() {
@@ -717,7 +902,6 @@ function Painel() {
     window.open(`/assinar?${params.toString()}`, "_blank", "noopener");
   }
 
-
   function saveBrand(next: Brand) {
     if (!shop?.id) return;
     writeBrand(shop.id, next);
@@ -730,7 +914,15 @@ function Painel() {
     icon: React.ReactNode;
     children?: Array<{ key: AssinTab | ConfigTab | AgendaTab; label: string }>;
   }> = [
-    { key: "agenda", label: "Agenda", icon: <IconCalendar />, children: [{ key: "agenda", label: "Minha agenda" }, { key: "lembretes", label: "Lembretes / Confirmações" }] },
+    {
+      key: "agenda",
+      label: "Agenda",
+      icon: <IconCalendar />,
+      children: [
+        { key: "agenda", label: "Minha agenda" },
+        { key: "lembretes", label: "Lembretes / Confirmações" },
+      ],
+    },
     { key: "funis", label: "Funis de Vendas", icon: <IconChart /> },
     { key: "follow-up", label: "Follow-up", icon: <IconClock /> },
     { key: "disparo", label: "Disparo", icon: <IconSend /> },
@@ -750,7 +942,9 @@ function Painel() {
             { key: "equipe" as Section, label: "Ranking de vendas", icon: <IconRankingBars /> },
           ]
         : []), // "outros": CRM genérico, sem Pacientes nem Assinaturas/Ranking
-    ...(isMetaProvider ? [{ key: "templates" as Section, label: "Modelos", icon: <IconNote /> }] : []),
+    ...(isMetaProvider
+      ? [{ key: "templates" as Section, label: "Modelos", icon: <IconNote /> }]
+      : []),
 
     { key: "conexao", label: "Conexão", icon: <IconPlug /> },
     { key: "agente-ia", label: "Agente de IA", icon: <IconRobot /> },
@@ -784,126 +978,155 @@ function Painel() {
          rolava e a barra lateral "subia" junto, dando sensação de site
          quebrado). */}
       {!mobileAgendaOnly && (
-      <aside className={"print:hidden hidden md:flex h-full shrink-0 flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-200 " + (sidebarCollapsed ? "w-[68px]" : "w-64")}>
-        <div className={"flex pt-5 pb-4 " + (sidebarCollapsed ? "flex-col items-center gap-2 px-2" : "items-center justify-between pl-6 pr-3")}>
-          <div className={"relative flex h-9 shrink-0 items-center transition-[width] duration-200 " + (sidebarCollapsed ? "w-9 justify-center" : "w-36 justify-start")}>
-            {/* Ambas as imagens ficam sempre montadas (já pré-carregadas) e alternam
+        <aside
+          className={
+            "print:hidden hidden md:flex h-full shrink-0 flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-200 " +
+            (sidebarCollapsed ? "w-[68px]" : "w-64")
+          }
+        >
+          <div
+            className={
+              "flex pt-5 pb-4 " +
+              (sidebarCollapsed
+                ? "flex-col items-center gap-2 px-2"
+                : "items-center justify-between pl-6 pr-3")
+            }
+          >
+            <div
+              className={
+                "relative flex h-9 shrink-0 items-center transition-[width] duration-200 " +
+                (sidebarCollapsed ? "w-9 justify-center" : "w-36 justify-start")
+              }
+            >
+              {/* Ambas as imagens ficam sempre montadas (já pré-carregadas) e alternam
                 via opacidade, em sincronia com a transição de largura da sidebar,
                 evitando o "salto" que acontecia ao trocar de <img> condicionalmente. */}
-            <img
-              src="/brand/zaylo-logo.png"
-              alt="CRM Zaylo"
-              className={
-                "absolute left-0 h-8 w-auto object-contain object-left transition-opacity duration-200 " +
-                (sidebarCollapsed ? "opacity-0" : "opacity-100")
-              }
-            />
-            <img
-              src="/brand/zaylo-icon.png"
-              alt="CRM Zaylo"
-              className={
-                "absolute h-8 w-auto object-contain transition-opacity duration-200 " +
-                (sidebarCollapsed ? "opacity-100" : "opacity-0")
-              }
-            />
-          </div>
-          <button
-            onClick={() => setSidebarCollapsed((v) => !v)}
-            title={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground/50 transition hover:bg-sidebar-accent hover:text-sidebar-foreground"
-          >
-            <svg
-              viewBox="0 0 20 20"
-              fill="none"
-              className={"h-4 w-4 transition-transform " + (sidebarCollapsed ? "rotate-180" : "")}
+              <img
+                src="/brand/zaylo-logo.png"
+                alt="CRM Zaylo"
+                className={
+                  "absolute left-0 h-8 w-auto object-contain object-left transition-opacity duration-200 " +
+                  (sidebarCollapsed ? "opacity-0" : "opacity-100")
+                }
+              />
+              <img
+                src="/brand/zaylo-icon.png"
+                alt="CRM Zaylo"
+                className={
+                  "absolute h-8 w-auto object-contain transition-opacity duration-200 " +
+                  (sidebarCollapsed ? "opacity-100" : "opacity-0")
+                }
+              />
+            </div>
+            <button
+              onClick={() => setSidebarCollapsed((v) => !v)}
+              title={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground/50 transition hover:bg-sidebar-accent hover:text-sidebar-foreground"
             >
-              <path d="M12.5 4l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-        </div>
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                className={"h-4 w-4 transition-transform " + (sidebarCollapsed ? "rotate-180" : "")}
+              >
+                <path
+                  d="M12.5 4l-6 6 6 6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
 
+          <div className="mx-3 mb-2 h-px bg-sidebar-border" />
 
-        <div className="mx-3 mb-2 h-px bg-sidebar-border" />
-
-
-        <nav className={"flex-1 space-y-1 " + (sidebarCollapsed ? "px-2" : "px-3")}>
-          {NAV_TOP.map((n) => {
-            const active = section === n.key;
-            const open = Boolean(n.children) && openMenu === n.key && !sidebarCollapsed;
-            return (
-              <div key={n.key} className="group relative">
-                <button
-                  onClick={() => {
-                    // Menu recolhido: clicar num ícone expande o menu, pra o
-                    // usuário enxergar as sub-abas da seção.
-                    const wasCollapsed = sidebarCollapsed;
-                    if (wasCollapsed) setSidebarCollapsed(false);
-                    if (n.children) {
-                      // Sanfona individual: abre só a seção clicada.
-                      setOpenMenu((cur) => (cur === n.key && !wasCollapsed ? null : n.key));
-                      if (!active) setSection(n.key);
-                      return;
-                    }
-                    setOpenMenu(null);
-                    setSection(n.key);
-                  }}
-                  className={navRowCls(active) + (sidebarCollapsed ? " justify-center px-0" : "")}
-                >
-                  <span className="flex h-5 w-5 items-center justify-center">{n.icon}</span>
-                  {!sidebarCollapsed && (
-                    <>
-                      <span className="flex-1 truncate">{n.label}</span>
-                      {/* Seta só aparece em itens que realmente têm sub-abas — os
+          <nav className={"flex-1 space-y-1 " + (sidebarCollapsed ? "px-2" : "px-3")}>
+            {NAV_TOP.map((n) => {
+              const active = section === n.key;
+              const open = Boolean(n.children) && openMenu === n.key && !sidebarCollapsed;
+              return (
+                <div key={n.key} className="group relative">
+                  <button
+                    onClick={() => {
+                      // Menu recolhido: clicar num ícone expande o menu, pra o
+                      // usuário enxergar as sub-abas da seção.
+                      const wasCollapsed = sidebarCollapsed;
+                      if (wasCollapsed) setSidebarCollapsed(false);
+                      if (n.children) {
+                        // Sanfona individual: abre só a seção clicada.
+                        setOpenMenu((cur) => (cur === n.key && !wasCollapsed ? null : n.key));
+                        if (!active) setSection(n.key);
+                        return;
+                      }
+                      setOpenMenu(null);
+                      setSection(n.key);
+                    }}
+                    className={navRowCls(active) + (sidebarCollapsed ? " justify-center px-0" : "")}
+                  >
+                    <span className="flex h-5 w-5 items-center justify-center">{n.icon}</span>
+                    {!sidebarCollapsed && (
+                      <>
+                        <span className="flex-1 truncate">{n.label}</span>
+                        {/* Seta só aparece em itens que realmente têm sub-abas — os
                           demais ficam sem seta, a pedido do Mariano. */}
-                      {n.children && (
-                        <IconChevron
-                          className={
-                            (open ? "rotate-90 " : "") +
-                            (active ? "text-white/70" : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/80")
-                          }
-                        />
-                      )}
-                    </>
+                        {n.children && (
+                          <IconChevron
+                            className={
+                              (open ? "rotate-90 " : "") +
+                              (active
+                                ? "text-white/70"
+                                : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/80")
+                            }
+                          />
+                        )}
+                      </>
+                    )}
+                  </button>
+                  {sidebarCollapsed && (
+                    <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-brand px-2.5 py-1.5 text-xs font-semibold text-white opacity-0 shadow-lg transition-opacity duration-75 group-hover:opacity-100">
+                      {n.label}
+                    </span>
                   )}
-                </button>
-                {sidebarCollapsed && (
-                  <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-brand px-2.5 py-1.5 text-xs font-semibold text-white opacity-0 shadow-lg transition-opacity duration-75 group-hover:opacity-100">
-                    {n.label}
-                  </span>
-                )}
-                {open && n.children && (
-                  <div className="mt-1 space-y-0.5 border-l border-sidebar-border pl-3 ml-4">
-                    {n.children.map((sub) => {
-                      const isSubActive = n.key === "assinantes" ? assinTab === sub.key : n.key === "configuracoes" ? configTab === sub.key : n.key === "agenda" ? agendaTab === sub.key : false;
-                      return (
-                        <button
-                          key={sub.key}
-                          onClick={() => {
-                            setSection(n.key);
-                            if (n.key === "assinantes") setAssinTab(sub.key as AssinTab);
-                            else if (n.key === "configuracoes") setConfigTab(sub.key as ConfigTab);
-                            else if (n.key === "agenda") setAgendaTab(sub.key as AgendaTab);
-                          }}
-                          className={
-                            "block w-full rounded-lg px-3 py-1.5 text-left text-[13px] transition " +
-                            (active && isSubActive
-                              ? "bg-sidebar-accent font-semibold text-sidebar-foreground"
-                              : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground")
-                          }
-                        >
-                          {sub.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-
-          })}
-        </nav>
-
-      </aside>
+                  {open && n.children && (
+                    <div className="mt-1 space-y-0.5 border-l border-sidebar-border pl-3 ml-4">
+                      {n.children.map((sub) => {
+                        const isSubActive =
+                          n.key === "assinantes"
+                            ? assinTab === sub.key
+                            : n.key === "configuracoes"
+                              ? configTab === sub.key
+                              : n.key === "agenda"
+                                ? agendaTab === sub.key
+                                : false;
+                        return (
+                          <button
+                            key={sub.key}
+                            onClick={() => {
+                              setSection(n.key);
+                              if (n.key === "assinantes") setAssinTab(sub.key as AssinTab);
+                              else if (n.key === "configuracoes")
+                                setConfigTab(sub.key as ConfigTab);
+                              else if (n.key === "agenda") setAgendaTab(sub.key as AgendaTab);
+                            }}
+                            className={
+                              "block w-full rounded-lg px-3 py-1.5 text-left text-[13px] transition " +
+                              (active && isSubActive
+                                ? "bg-sidebar-accent font-semibold text-sidebar-foreground"
+                                : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground")
+                            }
+                          >
+                            {sub.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </nav>
+        </aside>
       )}
 
       {/* Mobile top bar — no modo "só agenda" (link dedicado), mostra só
@@ -943,14 +1166,15 @@ function Painel() {
         )}
       </div>
 
-
-
-
       {/* Content */}
       <div className="flex-1 min-w-0 h-full overflow-x-auto overflow-y-auto">
         {(section === "agenda" || mobileAgendaOnly) && token && (
           <>
-            <SectionHeader icon={<IconCalendar />} title="Agenda" subtitle={agendaTab === "lembretes" ? "Lembretes / Confirmações" : undefined} />
+            <SectionHeader
+              icon={<IconCalendar />}
+              title="Agenda"
+              subtitle={agendaTab === "lembretes" ? "Lembretes / Confirmações" : undefined}
+            />
             <main className="px-4 py-4">
               {agendaTab === "agenda" ? (
                 <AgendaView
@@ -960,7 +1184,9 @@ function Painel() {
                 />
               ) : (
                 <PremiumSoftLock active={!!billing && !billing.premium} onUpgrade={openCheckout}>
-                  <AgendaRemindersView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+                  <AgendaRemindersView
+                    api={(path: string, opts?: RequestInit) => api(token, path, opts)}
+                  />
                 </PremiumSoftLock>
               )}
             </main>
@@ -974,8 +1200,17 @@ function Painel() {
                 <div className="flex w-max shrink-0 animate-ai-ticker items-center whitespace-nowrap">
                   {Array.from({ length: 8 }).map((_, i) => (
                     <div key={i} className="flex shrink-0 items-center">
-                      {["Vendas", "Agendamentos", "Atendimento 24 horas", "Humanização", "Fidelização"].map((word) => (
-                        <span key={word} className="flex items-center text-[13px] font-semibold uppercase tracking-widest text-white">
+                      {[
+                        "Vendas",
+                        "Agendamentos",
+                        "Atendimento 24 horas",
+                        "Humanização",
+                        "Fidelização",
+                      ].map((word) => (
+                        <span
+                          key={word}
+                          className="flex items-center text-[13px] font-semibold uppercase tracking-widest text-white"
+                        >
                           {word}
                           <span className="mx-4 h-1 w-1 rounded-full bg-white/50" />
                         </span>
@@ -1005,7 +1240,9 @@ function Painel() {
           <>
             <header className="sticky top-0 z-10 bg-brand mt-14 md:mt-0">
               <div className="flex items-center gap-2.5 px-5 py-3">
-                <span className="text-white"><IconGraduationCap /></span>
+                <span className="text-white">
+                  <IconGraduationCap />
+                </span>
                 <h1 className="truncate text-[15px] font-medium leading-tight text-white">
                   Treinamentos
                 </h1>
@@ -1026,16 +1263,25 @@ function Painel() {
                 (configTab === "servicos" && "Serviços") ||
                 (configTab === "produtos" && "Produtos") ||
                 (configTab === "profissionais" && "Profissionais") ||
-                (configTab === "clientes" && (isClinicNiche(businessType) ? "Importar pacientes" : "Clientes")) ||
+                (configTab === "clientes" &&
+                  (isClinicNiche(businessType) ? "Importar pacientes" : "Clientes")) ||
                 (configTab === "gerais" && "Gerais") ||
                 (configTab === "conta" && "Minha conta") ||
                 undefined
               }
             />
             <main className="px-4 py-4">
-              {configTab === "servicos" && <ServicesTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
-              {configTab === "produtos" && <ProductsTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
-              {configTab === "profissionais" && <ProfessionalsTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
+              {configTab === "servicos" && (
+                <ServicesTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+              )}
+              {configTab === "produtos" && (
+                <ProductsTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+              )}
+              {configTab === "profissionais" && (
+                <ProfessionalsTab
+                  api={(path: string, opts?: RequestInit) => api(token, path, opts)}
+                />
+              )}
               {configTab === "clientes" && (
                 <CustomersTab
                   api={(path: string, opts?: RequestInit) => api(token, path, opts)}
@@ -1045,10 +1291,16 @@ function Painel() {
               {configTab === "gerais" && (
                 <GeneralSettingsTab
                   api={(path: string, opts?: RequestInit) => api(token, path, opts)}
-                  mobileAgendaLink={typeof window !== "undefined" ? `${window.location.origin}/painel?token=${token}&section=agenda&mobile=agenda` : undefined}
+                  mobileAgendaLink={
+                    typeof window !== "undefined"
+                      ? `${window.location.origin}/painel?token=${token}&section=agenda&mobile=agenda`
+                      : undefined
+                  }
                 />
               )}
-              {configTab === "conta" && <AccountTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />}
+              {configTab === "conta" && (
+                <AccountTab api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+              )}
             </main>
           </>
         )}
@@ -1093,7 +1345,9 @@ function Painel() {
                       onClick={() => setDisparoTab(t)}
                       className={
                         "rounded-md px-3 py-1.5 text-xs font-medium transition " +
-                        (disparoTab === t ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
+                        (disparoTab === t
+                          ? "bg-white text-neutral-900 shadow-sm"
+                          : "text-neutral-500 hover:text-neutral-900")
                       }
                     >
                       {t === "novo" ? "Novo disparo" : "Campanhas"}
@@ -1160,7 +1414,10 @@ function Painel() {
           <>
             <header className="print:hidden sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
               <div className="flex items-center gap-3 px-5 py-2.5">
-                <div ref={setPacientesHeaderEl} className="flex min-w-0 flex-1 items-center gap-2" />
+                <div
+                  ref={setPacientesHeaderEl}
+                  className="flex min-w-0 flex-1 items-center gap-2"
+                />
               </div>
             </header>
             <main className="px-4 py-4">
@@ -1201,7 +1458,6 @@ function Painel() {
           </>
         )}
 
-
         {section === "conexao" && token && (
           <>
             <SectionHeader icon={<IconPlug />} title="Conexão" />
@@ -1234,12 +1490,10 @@ function Painel() {
             )}
           </>
         )}
-
       </div>
     </div>
   );
 }
-
 
 type DrawerTab = "notes" | "schedule";
 
@@ -1253,7 +1507,16 @@ function IconWhatsapp() {
 /** Layout de template — retângulo com cabeçalho + linhas de conteúdo. */
 function IconNote() {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect x="4.5" y="3.5" width="15" height="17" rx="1.6" />
       <path d="M4.5 8.5h15" />
       <path d="M8 12.3h8M8 15.5h5.5" />
@@ -1262,7 +1525,16 @@ function IconNote() {
 }
 function IconClock() {
   return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <circle cx="11" cy="13" r="8" />
       <path d="M11 9.2V13l2.6 1.6" />
       <path d="M8.2 2.6h5.6M18.5 5l1.6-1.6" />
@@ -1290,10 +1562,16 @@ function CardAction({
       title={title}
       disabled={disabled}
       draggable={false}
-      onDragStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      onDragStart={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
       onPointerDown={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
-      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
       className={
         "grid h-7 w-7 place-items-center rounded-md transition disabled:opacity-40 " +
         (colorClass ?? "text-neutral-500 hover:text-brand")
@@ -1344,7 +1622,10 @@ function WhatsAppActionModal({
       body: JSON.stringify({ phone: phoneDraft.trim() }),
     });
     setBusy(false);
-    if (!r?.ok) { setErr(r?.error || "Não foi possível salvar o telefone"); return; }
+    if (!r?.ok) {
+      setErr(r?.error || "Não foi possível salvar o telefone");
+      return;
+    }
     setPhone(r.customer.phone as string);
     setPhoneDraft("");
     setFeedback("Telefone salvo ✔");
@@ -1368,7 +1649,10 @@ function WhatsAppActionModal({
           actions: qr ? sendableActions(qr.actions) : undefined,
         });
     setBusy(false);
-    if (!r.ok) { setErr(r.error || "Falha ao falar com a extensão"); return; }
+    if (!r.ok) {
+      setErr(r.error || "Falha ao falar com a extensão");
+      return;
+    }
     if (!openOnly && qr) {
       await applyFunnelActions((path, opts) => api(token, path, opts), qr.actions, {
         title: customer.name,
@@ -1409,10 +1693,16 @@ function WhatsAppActionModal({
         </div>
 
         <Field label="Resposta rápida">
-          <select value={selected} onChange={(e) => setSelected(e.target.value)} className={inputCls}>
+          <select
+            value={selected}
+            onChange={(e) => setSelected(e.target.value)}
+            className={inputCls}
+          >
             <option value="">Nenhuma (mensagem manual)</option>
             {replies.map((q) => (
-              <option key={q.id} value={q.id}>{q.title}</option>
+              <option key={q.id} value={q.id}>
+                {q.title}
+              </option>
             ))}
           </select>
         </Field>
@@ -1455,7 +1745,6 @@ function WhatsAppActionModal({
 }
 
 function KanbanView({
-
   customers,
   loading,
   token,
@@ -1514,16 +1803,16 @@ function KanbanView({
     const contactCount = byStatus[col.key]?.length ?? 0;
     const ok = await confirm({
       title: `Excluir o kanban "${col.label}"?`,
-      description: contactCount > 0
-        ? `A coluna será excluída, mas os ${contactCount} contato(s) dentro dela continuarão salvos. Eles voltarão a aparecer se uma coluna com esse mesmo status for criada ou importada novamente.`
-        : "A coluna será excluída. Nenhum contato será removido.",
+      description:
+        contactCount > 0
+          ? `A coluna será excluída, mas os ${contactCount} contato(s) dentro dela continuarão salvos. Eles voltarão a aparecer se uma coluna com esse mesmo status for criada ou importada novamente.`
+          : "A coluna será excluída. Nenhum contato será removido.",
       confirmLabel: "Excluir",
       destructive: true,
     });
     if (!ok) return;
     persistCols(cols.filter((c) => c.key !== col.key));
   }
-
 
   const effective = useMemo(
     () => customers.map((c) => (pending[c.id] ? { ...c, status: pending[c.id] } : c)),
@@ -1543,14 +1832,18 @@ function KanbanView({
   const colTotal = (key: string) =>
     (byStatus[key] ?? []).reduce((sum, c) => sum + priceOf(plans, planFromTags(c.tags)), 0);
 
-
   async function moveTo(id: string, status: string) {
     setPending((p) => ({ ...p, [id]: status }));
     const r = await api(token, `/api/public/extension/customers/${id}`, {
       method: "PATCH",
       body: JSON.stringify({ status }),
     });
-    if (!r?.ok) setPending((p) => { const n = { ...p }; delete n[id]; return n; });
+    if (!r?.ok)
+      setPending((p) => {
+        const n = { ...p };
+        delete n[id];
+        return n;
+      });
     reload();
   }
 
@@ -1587,19 +1880,28 @@ function KanbanView({
             value={newCol}
             onChange={(e) => setNewCol(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") { addColumn(newCol); setNewCol(null); }
+              if (e.key === "Enter") {
+                addColumn(newCol);
+                setNewCol(null);
+              }
               if (e.key === "Escape") setNewCol(null);
             }}
             placeholder="Nome do kanban"
             className="w-44 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs text-neutral-900 outline-none focus:border-brand"
           />
           <button
-            onClick={() => { addColumn(newCol); setNewCol(null); }}
+            onClick={() => {
+              addColumn(newCol);
+              setNewCol(null);
+            }}
             className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white hover:bg-brand-strong"
           >
             Criar
           </button>
-          <button onClick={() => setNewCol(null)} className="text-xs text-neutral-500 hover:text-neutral-900">
+          <button
+            onClick={() => setNewCol(null)}
+            className="text-xs text-neutral-500 hover:text-neutral-900"
+          >
             cancelar
           </button>
         </div>
@@ -1631,20 +1933,22 @@ function KanbanView({
       {/* Primeira utilização: só o botão de importar planilha. */}
       {firstUse
         ? !loading && (
-          <div className="rounded-2xl border border-dashed border-neutral-300 bg-white px-6 py-14 text-center">
-            <p className="text-base font-semibold text-neutral-900">Comece importando sua planilha</p>
-            <p className="mx-auto mt-1 max-w-md text-xs text-neutral-500">
-              Os assinantes são cadastrados automaticamente e os kanbans nascem com a mesma
-              estrutura da planilha.
-            </p>
-            <button
-              onClick={() => setShowImport(true)}
-              className="mx-auto mt-6 rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-strong"
-            >
-              Importar planilha
-            </button>
-          </div>
-        )
+            <div className="rounded-2xl border border-dashed border-neutral-300 bg-white px-6 py-14 text-center">
+              <p className="text-base font-semibold text-neutral-900">
+                Comece importando sua planilha
+              </p>
+              <p className="mx-auto mt-1 max-w-md text-xs text-neutral-500">
+                Os assinantes são cadastrados automaticamente e os kanbans nascem com a mesma
+                estrutura da planilha.
+              </p>
+              <button
+                onClick={() => setShowImport(true)}
+                className="mx-auto mt-6 rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-strong"
+              >
+                Importar planilha
+              </button>
+            </div>
+          )
         : null}
 
       {loading && <p className="text-sm text-neutral-500">Carregando...</p>}
@@ -1659,14 +1963,14 @@ function KanbanView({
         </div>
       )}
 
-
-
-
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         {cols.map((col) => (
           <div
             key={col.key}
-            onDragOver={(e) => { e.preventDefault(); setOverCol(col.key); }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setOverCol(col.key);
+            }}
             onDragLeave={() => setOverCol((c) => (c === col.key ? null : c))}
             onDrop={(e) => {
               e.preventDefault();
@@ -1677,12 +1981,16 @@ function KanbanView({
             }}
             className={
               "rounded-xl border bg-white shadow-sm transition " +
-              (overCol === col.key ? "border-neutral-400 ring-2 ring-neutral-300/60" : "border-neutral-200")
+              (overCol === col.key
+                ? "border-neutral-400 ring-2 ring-neutral-300/60"
+                : "border-neutral-200")
             }
           >
             <div className="border-b border-neutral-200 px-3 py-2">
               <div className="flex items-center justify-between gap-2">
-                <h3 className="truncate text-[11px] font-semibold uppercase tracking-wider text-neutral-700">{col.label}</h3>
+                <h3 className="truncate text-[11px] font-semibold uppercase tracking-wider text-neutral-700">
+                  {col.label}
+                </h3>
                 <button
                   onClick={() => void removeColumn(col)}
                   title="Excluir kanban"
@@ -1692,13 +2000,16 @@ function KanbanView({
                 </button>
               </div>
               <div className="flex items-baseline justify-between gap-2">
-                <p className="text-[11px] text-neutral-500">{byStatus[col.key]?.length ?? 0} contato(s)</p>
-                <p className="text-xs font-semibold text-neutral-900">{formatBRL(colTotal(col.key))}</p>
+                <p className="text-[11px] text-neutral-500">
+                  {byStatus[col.key]?.length ?? 0} contato(s)
+                </p>
+                <p className="text-xs font-semibold text-neutral-900">
+                  {formatBRL(colTotal(col.key))}
+                </p>
               </div>
             </div>
 
             <div className="h-[calc(100vh-150px)] min-h-[420px] space-y-2 overflow-y-auto p-2.5">
-
               {(byStatus[col.key] ?? []).map((c) => {
                 const plan = planFromTags(c.tags);
                 return (
@@ -1710,7 +2021,10 @@ function KanbanView({
                       e.dataTransfer.setData("text/plain", c.id);
                       e.dataTransfer.effectAllowed = "move";
                     }}
-                    onDragEnd={() => { setDragId(null); setOverCol(null); }}
+                    onDragEnd={() => {
+                      setDragId(null);
+                      setOverCol(null);
+                    }}
                     onClick={() => setDetail(c)}
                     className={
                       "select-none cursor-grab rounded-lg border border-neutral-300 bg-neutral-50 p-2.5 text-[13px] transition hover:-translate-y-0.5 hover:border-neutral-400 hover:shadow-md active:cursor-grabbing " +
@@ -1719,7 +2033,9 @@ function KanbanView({
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="truncate font-semibold text-neutral-900">{c.name || phoneLabel(c.phone)}</div>
+                        <div className="truncate font-semibold text-neutral-900">
+                          {c.name || phoneLabel(c.phone)}
+                        </div>
                         <div className="mt-1 flex flex-wrap items-center gap-1">
                           {plan && (
                             <span className="rounded bg-yellow-100 px-1.5 py-0.5 text-[10px] font-medium text-yellow-800">
@@ -1743,14 +2059,20 @@ function KanbanView({
                           </CardAction>
                           <CardAction
                             title="Anotações"
-                            onClick={() => { setDetailTab("notes"); setDetail(c); }}
+                            onClick={() => {
+                              setDetailTab("notes");
+                              setDetail(c);
+                            }}
                             colorClass="text-sky-600 hover:bg-sky-50"
                           >
                             <IconNote />
                           </CardAction>
                           <CardAction
                             title="Mensagem agendada"
-                            onClick={() => { setDetailTab("schedule"); setDetail(c); }}
+                            onClick={() => {
+                              setDetailTab("schedule");
+                              setDetail(c);
+                            }}
                             colorClass="text-orange-600 hover:bg-orange-50"
                           >
                             <IconClock />
@@ -1758,11 +2080,23 @@ function KanbanView({
                         </div>
                       </div>
                       <button
-                        onClick={(e) => { e.stopPropagation(); remove(c.id); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          remove(c.id);
+                        }}
                         className="rounded-md p-1 text-neutral-400 transition hover:bg-red-50 hover:text-red-600"
                         title="Remover"
                       >
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="14"
+                          height="14"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
                           <path d="M4 7h16" />
                           <path d="M9 7V4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7" />
                           <path d="M6 7l1 12.5a1.5 1.5 0 0 0 1.5 1.5h7a1.5 1.5 0 0 0 1.5-1.5L18 7" />
@@ -1781,13 +2115,18 @@ function KanbanView({
         ))}
       </div>
 
-      {showAdd && <AddModal token={token} cols={cols} onClose={() => { setShowAdd(false); reload(); }} />}
-      {waTarget && (
-        <WhatsAppActionModal
+      {showAdd && (
+        <AddModal
           token={token}
-          customer={waTarget}
-          onClose={() => setWaTarget(null)}
+          cols={cols}
+          onClose={() => {
+            setShowAdd(false);
+            reload();
+          }}
         />
+      )}
+      {waTarget && (
+        <WhatsAppActionModal token={token} customer={waTarget} onClose={() => setWaTarget(null)} />
       )}
       {detail && (
         <CustomerDrawer
@@ -1796,9 +2135,18 @@ function KanbanView({
           plans={plans}
           cols={cols}
           initialTab={detailTab}
-          onOpenWhatsapp={() => { setWaTarget(detail); setDetail(null); }}
-          onMove={(status) => { moveTo(detail.id, status); setDetail(null); }}
-          onClose={() => { setDetail(null); reload(); }}
+          onOpenWhatsapp={() => {
+            setWaTarget(detail);
+            setDetail(null);
+          }}
+          onMove={(status) => {
+            moveTo(detail.id, status);
+            setDetail(null);
+          }}
+          onClose={() => {
+            setDetail(null);
+            reload();
+          }}
         />
       )}
 
@@ -1807,7 +2155,10 @@ function KanbanView({
           token={token}
           shopId={shopId}
           system={readSystem(shopId)}
-          onGoSettings={() => { setShowImport(false); onGoSettings(); }}
+          onGoSettings={() => {
+            setShowImport(false);
+            onGoSettings();
+          }}
           onImported={async (summary) => {
             // Sucesso: fecha o pop-up na hora e a lista já aparece atualizada.
             setShowImport(false);
@@ -1860,7 +2211,6 @@ function CustomerDrawer({
   const [feedback, setFeedback] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-
   async function saveNotes() {
     setBusy(true);
     const r = await api(token, `/api/public/extension/customers/${customer.id}`, {
@@ -1868,7 +2218,10 @@ function CustomerDrawer({
       body: JSON.stringify({ notes: notes.trim() || null }),
     });
     setBusy(false);
-    if (!r?.ok) { setErr(r?.error || "Erro ao salvar anotação"); return; }
+    if (!r?.ok) {
+      setErr(r?.error || "Erro ao salvar anotação");
+      return;
+    }
     setErr(null);
     setSavedNotes(true);
     setTimeout(() => setSavedNotes(false), 1800);
@@ -1888,7 +2241,10 @@ function CustomerDrawer({
       }),
     });
     setBusy(false);
-    if (!r?.ok) { setErr(r?.error || "Erro ao agendar"); return; }
+    if (!r?.ok) {
+      setErr(r?.error || "Erro ao agendar");
+      return;
+    }
     setMsg("");
     setFeedback(when ? "Mensagem agendada ✔" : "Mensagem enfileirada para envio ✔");
     nudgeExtensionPoll();
@@ -1914,7 +2270,9 @@ function CustomerDrawer({
                 onClick={() => setDrawerTab(t)}
                 className={
                   "rounded-md px-3 py-1.5 text-xs font-medium transition " +
-                  (drawerTab === t ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900")
+                  (drawerTab === t
+                    ? "bg-white text-neutral-900 shadow-sm"
+                    : "text-neutral-500 hover:text-neutral-900")
                 }
               >
                 {t === "notes" ? "Anotações" : "Mensagens agendadas"}
@@ -1937,7 +2295,11 @@ function CustomerDrawer({
             onChange={(e) => onMove(e.target.value)}
             className={inputCls}
           >
-            {cols.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+            {cols.map((c) => (
+              <option key={c.key} value={c.key}>
+                {c.label}
+              </option>
+            ))}
           </select>
         </Field>
 
@@ -1999,13 +2361,19 @@ function CustomerDrawer({
         {err && <p className="text-sm text-red-500">{err}</p>}
         {feedback && <p className="text-sm text-emerald-600">{feedback}</p>}
       </div>
-
     </Modal>
   );
 }
 
-
-function AddModal({ token, cols, onClose }: { token: string; cols: Array<{ key: string; label: string }>; onClose: () => void }) {
+function AddModal({
+  token,
+  cols,
+  onClose,
+}: {
+  token: string;
+  cols: Array<{ key: string; label: string }>;
+  onClose: () => void;
+}) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   // A coluna precisa existir no kanban — senão o contato some da tela.
@@ -2020,10 +2388,19 @@ function AddModal({ token, cols, onClose }: { token: string; cols: Array<{ key: 
     setErr(null);
     const r = await api(token, "/api/public/extension/customers", {
       method: "POST",
-      body: JSON.stringify({ name: name.trim(), phone: phone.trim(), status, tags: [], is_subscriber: true }),
+      body: JSON.stringify({
+        name: name.trim(),
+        phone: phone.trim(),
+        status,
+        tags: [],
+        is_subscriber: true,
+      }),
     });
     setBusy(false);
-    if (!r?.ok) { setErr(r?.error || "Erro"); return; }
+    if (!r?.ok) {
+      setErr(r?.error || "Erro");
+      return;
+    }
     onClose();
   }
 
@@ -2031,14 +2408,28 @@ function AddModal({ token, cols, onClose }: { token: string; cols: Array<{ key: 
     <Modal onClose={onClose} title="Adicionar contato">
       <form onSubmit={submit} className="space-y-3">
         <Field label="Nome">
-          <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} required />
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className={inputCls}
+            required
+          />
         </Field>
         <Field label="Telefone (com DDD)">
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls} required />
+          <input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className={inputCls}
+            required
+          />
         </Field>
         <Field label="Coluna">
           <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
-            {cols.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+            {cols.map((c) => (
+              <option key={c.key} value={c.key}>
+                {c.label}
+              </option>
+            ))}
           </select>
         </Field>
         {err && <p className="text-sm text-red-500">{err}</p>}
@@ -2097,12 +2488,17 @@ function ImportModal({
       if (!report.rows.length) {
         throw new Error(
           "Nenhuma linha válida encontrada. Confira se a planilha é a exportação do " +
-            (meta?.label ?? "sistema") + " e tem colunas de nome e telefone.",
+            (meta?.label ?? "sistema") +
+            " e tem colunas de nome e telefone.",
         );
       }
       const r = await api(token, "/api/public/extension/customers/import", {
         method: "POST",
-        body: JSON.stringify({ customers: report.rows, mode: "replace_spreadsheet", is_subscriber: true }),
+        body: JSON.stringify({
+          customers: report.rows,
+          mode: "replace_spreadsheet",
+          is_subscriber: true,
+        }),
       });
       if (!r?.ok) throw new Error(r?.error || "Erro na importação");
 
@@ -2117,9 +2513,7 @@ function ImportModal({
       const sheetStatuses = Object.keys(report.byStatus);
       const syncedCols = syncColumnsFromSheet(shopId, sheetStatuses);
 
-      const dist = syncedCols
-        .map((c) => `${c.label}: ${report.byStatus[c.key]}`)
-        .join(" · ");
+      const dist = syncedCols.map((c) => `${c.label}: ${report.byStatus[c.key]}`).join(" · ");
 
       onImported(
         `Linhas lidas: ${report.total} · Importadas: ${report.rows.length}` +
@@ -2190,7 +2584,6 @@ function ImportModal({
           </div>
         </Field>
 
-
         {err && <p className="text-sm text-red-500">{err}</p>}
         <button
           disabled={busy || !file}
@@ -2203,14 +2596,10 @@ function ImportModal({
   );
 }
 
-
-
 // O formulário de disparo agora vive na seção "Disparo" (src/components/dispatch-view.tsx).
-
 
 // Cache module-scoped: sobrevive à troca de aba, evita "Carregando..." piscando.
 const campaignsCache: Record<string, Campaign[] | undefined> = {};
-
 
 function CampaignsView({ token, scope }: { token: string; scope?: "assinaturas" | "funil" }) {
   const { confirm, dialog } = useConfirm();
@@ -2251,7 +2640,9 @@ function CampaignsView({ token, scope }: { token: string; scope?: "assinaturas" 
     // campanha parada/cancelada não muda mais, não precisa recarregar.
     if (campaign?.status !== "running") return;
     jobsTimerRef.current = setInterval(() => loadJobs(expandedId), 3000);
-    return () => { if (jobsTimerRef.current) clearInterval(jobsTimerRef.current); };
+    return () => {
+      if (jobsTimerRef.current) clearInterval(jobsTimerRef.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expandedId, campaigns.find((c) => c.id === expandedId)?.status]);
 
@@ -2268,7 +2659,9 @@ function CampaignsView({ token, scope }: { token: string; scope?: "assinaturas" 
   useEffect(() => {
     reload();
     timerRef.current = setInterval(reload, 4000);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -2332,11 +2725,24 @@ function CampaignsView({ token, scope }: { token: string; scope?: "assinaturas" 
                 <p className="text-xs uppercase tracking-wide text-neutral-500">
                   {isFinal && c.status !== "canceled"
                     ? "Finalizada"
-                    : c.status === "running" ? "Em andamento" : c.status === "paused" ? "Pausada" : c.status === "canceled" ? "Cancelada" : c.status}
+                    : c.status === "running"
+                      ? "Em andamento"
+                      : c.status === "paused"
+                        ? "Pausada"
+                        : c.status === "canceled"
+                          ? "Cancelada"
+                          : c.status}
                 </p>
                 {c.created_at && (
                   <p className="mt-0.5 text-[11px] text-neutral-400">
-                    Criada em {new Date(c.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    Criada em{" "}
+                    {new Date(c.created_at).toLocaleString("pt-BR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </p>
                 )}
               </div>
@@ -2363,7 +2769,9 @@ function CampaignsView({ token, scope }: { token: string; scope?: "assinaturas" 
                 referência que o Mariano mandou (extensão "Envio Rápido"). */}
             <div className="mt-5 grid grid-cols-3 gap-3 text-center">
               <div>
-                <p className="text-[11px] uppercase tracking-wide text-neutral-500">Total de contatos</p>
+                <p className="text-[11px] uppercase tracking-wide text-neutral-500">
+                  Total de contatos
+                </p>
                 <p className="mt-1 text-2xl font-bold text-neutral-900">{total}</p>
               </div>
               <div>
@@ -2371,7 +2779,9 @@ function CampaignsView({ token, scope }: { token: string; scope?: "assinaturas" 
                 <p className="mt-1 text-2xl font-bold text-emerald-600">{c.stats.sent}</p>
               </div>
               <div>
-                <p className="text-[11px] uppercase tracking-wide text-neutral-500">Erro ao enviar</p>
+                <p className="text-[11px] uppercase tracking-wide text-neutral-500">
+                  Erro ao enviar
+                </p>
                 <p className="mt-1 text-2xl font-bold text-red-600">{c.stats.failed}</p>
               </div>
             </div>
@@ -2401,7 +2811,9 @@ function CampaignsView({ token, scope }: { token: string; scope?: "assinaturas" 
                 >
                   {expandedId === c.id ? "Ocultar detalhes" : "Ver detalhes por contato"}
                 </button>
-                <span>{done} / {total} processados · {pct}%</span>
+                <span>
+                  {done} / {total} processados · {pct}%
+                </span>
               </div>
             </div>
 
@@ -2413,7 +2825,9 @@ function CampaignsView({ token, scope }: { token: string; scope?: "assinaturas" 
                 {expandedLoading && expandedJobs.length === 0 ? (
                   <p className="p-4 text-center text-sm text-neutral-500">Carregando...</p>
                 ) : expandedJobs.length === 0 ? (
-                  <p className="p-4 text-center text-sm text-neutral-500">Nenhum contato nessa campanha.</p>
+                  <p className="p-4 text-center text-sm text-neutral-500">
+                    Nenhum contato nessa campanha.
+                  </p>
                 ) : (
                   <table className="w-full text-sm">
                     <thead className="bg-neutral-50 text-left text-[11px] uppercase tracking-wide text-neutral-500">
@@ -2440,7 +2854,13 @@ function CampaignsView({ token, scope }: { token: string; scope?: "assinaturas" 
                               }
                               title={j.error || undefined}
                             >
-                              {j.status === "sent" ? "Enviado" : j.status === "failed" ? "Falhou" : j.status === "in_flight" ? "Enviando" : "Pendente"}
+                              {j.status === "sent"
+                                ? "Enviado"
+                                : j.status === "failed"
+                                  ? "Falhou"
+                                  : j.status === "in_flight"
+                                    ? "Enviando"
+                                    : "Pendente"}
                             </span>
                           </td>
                         </tr>
@@ -2453,7 +2873,6 @@ function CampaignsView({ token, scope }: { token: string; scope?: "assinaturas" 
           </div>
         );
       })}
-
     </div>
   );
 }
@@ -2486,7 +2905,12 @@ function Modal({
       <div className="w-full max-w-md rounded-xl border border-neutral-300 bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-neutral-900">{title}</h2>
-          <button onClick={onClose} className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900">✕</button>
+          <button
+            onClick={onClose}
+            className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900"
+          >
+            ✕
+          </button>
         </div>
         {children}
       </div>
@@ -2542,8 +2966,14 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
               Assinantes ativos
             </p>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-4xl font-semibold leading-none tracking-tight text-neutral-950">{totalSubs}</span>
-              {goal > 0 && <span className="text-4xl font-semibold leading-none tracking-tight text-neutral-400">/ {goal}</span>}
+              <span className="text-4xl font-semibold leading-none tracking-tight text-neutral-950">
+                {totalSubs}
+              </span>
+              {goal > 0 && (
+                <span className="text-4xl font-semibold leading-none tracking-tight text-neutral-400">
+                  / {goal}
+                </span>
+              )}
             </div>
 
             <p className="mt-2 text-sm font-medium text-neutral-600">
@@ -2563,18 +2993,20 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
         </div>
         <div className="mt-5">
           <div className="h-3 w-full overflow-hidden rounded-full bg-neutral-100">
-            <div className="h-full rounded-full bg-yellow-400 transition-all duration-500" style={{ width: `${pct}%` }} />
+            <div
+              className="h-full rounded-full bg-yellow-400 transition-all duration-500"
+              style={{ width: `${pct}%` }}
+            />
           </div>
           <p className="mt-1.5 text-right text-xs font-semibold text-neutral-500">{pct}%</p>
         </div>
       </div>
 
-
       <div className="space-y-5 rounded-xl border border-neutral-300 bg-white p-5 shadow-sm">
-
-
         <div className="space-y-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Sistema</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            Sistema
+          </h3>
           <div className="grid gap-2 sm:grid-cols-2">
             {SUBSCRIPTION_SYSTEMS.map((s) => (
               <button
@@ -2595,7 +3027,9 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
         </div>
 
         <div className="space-y-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Planos e valores</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            Planos e valores
+          </h3>
           {plans.length === 0 && <p className="text-xs text-neutral-400">Nenhum plano ainda.</p>}
           {plans.map((p, i) => (
             <div key={p.name + i} className="flex items-center gap-2">
@@ -2617,7 +3051,10 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
                 placeholder="0,00"
                 onChange={(e) => {
                   const next = [...plans];
-                  next[i] = { ...next[i], priceCents: Math.round(Number(e.target.value || 0) * 100) };
+                  next[i] = {
+                    ...next[i],
+                    priceCents: Math.round(Number(e.target.value || 0) * 100),
+                  };
                   setPlans(next);
                 }}
                 onBlur={() => persistPlans(plans)}
@@ -2651,7 +3088,9 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
         </div>
 
         <div className="space-y-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Meta do mês</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            Meta do mês
+          </h3>
           <input
             type="number"
             min={0}
@@ -2664,7 +3103,10 @@ function OverviewView({ customers, shopId }: { customers: Customer[]; shopId: st
         </div>
 
         <button
-          onClick={() => { writeGoal(shopId, goal); persistPlans(plans); }}
+          onClick={() => {
+            writeGoal(shopId, goal);
+            persistPlans(plans);
+          }}
           className="w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong"
         >
           Salvar
@@ -2751,7 +3193,9 @@ function SettingsView({
         </div>
 
         <label className="block space-y-2">
-          <span className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500">Nome da barbearia</span>
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500">
+            Nome da barbearia
+          </span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}

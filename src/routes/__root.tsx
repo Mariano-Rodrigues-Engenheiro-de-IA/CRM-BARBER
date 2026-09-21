@@ -88,12 +88,37 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:title", content: "CRM Zaylo" },
       { name: "twitter:title", content: "CRM Zaylo" },
-      { property: "og:description", content: "Gerencie assinaturas, vendas, funis, disparos em massa e sua equipe direto no WhatsApp Web, com a extensão de Chrome do CRM Zaylo para barbearias." },
-      { name: "twitter:description", content: "Gerencie assinaturas, vendas, funis, disparos em massa e sua equipe direto no WhatsApp Web, com a extensão de Chrome do CRM Zaylo para barbearias." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2865b1f1-d0fc-4253-ae81-ec65dd0e051d/id-preview-9e7bc48a--652f97f5-da54-4335-aff1-092273b48f7a.lovable.app-1784750247337.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2865b1f1-d0fc-4253-ae81-ec65dd0e051d/id-preview-9e7bc48a--652f97f5-da54-4335-aff1-092273b48f7a.lovable.app-1784750247337.png" },
+      {
+        property: "og:description",
+        content:
+          "Gerencie assinaturas, vendas, funis, disparos em massa e sua equipe direto no WhatsApp Web, com a extensão de Chrome do CRM Zaylo para barbearias.",
+      },
+      {
+        name: "twitter:description",
+        content:
+          "Gerencie assinaturas, vendas, funis, disparos em massa e sua equipe direto no WhatsApp Web, com a extensão de Chrome do CRM Zaylo para barbearias.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2865b1f1-d0fc-4253-ae81-ec65dd0e051d/id-preview-9e7bc48a--652f97f5-da54-4335-aff1-092273b48f7a.lovable.app-1784750247337.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2865b1f1-d0fc-4253-ae81-ec65dd0e051d/id-preview-9e7bc48a--652f97f5-da54-4335-aff1-092273b48f7a.lovable.app-1784750247337.png",
+      },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
+      // PWA: deixa instalável como app na tela de início, com ícone e
+      // nome próprios (em vez de um atalho genérico) — pedido do
+      // usuário, pro link "Minha agenda" (e o app como um todo) ficar
+      // com cara de app de verdade no celular do cliente.
+      { name: "theme-color", content: "#0f172a" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-title", content: "Zaylo" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
     ],
     links: [
       {
@@ -120,6 +145,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "icon",
         type: "image/png",
         href: "/brand/zaylo-favicon.png",
+      },
+      {
+        rel: "manifest",
+        href: "/manifest.webmanifest",
+      },
+      {
+        rel: "apple-touch-icon",
+        href: "/brand/icon-192.png",
       },
     ],
   }),
