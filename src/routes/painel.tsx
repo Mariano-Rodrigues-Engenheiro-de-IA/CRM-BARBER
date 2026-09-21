@@ -1495,7 +1495,9 @@ function Painel() {
 
         {section === "conexao" && token && (
           <>
-            <SectionHeader icon={<IconPlug />} title="Conexão" />
+            <SectionHeader
+              title={<TrainingBadge label="Tutorial" onClick={() => openTraining("Conexão")} />}
+            />
             <main className="max-w-3xl px-4 py-4">
               <ConnectionView
                 api={(path: string, opts?: RequestInit) => api(token, path, opts)}
