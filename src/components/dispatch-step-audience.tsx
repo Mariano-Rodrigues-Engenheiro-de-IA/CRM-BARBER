@@ -102,18 +102,26 @@ function SourceSubFilter({
   if (value.kind === "inbox" || value.kind === "sheet") return null;
 
   if (value.kind === "labels") {
+    // Só existe 1 funil "Listas" por barbearia (garantido pelo sistema) —
+    // as listas de verdade (Aniversariantes, VIP...) são as ETAPAS dele.
+    // changeKind (no componente pai) já preenche funnelId automaticamente
+    // ao entrar nesse modo.
+    const listasFunnel = labelFunnels[0];
     return (
       <div>
         <p className="mb-1 text-xs font-medium text-neutral-500">Lista</p>
         <select
-          value={value.funnelId ?? ""}
-          onChange={(e) => onChange({ ...value, funnelId: e.target.value })}
+          value={value.stageId ?? ""}
+          onChange={(e) =>
+            onChange({ ...value, funnelId: listasFunnel?.id, stageId: e.target.value })
+          }
           className={mediumSelectCls}
+          disabled={!listasFunnel}
         >
-          <option value="">Escolha uma lista</option>
-          {labelFunnels.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.name}
+          <option value="">Todas as listas</option>
+          {(listasFunnel?.stages ?? []).map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
             </option>
           ))}
         </select>
@@ -317,7 +325,16 @@ export function AudienceStep({
   const displayed = useMemo(() => resolveAudienceSource(source, data), [source, data]);
 
   function changeKind(kind: AudienceSourceKind) {
-    onSourceChange(firstAvailableSource(kind));
+    const next = firstAvailableSource(kind);
+    // "Listas" sempre tem UM único funil (mode: label) por barbearia — as
+    // listas individuais (Aniversariantes, VIP...) são as ETAPAS dentro
+    // dele, não funis separados. Preenche automaticamente, não faz
+    // sentido pedir pro usuário "escolher o funil" quando só existe 1.
+    if (kind === "labels") {
+      const listasFunnel = funnels.find((f) => f.mode === "label");
+      if (listasFunnel) next.funnelId = listasFunnel.id;
+    }
+    onSourceChange(next);
   }
 
   /** Um contato é "selecionado" se QUALQUER UMA das suas chaves (id ou

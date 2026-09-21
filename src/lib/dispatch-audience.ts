@@ -107,8 +107,17 @@ function resolveLabelFunnel(source: AudienceSource, data: AudienceResolveData): 
   if (!source.funnelId) return [];
   const funnel = data.funnels.find((f) => f.id === source.funnelId && f.mode === "label");
   if (!funnel) return [];
+  // ⚠️ Corrigido (19/09, bug real reportado pelo usuário: "não consigo
+  // disparar pra uma lista específica"): antes SEMPRE juntava as
+  // etiquetas de TODAS as etapas do funil, ignorando source.stageId —
+  // mesmo escolhendo uma lista específica na Etapa 1, vinha todo mundo
+  // de todas as listas junto. Agora, quando uma etapa (lista) específica
+  // é escolhida, filtra só ela; sem escolha = todas juntas (padrão).
+  const stages = source.stageId
+    ? funnel.stages.filter((s) => s.id === source.stageId)
+    : funnel.stages;
   const wantedLabelIds = new Set(
-    funnel.stages
+    stages
       .map((s) => data.labels.find((l) => l.name === s.name)?.wa_label_id)
       .filter((x): x is string => Boolean(x)),
   );

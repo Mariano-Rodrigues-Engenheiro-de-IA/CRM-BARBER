@@ -18,6 +18,7 @@ import { MessagePreview } from "@/components/dispatch-message-preview";
 import { TemplatePreview } from "@/components/whatsapp-template-preview";
 import type { AudienceContact, AudienceSource, DispatchCustomer } from "@/lib/dispatch-audience";
 export type { DispatchCustomer } from "@/lib/dispatch-audience";
+import { ensureFreshLabelFunnels } from "@/lib/label-funnel-sync";
 
 type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
 
@@ -184,6 +185,22 @@ export function DispatchCenter({
       if (w?.ok) {
         setLabels((w.labels as WaLabel[]) || []);
         setContacts((w.contacts as WaContact[]) || []);
+      }
+      // Garante que "Listas" existe e está em dia com as etiquetas reais
+      // do WhatsApp — antes só rodava se o usuário tivesse passado pela
+      // aba Funis naquela sessão; indo direto pro Disparo, via dados
+      // desatualizados (bug real reportado pelo usuário).
+      if (f?.ok && w?.ok) {
+        const freshFunnels = await ensureFreshLabelFunnels(
+          api,
+          (f.funnels as Funnel[]) || [],
+          (w.labels as WaLabel[]) || [],
+          async () => {
+            const r = await api("/api/public/extension/funnels");
+            return r?.ok ? (r.funnels as Funnel[]) || [] : [];
+          },
+        );
+        setFunnels(freshFunnels);
       }
       // Falha silenciosa aqui é aceitável: sem conexão via API oficial
       // ainda, esse endpoint dá erro — a opção "Modelo aprovado" só

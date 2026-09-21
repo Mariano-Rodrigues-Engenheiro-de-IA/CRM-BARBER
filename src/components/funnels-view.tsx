@@ -17,11 +17,8 @@ import {
   type WaContact,
   type WaLabel,
 } from "@/lib/funnels";
-import {
-  applyFunnelActions,
-  canOpenWhatsapp,
-  openWhatsappChat,
-} from "@/lib/wa-actions";
+import { applyFunnelActions, canOpenWhatsapp, openWhatsappChat } from "@/lib/wa-actions";
+import { ensureDefaultFunnels, syncLabelFunnel } from "@/lib/label-funnel-sync";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { sendableActions, type QuickReply } from "@/lib/quick-replies";
 
@@ -32,8 +29,6 @@ const inputCls =
 
 /** Cache entre navegações: voltar pra aba Funis não deve piscar esqueleto. */
 let funnelsCache: { funnels: Funnel[]; labels: WaLabel[]; contacts: WaContact[] } | null = null;
-/** Trava global para evitar que múltiplos componentes (ou remounts) criem funis padrão ao mesmo tempo. */
-let isEnsuringDefaults = false;
 
 export function FunnelsView({
   api,
@@ -59,25 +54,34 @@ export function FunnelsView({
   const [err, setErr] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [detail, setDetail] = useState<FunnelCard | null>(null);
-  const [bulkMoveTarget, setBulkMoveTarget] = useState<{ stageId: string; stageName: string } | null>(null);
+  const [bulkMoveTarget, setBulkMoveTarget] = useState<{
+    stageId: string;
+    stageName: string;
+  } | null>(null);
   const [bulkMoving, setBulkMoving] = useState(false);
   const [detailTab, setDetailTab] = useState<"notes" | "schedule" | "profile">("notes");
   const [inboxQuery, setInboxQuery] = useState("");
   const [renamingStage, setRenamingStage] = useState<string | null>(null);
   const [stageSearch, setStageSearch] = useState<Record<string, string>>({});
-  const [dropIndicator, setDropIndicator] = useState<{ stageId: string; index: number } | null>(null);
+  const [dropIndicator, setDropIndicator] = useState<{ stageId: string; index: number } | null>(
+    null,
+  );
   const draggedCardHeight = useRef<number>(72);
   const [stageDropIndicator, setStageDropIndicator] = useState<number | null>(null);
   // Valor do cliente somado — carregado uma vez, em lote, pra mostrar tanto
   // o valor individual em cada card quanto o total parado em cada etapa.
-  const [dealValues, setDealValues] = useState<Array<{ wa_contact_id: string | null; phone: string | null; value_cents: number | null }>>([]);
+  const [dealValues, setDealValues] = useState<
+    Array<{ wa_contact_id: string | null; phone: string | null; value_cents: number | null }>
+  >([]);
   const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
   // Snapshot ESTÁTICO das posições dos cards de uma coluna, capturado uma
   // única vez ao entrar nela durante o arraste — evita o loop de
   // realimentação onde re-medir o DOM a cada movimento (que a própria
   // inserção do placeholder já alterou) causava o card "trocar de alvo"
   // continuamente e tremer.
-  const columnSnapshot = useRef<{ stageId: string; cards: { id: string; mid: number }[] } | null>(null);
+  const columnSnapshot = useRef<{ stageId: string; cards: { id: string; mid: number }[] } | null>(
+    null,
+  );
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   /** Só atualiza o indicador se a posição realmente mudou — evita
@@ -119,128 +123,13 @@ export function FunnelsView({
     return { list, labels: ls, contacts: cs };
   }
 
-  /**
-   * "Funil principal" e "Listas" são fixos: nascem sozinhos e
-   * não podem ser excluídos. O botão do cabeçalho só cria funis personalizados.
-   */
-  async function ensureDefaults(list: Funnel[]) {
-    if (isEnsuringDefaults) return false;
-    isEnsuringDefaults = true;
-    try {
-      let created = false;
-
-      // 1) Garantir apenas UM funil principal (mode: tab)
-      // Buscamos qualquer funil que seja "tab" ou que tenha o nome "Funil principal"
-      const tabFunnels = list.filter((f) => f.mode === "tab" || f.name === "Funil principal");
-      if (tabFunnels.length === 0) {
-        const r = await api("/api/public/extension/funnels", {
-          method: "POST",
-          body: JSON.stringify({
-            name: "Funil principal",
-            mode: "tab",
-            stages: ["Novo lead", "Em conversa", "Negociando", "Fechado"],
-          }),
-        });
-        created = created || Boolean(r?.ok);
-      } else if (tabFunnels.length > 1) {
-        // Limpa duplicados: mantém o primeiro que for realmente "tab", ou o primeiro da lista
-        const keep = tabFunnels.find(f => f.mode === "tab") || tabFunnels[0];
-        for (const dup of tabFunnels) {
-          if (dup.id === keep.id) continue;
-          await api(`/api/public/extension/funnels/${dup.id}`, { method: "DELETE" });
-          created = true;
-        }
-      }
-
-      // 2) Garantir apenas UM funil de listas (mode: label)
-      const labelFunnels = list.filter((f) => f.mode === "label");
-      if (labelFunnels.length === 0) {
-        const r = await api("/api/public/extension/funnels", {
-          method: "POST",
-          body: JSON.stringify({ name: "Listas", mode: "label", stages: [] }),
-        });
-        created = created || Boolean(r?.ok);
-      } else if (labelFunnels.length > 1) {
-        const keep = labelFunnels.find((f) => f.name === "Listas") || labelFunnels[0];
-        for (const dup of labelFunnels) {
-          if (dup.id === keep.id) continue;
-          await api(`/api/public/extension/funnels/${dup.id}`, { method: "DELETE" });
-          created = true;
-        }
-      }
-
-      // 3) Renomear legado se necessário
-      const legacy = list.find((f) => f.mode === "label" && f.name !== "Listas");
-      if (legacy && labelFunnels.length === 1) {
-        await api(`/api/public/extension/funnels/${legacy.id}`, {
-          method: "PATCH",
-          body: JSON.stringify({ name: "Listas" }),
-        });
-        created = true;
-      }
-
-      return created;
-    } finally {
-      isEnsuringDefaults = false;
-    }
-  }
-
-  /** Mantém somente as colunas. Os contatos são renderizados diretamente do
-   * snapshot do WhatsApp, sem criar/deletar centenas de cards em sequência. */
-  async function syncLabelFunnel(list: Funnel[], ls: WaLabel[], cs: WaContact[]) {
-    const funnel = list.find((f) => f.mode === "label");
-    if (!funnel) return false;
-
-    // Detecta stages duplicados por nome (pode ter acontecido antes desta
-    // lógica de dedup existir). Mantém só um por nome — o de menor
-    // sort_order — e manda o resto pra remoção junto com os "stale".
-    const seenNames = new Set<string>();
-    const duplicateIds: string[] = [];
-    for (const s of [...funnel.stages].sort((a, b) => a.sort_order - b.sort_order)) {
-      if (seenNames.has(s.name)) {
-        duplicateIds.push(s.id);
-      } else {
-        seenNames.add(s.name);
-      }
-    }
-    const uniqueStages = funnel.stages.filter((s) => !duplicateIds.includes(s.id));
-
-    // 1) Colunas = listas do WhatsApp (na mesma ordem).
-    const byName = new Map(uniqueStages.map((s) => [s.name, s]));
-    const stale = uniqueStages.filter((s) => !ls.some((l) => l.name === s.name));
-    const missing = ls.filter((l) => !byName.has(l.name));
-    // Verifica se houve mudança nas colunas ou nas cores das etiquetas
-    const hasColorChange = ls.some(l => {
-      const stage = byName.get(l.name);
-      return stage && stage.color !== l.color;
-    });
-
-    if (stale.length || missing.length || duplicateIds.length || hasColorChange) {
-      await api(`/api/public/extension/funnels/${funnel.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          stages: ls.map((l, i) => {
-            const found = byName.get(l.name);
-            return found
-              ? { id: found.id, name: l.name, color: l.color, sort_order: i }
-              : { name: l.name, color: l.color, sort_order: i };
-          }),
-          removed_stage_ids: [...stale.map((s) => s.id), ...duplicateIds],
-        }),
-      });
-      return true;
-    }
-
-    return false;
-  }
-
   useEffect(() => {
     void (async () => {
       const r = await reload();
       if (!r) return;
-      const created = await ensureDefaults(r.list);
+      const created = await ensureDefaultFunnels(api, r.list);
       const base = created ? await reload() : r;
-      if (await syncLabelFunnel(base.list, base.labels, base.contacts)) await reload();
+      if (await syncLabelFunnel(api, base.list, base.labels)) await reload();
     })();
     api("/api/public/extension/customer-deal").then((r) => {
       if (r?.ok) setDealValues((r.deals as typeof dealValues) || []);
@@ -260,7 +149,10 @@ export function FunnelsView({
 
   function stageTotalValue(stageId: string): number {
     const cards = active?.cards.filter((c) => c.stage_id === stageId) ?? [];
-    return cards.reduce((sum, c) => sum + (dealValueByKey.get(c.wa_contact_id || c.phone || "") || 0), 0);
+    return cards.reduce(
+      (sum, c) => sum + (dealValueByKey.get(c.wa_contact_id || c.phone || "") || 0),
+      0,
+    );
   }
 
   const active = funnels.find((f) => f.id === activeId) || null;
@@ -394,7 +286,11 @@ export function FunnelsView({
    * competir com outras coisas reagindo à mudança de `funnels` a cada
    * passo (era isso que fazia só o primeiro lead mover de verdade).
    */
-  async function bulkMoveLeads(sourceFunnelId: string, sourceStageId: string, targetStageId: string) {
+  async function bulkMoveLeads(
+    sourceFunnelId: string,
+    sourceStageId: string,
+    targetStageId: string,
+  ) {
     if (!active) return;
     if (premiumLocked) {
       onBlockedMove?.();
@@ -599,9 +495,7 @@ export function FunnelsView({
     ordered.splice(clampedIndex, 0, moved);
     const withNewOrder = ordered.map((s, i) => ({ ...s, sort_order: i }));
 
-    setFunnels((list) =>
-      list.map((f) => (f.id !== funnelId ? f : { ...f, stages: withNewOrder })),
-    );
+    setFunnels((list) => list.map((f) => (f.id !== funnelId ? f : { ...f, stages: withNewOrder })));
     await api(`/api/public/extension/funnels/${funnelId}`, {
       method: "PATCH",
       body: JSON.stringify({
@@ -692,7 +586,16 @@ export function FunnelsView({
                 </span>
               </div>
               <div className="relative mt-1.5">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-neutral-400">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="13"
+                  height="13"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-neutral-400"
+                >
                   <circle cx="11" cy="11" r="7" />
                   <path d="m20 20-3.5-3.5" />
                 </svg>
@@ -800,7 +703,9 @@ export function FunnelsView({
               const search = (stageSearch[stage.id] ?? "").trim().toLowerCase();
               const cards = search
                 ? allCards.filter(
-                    (c) => (c.title ?? "").toLowerCase().includes(search) || (c.phone ?? "").includes(search),
+                    (c) =>
+                      (c.title ?? "").toLowerCase().includes(search) ||
+                      (c.phone ?? "").includes(search),
                   )
                 : allCards;
 
@@ -850,7 +755,8 @@ export function FunnelsView({
                       // dois cards vizinhos faziam o índice "piscar" entre
                       // os dois repetidamente, dando a sensação de disputa.
                       const margin = 12;
-                      const knownIndex = dropIndicator?.stageId === stage.id ? dropIndicator.index : snap.length;
+                      const knownIndex =
+                        dropIndicator?.stageId === stage.id ? dropIndicator.index : snap.length;
                       let index = Math.min(knownIndex, snap.length);
                       while (index < snap.length && e.clientY > snap[index].mid + margin) index++;
                       while (index > 0 && e.clientY < snap[index - 1].mid - margin) index--;
@@ -871,13 +777,15 @@ export function FunnelsView({
                     const card = dragged.current;
                     draggedContact.current = null;
                     dragged.current = null;
-                    const idx = dropIndicator?.stageId === stage.id ? dropIndicator.index : cards.length;
+                    const idx =
+                      dropIndicator?.stageId === stage.id ? dropIndicator.index : cards.length;
                     if (contact) {
                       // Se o contato já virou card neste funil, o drop move o
                       // card existente em vez de ser ignorado em silêncio.
                       const existing = active.cards.find((c) => c.wa_contact_id === contact.id);
                       if (existing) {
-                        if (existing.stage_id !== stage.id) void moveCardToPosition(existing, stage.id, idx);
+                        if (existing.stage_id !== stage.id)
+                          void moveCardToPosition(existing, stage.id, idx);
                         setDropIndicator(null);
                         return;
                       }
@@ -912,7 +820,8 @@ export function FunnelsView({
                     // de um card filho pra outro dentro dela).
                     if (!e.currentTarget.contains(e.relatedTarget as Node)) {
                       setDropIndicator((prev) => (prev?.stageId === stage.id ? null : prev));
-                      if (columnSnapshot.current?.stageId === stage.id) columnSnapshot.current = null;
+                      if (columnSnapshot.current?.stageId === stage.id)
+                        columnSnapshot.current = null;
                     }
                   }}
 
@@ -928,7 +837,10 @@ export function FunnelsView({
                       draggedStageId.current = stage.id;
                       e.dataTransfer.effectAllowed = "move";
                     }}
-                    onDragEnd={() => { draggedStageId.current = null; setStageDropIndicator(null); }}
+                    onDragEnd={() => {
+                      draggedStageId.current = null;
+                      setStageDropIndicator(null);
+                    }}
                     title="Arrastar para reordenar"
                     className="flex select-none cursor-move items-center justify-between gap-2 active:cursor-move"
                   >
@@ -939,9 +851,9 @@ export function FunnelsView({
                         onRename={(n: string) => {
                           setRenamingStage(null);
                           void renameStage(stage, n);
-                      }}
-                      onCancel={() => setRenamingStage(null)}
-                    />
+                        }}
+                        onCancel={() => setRenamingStage(null)}
+                      />
                     </div>
                     <div
                       className="flex shrink-0 items-center gap-1"
@@ -964,7 +876,8 @@ export function FunnelsView({
                             { label: "Renomear", onClick: () => setRenamingStage(stage.id) },
                             {
                               label: "Mover leads para cá",
-                              onClick: () => setBulkMoveTarget({ stageId: stage.id, stageName: stage.name }),
+                              onClick: () =>
+                                setBulkMoveTarget({ stageId: stage.id, stageName: stage.name }),
                             },
                             {
                               label: "Excluir",
@@ -978,13 +891,24 @@ export function FunnelsView({
                   </div>
 
                   <div className="relative mt-2" onMouseDown={(e) => e.stopPropagation()}>
-                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-neutral-400">
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="13"
+                      height="13"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-neutral-400"
+                    >
                       <circle cx="11" cy="11" r="7" />
                       <path d="m20 20-3.5-3.5" />
                     </svg>
                     <input
                       value={stageSearch[stage.id] ?? ""}
-                      onChange={(e) => setStageSearch((prev) => ({ ...prev, [stage.id]: e.target.value }))}
+                      onChange={(e) =>
+                        setStageSearch((prev) => ({ ...prev, [stage.id]: e.target.value }))
+                      }
                       placeholder="Buscar nesta aba..."
                       className="w-full rounded-lg border border-neutral-300 bg-white py-1.5 pl-7 pr-2 text-xs outline-none focus:border-brand"
                     />
@@ -1013,7 +937,8 @@ export function FunnelsView({
                           onDragStart={(e) => {
                             dragged.current = card;
                             draggedContact.current = null;
-                            draggedCardHeight.current = e.currentTarget.getBoundingClientRect().height;
+                            draggedCardHeight.current =
+                              e.currentTarget.getBoundingClientRect().height;
                             setDraggingCardId(card.id);
                             e.dataTransfer.effectAllowed = "move";
                             try {
@@ -1034,120 +959,143 @@ export function FunnelsView({
                             (draggingCardId === card.id ? "opacity-80 ring-2 ring-brand" : "")
                           }
                         >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            {card?.profile_picture_url ? (
-                              <Avatar className="h-7 w-7 shrink-0">
-                                <AvatarImage src={card.profile_picture_url} alt={card.title ?? ""} />
-                                <AvatarFallback className="text-[10px]">
-                                  {(card.title ?? "").slice(0, 2).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                            ) : (
-                              <div className="h-7 w-7 shrink-0 rounded-full bg-neutral-100 flex items-center justify-center text-[10px] text-neutral-400 font-bold">
-                                {(card?.title ?? "").slice(0, 2).toUpperCase()}
-                              </div>
-                            )}
-                            <p className="min-w-0 truncate text-sm font-medium text-neutral-900">
-                              {card.title}
-                            </p>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              {card?.profile_picture_url ? (
+                                <Avatar className="h-7 w-7 shrink-0">
+                                  <AvatarImage
+                                    src={card.profile_picture_url}
+                                    alt={card.title ?? ""}
+                                  />
+                                  <AvatarFallback className="text-[10px]">
+                                    {(card.title ?? "").slice(0, 2).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                              ) : (
+                                <div className="h-7 w-7 shrink-0 rounded-full bg-neutral-100 flex items-center justify-center text-[10px] text-neutral-400 font-bold">
+                                  {(card?.title ?? "").slice(0, 2).toUpperCase()}
+                                </div>
+                              )}
+                              <p className="min-w-0 truncate text-sm font-medium text-neutral-900">
+                                {card.title}
+                              </p>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-1">
+                              {card.followup && (
+                                <FollowupBadge followup={card.followup} cardTitle={card.title} />
+                              )}
+                              {active.mode !== "label" && (
+                                <button
+                                  onClick={() => removeCard(card)}
+                                  title="Remover lead"
+                                  className="shrink-0 rounded-md p-1 text-neutral-400 transition hover:bg-red-50 hover:text-red-600"
+                                >
+                                  <svg
+                                    viewBox="0 0 24 24"
+                                    width="14"
+                                    height="14"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.8"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <path d="M4 7h16" />
+                                    <path d="M9 7V4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7" />
+                                    <path d="M6 7l1 12.5a1.5 1.5 0 0 0 1.5 1.5h7a1.5 1.5 0 0 0 1.5-1.5L18 7" />
+                                    <path d="M10 11v6M14 11v6" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex shrink-0 items-center gap-1">
-                            {card.followup && <FollowupBadge followup={card.followup} cardTitle={card.title} />}
-                            {active.mode !== "label" && (
-                            <button
-                              onClick={() => removeCard(card)}
-                              title="Remover lead"
-                              className="shrink-0 rounded-md p-1 text-neutral-400 transition hover:bg-red-50 hover:text-red-600"
-                            >
-                              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M4 7h16" />
-                                <path d="M9 7V4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7" />
-                                <path d="M6 7l1 12.5a1.5 1.5 0 0 0 1.5 1.5h7a1.5 1.5 0 0 0 1.5-1.5L18 7" />
-                                <path d="M10 11v6M14 11v6" />
-                              </svg>
-                            </button>
-                            )}
-                          </div>
-                        </div>
-                        {card.notes && (
-                          <span className="mt-1 inline-block rounded bg-neutral-200 px-1.5 py-0.5 text-[10px] text-neutral-700">
-                            anotação
-                          </span>
-                        )}
-
-                        <div className="mt-2 flex items-center gap-1">
-                          <div className="relative inline-block">
-                            <CardAction
-                              title="Abrir conversa no WhatsApp"
-                              disabled={!canOpenWhatsapp(card.phone, card.wa_id)}
-                              colorClass="text-emerald-600 hover:bg-emerald-50"
-                              onClick={() =>
-                                void openWhatsappChat(card.phone || "", card.title, card.wa_id)
-                              }
-                            >
-                              <IconWhatsapp />
-                            </CardAction>
-                            <UnreadBadge count={card.unread_count ?? 0} />
-                          </div>
-                          <div className="relative inline-block">
-                            <CardAction
-                              title="Anotações"
-                              colorClass="text-sky-600 hover:bg-sky-50"
-                              onClick={() => {
-                                setDetailTab("notes");
-                                setDetail(card);
-                              }}
-                            >
-                              <IconNote />
-                            </CardAction>
-                            <NotesBadge count={card.notes_count ?? 0} />
-                          </div>
-                          <div className="relative inline-block">
-                            <CardAction
-                              title="Mensagem agendada / disparo"
-                              colorClass="text-orange-600 hover:bg-orange-50"
-                              onClick={() => {
-                                setDetailTab("schedule");
-                                setDetail(card);
-                              }}
-                            >
-                              <IconClock />
-                            </CardAction>
-                            <UnreadBadge count={card.schedule_count ?? 0} colorClass="bg-blue-600" />
-                          </div>
-                          <CardAction
-                            title="Perfil e valor do cliente"
-                            colorClass="text-violet-600 hover:bg-violet-50"
-                            onClick={() => {
-                              setDetailTab("profile");
-                              setDetail(card);
-                            }}
-                          >
-                            <IconProfile />
-                          </CardAction>
-                          {dealValueByKey.get(card.wa_contact_id || card.phone || "") ? (
-                            <span className="ml-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
-                              {formatBRL(dealValueByKey.get(card.wa_contact_id || card.phone || "") || 0)}
+                          {card.notes && (
+                            <span className="mt-1 inline-block rounded bg-neutral-200 px-1.5 py-0.5 text-[10px] text-neutral-700">
+                              anotação
                             </span>
-                          ) : null}
-                          {(card.label_ids ?? []).length > 0 ? (
-                            (card.label_ids ?? []).map((labelId) => {
-                              const lbl = labels.find((l) => l.wa_label_id === labelId);
-                              if (!lbl) return null;
-                              return <IconTag key={labelId} color={lbl.color} title={lbl.name} />;
-                            })
-                          ) : (
-                            <IconTag color={null} title="Sem etiqueta" />
                           )}
+
+                          <div className="mt-2 flex items-center gap-1">
+                            <div className="relative inline-block">
+                              <CardAction
+                                title="Abrir conversa no WhatsApp"
+                                disabled={!canOpenWhatsapp(card.phone, card.wa_id)}
+                                colorClass="text-emerald-600 hover:bg-emerald-50"
+                                onClick={() =>
+                                  void openWhatsappChat(card.phone || "", card.title, card.wa_id)
+                                }
+                              >
+                                <IconWhatsapp />
+                              </CardAction>
+                              <UnreadBadge count={card.unread_count ?? 0} />
+                            </div>
+                            <div className="relative inline-block">
+                              <CardAction
+                                title="Anotações"
+                                colorClass="text-sky-600 hover:bg-sky-50"
+                                onClick={() => {
+                                  setDetailTab("notes");
+                                  setDetail(card);
+                                }}
+                              >
+                                <IconNote />
+                              </CardAction>
+                              <NotesBadge count={card.notes_count ?? 0} />
+                            </div>
+                            <div className="relative inline-block">
+                              <CardAction
+                                title="Mensagem agendada / disparo"
+                                colorClass="text-orange-600 hover:bg-orange-50"
+                                onClick={() => {
+                                  setDetailTab("schedule");
+                                  setDetail(card);
+                                }}
+                              >
+                                <IconClock />
+                              </CardAction>
+                              <UnreadBadge
+                                count={card.schedule_count ?? 0}
+                                colorClass="bg-blue-600"
+                              />
+                            </div>
+                            <CardAction
+                              title="Perfil e valor do cliente"
+                              colorClass="text-violet-600 hover:bg-violet-50"
+                              onClick={() => {
+                                setDetailTab("profile");
+                                setDetail(card);
+                              }}
+                            >
+                              <IconProfile />
+                            </CardAction>
+                            {dealValueByKey.get(card.wa_contact_id || card.phone || "") ? (
+                              <span className="ml-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
+                                {formatBRL(
+                                  dealValueByKey.get(card.wa_contact_id || card.phone || "") || 0,
+                                )}
+                              </span>
+                            ) : null}
+                            {(card.label_ids ?? []).length > 0 ? (
+                              (card.label_ids ?? []).map((labelId) => {
+                                const lbl = labels.find((l) => l.wa_label_id === labelId);
+                                if (!lbl) return null;
+                                return <IconTag key={labelId} color={lbl.color} title={lbl.name} />;
+                              })
+                            ) : (
+                              <IconTag color={null} title="Sem etiqueta" />
+                            )}
+                          </div>
                         </div>
-                      </div>
                       );
                       return [placeholder, cardEl].filter(Boolean);
                     })}
-                    {dropIndicator?.stageId === stage.id && dropIndicator.index === cards.length && (
-                      <div className="rounded-xl border-2 border-brand/50 bg-brand/5 transition-all duration-150" style={{ height: draggedCardHeight.current }} />
-                    )}
+                    {dropIndicator?.stageId === stage.id &&
+                      dropIndicator.index === cards.length && (
+                        <div
+                          className="rounded-xl border-2 border-brand/50 bg-brand/5 transition-all duration-150"
+                          style={{ height: draggedCardHeight.current }}
+                        />
+                      )}
                   </div>
                 </div>
               );
@@ -1402,11 +1350,20 @@ function humanizeDue(dueAtIso: string | null): string {
 /** Reloginho de follow-up no card — mostra de cara se esse lead ainda vai
  * receber alguma mensagem da sequência (e quando) ou se já recebeu tudo.
  * Clicar abre um relatório rápido com os detalhes. */
-function FollowupBadge({ followup, cardTitle }: { followup: NonNullable<FunnelCard["followup"]>; cardTitle: string }) {
+function FollowupBadge({
+  followup,
+  cardTitle,
+}: {
+  followup: NonNullable<FunnelCard["followup"]>;
+  cardTitle: string;
+}) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
-  const isOverdue = !followup.all_sent && followup.next_due_at && new Date(followup.next_due_at).getTime() <= Date.now();
+  const isOverdue =
+    !followup.all_sent &&
+    followup.next_due_at &&
+    new Date(followup.next_due_at).getTime() <= Date.now();
   const colorClass = followup.all_sent
     ? "bg-emerald-50 text-emerald-700 border-emerald-200"
     : isOverdue
@@ -1441,46 +1398,68 @@ function FollowupBadge({ followup, cardTitle }: { followup: NonNullable<FunnelCa
         <Clock className="h-2.5 w-2.5" />
         {followup.sent_count}/{followup.total_steps}
       </button>
-      {open && pos && createPortal(
-        // Portal pro <body> de propósito, não só position: fixed — o
-        // card inteiro é draggable, e um popup vivendo dentro dele (mesmo
-        // com fixed) ainda faz parte da mesma árvore de drag do
-        // navegador, causando aquele tremor ao clicar (o navegador tenta
-        // iniciar um arraste do card ao mesmo tempo que abre o popup).
-        // Um portal de verdade tira o popup dessa árvore.
-        <>
-          <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
-          <div
-            className="fixed z-50 w-56 rounded-xl border border-neutral-200 bg-white p-3 text-left shadow-lg"
-            style={{ top: pos.top, left: pos.left }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="mb-1 truncate text-xs font-semibold text-neutral-900">{cardTitle}</p>
-            <p className="text-xs text-neutral-600">
-              {followup.sent_count} de {followup.total_steps} mensagem{followup.total_steps === 1 ? "" : "s"} da sequência
-              enviada{followup.sent_count === 1 ? "" : "s"}.
-            </p>
-            {followup.all_sent ? (
-              <p className="mt-1.5 text-xs font-medium text-emerald-700">Sequência concluída.</p>
-            ) : (
-              <p className="mt-1.5 text-xs font-medium text-neutral-700">
-                Próxima mensagem: {isOverdue ? "processando agora" : humanizeDue(followup.next_due_at)}
+      {open &&
+        pos &&
+        createPortal(
+          // Portal pro <body> de propósito, não só position: fixed — o
+          // card inteiro é draggable, e um popup vivendo dentro dele (mesmo
+          // com fixed) ainda faz parte da mesma árvore de drag do
+          // navegador, causando aquele tremor ao clicar (o navegador tenta
+          // iniciar um arraste do card ao mesmo tempo que abre o popup).
+          // Um portal de verdade tira o popup dessa árvore.
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpen(false);
+              }}
+            />
+            <div
+              className="fixed z-50 w-56 rounded-xl border border-neutral-200 bg-white p-3 text-left shadow-lg"
+              style={{ top: pos.top, left: pos.left }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="mb-1 truncate text-xs font-semibold text-neutral-900">{cardTitle}</p>
+              <p className="text-xs text-neutral-600">
+                {followup.sent_count} de {followup.total_steps} mensagem
+                {followup.total_steps === 1 ? "" : "s"} da sequência enviada
+                {followup.sent_count === 1 ? "" : "s"}.
               </p>
-            )}
-            {followup.last_sent_at && (
-              <p className="mt-1 text-[11px] text-neutral-400">
-                Última enviada {new Date(followup.last_sent_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-              </p>
-            )}
-          </div>
-        </>,
-        document.body,
-      )}
+              {followup.all_sent ? (
+                <p className="mt-1.5 text-xs font-medium text-emerald-700">Sequência concluída.</p>
+              ) : (
+                <p className="mt-1.5 text-xs font-medium text-neutral-700">
+                  Próxima mensagem:{" "}
+                  {isOverdue ? "processando agora" : humanizeDue(followup.next_due_at)}
+                </p>
+              )}
+              {followup.last_sent_at && (
+                <p className="mt-1 text-[11px] text-neutral-400">
+                  Última enviada{" "}
+                  {new Date(followup.last_sent_at).toLocaleString("pt-BR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              )}
+            </div>
+          </>,
+          document.body,
+        )}
     </div>
   );
 }
 
-function UnreadBadge({ count, colorClass = "bg-emerald-600" }: { count: number; colorClass?: string }) {
+function UnreadBadge({
+  count,
+  colorClass = "bg-emerald-600",
+}: {
+  count: number;
+  colorClass?: string;
+}) {
   if (!count || count <= 0) return null;
   return (
     <span
@@ -1499,7 +1478,16 @@ function NotesBadge({ count }: { count: number }) {
   if (!count || count <= 0) return null;
   return (
     <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-sky-600 text-white ring-2 ring-white">
-      <svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        viewBox="0 0 24 24"
+        width="9"
+        height="9"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="M12 20h9" />
         <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
       </svg>
@@ -1544,14 +1532,34 @@ const IconWhatsapp = () => (
   </svg>
 );
 const IconNote = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
     <rect x="5" y="4" width="14" height="17" rx="2" />
     <path d="M9 4V3.3A1.3 1.3 0 0 1 10.3 2h3.4A1.3 1.3 0 0 1 15 3.3V4" />
     <path d="m10 17 6.2-6.2a1.15 1.15 0 0 0-1.6-1.6L8.4 15.4l-.5 2.1z" />
   </svg>
 );
 const IconClock = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
     <path d="M3 9.5h11" />
     <path d="M14.5 4.5H5.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2H10" />
     <path d="M8 3v3M12 3v3" />
@@ -1560,28 +1568,68 @@ const IconClock = () => (
   </svg>
 );
 const IconProfile = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
     <rect x="3" y="3.5" width="18" height="17" rx="3.2" />
     <circle cx="12" cy="10" r="3" />
     <path d="M6.5 17.2c.9-2.3 3-3.7 5.5-3.7s4.6 1.4 5.5 3.7" />
   </svg>
 );
 const IconDeal = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
     <rect x="2" y="6" width="20" height="12" rx="2.5" />
     <circle cx="12" cy="12" r="2.6" />
     <path d="M6 9v.01M18 15v.01" />
   </svg>
 );
 const IconTrashMini = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.9"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
     <path d="M3 6h18" />
     <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
     <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
   </svg>
 );
 const IconPencilMini = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.9"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
     <path d="M17 3a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
   </svg>
 );
@@ -1710,7 +1758,8 @@ function BulkMoveModal({
     <Overlay title={`Mover leads para "${targetStageName}"`} onClose={onClose}>
       <div className="space-y-4">
         <p className="text-sm text-neutral-500">
-          Escolha de qual funil e etapa você quer puxar TODOS os leads — eles saem de lá e entram aqui.
+          Escolha de qual funil e etapa você quer puxar TODOS os leads — eles saem de lá e entram
+          aqui.
         </p>
         <div className="space-y-1">
           <label className="text-xs font-semibold text-neutral-600">Funil de origem</label>
@@ -1799,7 +1848,9 @@ function CardDrawer({
   const [err, setErr] = useState<string | null>(null);
   // Resumo gerado pela IA (projeto IA-BARBER-AGENDA) — busca separada,
   // pra não pesar a lista geral de clientes com esse campo toda vez.
-  const [aiSummary, setAiSummary] = useState<{ text: string; updatedAt: string | null } | null>(null);
+  const [aiSummary, setAiSummary] = useState<{ text: string; updatedAt: string | null } | null>(
+    null,
+  );
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
 
   // Perfil do cliente / Valor do cliente / Resumo da IA / Anotações /
@@ -1838,11 +1889,23 @@ function CardDrawer({
 
   // Anotações — MESMA lead_notes usada no ícone de Anotações do WhatsApp
   // (várias notas, texto e/ou mídia), não mais um campo único.
-  type LeadNote = { id: string; body: string | null; media_url: string | null; media_mime: string | null; media_path?: string | null; media_filename?: string | null; created_at: string };
+  type LeadNote = {
+    id: string;
+    body: string | null;
+    media_url: string | null;
+    media_mime: string | null;
+    media_path?: string | null;
+    media_filename?: string | null;
+    created_at: string;
+  };
   const [notesList, setNotesList] = useState<LeadNote[] | null>(null);
   const [newNoteBody, setNewNoteBody] = useState("");
   const noteFileRef = useRef<HTMLInputElement | null>(null);
-  const [noteUploaded, setNoteUploaded] = useState<{ path: string; mime: string; filename: string } | null>(null);
+  const [noteUploaded, setNoteUploaded] = useState<{
+    path: string;
+    mime: string;
+    filename: string;
+  } | null>(null);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteStage, setNoteStage] = useState<"list" | "form">("list");
 
@@ -1852,14 +1915,21 @@ function CardDrawer({
     setNotesList((r?.ok ? (r.notes as LeadNote[]) : []) || []);
   }
   useEffect(() => {
-    if (tab === "notes") { setNoteStage("list"); void loadNotes(); }
+    if (tab === "notes") {
+      setNoteStage("list");
+      void loadNotes();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
   function startEditNote(n: LeadNote) {
     setEditingNoteId(n.id);
     setNewNoteBody(n.body || "");
-    setNoteUploaded(n.media_path ? { path: n.media_path, mime: n.media_mime || "", filename: n.media_filename || "" } : null);
+    setNoteUploaded(
+      n.media_path
+        ? { path: n.media_path, mime: n.media_mime || "", filename: n.media_filename || "" }
+        : null,
+    );
   }
   function cancelEditNote() {
     setEditingNoteId(null);
@@ -1922,7 +1992,12 @@ function CardDrawer({
         method: "POST",
         body: JSON.stringify({ filename: file.name, mime: file.type, data_base64: dataUrl }),
       });
-      if (r?.ok) setNoteUploaded({ path: r.path as string, mime: r.mime as string, filename: r.filename as string });
+      if (r?.ok)
+        setNoteUploaded({
+          path: r.path as string,
+          mime: r.mime as string,
+          filename: r.filename as string,
+        });
       else setErr((r?.error as string) || "Não consegui enviar o arquivo.");
     } catch (e) {
       setErr(String((e as Error)?.message || e));
@@ -1933,7 +2008,15 @@ function CardDrawer({
 
   // Mensagens agendadas — MESMA fila usada no ícone de Mensagens Agendadas
   // do WhatsApp (lead-schedule), pra ficar sincronizado nos dois lugares.
-  type QuickReplyAction = { type: string; text?: string | null; path?: string | null; url?: string | null; mime?: string | null; filename?: string | null; caption?: string | null };
+  type QuickReplyAction = {
+    type: string;
+    text?: string | null;
+    path?: string | null;
+    url?: string | null;
+    mime?: string | null;
+    filename?: string | null;
+    caption?: string | null;
+  };
   type ScheduledJob = {
     id: string;
     rendered_body: string;
@@ -1948,19 +2031,30 @@ function CardDrawer({
   const [when, setWhen] = useState("");
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [scheduleType, setScheduleType] = useState<"text" | "image" | "audio" | "qr">("text");
-  const [scheduleUploaded, setScheduleUploaded] = useState<{ path: string; mime: string; filename: string } | null>(null);
+  const [scheduleUploaded, setScheduleUploaded] = useState<{
+    path: string;
+    mime: string;
+    filename: string;
+  } | null>(null);
   const [scheduleCaption, setScheduleCaption] = useState("");
   const [scheduleQrId, setScheduleQrId] = useState("");
-  const [availableQuickReplies, setAvailableQuickReplies] = useState<{ id: string; title: string; actions: QuickReplyAction[] }[] | null>(null);
+  const [availableQuickReplies, setAvailableQuickReplies] = useState<
+    { id: string; title: string; actions: QuickReplyAction[] }[] | null
+  >(null);
   const scheduleFileRef = useRef<HTMLInputElement | null>(null);
 
   async function loadJobs() {
     if (!card.phone) return;
-    const r = await api(`/api/public/extension/lead-schedule?phone=${encodeURIComponent(card.phone)}`);
+    const r = await api(
+      `/api/public/extension/lead-schedule?phone=${encodeURIComponent(card.phone)}`,
+    );
     setJobsList((r?.ok ? (r.jobs as ScheduledJob[]) : []) || []);
   }
   useEffect(() => {
-    if (tab === "schedule") { setScheduleStage("list"); void loadJobs(); }
+    if (tab === "schedule") {
+      setScheduleStage("list");
+      void loadJobs();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
@@ -1989,7 +2083,9 @@ function CardDrawer({
   async function ensureQuickReplies() {
     if (availableQuickReplies !== null) return;
     const r = await api("/api/public/extension/quick-replies");
-    setAvailableQuickReplies((r?.ok ? (r.quick_replies as typeof availableQuickReplies) : []) || []);
+    setAvailableQuickReplies(
+      (r?.ok ? (r.quick_replies as typeof availableQuickReplies) : []) || [],
+    );
   }
 
   async function onPickScheduleFile(file: File) {
@@ -2005,7 +2101,12 @@ function CardDrawer({
         method: "POST",
         body: JSON.stringify({ filename: file.name, mime: file.type, data_base64: dataUrl }),
       });
-      if (r?.ok) setScheduleUploaded({ path: r.path as string, mime: r.mime as string, filename: r.filename as string });
+      if (r?.ok)
+        setScheduleUploaded({
+          path: r.path as string,
+          mime: r.mime as string,
+          filename: r.filename as string,
+        });
       else setErr((r?.error as string) || "Não consegui enviar o arquivo.");
     } catch (e) {
       setErr(String((e as Error)?.message || e));
@@ -2018,22 +2119,46 @@ function CardDrawer({
     if (!card.phone) return false;
     let body: Record<string, unknown>;
     if (scheduleType === "text") {
-      if (!msg.trim()) { setErr("Escreva a mensagem."); return false; }
+      if (!msg.trim()) {
+        setErr("Escreva a mensagem.");
+        return false;
+      }
       body = { message: msg.trim() };
     } else if (scheduleType === "image" || scheduleType === "audio") {
-      if (!scheduleUploaded) { setErr("Escolha um arquivo."); return false; }
-      body = { actions: [{ type: scheduleType, path: scheduleUploaded.path, mime: scheduleUploaded.mime, filename: scheduleUploaded.filename, caption: scheduleCaption.trim() || undefined }] };
+      if (!scheduleUploaded) {
+        setErr("Escolha um arquivo.");
+        return false;
+      }
+      body = {
+        actions: [
+          {
+            type: scheduleType,
+            path: scheduleUploaded.path,
+            mime: scheduleUploaded.mime,
+            filename: scheduleUploaded.filename,
+            caption: scheduleCaption.trim() || undefined,
+          },
+        ],
+      };
     } else {
       const qr = availableQuickReplies?.find((q) => q.id === scheduleQrId);
-      if (!qr) { setErr("Escolha uma resposta rápida."); return false; }
-      body = { actions: qr.actions.filter((a) => ["text", "image", "audio", "video"].includes(a.type)) };
+      if (!qr) {
+        setErr("Escolha uma resposta rápida.");
+        return false;
+      }
+      body = {
+        actions: qr.actions.filter((a) => ["text", "image", "audio", "video"].includes(a.type)),
+      };
     }
     setBusy(true);
     setErr(null);
     const r = editingJobId
       ? await api(`/api/public/extension/lead-schedule/${editingJobId}`, {
           method: "PATCH",
-          body: JSON.stringify({ ...body, scheduled_for: when ? new Date(when).toISOString() : undefined }),
+          body: JSON.stringify({
+            ...body,
+            scheduled_for: when ? new Date(when).toISOString() : undefined,
+          }),
         })
       : await api("/api/public/extension/lead-schedule", {
           method: "POST",
@@ -2081,7 +2206,11 @@ function CardDrawer({
         if (!d.notes && card.notes) d.notes = card.notes;
         setProfile(p);
         setDeal(d);
-        setDealValueText(d.value_cents != null ? ((d.value_cents as number) / 100).toFixed(2).replace(".", ",") : "");
+        setDealValueText(
+          d.value_cents != null
+            ? ((d.value_cents as number) / 100).toFixed(2).replace(".", ",")
+            : "",
+        );
         setProfileLoaded(true);
         setCpDirty(false);
       });
@@ -2093,7 +2222,8 @@ function CardDrawer({
     if (!profile || !deal) return;
     setCpBusy(true);
     const num = parseFloat(dealValueText.replace(/\./g, "").replace(",", "."));
-    const value_cents = dealValueText.trim() === "" ? null : Number.isFinite(num) ? Math.round(num * 100) : null;
+    const value_cents =
+      dealValueText.trim() === "" ? null : Number.isFinite(num) ? Math.round(num * 100) : null;
     if (card.id && typeof deal.notes === "string" && deal.notes !== (card.notes ?? "")) {
       await api("/api/public/extension/funnel-cards", {
         method: "PATCH",
@@ -2103,11 +2233,20 @@ function CardDrawer({
     const [r1, r2] = await Promise.all([
       api("/api/public/extension/customer-profile", {
         method: "PATCH",
-        body: JSON.stringify({ wa_contact_id: card.wa_contact_id || null, phone: card.phone || null, ...profile }),
+        body: JSON.stringify({
+          wa_contact_id: card.wa_contact_id || null,
+          phone: card.phone || null,
+          ...profile,
+        }),
       }),
       api("/api/public/extension/customer-deal", {
         method: "PATCH",
-        body: JSON.stringify({ wa_contact_id: card.wa_contact_id || null, phone: card.phone || null, ...deal, value_cents }),
+        body: JSON.stringify({
+          wa_contact_id: card.wa_contact_id || null,
+          phone: card.phone || null,
+          ...deal,
+          value_cents,
+        }),
       }),
     ]);
     setDeal({ ...deal, value_cents });
@@ -2116,7 +2255,11 @@ function CardDrawer({
       setCpDirty(false);
       onDealSaved?.();
     } else {
-      setErr((!r1?.ok && (r1?.error as string)) || (!r2?.ok && (r2?.error as string)) || "Erro ao salvar");
+      setErr(
+        (!r1?.ok && (r1?.error as string)) ||
+          (!r2?.ok && (r2?.error as string)) ||
+          "Erro ao salvar",
+      );
     }
   }
 
@@ -2136,46 +2279,69 @@ function CardDrawer({
             <p className="whitespace-pre-wrap text-xs text-neutral-700">{aiSummary.text}</p>
             {aiSummary.updatedAt && (
               <p className="mt-1.5 text-[10px] text-neutral-400">
-                Atualizado {new Date(aiSummary.updatedAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                Atualizado{" "}
+                {new Date(aiSummary.updatedAt).toLocaleString("pt-BR", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
               </p>
             )}
           </div>
         )}
 
         {tab !== "profile" && (
-        <div className="flex items-center justify-between gap-2">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-            {tab === "notes" ? "Anotações" : "Mensagens agendadas"}
-          </h4>
-          {canOpenWhatsapp(card.phone, card.wa_id) && (
-            <button
-              onClick={() => void openWhatsappChat(card.phone || "", card.title, card.wa_id)}
-              className="flex items-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
-            >
-              <IconWhatsapp /> WhatsApp
-            </button>
-          )}
-        </div>
+          <div className="flex items-center justify-between gap-2">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+              {tab === "notes" ? "Anotações" : "Mensagens agendadas"}
+            </h4>
+            {canOpenWhatsapp(card.phone, card.wa_id) && (
+              <button
+                onClick={() => void openWhatsappChat(card.phone || "", card.title, card.wa_id)}
+                className="flex items-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
+              >
+                <IconWhatsapp /> WhatsApp
+              </button>
+            )}
+          </div>
         )}
 
         {tab === "notes" && noteStage === "list" && (
           <>
-            {notesList === null && <p className="py-6 text-center text-sm text-neutral-400">Carregando...</p>}
+            {notesList === null && (
+              <p className="py-6 text-center text-sm text-neutral-400">Carregando...</p>
+            )}
             {notesList?.length === 0 && (
               <div className="flex flex-col items-center px-2 pb-2 pt-7 text-center">
                 <div className="mb-3.5 text-neutral-300">
-                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="44"
+                    height="44"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <rect x="5" y="4" width="14" height="17" rx="2" />
                     <path d="M9 4V3.3A1.3 1.3 0 0 1 10.3 2h3.4A1.3 1.3 0 0 1 15 3.3V4" />
                     <path d="m10 17 6.2-6.2a1.15 1.15 0 0 0-1.6-1.6L8.4 15.4l-.5 2.1z" />
                   </svg>
                 </div>
-                <p className="mb-2 text-base font-extrabold text-neutral-900">Nenhuma nota encontrada</p>
+                <p className="mb-2 text-base font-extrabold text-neutral-900">
+                  Nenhuma nota encontrada
+                </p>
                 <p className="mb-5 max-w-xs text-[13px] leading-relaxed text-neutral-500">
-                  Parece que você ainda não adicionou nenhuma nota. Clique no botão abaixo para criar uma nova nota.
+                  Parece que você ainda não adicionou nenhuma nota. Clique no botão abaixo para
+                  criar uma nova nota.
                 </p>
                 <button
-                  onClick={() => { cancelEditNote(); setNoteStage("form"); }}
+                  onClick={() => {
+                    cancelEditNote();
+                    setNoteStage("form");
+                  }}
                   className="rounded-lg bg-brand px-5 py-2.5 text-[13.5px] font-bold text-white hover:bg-brand-strong"
                 >
                   Criar anotação
@@ -2189,7 +2355,10 @@ function CardDrawer({
                     {notesList.length} nota{notesList.length === 1 ? "" : "s"}
                   </h4>
                   <button
-                    onClick={() => { cancelEditNote(); setNoteStage("form"); }}
+                    onClick={() => {
+                      cancelEditNote();
+                      setNoteStage("form");
+                    }}
                     className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-strong"
                   >
                     + Nova
@@ -2197,24 +2366,56 @@ function CardDrawer({
                 </div>
                 <div className="space-y-2">
                   {notesList.map((n) => (
-                    <div key={n.id} className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+                    <div
+                      key={n.id}
+                      className="rounded-xl border border-neutral-200 bg-neutral-50 p-3"
+                    >
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-[11px] text-neutral-400">
-                          {new Date(n.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                          {new Date(n.created_at).toLocaleString("pt-BR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
                         </p>
                         <div className="flex shrink-0 gap-1">
-                          <button onClick={() => { startEditNote(n); setNoteStage("form"); }} className="rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-brand">
+                          <button
+                            onClick={() => {
+                              startEditNote(n);
+                              setNoteStage("form");
+                            }}
+                            className="rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-brand"
+                          >
                             <IconPencilMini />
                           </button>
-                          <button onClick={() => void removeNote(n.id)} className="rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-red-600">
+                          <button
+                            onClick={() => void removeNote(n.id)}
+                            className="rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-red-600"
+                          >
                             <IconTrashMini />
                           </button>
                         </div>
                       </div>
-                      {n.body && <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-800">{n.body}</p>}
-                      {n.media_url && n.media_mime?.startsWith("image/") && <img src={n.media_url} alt="" className="mt-2 max-h-40 rounded-lg object-cover" />}
-                      {n.media_url && n.media_mime?.startsWith("video/") && <video src={n.media_url} controls className="mt-2 max-h-40 rounded-lg" />}
-                      {n.media_url && n.media_mime?.startsWith("audio/") && <audio src={n.media_url} controls className="mt-2 h-8 w-full" />}
+                      {n.body && (
+                        <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-800">
+                          {n.body}
+                        </p>
+                      )}
+                      {n.media_url && n.media_mime?.startsWith("image/") && (
+                        <img
+                          src={n.media_url}
+                          alt=""
+                          className="mt-2 max-h-40 rounded-lg object-cover"
+                        />
+                      )}
+                      {n.media_url && n.media_mime?.startsWith("video/") && (
+                        <video src={n.media_url} controls className="mt-2 max-h-40 rounded-lg" />
+                      )}
+                      {n.media_url && n.media_mime?.startsWith("audio/") && (
+                        <audio src={n.media_url} controls className="mt-2 h-8 w-full" />
+                      )}
                     </div>
                   ))}
                 </div>
@@ -2225,7 +2426,9 @@ function CardDrawer({
 
         {tab === "notes" && noteStage === "form" && (
           <div className="space-y-2">
-            <label className="mb-1 block text-xs font-bold text-neutral-700">Adicione uma mídia na anotação</label>
+            <label className="mb-1 block text-xs font-bold text-neutral-700">
+              Adicione uma mídia na anotação
+            </label>
             <label className="flex items-center gap-2 rounded-xl border border-dashed border-neutral-300 px-3 py-2.5 text-xs font-medium text-neutral-600 hover:border-brand">
               <input
                 ref={noteFileRef}
@@ -2237,12 +2440,20 @@ function CardDrawer({
                   if (f) void onPickNoteFile(f);
                 }}
               />
-              <button type="button" onClick={() => noteFileRef.current?.click()} className="shrink-0 rounded-lg border border-neutral-300 px-2 py-1">
+              <button
+                type="button"
+                onClick={() => noteFileRef.current?.click()}
+                className="shrink-0 rounded-lg border border-neutral-300 px-2 py-1"
+              >
                 Escolher arquivo
               </button>
-              <span className="truncate">{noteUploaded ? noteUploaded.filename : "Imagem, áudio ou vídeo (opcional)"}</span>
+              <span className="truncate">
+                {noteUploaded ? noteUploaded.filename : "Imagem, áudio ou vídeo (opcional)"}
+              </span>
             </label>
-            <label className="mb-1 mt-3 block text-xs font-bold text-neutral-700">Insira uma anotação</label>
+            <label className="mb-1 mt-3 block text-xs font-bold text-neutral-700">
+              Insira uma anotação
+            </label>
             <textarea
               value={newNoteBody}
               onChange={(e) => setNewNoteBody(e.target.value)}
@@ -2253,13 +2464,18 @@ function CardDrawer({
             />
             <div className="mt-3 flex justify-end gap-2">
               <button
-                onClick={() => { cancelEditNote(); setNoteStage("list"); }}
+                onClick={() => {
+                  cancelEditNote();
+                  setNoteStage("list");
+                }}
                 className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
               >
                 Cancelar
               </button>
               <button
-                onClick={async () => { if (await addNote()) setNoteStage("list"); }}
+                onClick={async () => {
+                  if (await addNote()) setNoteStage("list");
+                }}
                 disabled={busy || (!newNoteBody.trim() && !noteUploaded)}
                 className="rounded-lg bg-brand px-5 py-2 text-sm font-bold text-white hover:bg-brand-strong disabled:cursor-default disabled:opacity-40"
               >
@@ -2271,11 +2487,22 @@ function CardDrawer({
 
         {tab === "schedule" && scheduleStage === "list" && (
           <>
-            {jobsList === null && <p className="py-6 text-center text-sm text-neutral-400">Carregando...</p>}
+            {jobsList === null && (
+              <p className="py-6 text-center text-sm text-neutral-400">Carregando...</p>
+            )}
             {jobsList?.length === 0 && (
               <div className="flex flex-col items-center px-2 pb-2 pt-7 text-center">
                 <div className="mb-3.5 text-neutral-300">
-                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="44"
+                    height="44"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <path d="M3 9.5h11" />
                     <path d="M14.5 4.5H5.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2H10" />
                     <path d="M8 3v3M12 3v3" />
@@ -2283,12 +2510,18 @@ function CardDrawer({
                     <path d="M16.5 13v2.5l1.7 1" />
                   </svg>
                 </div>
-                <p className="mb-2 text-base font-extrabold text-neutral-900">Nenhum agendamento encontrado</p>
+                <p className="mb-2 text-base font-extrabold text-neutral-900">
+                  Nenhum agendamento encontrado
+                </p>
                 <p className="mb-5 max-w-xs text-[13px] leading-relaxed text-neutral-500">
-                  Não há agendamentos programados no momento. Para adicionar um novo, clique no botão de criação.
+                  Não há agendamentos programados no momento. Para adicionar um novo, clique no
+                  botão de criação.
                 </p>
                 <button
-                  onClick={() => { resetScheduleForm(); setScheduleStage("form"); }}
+                  onClick={() => {
+                    resetScheduleForm();
+                    setScheduleStage("form");
+                  }}
                   className="rounded-lg bg-brand px-5 py-2.5 text-[13.5px] font-bold text-white hover:bg-brand-strong"
                 >
                   Adicionar
@@ -2302,7 +2535,10 @@ function CardDrawer({
                     {jobsList.length} agendamento{jobsList.length === 1 ? "" : "s"}
                   </h4>
                   <button
-                    onClick={() => { resetScheduleForm(); setScheduleStage("form"); }}
+                    onClick={() => {
+                      resetScheduleForm();
+                      setScheduleStage("form");
+                    }}
                     className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-strong"
                   >
                     + Novo
@@ -2310,41 +2546,83 @@ function CardDrawer({
                 </div>
                 <div className="space-y-2">
                   {jobsList.map((j) => {
-                    const mediaActions = (j.message_actions || []).filter((a) => a.type !== "text" && a.url);
+                    const mediaActions = (j.message_actions || []).filter(
+                      (a) => a.type !== "text" && a.url,
+                    );
                     return (
-                      <div key={j.id} className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+                      <div
+                        key={j.id}
+                        className="rounded-xl border border-neutral-200 bg-neutral-50 p-3"
+                      >
                         <div className="flex items-start justify-between gap-2">
                           <p className="text-[11px] text-neutral-400">
-                            {new Date(j.scheduled_for).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                            {new Date(j.scheduled_for).toLocaleString("pt-BR", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
                             <span
                               className={
                                 "ml-2 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase " +
-                                (j.status === "sent" ? "bg-emerald-100 text-emerald-700" : j.status === "failed" ? "bg-red-100 text-red-600" : "bg-blue-100 text-blue-700")
+                                (j.status === "sent"
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : j.status === "failed"
+                                    ? "bg-red-100 text-red-600"
+                                    : "bg-blue-100 text-blue-700")
                               }
                             >
-                              {j.status === "sent" ? "Enviada" : j.status === "failed" ? "Falhou" : "Agendada"}
+                              {j.status === "sent"
+                                ? "Enviada"
+                                : j.status === "failed"
+                                  ? "Falhou"
+                                  : "Agendada"}
                             </span>
                           </p>
                           <div className="flex shrink-0 gap-1">
                             {j.status === "pending" && (
-                              <button onClick={() => { startEditJob(j); setScheduleStage("form"); }} className="rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-brand">
+                              <button
+                                onClick={() => {
+                                  startEditJob(j);
+                                  setScheduleStage("form");
+                                }}
+                                className="rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-brand"
+                              >
                                 <IconPencilMini />
                               </button>
                             )}
-                            <button onClick={() => void cancelJob(j.id)} className="rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-red-600">
+                            <button
+                              onClick={() => void cancelJob(j.id)}
+                              className="rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-red-600"
+                            >
                               <IconTrashMini />
                             </button>
                           </div>
                         </div>
-                        <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-800">{j.rendered_body}</p>
+                        <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-800">
+                          {j.rendered_body}
+                        </p>
                         {mediaActions.map((a, i) => (
                           <div key={i}>
-                            {a.type === "image" && a.url && <img src={a.url} alt="" className="mt-2 max-h-40 rounded-lg object-cover" />}
-                            {a.type === "video" && a.url && <video src={a.url} controls className="mt-2 max-h-40 rounded-lg" />}
-                            {a.type === "audio" && a.url && <audio src={a.url} controls className="mt-2 h-8 w-full" />}
+                            {a.type === "image" && a.url && (
+                              <img
+                                src={a.url}
+                                alt=""
+                                className="mt-2 max-h-40 rounded-lg object-cover"
+                              />
+                            )}
+                            {a.type === "video" && a.url && (
+                              <video src={a.url} controls className="mt-2 max-h-40 rounded-lg" />
+                            )}
+                            {a.type === "audio" && a.url && (
+                              <audio src={a.url} controls className="mt-2 h-8 w-full" />
+                            )}
                           </div>
                         ))}
-                        {j.status === "failed" && j.last_error && <p className="mt-1 text-xs text-red-500">{j.last_error}</p>}
+                        {j.status === "failed" && j.last_error && (
+                          <p className="mt-1 text-xs text-red-500">{j.last_error}</p>
+                        )}
                       </div>
                     );
                   })}
@@ -2357,18 +2635,25 @@ function CardDrawer({
         {tab === "schedule" && scheduleStage === "form" && (
           <div className="space-y-2">
             <div className="mb-3 flex gap-1 rounded-xl border border-neutral-200 bg-neutral-50 p-1">
-              {([
-                { key: "text", label: "Texto" },
-                { key: "image", label: "Imagem" },
-                { key: "audio", label: "Áudio" },
-                { key: "qr", label: "Resposta rápida" },
-              ] as const).map((t) => (
+              {(
+                [
+                  { key: "text", label: "Texto" },
+                  { key: "image", label: "Imagem" },
+                  { key: "audio", label: "Áudio" },
+                  { key: "qr", label: "Resposta rápida" },
+                ] as const
+              ).map((t) => (
                 <button
                   key={t.key}
-                  onClick={() => { setScheduleType(t.key); if (t.key === "qr") void ensureQuickReplies(); }}
+                  onClick={() => {
+                    setScheduleType(t.key);
+                    if (t.key === "qr") void ensureQuickReplies();
+                  }}
                   className={
                     "flex-1 rounded-lg px-2 py-1.5 text-[11.5px] font-bold transition-colors " +
-                    (scheduleType === t.key ? "bg-brand text-white" : "text-neutral-500 hover:bg-neutral-100")
+                    (scheduleType === t.key
+                      ? "bg-brand text-white"
+                      : "text-neutral-500 hover:bg-neutral-100")
                   }
                 >
                   {t.label}
@@ -2400,10 +2685,18 @@ function CardDrawer({
                       if (f) void onPickScheduleFile(f);
                     }}
                   />
-                  <button type="button" onClick={() => scheduleFileRef.current?.click()} className="shrink-0 rounded-lg border border-neutral-300 px-2 py-1">
+                  <button
+                    type="button"
+                    onClick={() => scheduleFileRef.current?.click()}
+                    className="shrink-0 rounded-lg border border-neutral-300 px-2 py-1"
+                  >
                     Escolher arquivo
                   </button>
-                  <span className="truncate">{scheduleUploaded ? scheduleUploaded.filename : `Arquivo de ${scheduleType === "image" ? "imagem" : "áudio"}`}</span>
+                  <span className="truncate">
+                    {scheduleUploaded
+                      ? scheduleUploaded.filename
+                      : `Arquivo de ${scheduleType === "image" ? "imagem" : "áudio"}`}
+                  </span>
                 </label>
                 {scheduleType === "image" && (
                   <input
@@ -2418,13 +2711,23 @@ function CardDrawer({
 
             {scheduleType === "qr" && (
               <>
-                <select value={scheduleQrId} onChange={(e) => setScheduleQrId(e.target.value)} className={inputCls}>
+                <select
+                  value={scheduleQrId}
+                  onChange={(e) => setScheduleQrId(e.target.value)}
+                  className={inputCls}
+                >
                   <option value="">Escolha uma resposta rápida...</option>
                   {availableQuickReplies?.map((q) => (
-                    <option key={q.id} value={q.id}>{q.title}</option>
+                    <option key={q.id} value={q.id}>
+                      {q.title}
+                    </option>
                   ))}
                 </select>
-                {availableQuickReplies?.length === 0 && <p className="text-xs text-neutral-400">Nenhuma resposta rápida cadastrada ainda.</p>}
+                {availableQuickReplies?.length === 0 && (
+                  <p className="text-xs text-neutral-400">
+                    Nenhuma resposta rápida cadastrada ainda.
+                  </p>
+                )}
               </>
             )}
 
@@ -2438,20 +2741,29 @@ function CardDrawer({
               <input
                 type="time"
                 value={when.split("T")[1] || ""}
-                onChange={(e) => setWhen(`${when.split("T")[0] || new Date().toISOString().slice(0, 10)}T${e.target.value}`)}
+                onChange={(e) =>
+                  setWhen(
+                    `${when.split("T")[0] || new Date().toISOString().slice(0, 10)}T${e.target.value}`,
+                  )
+                }
                 className={inputCls}
               />
             </div>
 
             <div className="mt-3 flex justify-end gap-2">
               <button
-                onClick={() => { resetScheduleForm(); setScheduleStage("list"); }}
+                onClick={() => {
+                  resetScheduleForm();
+                  setScheduleStage("list");
+                }}
                 className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
               >
                 Cancelar
               </button>
               <button
-                onClick={async () => { if (await schedule()) setScheduleStage("list"); }}
+                onClick={async () => {
+                  if (await schedule()) setScheduleStage("list");
+                }}
                 disabled={busy}
                 className="rounded-lg bg-brand px-5 py-2 text-sm font-bold text-white hover:bg-brand-strong disabled:cursor-default disabled:opacity-40"
               >
@@ -2463,16 +2775,29 @@ function CardDrawer({
 
         {tab === "profile" && (
           <div className="space-y-3">
-            {!contactQuery && <p className="text-sm text-neutral-500">Sem telefone/contato vinculado a esse lead.</p>}
-            {contactQuery && !profileLoaded && <p className="text-sm text-neutral-400">Carregando...</p>}
+            {!contactQuery && (
+              <p className="text-sm text-neutral-500">
+                Sem telefone/contato vinculado a esse lead.
+              </p>
+            )}
+            {contactQuery && !profileLoaded && (
+              <p className="text-sm text-neutral-400">Carregando...</p>
+            )}
             {contactQuery && profileLoaded && profile && deal && (
               <>
                 <div className="mb-1 flex items-center gap-3">
                   {card.profile_picture_url ? (
-                    <img src={card.profile_picture_url} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover" />
+                    <img
+                      src={card.profile_picture_url}
+                      alt=""
+                      className="h-11 w-11 shrink-0 rounded-full object-cover"
+                    />
                   ) : (
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand text-base font-bold text-white">
-                      {((profile.name as string) || card.title || "?").trim().charAt(0).toUpperCase()}
+                      {((profile.name as string) || card.title || "?")
+                        .trim()
+                        .charAt(0)
+                        .toUpperCase()}
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
@@ -2481,19 +2806,39 @@ function CardDrawer({
                         className="min-w-0 flex-1 border-0 border-b border-transparent bg-transparent py-0.5 text-sm font-extrabold text-neutral-900 outline-none transition-colors hover:border-neutral-200 focus:border-brand"
                         value={(profile.name as string) ?? ""}
                         placeholder="Nome do contato"
-                        onChange={(e) => { setProfile({ ...profile, name: e.target.value }); setCpDirty(true); }}
+                        onChange={(e) => {
+                          setProfile({ ...profile, name: e.target.value });
+                          setCpDirty(true);
+                        }}
                       />
-                      <span className="shrink-0 text-neutral-300"><IconPencilMini /></span>
+                      <span className="shrink-0 text-neutral-300">
+                        <IconPencilMini />
+                      </span>
                     </div>
                     <p className="text-xs text-neutral-500">{card.phone}</p>
                   </div>
                 </div>
 
                 <Field label="Email">
-                  <input className={inputCls} value={(profile.email as string) ?? ""} onChange={(e) => { setProfile({ ...profile, email: e.target.value }); setCpDirty(true); }} placeholder="email@exemplo.com" />
+                  <input
+                    className={inputCls}
+                    value={(profile.email as string) ?? ""}
+                    onChange={(e) => {
+                      setProfile({ ...profile, email: e.target.value });
+                      setCpDirty(true);
+                    }}
+                    placeholder="email@exemplo.com"
+                  />
                 </Field>
                 <Field label="Sexo">
-                  <select className={inputCls} value={(profile.gender as string) ?? ""} onChange={(e) => { setProfile({ ...profile, gender: e.target.value }); setCpDirty(true); }}>
+                  <select
+                    className={inputCls}
+                    value={(profile.gender as string) ?? ""}
+                    onChange={(e) => {
+                      setProfile({ ...profile, gender: e.target.value });
+                      setCpDirty(true);
+                    }}
+                  >
                     <option value="">Selecione um sexo</option>
                     <option value="feminino">Feminino</option>
                     <option value="masculino">Masculino</option>
@@ -2502,26 +2847,73 @@ function CardDrawer({
                   </select>
                 </Field>
                 <Field label="Data de nascimento">
-                  <input type="date" className={inputCls} value={(profile.birth_date as string) ?? ""} onChange={(e) => { setProfile({ ...profile, birth_date: e.target.value }); setCpDirty(true); }} />
+                  <input
+                    type="date"
+                    className={inputCls}
+                    value={(profile.birth_date as string) ?? ""}
+                    onChange={(e) => {
+                      setProfile({ ...profile, birth_date: e.target.value });
+                      setCpDirty(true);
+                    }}
+                  />
                 </Field>
                 <Field label="Cidade">
-                  <input className={inputCls} value={(profile.city as string) ?? ""} onChange={(e) => { setProfile({ ...profile, city: e.target.value }); setCpDirty(true); }} />
+                  <input
+                    className={inputCls}
+                    value={(profile.city as string) ?? ""}
+                    onChange={(e) => {
+                      setProfile({ ...profile, city: e.target.value });
+                      setCpDirty(true);
+                    }}
+                  />
                 </Field>
 
                 <div className="my-1 border-t border-neutral-100" />
 
                 <Field label="Origem do lead">
-                  <input className={inputCls} value={(deal.lead_source as string) ?? ""} onChange={(e) => { setDeal({ ...deal, lead_source: e.target.value }); setCpDirty(true); }} placeholder="Ex: Instagram, indicação..." />
+                  <input
+                    className={inputCls}
+                    value={(deal.lead_source as string) ?? ""}
+                    onChange={(e) => {
+                      setDeal({ ...deal, lead_source: e.target.value });
+                      setCpDirty(true);
+                    }}
+                    placeholder="Ex: Instagram, indicação..."
+                  />
                 </Field>
                 <Field label="Estágio do contato">
-                  <input className={inputCls} value={(deal.stage_label as string) ?? ""} onChange={(e) => { setDeal({ ...deal, stage_label: e.target.value }); setCpDirty(true); }} placeholder="Ex: Qualificando" />
+                  <input
+                    className={inputCls}
+                    value={(deal.stage_label as string) ?? ""}
+                    onChange={(e) => {
+                      setDeal({ ...deal, stage_label: e.target.value });
+                      setCpDirty(true);
+                    }}
+                    placeholder="Ex: Qualificando"
+                  />
                 </Field>
                 <div className="grid grid-cols-2 gap-2">
                   <Field label="Data de entrada">
-                    <input type="date" className={inputCls} value={(deal.entry_date as string) ?? ""} onChange={(e) => { setDeal({ ...deal, entry_date: e.target.value }); setCpDirty(true); }} />
+                    <input
+                      type="date"
+                      className={inputCls}
+                      value={(deal.entry_date as string) ?? ""}
+                      onChange={(e) => {
+                        setDeal({ ...deal, entry_date: e.target.value });
+                        setCpDirty(true);
+                      }}
+                    />
                   </Field>
                   <Field label="Data de saída">
-                    <input type="date" className={inputCls} value={(deal.exit_date as string) ?? ""} onChange={(e) => { setDeal({ ...deal, exit_date: e.target.value }); setCpDirty(true); }} />
+                    <input
+                      type="date"
+                      className={inputCls}
+                      value={(deal.exit_date as string) ?? ""}
+                      onChange={(e) => {
+                        setDeal({ ...deal, exit_date: e.target.value });
+                        setCpDirty(true);
+                      }}
+                    />
                   </Field>
                 </div>
                 <Field label="Valor do negócio (R$)">
@@ -2530,17 +2922,36 @@ function CardDrawer({
                     <input
                       className={inputCls}
                       value={dealValueText}
-                      onChange={(e) => { setDealValueText(e.target.value); setCpDirty(true); }}
+                      onChange={(e) => {
+                        setDealValueText(e.target.value);
+                        setCpDirty(true);
+                      }}
                       placeholder="0,00"
                       inputMode="decimal"
                     />
                   </div>
                 </Field>
                 <Field label="Produto de interesse">
-                  <input className={inputCls} value={(deal.products_of_interest as string) ?? ""} onChange={(e) => { setDeal({ ...deal, products_of_interest: e.target.value }); setCpDirty(true); }} />
+                  <input
+                    className={inputCls}
+                    value={(deal.products_of_interest as string) ?? ""}
+                    onChange={(e) => {
+                      setDeal({ ...deal, products_of_interest: e.target.value });
+                      setCpDirty(true);
+                    }}
+                  />
                 </Field>
                 <Field label="Observações">
-                  <textarea rows={3} className={inputCls} value={(deal.notes as string) ?? ""} onChange={(e) => { setDeal({ ...deal, notes: e.target.value }); setCpDirty(true); }} placeholder="Adicione uma observação" />
+                  <textarea
+                    rows={3}
+                    className={inputCls}
+                    value={(deal.notes as string) ?? ""}
+                    onChange={(e) => {
+                      setDeal({ ...deal, notes: e.target.value });
+                      setCpDirty(true);
+                    }}
+                    placeholder="Adicione uma observação"
+                  />
                 </Field>
 
                 <button
@@ -2693,7 +3104,10 @@ function AddStageColumn({ onAdd }: { onAdd: (name: string) => void }) {
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") confirm();
-          if (e.key === "Escape") { setOpen(false); setName(""); }
+          if (e.key === "Escape") {
+            setOpen(false);
+            setName("");
+          }
         }}
         placeholder="Nome da aba"
         className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm outline-none focus:border-brand"
@@ -2707,7 +3121,10 @@ function AddStageColumn({ onAdd }: { onAdd: (name: string) => void }) {
           Adicionar
         </button>
         <button
-          onClick={() => { setOpen(false); setName(""); }}
+          onClick={() => {
+            setOpen(false);
+            setName("");
+          }}
           className="rounded-lg border border-neutral-300 px-2 py-1.5 text-xs text-neutral-600"
         >
           Cancelar
