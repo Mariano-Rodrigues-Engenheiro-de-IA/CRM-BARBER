@@ -524,7 +524,7 @@ function SectionHeader({
   right,
 }: {
   icon?: React.ReactNode;
-  title: string;
+  title: React.ReactNode;
   subtitle?: string;
   right?: React.ReactNode;
 }) {
@@ -532,7 +532,7 @@ function SectionHeader({
     <header className="print:hidden sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
       <div className="flex items-center gap-3 px-5 py-3">
         <div className="flex min-w-0 flex-1 items-baseline gap-1.5">
-          <h1 className="truncate text-[15px] font-semibold text-neutral-900">{title}</h1>
+          <div className="truncate text-[15px] font-semibold text-neutral-900">{title}</div>
           {subtitle && (
             <>
               <span className="shrink-0 text-neutral-300">›</span>
@@ -619,6 +619,30 @@ function IconGraduationCap() {
       <path d="M5 11.5v5c0 1.8 3.1 3.5 7 3.5s7-1.7 7-3.5v-5" />
       <path d="M23 9v7" />
     </svg>
+  );
+}
+
+/** Aviso "Aula: ..." que leva direto pro módulo de treinamento
+ * correspondente — usado no cabeçalho de seções que têm um vídeo
+ * dedicado (hoje: Disparo). Cor âmbar/laranja de propósito, diferente
+ * do azul da marca, pra destacar visualmente como "conteúdo à parte"
+ * dentro do cabeçalho. Bolinha branca com pulso contínuo (efeito "ao
+ * vivo"), ícone de formatura no final — mesmo ícone da aba
+ * Treinamentos (IconGraduationCap), sem ícone de play. */
+function TrainingBadge({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105"
+    >
+      <span className="relative flex h-2.5 w-2.5 shrink-0">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-white" />
+      </span>
+      {label}
+      <IconGraduationCap />
+    </button>
   );
 }
 
@@ -1348,8 +1372,12 @@ function Painel() {
         {section === "disparo" && token && (
           <>
             <SectionHeader
-              icon={<IconSend />}
-              title="Disparo"
+              title={
+                <TrainingBadge
+                  label="Aula: Disparo de mensagens"
+                  onClick={() => openTraining("Disparo")}
+                />
+              }
               right={
                 <nav className="flex shrink-0 gap-1 rounded-lg bg-neutral-100 p-1">
                   {(["novo", "campanhas"] as const).map((t) => (
@@ -1378,7 +1406,6 @@ function Painel() {
                   onNeedConnection={() => setSection("conexao")}
                   onDone={() => setDisparoTab("campanhas")}
                   isBarbearia={businessType === "barbearia"}
-                  onOpenTraining={() => openTraining("Disparo")}
                 />
               )}
               {disparoTab === "campanhas" && <CampaignsView token={token} />}
