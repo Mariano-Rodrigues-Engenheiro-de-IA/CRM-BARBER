@@ -633,7 +633,7 @@ function TrainingBadge({ label, onClick }: { label: string; onClick: () => void 
     <button
       type="button"
       onClick={onClick}
-      className="group flex items-center gap-2 rounded-full bg-gradient-to-r from-brand to-neutral-900 px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-110"
+      className="group flex items-center gap-2 rounded-full border border-white/20 bg-gradient-to-r from-brand to-neutral-900 px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-md transition hover:scale-105 hover:border-white/40 hover:shadow-lg hover:brightness-125 active:scale-95"
     >
       <span className="relative flex h-2.5 w-2.5 shrink-0">
         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
