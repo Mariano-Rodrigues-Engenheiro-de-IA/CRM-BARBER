@@ -622,19 +622,18 @@ function IconGraduationCap() {
   );
 }
 
-/** Aviso "Aula: ..." que leva direto pro módulo de treinamento
+/** Aviso "Tutorial" que leva direto pro módulo de treinamento
  * correspondente — usado no cabeçalho de seções que têm um vídeo
- * dedicado (hoje: Disparo). Cor âmbar/laranja de propósito, diferente
- * do azul da marca, pra destacar visualmente como "conteúdo à parte"
- * dentro do cabeçalho. Bolinha branca com pulso contínuo (efeito "ao
- * vivo"), ícone de formatura no final — mesmo ícone da aba
- * Treinamentos (IconGraduationCap), sem ícone de play. */
+ * dedicado (hoje: Disparo). Gradiente azul (cor da marca) → preto,
+ * bolinha branca com pulso contínuo (efeito "ao vivo"), ícone de
+ * formatura no final — mesmo ícone da aba Treinamentos
+ * (IconGraduationCap). */
 function TrainingBadge({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-105"
+      className="group flex items-center gap-2 rounded-full bg-gradient-to-r from-brand to-neutral-900 px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-sm transition hover:shadow-md hover:brightness-110"
     >
       <span className="relative flex h-2.5 w-2.5 shrink-0">
         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
@@ -1372,12 +1371,7 @@ function Painel() {
         {section === "disparo" && token && (
           <>
             <SectionHeader
-              title={
-                <TrainingBadge
-                  label="Aula: Disparo de mensagens"
-                  onClick={() => openTraining("Disparo")}
-                />
-              }
+              title={<TrainingBadge label="Tutorial" onClick={() => openTraining("Disparo")} />}
               right={
                 <nav className="flex shrink-0 gap-1 rounded-lg bg-neutral-100 p-1">
                   {(["novo", "campanhas"] as const).map((t) => (
