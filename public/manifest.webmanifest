@@ -2,7 +2,7 @@
   "name": "Zaylo CRM",
   "short_name": "Zaylo",
   "description": "Painel Zaylo — agenda, disparos e atendimento via WhatsApp.",
-  "start_url": "/painel",
+  "start_url": "/painel?section=agenda&mobile=agenda",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#0f172a",
