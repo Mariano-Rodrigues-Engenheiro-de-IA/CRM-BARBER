@@ -79,7 +79,7 @@ function AdminHome() {
       </aside>
 
       <main className="flex-1 overflow-x-auto p-6">
-        <div className="mx-auto max-w-6xl">
+        <div className={tab === "clientes" ? "w-full" : "mx-auto max-w-6xl"}>
           {tab === "clientes" && <AdminClientsPanel />}
           {tab === "assinaturas" && <AdminSubscriptionsPanel />}
           {tab === "interessados" && (

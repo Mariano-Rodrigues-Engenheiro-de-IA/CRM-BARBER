@@ -13,7 +13,7 @@ export const Route = createFileRoute("/admin/clients")({
   }),
   component: () => (
     <div className="min-h-screen bg-neutral-100 p-6">
-      <div className="mx-auto max-w-6xl">
+      <div className="w-full">
         <AdminClientsPanel />
       </div>
     </div>
