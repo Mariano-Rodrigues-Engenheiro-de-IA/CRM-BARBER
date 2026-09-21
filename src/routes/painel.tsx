@@ -1292,8 +1292,8 @@ function Painel() {
                 <GeneralSettingsTab
                   api={(path: string, opts?: RequestInit) => api(token, path, opts)}
                   mobileAgendaLink={
-                    typeof window !== "undefined"
-                      ? `${window.location.origin}/painel?token=${token}&section=agenda&mobile=agenda`
+                    typeof window !== "undefined" && token
+                      ? `${window.location.origin}/painel/agenda/${encodeURIComponent(token)}`
                       : undefined
                   }
                 />
