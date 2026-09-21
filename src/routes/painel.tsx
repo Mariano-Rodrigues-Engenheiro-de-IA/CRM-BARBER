@@ -700,6 +700,16 @@ function Painel() {
     return "agenda";
   })();
   const [section, setSection] = useState<Section>(initialSection);
+  // Título do módulo de treinamento a abrir automaticamente ao entrar na
+  // aba Aulas — usado pelos ícones "Aula: ..." espalhados por outras
+  // abas (Disparo, e futuramente outras). Não é um ID fixo: busca por
+  // título (ver AulasView), continua funcionando mesmo se o módulo for
+  // reordenado/editado depois.
+  const [pendingTrainingModule, setPendingTrainingModule] = useState<string | null>(null);
+  function openTraining(moduleTitle: string) {
+    setPendingTrainingModule(moduleTitle);
+    setSection("treinamento");
+  }
   // Modo "só agenda" — usado pelo link dedicado de Configurações >
   // Gerais ("Minha agenda"), pra abrir SÓ a Agenda no celular, sem o
   // menu inteiro do sistema. Detectado uma vez, não muda durante a
@@ -1249,7 +1259,10 @@ function Painel() {
               </div>
             </header>
             <main className="px-4 py-6">
-              <AulasView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+              <AulasView
+                api={(path: string, opts?: RequestInit) => api(token, path, opts)}
+                openModuleTitle={pendingTrainingModule ?? undefined}
+              />
             </main>
           </>
         )}
@@ -1365,6 +1378,7 @@ function Painel() {
                   onNeedConnection={() => setSection("conexao")}
                   onDone={() => setDisparoTab("campanhas")}
                   isBarbearia={businessType === "barbearia"}
+                  onOpenTraining={() => openTraining("Disparo")}
                 />
               )}
               {disparoTab === "campanhas" && <CampaignsView token={token} />}

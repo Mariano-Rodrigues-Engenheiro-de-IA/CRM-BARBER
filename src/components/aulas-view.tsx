@@ -29,8 +29,15 @@ type Module = {
  * 1) Banner grande no topo — só decorativo.
  * 2) Grade de módulos (capa + título) — clicar entra no módulo.
  * 3) Dentro de um módulo: lista das aulas daquele módulo só, com a
- *    primeira em destaque, e um jeito de voltar pra grade de módulos. */
-export function AulasView({ api }: { api: Api }) {
+ *    primeira em destaque, e um jeito de voltar pra grade de módulos.
+ *
+ * openModuleTitle (opcional): usado por ícones "Aula: ..." em outras
+ * abas (ex: Disparo) — ao montar com esse valor preenchido, abre
+ * automaticamente o módulo cujo título contém esse texto (comparação
+ * sem acento/maiúsculas). Busca por TÍTULO, não por ID fixo — assim
+ * continua funcionando mesmo se o módulo for reordenado ou editado
+ * depois. */
+export function AulasView({ api, openModuleTitle }: { api: Api; openModuleTitle?: string }) {
   const { data: lessons } = useCachedFetch<Lesson[]>("training-lessons", async () => {
     const r = await api("/api/public/extension/lessons");
     return r?.ok ? r.lessons : [];
@@ -50,6 +57,19 @@ export function AulasView({ api }: { api: Api }) {
     img.onerror = () => setBannerLoaded(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!openModuleTitle || !modules?.length) return;
+    const norm = (s: string) =>
+      s
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+    const target = norm(openModuleTitle);
+    const found = modules.find((m) => norm(m.title).includes(target));
+    if (found) setOpenModuleId(found.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openModuleTitle, modules]);
 
   const openModule = modules?.find((m) => m.id === openModuleId) ?? null;
   const moduleLessons = (lessons ?? [])
@@ -76,7 +96,8 @@ export function AulasView({ api }: { api: Api }) {
         <div className="flex min-h-[220px] flex-col justify-center px-6 py-10 md:min-h-[280px] md:px-12">
           <h1 className="max-w-md text-3xl font-bold text-white md:text-5xl">Bem-vindo(a)!</h1>
           <p className="mt-2 max-w-sm text-sm text-neutral-200 md:text-base">
-            Aulas práticas pra você tirar o máximo proveito do sistema. Comece pela primeira e siga no seu ritmo.
+            Aulas práticas pra você tirar o máximo proveito do sistema. Comece pela primeira e siga
+            no seu ritmo.
           </p>
         </div>
       </div>
@@ -111,7 +132,13 @@ export function AulasView({ api }: { api: Api }) {
   );
 }
 
-function ModulesGrid({ modules, onOpen }: { modules: Module[] | null; onOpen: (id: string) => void }) {
+function ModulesGrid({
+  modules,
+  onOpen,
+}: {
+  modules: Module[] | null;
+  onOpen: (id: string) => void;
+}) {
   if (!modules) {
     return <p className="text-sm text-neutral-500">Carregando...</p>;
   }
@@ -147,12 +174,23 @@ function ModulesGrid({ modules, onOpen }: { modules: Module[] | null; onOpen: (i
                   }
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-xs text-neutral-400">{m.title}</div>
+                <div className="flex h-full w-full items-center justify-center text-xs text-neutral-400">
+                  {m.title}
+                </div>
               )}
               {m.locked && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="flex h-11 w-11 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="20"
+                      height="20"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
                       <rect x="4" y="11" width="16" height="10" rx="2" />
                       <path d="M8 11V7a4 4 0 0 1 8 0v4" />
                     </svg>
@@ -161,7 +199,12 @@ function ModulesGrid({ modules, onOpen }: { modules: Module[] | null; onOpen: (i
               )}
             </div>
             <div className="p-2.5">
-              <p className={"line-clamp-2 text-sm font-semibold " + (m.locked ? "text-neutral-400" : "text-neutral-900")}>
+              <p
+                className={
+                  "line-clamp-2 text-sm font-semibold " +
+                  (m.locked ? "text-neutral-400" : "text-neutral-900")
+                }
+              >
                 {m.title}
               </p>
               {m.locked && <p className="text-[11px] text-neutral-400">Em breve</p>}
@@ -186,7 +229,10 @@ function ModuleLessons({
 }) {
   return (
     <div>
-      <button onClick={onBack} className="mb-4 flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-neutral-800">
+      <button
+        onClick={onBack}
+        className="mb-4 flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-neutral-800"
+      >
         ← Voltar aos módulos
       </button>
       <h3 className="mb-1 text-lg font-bold text-neutral-900">{module.title}</h3>
@@ -210,7 +256,11 @@ function ModuleLessons({
                 }
               >
                 <div className="relative">
-                  <img src={youtubeThumbnail(l.youtube_url) ?? undefined} alt="" className="h-40 w-full object-cover" />
+                  <img
+                    src={youtubeThumbnail(l.youtube_url) ?? undefined}
+                    alt=""
+                    className="h-40 w-full object-cover"
+                  />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition group-hover:bg-black/20">
                     <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/90 opacity-0 shadow transition group-hover:opacity-100">
                       <PlayIcon />
@@ -224,7 +274,9 @@ function ModuleLessons({
                 </div>
                 <div className="p-3">
                   <p className="line-clamp-2 text-sm font-semibold text-neutral-900">{l.title}</p>
-                  {l.description && <p className="mt-1 line-clamp-2 text-xs text-neutral-500">{l.description}</p>}
+                  {l.description && (
+                    <p className="mt-1 line-clamp-2 text-xs text-neutral-500">{l.description}</p>
+                  )}
                 </div>
               </button>
             );

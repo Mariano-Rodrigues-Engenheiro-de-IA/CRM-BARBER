@@ -10,6 +10,7 @@
 // são idênticos para os três públicos.
 
 import { useEffect, useState } from "react";
+import { CirclePlay } from "lucide-react";
 import { type QuickReply, type QuickReplyAction } from "@/lib/quick-replies";
 import type { Funnel, WaContact, WaLabel } from "@/lib/funnels";
 import { AudienceStep } from "@/components/dispatch-step-audience";
@@ -105,6 +106,7 @@ export function DispatchCenter({
   onNeedConnection,
   onDone,
   isBarbearia,
+  onOpenTraining,
 }: {
   api: ApiFn;
   customers: DispatchCustomer[];
@@ -115,6 +117,10 @@ export function DispatchCenter({
   // assinatura) — vazava pro nicho genérico/clínica, que nunca tem
   // esse kanban. Achado de bug real reportado pelo Mariano.
   isBarbearia: boolean;
+  // Aviso "Aula: Disparo de mensagens" que leva direto pro módulo de
+  // treinamento correspondente (ver /components/aulas-view.tsx).
+  // Opcional — se não vier, o aviso simplesmente não aparece.
+  onOpenTraining?: () => void;
 }) {
   // Funis
   const [funnels, setFunnels] = useState<Funnel[]>([]);
@@ -457,6 +463,22 @@ export function DispatchCenter({
 
   return (
     <div className={"mx-auto w-full " + (step === 1 || step === 2 ? "max-w-3xl" : "max-w-xl")}>
+      {onOpenTraining && (
+        <div className="mb-3 flex justify-end">
+          <button
+            type="button"
+            onClick={onOpenTraining}
+            className="group relative flex items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-brand to-brand/80 px-4 py-2 text-xs font-semibold text-white shadow-md transition hover:shadow-lg hover:brightness-105"
+          >
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-white" />
+            </span>
+            <CirclePlay className="h-4 w-4" />
+            Aula: Disparo de mensagens
+          </button>
+        </div>
+      )}
       {step === 1 ? (
         <div className="space-y-5 rounded-xl border border-neutral-300 bg-white p-6 shadow-sm">
           <AudienceStep
