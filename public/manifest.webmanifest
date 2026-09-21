@@ -3,7 +3,7 @@
   "short_name": "Zaylo",
   "description": "Painel Zaylo — agenda, disparos e atendimento via WhatsApp.",
   "start_url": "/painel?section=agenda&mobile=agenda",
-  "display": "standalone",
+  "display": "browser",
   "background_color": "#ffffff",
   "theme_color": "#0f172a",
   "icons": [
