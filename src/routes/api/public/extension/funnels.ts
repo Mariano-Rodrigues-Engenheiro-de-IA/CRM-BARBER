@@ -18,6 +18,7 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
           return jsonResponse(request, { ok: false, error: auth.error }, { status: auth.status });
         }
         const shop = auth.token.barbershop_id;
+        const url = new URL(request.url);
 
         const funnels = await supabaseAdmin
           .from("funnels")
@@ -130,51 +131,66 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
         // padrão 30 dias). Independente de em qual funil o card
         // aparece aqui — casa por telefone/wa_contact_id com os cards
         // do funil especial "Pós-venda".
+        //
+        // ⚠️ Só calcula quando pedido explicitamente (?include_attendance=1)
+        // — são 2 a 4 consultas extras encadeadas, e só a tela de Funis
+        // (que mostra o selinho) precisa disso. Rodar sempre, pra
+        // TODA tela que só quer a lista de funis/cards (Disparo,
+        // Follow-up, Pós-venda, Respostas rápidas), deixava tudo mais
+        // lento sem necessidade — bug real reportado pelo usuário 22/09.
+        const includeAttendance = url.searchParams.get("include_attendance") === "1";
         const attendanceCountByPhone = new Map<string, number>();
         const attendanceCountByWaContact = new Map<string, number>();
-        const { data: postsaleFunnel } = await supabaseAdmin
-          .from("funnels")
-          .select("id")
-          .eq("barbershop_id", shop)
-          .eq("mode", "postsale")
-          .maybeSingle();
-        if (postsaleFunnel) {
-          const { data: postsaleStage } = await supabaseAdmin
-            .from("funnel_stages")
+        if (includeAttendance) {
+          const { data: postsaleFunnel } = await supabaseAdmin
+            .from("funnels")
             .select("id")
-            .eq("funnel_id", postsaleFunnel.id)
             .eq("barbershop_id", shop)
+            .eq("mode", "postsale")
             .maybeSingle();
-          if (postsaleStage) {
-            const { data: postsaleRule } = await supabaseAdmin
-              .from("funnel_followup_rules")
-              .select("badge_period_days")
+          if (postsaleFunnel) {
+            const { data: postsaleStage } = await supabaseAdmin
+              .from("funnel_stages")
+              .select("id")
               .eq("funnel_id", postsaleFunnel.id)
-              .eq("stage_id", postsaleStage.id)
-              .maybeSingle();
-            const periodDays = postsaleRule?.badge_period_days ?? 30;
-            const since = new Date(Date.now() - periodDays * 24 * 3600_000).toISOString();
-            const { data: postsaleCards } = await supabaseAdmin
-              .from("funnel_cards")
-              .select("id, phone, wa_contact_id")
               .eq("barbershop_id", shop)
-              .eq("funnel_id", postsaleFunnel.id);
-            const cardById = new Map((postsaleCards ?? []).map((c) => [c.id, c]));
-            const { data: attendanceHistory } = await supabaseAdmin
-              .from("funnel_card_stage_history")
-              .select("card_id")
-              .eq("stage_id", postsaleStage.id)
-              .gte("entered_at", since);
-            for (const h of attendanceHistory ?? []) {
-              const c = cardById.get(h.card_id);
-              if (!c) continue;
-              if (c.phone)
-                attendanceCountByPhone.set(c.phone, (attendanceCountByPhone.get(c.phone) ?? 0) + 1);
-              if (c.wa_contact_id)
-                attendanceCountByWaContact.set(
-                  c.wa_contact_id,
-                  (attendanceCountByWaContact.get(c.wa_contact_id) ?? 0) + 1,
-                );
+              .maybeSingle();
+            if (postsaleStage) {
+              const [{ data: postsaleRule }, { data: postsaleCards }] = await Promise.all([
+                supabaseAdmin
+                  .from("funnel_followup_rules")
+                  .select("badge_period_days")
+                  .eq("funnel_id", postsaleFunnel.id)
+                  .eq("stage_id", postsaleStage.id)
+                  .maybeSingle(),
+                supabaseAdmin
+                  .from("funnel_cards")
+                  .select("id, phone, wa_contact_id")
+                  .eq("barbershop_id", shop)
+                  .eq("funnel_id", postsaleFunnel.id),
+              ]);
+              const periodDays = postsaleRule?.badge_period_days ?? 30;
+              const since = new Date(Date.now() - periodDays * 24 * 3600_000).toISOString();
+              const cardById = new Map((postsaleCards ?? []).map((c) => [c.id, c]));
+              const { data: attendanceHistory } = await supabaseAdmin
+                .from("funnel_card_stage_history")
+                .select("card_id")
+                .eq("stage_id", postsaleStage.id)
+                .gte("entered_at", since);
+              for (const h of attendanceHistory ?? []) {
+                const c = cardById.get(h.card_id);
+                if (!c) continue;
+                if (c.phone)
+                  attendanceCountByPhone.set(
+                    c.phone,
+                    (attendanceCountByPhone.get(c.phone) ?? 0) + 1,
+                  );
+                if (c.wa_contact_id)
+                  attendanceCountByWaContact.set(
+                    c.wa_contact_id,
+                    (attendanceCountByWaContact.get(c.wa_contact_id) ?? 0) + 1,
+                  );
+              }
             }
           }
         }

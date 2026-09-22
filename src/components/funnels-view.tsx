@@ -142,7 +142,7 @@ export function FunnelsView({
 
   async function reload() {
     const [f, w] = await Promise.all([
-      api("/api/public/extension/funnels"),
+      api("/api/public/extension/funnels?include_attendance=1"),
       api("/api/public/extension/wa/data"),
     ]);
     let list: Funnel[] = funnelsCache?.funnels ?? [];
