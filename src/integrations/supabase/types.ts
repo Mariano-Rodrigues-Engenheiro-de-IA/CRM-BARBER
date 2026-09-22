@@ -1245,6 +1245,60 @@ export type Database = {
           },
         ];
       };
+      funnel_card_stage_history: {
+        Row: {
+          card_id: string;
+          entered_at: string;
+          funnel_id: string;
+          id: string;
+          left_at: string | null;
+          stage_id: string;
+        };
+        Insert: {
+          card_id: string;
+          entered_at?: string;
+          funnel_id: string;
+          id?: string;
+          left_at?: string | null;
+          stage_id: string;
+        };
+        Update: {
+          card_id?: string;
+          entered_at?: string;
+          funnel_id?: string;
+          id?: string;
+          left_at?: string | null;
+          stage_id?: string;
+        };
+        Relationships: [];
+      };
+      funnel_followup_left_stage_sent: {
+        Row: {
+          card_id: string;
+          id: string;
+          left_at: string;
+          message_job_id: string | null;
+          rule_id: string;
+          step_id: string;
+        };
+        Insert: {
+          card_id: string;
+          id?: string;
+          left_at: string;
+          message_job_id?: string | null;
+          rule_id: string;
+          step_id: string;
+        };
+        Update: {
+          card_id?: string;
+          id?: string;
+          left_at?: string;
+          message_job_id?: string | null;
+          rule_id?: string;
+          step_id?: string;
+        };
+        Relationships: [];
+      };
       funnel_followup_rules: {
         Row: {
           active: boolean;
@@ -1252,7 +1306,9 @@ export type Database = {
           created_at: string;
           funnel_id: string;
           id: string;
+          max_messages_per_contact: number | null;
           stage_id: string;
+          trigger_type: string;
           updated_at: string;
         };
         Insert: {
@@ -1261,7 +1317,9 @@ export type Database = {
           created_at?: string;
           funnel_id: string;
           id?: string;
+          max_messages_per_contact?: number | null;
           stage_id: string;
+          trigger_type?: string;
           updated_at?: string;
         };
         Update: {
@@ -1270,7 +1328,9 @@ export type Database = {
           created_at?: string;
           funnel_id?: string;
           id?: string;
+          max_messages_per_contact?: number | null;
           stage_id?: string;
+          trigger_type?: string;
           updated_at?: string;
         };
         Relationships: [

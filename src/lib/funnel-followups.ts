@@ -9,7 +9,11 @@ import { quickReplyActionSchema, type QuickReplyAction } from "@/lib/quick-repli
 export const followupStepSchema = z
   .object({
     id: z.string().uuid().optional(), // presente ao editar um passo existente
-    delay_minutes: z.number().int().min(0).max(60 * 24 * 90), // até 90 dias
+    delay_minutes: z
+      .number()
+      .int()
+      .min(0)
+      .max(60 * 24 * 90), // até 90 dias
     // Texto livre (só funciona no provedor não oficial) OU modelo
     // aprovado (obrigatório se conectado via Meta) — um dos dois.
     actions: z.array(quickReplyActionSchema).max(10).optional(),
@@ -28,6 +32,13 @@ export const funnelFollowupRuleSchema = z.object({
   funnel_id: z.string().uuid(),
   stage_id: z.string().uuid(),
   active: z.boolean().optional(),
+  // "time_in_stage" (padrão): cada passo dispara conforme o tempo
+  // parado (delay 0 = assim que entrar). "left_stage": dispara quando
+  // o lead SAI da etapa/lista, sem depender de tempo parado.
+  trigger_type: z.enum(["time_in_stage", "left_stage"]).optional(),
+  // Quantidade máxima de mensagens que um mesmo contato recebe dessa
+  // regra — null/ausente = sem limite.
+  max_messages_per_contact: z.number().int().min(1).max(1000).nullable().optional(),
   steps: z.array(followupStepSchema).min(1).max(20),
 });
 
@@ -47,5 +58,7 @@ export type FunnelFollowupRule = {
   funnel_id: string;
   stage_id: string;
   active: boolean;
+  trigger_type: "time_in_stage" | "left_stage";
+  max_messages_per_contact: number | null;
   steps: FollowupStep[];
 };

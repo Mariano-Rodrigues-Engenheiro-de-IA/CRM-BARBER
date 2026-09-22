@@ -7,6 +7,7 @@ import { z } from "zod";
 import { jsonResponse, preflight } from "@/lib/extension-cors";
 import { authenticateExtension } from "@/lib/extension-auth";
 import { cardCreateSchema, cardPatchSchema } from "@/lib/funnels";
+import { recordStageChange } from "@/lib/funnel-stage-history.server";
 
 const deleteSchema = z.object({ id: z.string().uuid() });
 
@@ -35,7 +36,11 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
         }
         const parsed = cardCreateSchema.safeParse(payload);
         if (!parsed.success) {
-          return jsonResponse(request, { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" }, { status: 400 });
+          return jsonResponse(
+            request,
+            { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" },
+            { status: 400 },
+          );
         }
         const shop = auth.token.barbershop_id;
         const normalizedPhone = normalizePhone(parsed.data.phone);
@@ -43,7 +48,11 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
         // o telefone é o único jeito de saber que é a mesma pessoa — sem
         // isso, cada clique criava um card novo e o antigo nunca era
         // removido (o lead parecia "travado" na etapa anterior).
-        const matchCol = parsed.data.wa_contact_id ? "wa_contact_id" : normalizedPhone ? "phone" : null;
+        const matchCol = parsed.data.wa_contact_id
+          ? "wa_contact_id"
+          : normalizedPhone
+            ? "phone"
+            : null;
         const matchVal = parsed.data.wa_contact_id || normalizedPhone;
 
         const { data: stage } = await supabaseAdmin
@@ -54,7 +63,11 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
           .eq("barbershop_id", shop)
           .maybeSingle();
         if (!stage) {
-          return jsonResponse(request, { ok: false, error: "Coluna não encontrada" }, { status: 404 });
+          return jsonResponse(
+            request,
+            { ok: false, error: "Coluna não encontrada" },
+            { status: 404 },
+          );
         }
 
         // NOTA: um lead PODE estar em vários funis ao mesmo tempo — a
@@ -103,7 +116,12 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
           const existing = existingRes.data;
           if (existing) {
             const { wa_contacts, ...rest } = existing as any;
-            const patch: { stage_id?: string; stage_entered_at?: string; wa_contact_id?: string; title?: string } = {};
+            const patch: {
+              stage_id?: string;
+              stage_entered_at?: string;
+              wa_contact_id?: string;
+              title?: string;
+            } = {};
             if (existing.stage_id !== parsed.data.stage_id) {
               patch.stage_id = parsed.data.stage_id;
               // Reinicia a contagem de tempo pro follow-up por etapa —
@@ -114,13 +132,15 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
             // pra linkar o wa_contact_id agora, senão o próximo clique
             // (já com o id disponível) não ia encontrar esse card pelo
             // telefone e criaria outro duplicado.
-            if (parsed.data.wa_contact_id && !existing.wa_contact_id) patch.wa_contact_id = parsed.data.wa_contact_id;
+            if (parsed.data.wa_contact_id && !existing.wa_contact_id)
+              patch.wa_contact_id = parsed.data.wa_contact_id;
             // Autocorreção: se o card foi criado antes de uma melhoria na
             // identificação do nome (ex: "Dados do contato", texto da
             // própria interface do WhatsApp lido por engano), qualquer
             // toque novo nesse card já resolve com o nome certo — não
             // fica preso pra sempre com o título errado da primeira vez.
-            if (parsed.data.title && parsed.data.title !== existing.title) patch.title = parsed.data.title;
+            if (parsed.data.title && parsed.data.title !== existing.title)
+              patch.title = parsed.data.title;
             if (Object.keys(patch).length) {
               const { error: moveError } = await supabaseAdmin
                 .from("funnel_cards")
@@ -128,13 +148,26 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
                 .eq("id", existing.id)
                 .eq("barbershop_id", shop);
               if (moveError) {
-                return jsonResponse(request, { ok: false, error: moveError.message }, { status: 500 });
+                return jsonResponse(
+                  request,
+                  { ok: false, error: moveError.message },
+                  { status: 500 },
+                );
               }
               // Mudou de etapa — os passos de follow-up "já enviados" da
               // etapa anterior não valem mais aqui; se um dia ele voltar
               // pra essa mesma etapa de novo, a sequência recomeça do zero.
               if (patch.stage_id) {
-                await supabaseAdmin.from("funnel_followup_sent_log").delete().eq("card_id", existing.id);
+                await supabaseAdmin
+                  .from("funnel_followup_sent_log")
+                  .delete()
+                  .eq("card_id", existing.id);
+                await recordStageChange(supabaseAdmin, {
+                  cardId: existing.id,
+                  funnelId: parsed.data.funnel_id,
+                  fromStageId: existing.stage_id,
+                  toStageId: patch.stage_id,
+                });
               }
             }
             return jsonResponse(request, {
@@ -156,7 +189,6 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
           .from("funnel_cards")
           .select("id", { count: "exact", head: true })
           .eq("stage_id", parsed.data.stage_id);
-
 
         const insertPayload = {
           barbershop_id: shop,
@@ -199,7 +231,16 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
         }
 
         const { data, error } = insertRes;
-        if (error) return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
+        if (error)
+          return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
+        if (data?.id) {
+          await recordStageChange(supabaseAdmin, {
+            cardId: data.id,
+            funnelId: parsed.data.funnel_id,
+            fromStageId: null,
+            toStageId: parsed.data.stage_id,
+          });
+        }
         const { wa_contacts, ...rest } = (data ?? {}) as any;
         return jsonResponse(request, {
           ok: true,
@@ -227,7 +268,11 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
         }
         const parsed = cardPatchSchema.safeParse(payload);
         if (!parsed.success) {
-          return jsonResponse(request, { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" }, { status: 400 });
+          return jsonResponse(
+            request,
+            { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" },
+            { status: 400 },
+          );
         }
         const { id, ...rest } = parsed.data;
         // Confere a etapa ATUAL antes de decidir se isso é uma troca de
@@ -235,14 +280,18 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
         // follow-up) ou só reordenação dentro da mesma coluna (stage_id
         // igual ao que já tinha — não deve resetar nada).
         let stageReallyChanged = false;
+        let currentFunnelId: string | null = null;
+        let currentStageId: string | null = null;
         if (rest.stage_id !== undefined) {
           const { data: current } = await supabaseAdmin
             .from("funnel_cards")
-            .select("stage_id")
+            .select("stage_id, funnel_id")
             .eq("id", id)
             .eq("barbershop_id", auth.token.barbershop_id)
             .maybeSingle();
           stageReallyChanged = !!current && current.stage_id !== rest.stage_id;
+          currentFunnelId = current?.funnel_id ?? null;
+          currentStageId = current?.stage_id ?? null;
         }
         // Mover um lead entre etapas é Premium — reordenar dentro da
         // mesma coluna (stageReallyChanged = false) continua liberado no
@@ -282,12 +331,21 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
           .update(patch)
           .eq("id", id)
           .eq("barbershop_id", auth.token.barbershop_id);
-        if (error) return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
+        if (error)
+          return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
         // Mesma lógica do POST: mudou de etapa DE VERDADE, os passos "já
         // enviados" da etapa anterior não valem mais — reinicia o
         // histórico. Reordenação na mesma coluna não mexe nisso.
         if (stageReallyChanged) {
           await supabaseAdmin.from("funnel_followup_sent_log").delete().eq("card_id", id);
+          if (currentFunnelId && rest.stage_id) {
+            await recordStageChange(supabaseAdmin, {
+              cardId: id,
+              funnelId: currentFunnelId,
+              fromStageId: currentStageId,
+              toStageId: rest.stage_id,
+            });
+          }
         }
         return jsonResponse(request, { ok: true });
       },
@@ -306,14 +364,19 @@ export const Route = createFileRoute("/api/public/extension/funnel-cards")({
         }
         const parsed = deleteSchema.safeParse(payload);
         if (!parsed.success) {
-          return jsonResponse(request, { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" }, { status: 400 });
+          return jsonResponse(
+            request,
+            { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" },
+            { status: 400 },
+          );
         }
         const { error } = await supabaseAdmin
           .from("funnel_cards")
           .delete()
           .eq("id", parsed.data.id)
           .eq("barbershop_id", auth.token.barbershop_id);
-        if (error) return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
+        if (error)
+          return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
         return jsonResponse(request, { ok: true });
       },
     },

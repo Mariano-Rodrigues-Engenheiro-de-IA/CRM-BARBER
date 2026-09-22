@@ -10,7 +10,8 @@ import { jsonResponse, preflight } from "@/lib/extension-cors";
 import { authenticateExtension } from "@/lib/extension-auth";
 import { funnelFollowupRuleSchema } from "@/lib/funnel-followups";
 
-const STEP_COLS = "id, delay_minutes, actions, template_name, template_language, template_header_media_path, skip_if_replied, sort_order";
+const STEP_COLS =
+  "id, delay_minutes, actions, template_name, template_language, template_header_media_path, skip_if_replied, sort_order";
 
 export const Route = createFileRoute("/api/public/extension/funnel-followup-rules")({
   server: {
@@ -27,7 +28,9 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
         const funnelId = url.searchParams.get("funnel_id");
         let query = supabaseAdmin
           .from("funnel_followup_rules")
-          .select(`id, funnel_id, stage_id, active, funnel_followup_steps (${STEP_COLS})`)
+          .select(
+            `id, funnel_id, stage_id, active, trigger_type, max_messages_per_contact, funnel_followup_steps (${STEP_COLS})`,
+          )
           .eq("barbershop_id", auth.token.barbershop_id);
         if (funnelId) query = query.eq("funnel_id", funnelId);
         const { data, error } = await query;
@@ -36,9 +39,12 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
         }
         const rules = (data ?? []).map((r) => ({
           ...r,
-          steps: (r.funnel_followup_steps as unknown[] || [])
+          steps: ((r.funnel_followup_steps as unknown[]) || [])
             .slice()
-            .sort((a, b) => (a as { sort_order: number }).sort_order - (b as { sort_order: number }).sort_order),
+            .sort(
+              (a, b) =>
+                (a as { sort_order: number }).sort_order - (b as { sort_order: number }).sort_order,
+            ),
           funnel_followup_steps: undefined,
         }));
         return jsonResponse(request, { ok: true, rules });
@@ -69,7 +75,11 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
         const { getBillingStatus } = await import("@/lib/billing.server");
         const billing = await getBillingStatus(supabaseAdmin, shop);
         if (!billing.premium) {
-          return jsonResponse(request, { ok: false, error: "Follow-up faz parte do plano Premium." }, { status: 402 });
+          return jsonResponse(
+            request,
+            { ok: false, error: "Follow-up faz parte do plano Premium." },
+            { status: 402 },
+          );
         }
 
         // Upsert manual por (funnel_id, stage_id) — se já existe uma regra
@@ -88,9 +98,14 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
         if (ruleId) {
           const { error: updErr } = await supabaseAdmin
             .from("funnel_followup_rules")
-            .update({ active: parsed.data.active ?? true })
+            .update({
+              active: parsed.data.active ?? true,
+              trigger_type: parsed.data.trigger_type ?? "time_in_stage",
+              max_messages_per_contact: parsed.data.max_messages_per_contact ?? null,
+            })
             .eq("id", ruleId);
-          if (updErr) return jsonResponse(request, { ok: false, error: updErr.message }, { status: 500 });
+          if (updErr)
+            return jsonResponse(request, { ok: false, error: updErr.message }, { status: 500 });
           // Recomeça os passos do zero — mais simples e previsível que
           // tentar casar/atualizar item a item.
           await supabaseAdmin.from("funnel_followup_steps").delete().eq("rule_id", ruleId);
@@ -102,11 +117,17 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
               funnel_id: parsed.data.funnel_id,
               stage_id: parsed.data.stage_id,
               active: parsed.data.active ?? true,
+              trigger_type: parsed.data.trigger_type ?? "time_in_stage",
+              max_messages_per_contact: parsed.data.max_messages_per_contact ?? null,
             })
             .select("id")
             .single();
           if (insErr || !created) {
-            return jsonResponse(request, { ok: false, error: insErr?.message ?? "Falha ao criar regra" }, { status: 500 });
+            return jsonResponse(
+              request,
+              { ok: false, error: insErr?.message ?? "Falha ao criar regra" },
+              { status: 500 },
+            );
           }
           ruleId = created.id;
         }
@@ -129,7 +150,9 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
 
         const { data: full } = await supabaseAdmin
           .from("funnel_followup_rules")
-          .select(`id, funnel_id, stage_id, active, funnel_followup_steps (${STEP_COLS})`)
+          .select(
+            `id, funnel_id, stage_id, active, trigger_type, max_messages_per_contact, funnel_followup_steps (${STEP_COLS})`,
+          )
           .eq("id", ruleId)
           .single();
         return jsonResponse(request, { ok: true, rule: full });
