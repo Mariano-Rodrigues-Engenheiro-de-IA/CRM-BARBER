@@ -269,20 +269,20 @@ export function DispatchCenter({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Campanha pendente vinda do botão "Usar campanha" (aba Campanhas) —
-  // assim que a lista de campanhas salvas carregar, se tiver um ID
-  // pendente, já pré-seleciona ela como mensagem e avança pra Etapa 2.
+  // Campanha pendente vinda do botão "Enviar" (aba Campanhas) — assim
+  // que a lista de campanhas salvas carregar, já marca o modo
+  // "campaign" (o preenchimento de verdade, incluindo a imagem se
+  // tiver, acontece dentro de MessageComposerStep — reaproveita a
+  // mesma lógica de pickCampaign usada quando o usuário escolhe
+  // manualmente, sem duplicar). Fica na Etapa 1: usuário escolhe pra
+  // quem disparar primeiro, só depois vai pra Etapa 2 ver a mensagem
+  // já pronta — pedido explícito do usuário, não pular direto.
   useEffect(() => {
     if (!pendingSavedCampaignId || savedCampaigns.length === 0) return;
     const campaign = savedCampaigns.find((c) => c.id === pendingSavedCampaignId);
     if (!campaign) return;
     setMessageMode("campaign");
     setReplyId("");
-    setActions([{ type: "text", text: campaign.body_text }]);
-    setVariants([campaign.body_text]);
-    setStep(2);
-    onPendingSavedCampaignConsumed?.();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingSavedCampaignId, savedCampaigns]);
 
   const total = finalAudience.length;
@@ -685,6 +685,8 @@ export function DispatchCenter({
                       onVariants={setVariants}
                       onClearReply={() => setReplyId("")}
                       savedCampaigns={savedCampaigns}
+                      pendingSavedCampaignId={pendingSavedCampaignId}
+                      onPendingSavedCampaignConsumed={onPendingSavedCampaignConsumed}
                     />
                   )}
                 </div>

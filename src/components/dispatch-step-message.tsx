@@ -4,7 +4,7 @@
 // o modal ficava desconectado do resto do fluxo, "parecia amador"
 // comparado ao resto do CRM já redesenhado).
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   actionLabel,
   QUICK_REPLY_ACTION_TYPES,
@@ -51,6 +51,8 @@ export function MessageComposerStep({
   onVariants,
   onClearReply,
   savedCampaigns,
+  pendingSavedCampaignId,
+  onPendingSavedCampaignConsumed,
 }: {
   api: ApiFn;
   funnels: Funnel[];
@@ -68,6 +70,11 @@ export function MessageComposerStep({
   // "approved") — terceira opção de mensagem, ao lado de Criar
   // mensagem e Usar resposta rápida.
   savedCampaigns: SavedCampaign[];
+  // Vindo do botão "Enviar" na aba Campanhas — assim que essa campanha
+  // específica estiver disponível em savedCampaigns, aplica ela
+  // automaticamente (mesma lógica de pickCampaign, incluindo imagem).
+  pendingSavedCampaignId?: string | null;
+  onPendingSavedCampaignConsumed?: () => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -113,11 +120,68 @@ export function MessageComposerStep({
     }
   }
 
-  function pickCampaign(c: SavedCampaign) {
+  const [pickingCampaignId, setPickingCampaignId] = useState<string | null>(null);
+
+  async function pickCampaign(c: SavedCampaign) {
     onClearReply();
-    onActions([{ type: "text", text: c.body_text }]);
-    onVariants([c.body_text]);
+    setError(null);
+    if (!c.image_path) {
+      // Sem imagem: mensagem de texto simples, igual já era.
+      onActions([{ type: "text", text: c.body_text }]);
+      onVariants([c.body_text]);
+      return;
+    }
+    // Com imagem: a imagem da campanha vive num bucket público (capa/
+    // preview), diferente do bucket privado que o disparo de verdade
+    // usa (quick-reply-media, com URL assinada gerada na hora do
+    // envio). Baixa a imagem e reenvia pro bucket certo, igual seria
+    // se o usuário tivesse anexado ela manualmente — sem isso, a
+    // imagem nunca aparecia na mensagem (bug real reportado).
+    setPickingCampaignId(c.id);
+    try {
+      const imgRes = await fetch(c.image_path);
+      if (!imgRes.ok) throw new Error("Não consegui baixar a imagem dessa campanha.");
+      const blob = await imgRes.blob();
+      const mime = blob.type || "image/jpeg";
+      const dataBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      const result = await api("/api/public/extension/quick-replies/upload", {
+        method: "POST",
+        body: JSON.stringify({ filename: "campanha.jpg", mime, data_base64: dataBase64 }),
+      });
+      if (!result?.ok) throw new Error((result?.error as string) || "Falha ao preparar a imagem");
+      onActions([
+        {
+          type: "image",
+          path: result.path as string,
+          url: result.url as string,
+          mime: result.mime as string,
+          filename: result.filename as string,
+          caption: c.body_text,
+        },
+      ]);
+      onVariants([c.body_text]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Não foi possível preparar essa campanha.");
+      // Mesmo com falha na imagem, deixa o texto pronto — melhor que nada.
+      onActions([{ type: "text", text: c.body_text }]);
+      onVariants([c.body_text]);
+    } finally {
+      setPickingCampaignId(null);
+    }
   }
+
+  useEffect(() => {
+    if (!pendingSavedCampaignId) return;
+    const campaign = savedCampaigns.find((c) => c.id === pendingSavedCampaignId);
+    if (!campaign) return;
+    void pickCampaign(campaign).finally(() => onPendingSavedCampaignConsumed?.());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingSavedCampaignId, savedCampaigns]);
 
   return (
     <div className="space-y-3">
@@ -159,8 +223,9 @@ export function MessageComposerStep({
               <button
                 key={c.id}
                 type="button"
-                onClick={() => pickCampaign(c)}
-                className="flex w-full items-center gap-3 rounded-lg border border-neutral-200 px-3 py-2 text-left text-sm hover:border-brand"
+                onClick={() => void pickCampaign(c)}
+                disabled={pickingCampaignId === c.id}
+                className="flex w-full items-center gap-3 rounded-lg border border-neutral-200 px-3 py-2 text-left text-sm hover:border-brand disabled:opacity-50"
               >
                 {c.image_path && (
                   <img
@@ -171,7 +236,9 @@ export function MessageComposerStep({
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold text-neutral-900">{c.title}</p>
-                  <p className="truncate text-xs text-neutral-500">{c.body_text}</p>
+                  <p className="truncate text-xs text-neutral-500">
+                    {pickingCampaignId === c.id ? "Preparando..." : c.body_text}
+                  </p>
                 </div>
               </button>
             ))

@@ -45,6 +45,26 @@ const MONTH_NAMES = [
   "Dezembro",
 ];
 
+// Mesmo ícone usado na aba Disparo (IconSend em painel.tsx) — pedido
+// explícito do usuário, nada de emoji.
+function IconSend() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M22 2 11 13" />
+      <path d="M22 2 15 22l-4-9-9-4Z" />
+    </svg>
+  );
+}
+
 const STATUS_LABEL: Record<SavedCampaign["status"], { label: string; cls: string }> = {
   draft: { label: "Rascunho", cls: "bg-neutral-100 text-neutral-600" },
   pending_approval: { label: "Em análise na Meta", cls: "bg-amber-100 text-amber-700" },
@@ -278,9 +298,10 @@ export function CampaignsMarketplaceView({
                   {s.status === "approved" && (
                     <button
                       onClick={() => onUseCampaign(s.id)}
-                      className="flex shrink-0 items-center gap-1 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-strong"
+                      className="flex shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-strong"
                     >
-                      ✈️ Usar campanha
+                      <IconSend />
+                      Enviar
                     </button>
                   )}
                   {isMetaProvider && (s.status === "draft" || s.status === "rejected") && (
