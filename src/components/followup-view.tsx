@@ -1,9 +1,8 @@
-// Aba "Follow-up": sequência de mensagens programadas por etapa de
-// funil OU lista. O gatilho pode ser "assim que entrar", "assim que
-// sair" ou "tempo parado" — configurado num painel único (não mais
-// dividido em telas separadas), pedido explícito do usuário (22/09):
-// "a etapa que você vai escolher é uma etapa que fica DENTRO da
-// configuração do follow-up", não um passo prévio separado.
+// Aba "Follow-up": UMA mensagem programada por etapa de funil OU lista.
+// O gatilho pode ser "assim que entrar", "assim que sair" ou "tempo
+// parado" — configurado num painel único com 4 seções. Pedido explícito
+// do usuário (22/09): só um passo por follow-up (múltiplos passos
+// confundiam — "assim que entrar" a pessoa recebe o passo 1 ou o 2?).
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,16 +17,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Trash2, Clock, FileText, X } from "lucide-react";
+import { Plus, FileText, X } from "lucide-react";
 import { useConfirm } from "@/components/confirm-dialog";
 import type { Funnel } from "@/lib/funnels";
+import type { QuickReply } from "@/lib/quick-replies";
+import type { SavedCampaign } from "@/components/campaigns-marketplace-view";
 
 type Api = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
 
-type FollowupStep = {
-  id?: string;
+type FollowupContent = {
   delay_minutes: number;
-  actions: Array<{ type: "text"; text: string }>;
+  actions: Array<{
+    type: string;
+    text?: string;
+    path?: string;
+    url?: string | null;
+    mime?: string;
+    filename?: string;
+    caption?: string;
+  }>;
   template_name: string | null;
   template_language: string | null;
   template_header_media_path: string | null;
@@ -41,22 +49,21 @@ type FollowupRule = {
   trigger_type: "time_in_stage" | "left_stage";
   max_messages_per_contact: number | null;
   skip_if_replied: boolean;
-  steps: FollowupStep[];
+  steps: FollowupContent[]; // backend ainda guarda como array — sempre 1 item agora
 };
 
 type TemplateOption = { name: string; language: string; status: string; hasImageHeader: boolean };
 
-// Momento de UI (3 opções, como o usuário descreveu) — mapeia pros 2
-// trigger_type reais do backend: "immediate" e "time_in_stage" usam o
-// mesmo trigger_type "time_in_stage", só muda se o campo de tempo por
-// passo fica visível (immediate esconde, sempre 0).
+// Momento de UI (3 opções) — "immediate" e "time_in_stage" usam o mesmo
+// trigger_type no backend ("time_in_stage"), só muda se o campo de
+// tempo aparece na tela (immediate esconde, sempre 0).
 type Moment = "immediate" | "time_in_stage" | "left_stage";
 
 function momentFromRule(rule: FollowupRule | null): Moment {
   if (!rule) return "immediate";
   if (rule.trigger_type === "left_stage") return "left_stage";
-  const allImmediate = rule.steps.every((s) => s.delay_minutes === 0);
-  return allImmediate ? "immediate" : "time_in_stage";
+  const delay = rule.steps[0]?.delay_minutes ?? 0;
+  return delay === 0 ? "immediate" : "time_in_stage";
 }
 
 function minutesToValueUnit(min: number): { value: number; unit: "minutos" | "horas" | "dias" } {
@@ -70,9 +77,9 @@ function valueUnitToMinutes(value: number, unit: "minutos" | "horas" | "dias") {
   return value;
 }
 
-function emptyStep(delayMinutes = 60 * 24 * 3): FollowupStep {
+function emptyContent(): FollowupContent {
   return {
-    delay_minutes: delayMinutes,
+    delay_minutes: 0,
     actions: [{ type: "text", text: "" }],
     template_name: null,
     template_language: null,
@@ -84,6 +91,8 @@ export function FollowupView({ api }: { api: Api }) {
   const [funnels, setFunnels] = useState<Funnel[] | null>(null);
   const [rules, setRules] = useState<FollowupRule[]>([]);
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
+  const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
+  const [savedCampaigns, setSavedCampaigns] = useState<SavedCampaign[]>([]);
   const [isMetaProvider, setIsMetaProvider] = useState(false);
   const [editingRuleId, setEditingRuleId] = useState<string | "new" | null>(null);
   const [showReport, setShowReport] = useState(false);
@@ -128,6 +137,15 @@ export function FollowupView({ api }: { api: Api }) {
         );
       })
       .catch(() => {});
+    api("/api/public/extension/quick-replies").then((q) => {
+      if (q?.ok) setQuickReplies((q.quick_replies as QuickReply[]) || []);
+    });
+    api("/api/public/extension/campaigns/catalog").then((c) => {
+      if (c?.ok) {
+        const all = (c.saved as SavedCampaign[]) || [];
+        setSavedCampaigns(all.filter((s) => s.status === "approved"));
+      }
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -181,7 +199,6 @@ export function FollowupView({ api }: { api: Api }) {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {rules.map((rule) => {
             const { funnelName, stageName, isList } = labelFor(rule.funnel_id, rule.stage_id);
-            const stepCount = rule.steps.length;
             return (
               <button
                 key={rule.id}
@@ -201,9 +218,6 @@ export function FollowupView({ api }: { api: Api }) {
                 <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
                   <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-600">
                     {momentLabel(rule)}
-                  </span>
-                  <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-600">
-                    {stepCount} passo{stepCount === 1 ? "" : "s"}
                   </span>
                   {!rule.active && (
                     <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
@@ -230,6 +244,8 @@ export function FollowupView({ api }: { api: Api }) {
             )
           }
           templates={templates}
+          quickReplies={quickReplies}
+          savedCampaigns={savedCampaigns}
           isMetaProvider={isMetaProvider}
           onClose={() => setEditingRuleId(null)}
           onSaved={() => {
@@ -332,15 +348,19 @@ function FollowupReportModal({ api, onClose }: { api: Api; onClose: () => void }
   );
 }
 
-/** Painel único de configuração — as 4 seções pedidas pelo usuário
- * (22/09): Quem recebe, Quando, O que, Regras. Tudo no mesmo
- * retângulo, sem telas separadas. */
+type MessageSource = "write" | "quick_reply" | "campaign";
+
+/** Painel único de configuração — 4 seções: Quem recebe, Quando, O que
+ * enviar (UMA mensagem só, escrita na hora, resposta rápida, ou
+ * campanha salva), Regras. */
 function FollowupEditor({
   api,
   funnels,
   rule,
   existingRuleKeys,
   templates,
+  quickReplies,
+  savedCampaigns,
   isMetaProvider,
   onClose,
   onSaved,
@@ -350,6 +370,8 @@ function FollowupEditor({
   rule: FollowupRule | null;
   existingRuleKeys: Set<string>;
   templates: TemplateOption[];
+  quickReplies: QuickReply[];
+  savedCampaigns: SavedCampaign[];
   isMetaProvider: boolean;
   onClose: () => void;
   onSaved: () => void;
@@ -361,40 +383,29 @@ function FollowupEditor({
   const [moment, setMoment] = useState<Moment>(momentFromRule(rule));
   const [maxMessages, setMaxMessages] = useState<number | "">(rule?.max_messages_per_contact ?? "");
   const [skipIfReplied, setSkipIfReplied] = useState(rule?.skip_if_replied ?? true);
-  const [steps, setSteps] = useState<FollowupStep[]>(
-    rule?.steps.length ? rule.steps : [emptyStep(0)],
-  );
+  const [source, setSource] = useState<MessageSource>("write");
+  const [content, setContent] = useState<FollowupContent>(rule?.steps[0] ?? emptyContent());
   const [saving, setSaving] = useState(false);
-  const [headerPreviews, setHeaderPreviews] = useState<Record<number, string>>({});
-  const [uploadingHeaderIndex, setUploadingHeaderIndex] = useState<number | null>(null);
+  const [preparingSource, setPreparingSource] = useState(false);
+  const [headerPreview, setHeaderPreview] = useState<string | null>(null);
+  const [uploadingHeader, setUploadingHeader] = useState(false);
   const { confirm, dialog } = useConfirm();
 
   const approvedTemplates = templates.filter((t) => t.status === "APPROVED");
   const selectedFunnel = funnels.find((f) => f.id === funnelId) || null;
   const stageKey = selectedFunnel && stageId ? `${funnelId}:${stageId}` : null;
   const stageAlreadyUsed = !!stageKey && existingRuleKeys.has(stageKey);
+  const { value: delayValue, unit: delayUnit } = minutesToValueUnit(content.delay_minutes);
 
   function changeMoment(next: Moment) {
     setMoment(next);
-    if (next === "immediate") {
-      // Assim que entrar: sempre 0, sem sentido mostrar/editar o campo
-      // de tempo por passo — força todos os passos existentes pra 0.
-      setSteps((prev) => prev.map((s) => ({ ...s, delay_minutes: 0 })));
+    if (next !== "time_in_stage") {
+      setContent((prev) => ({ ...prev, delay_minutes: 0 }));
     }
   }
 
-  function updateStep(i: number, patch: Partial<FollowupStep>) {
-    setSteps((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
-  }
-  function addStep() {
-    setSteps((prev) => [...prev, emptyStep(moment === "immediate" ? 0 : undefined)]);
-  }
-  function removeStep(i: number) {
-    setSteps((prev) => prev.filter((_, idx) => idx !== i));
-  }
-
-  async function handleStepHeaderFile(i: number, file: File) {
-    setUploadingHeaderIndex(i);
+  async function handleHeaderFile(file: File) {
+    setUploadingHeader(true);
     try {
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -414,10 +425,83 @@ function FollowupEditor({
         toast.error((r?.error as string) || "Falha ao enviar a imagem.");
         return;
       }
-      updateStep(i, { template_header_media_path: (r.path as string) || null });
-      setHeaderPreviews((prev) => ({ ...prev, [i]: dataUrl }));
+      setContent((prev) => ({ ...prev, template_header_media_path: (r.path as string) || null }));
+      setHeaderPreview(dataUrl);
     } finally {
-      setUploadingHeaderIndex(null);
+      setUploadingHeader(false);
+    }
+  }
+
+  function pickQuickReply(qr: QuickReply) {
+    setContent((prev) => ({
+      ...prev,
+      actions: qr.actions,
+      template_name: null,
+      template_language: null,
+      template_header_media_path: null,
+    }));
+  }
+
+  // Mesma correção já aplicada no disparo (19/09): a imagem de uma
+  // campanha vive num bucket público (capa/preview), diferente do
+  // bucket privado que o envio de verdade usa — baixa e reenvia pro
+  // lugar certo antes de usar, senão a imagem nunca chega no
+  // WhatsApp.
+  async function pickCampaign(c: SavedCampaign) {
+    if (!c.image_path) {
+      setContent((prev) => ({
+        ...prev,
+        actions: [{ type: "text", text: c.body_text }],
+        template_name: null,
+        template_language: null,
+        template_header_media_path: null,
+      }));
+      return;
+    }
+    setPreparingSource(true);
+    try {
+      const imgRes = await fetch(c.image_path);
+      if (!imgRes.ok) throw new Error("Não consegui baixar a imagem dessa campanha.");
+      const blob = await imgRes.blob();
+      const mime = blob.type || "image/jpeg";
+      const dataBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      const result = await api("/api/public/extension/quick-replies/upload", {
+        method: "POST",
+        body: JSON.stringify({ filename: "campanha.jpg", mime, data_base64: dataBase64 }),
+      });
+      if (!result?.ok) throw new Error((result?.error as string) || "Falha ao preparar a imagem");
+      setContent((prev) => ({
+        ...prev,
+        actions: [
+          {
+            type: "image",
+            path: result.path as string,
+            url: result.url as string,
+            mime: result.mime as string,
+            filename: result.filename as string,
+            caption: c.body_text,
+          },
+        ],
+        template_name: null,
+        template_language: null,
+        template_header_media_path: null,
+      }));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível preparar essa campanha.");
+      setContent((prev) => ({
+        ...prev,
+        actions: [{ type: "text", text: c.body_text }],
+        template_name: null,
+        template_language: null,
+        template_header_media_path: null,
+      }));
+    } finally {
+      setPreparingSource(false);
     }
   }
 
@@ -427,24 +511,18 @@ function FollowupEditor({
         selectedFunnel?.mode === "label" ? "Escolhe uma lista." : "Escolhe um funil e uma etapa.",
       );
     }
-    const cleaned = steps.filter((s) =>
-      isMetaProvider ? !!s.template_name : s.actions[0]?.text?.trim(),
-    );
-    if (!cleaned.length) {
+    const hasMessage = isMetaProvider
+      ? !!content.template_name
+      : content.actions.some((a) => (a.type === "text" && a.text?.trim()) || a.type === "image");
+    if (!hasMessage) {
       return toast.error(
-        isMetaProvider
-          ? "Escolhe um modelo em pelo menos um passo."
-          : "Escreve pelo menos uma mensagem.",
+        isMetaProvider ? "Escolhe um modelo aprovado." : "Escreve ou escolhe uma mensagem.",
       );
     }
     if (isMetaProvider) {
-      for (const s of cleaned) {
-        const tpl = templates.find((t) => t.name === s.template_name);
-        if (tpl?.hasImageHeader && !s.template_header_media_path) {
-          return toast.error(
-            `O modelo do passo com "${tpl.name}" tem imagem no cabeçalho, envie a imagem antes de salvar.`,
-          );
-        }
+      const tpl = templates.find((t) => t.name === content.template_name);
+      if (tpl?.hasImageHeader && !content.template_header_media_path) {
+        return toast.error("Esse modelo tem imagem no cabeçalho, envie a imagem antes de salvar.");
       }
     }
     setSaving(true);
@@ -457,13 +535,15 @@ function FollowupEditor({
         trigger_type: moment === "left_stage" ? "left_stage" : "time_in_stage",
         max_messages_per_contact: maxMessages === "" ? null : maxMessages,
         skip_if_replied: skipIfReplied,
-        steps: cleaned.map((s) => ({
-          delay_minutes: moment === "immediate" ? 0 : s.delay_minutes,
-          actions: isMetaProvider ? [] : [{ type: "text", text: s.actions[0].text.trim() }],
-          template_name: isMetaProvider ? s.template_name : null,
-          template_language: isMetaProvider ? "pt_BR" : null,
-          template_header_media_path: isMetaProvider ? s.template_header_media_path : null,
-        })),
+        steps: [
+          {
+            delay_minutes: content.delay_minutes,
+            actions: isMetaProvider ? [] : content.actions,
+            template_name: isMetaProvider ? content.template_name : null,
+            template_language: isMetaProvider ? "pt_BR" : null,
+            template_header_media_path: isMetaProvider ? content.template_header_media_path : null,
+          },
+        ],
       }),
     });
     setSaving(false);
@@ -479,7 +559,7 @@ function FollowupEditor({
     if (!rule) return;
     const ok = await confirm({
       title: "Remover esse follow-up?",
-      description: "Todos os passos configurados vão ser apagados.",
+      description: "A configuração vai ser apagada.",
       confirmLabel: "Remover",
       destructive: true,
     });
@@ -607,153 +687,207 @@ function FollowupEditor({
                 Um tempo parado
               </button>
             </div>
+            {moment === "time_in_stage" && (
+              <div className="mt-2 flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={0}
+                  value={delayValue}
+                  onChange={(e) =>
+                    setContent((prev) => ({
+                      ...prev,
+                      delay_minutes: valueUnitToMinutes(
+                        Math.max(0, Number(e.target.value) || 0),
+                        delayUnit,
+                      ),
+                    }))
+                  }
+                  className="h-8 w-20"
+                />
+                <Select
+                  value={delayUnit}
+                  onValueChange={(v) =>
+                    setContent((prev) => ({
+                      ...prev,
+                      delay_minutes: valueUnitToMinutes(
+                        delayValue,
+                        v as "minutos" | "horas" | "dias",
+                      ),
+                    }))
+                  }
+                >
+                  <SelectTrigger className="h-8 w-28 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="minutos">minutos</SelectItem>
+                    <SelectItem value="horas">horas</SelectItem>
+                    <SelectItem value="dias">dias</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-xs text-neutral-500">parado(a) aqui</span>
+              </div>
+            )}
           </section>
 
-          {/* Seção 3 — O que (mensagem) */}
+          {/* Seção 3 — O que enviar */}
           <section>
             <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
               O que enviar
             </h4>
-            {isMetaProvider && (
+            {isMetaProvider ? (
               <p className="mb-2 text-xs text-neutral-500">
-                Seu número está conectado via Meta, então cada passo precisa de um modelo aprovado.
+                Seu número está conectado via Meta, então precisa de um modelo aprovado.
               </p>
+            ) : (
+              <div className="mb-2 grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSource("write")}
+                  className={`rounded-lg border px-3 py-2 text-xs font-semibold ${source === "write" ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
+                >
+                  Escrever
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSource("quick_reply")}
+                  className={`rounded-lg border px-3 py-2 text-xs font-semibold ${source === "quick_reply" ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
+                >
+                  Resposta rápida
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSource("campaign")}
+                  className={`rounded-lg border px-3 py-2 text-xs font-semibold ${source === "campaign" ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
+                >
+                  Campanha salva
+                </button>
+              </div>
             )}
-            <div className="space-y-3">
-              {steps.map((step, i) => {
-                const { value, unit } = minutesToValueUnit(step.delay_minutes);
-                return (
-                  <div key={i} className="rounded-xl border border-neutral-200 p-3">
-                    <div className="mb-2 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-xs font-medium text-neutral-600">
-                        <Clock className="h-3.5 w-3.5" /> Passo {i + 1}
-                        {moment !== "immediate" && (
-                          <>
-                            <Input
-                              type="number"
-                              min={0}
-                              value={value}
-                              onChange={(e) =>
-                                updateStep(i, {
-                                  delay_minutes: valueUnitToMinutes(
-                                    Math.max(0, Number(e.target.value) || 0),
-                                    unit,
-                                  ),
-                                })
-                              }
-                              className="h-7 w-16 px-2"
-                            />
-                            <Select
-                              value={unit}
-                              onValueChange={(v) =>
-                                updateStep(i, {
-                                  delay_minutes: valueUnitToMinutes(
-                                    value,
-                                    v as "minutos" | "horas" | "dias",
-                                  ),
-                                })
-                              }
-                            >
-                              <SelectTrigger className="h-7 w-24 px-2 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="minutos">minutos</SelectItem>
-                                <SelectItem value="horas">horas</SelectItem>
-                                <SelectItem value="dias">dias</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            depois
-                          </>
-                        )}
-                      </div>
-                      {steps.length > 1 && (
-                        <button
-                          onClick={() => removeStep(i)}
-                          className="rounded-md p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+
+            {isMetaProvider ? (
+              approvedTemplates.length === 0 ? (
+                <p className="text-xs text-amber-600">
+                  Nenhum modelo aprovado encontrado. Cria um na aba Modelos.
+                </p>
+              ) : (
+                <>
+                  <Select
+                    value={content.template_name || ""}
+                    onValueChange={(v) =>
+                      setContent((prev) => ({
+                        ...prev,
+                        template_name: v,
+                        template_header_media_path: null,
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Escolha um modelo…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {approvedTemplates.map((t) => (
+                        <SelectItem key={t.name} value={t.name}>
+                          {t.name}
+                          {t.hasImageHeader ? " (tem imagem)" : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {templates.find((t) => t.name === content.template_name)?.hasImageHeader && (
+                    <div className="mt-2 rounded-lg border border-neutral-200 bg-white p-2">
+                      <p className="mb-1 text-xs font-medium text-neutral-600">
+                        Imagem do cabeçalho
+                      </p>
+                      {headerPreview && (
+                        <img
+                          src={headerPreview}
+                          alt="Prévia"
+                          className="mb-2 max-h-24 rounded-lg border border-neutral-200 object-cover"
+                        />
+                      )}
+                      <label className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-dashed border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-600 hover:border-brand">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={uploadingHeader}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) void handleHeaderFile(f);
+                          }}
+                          className="hidden"
+                        />
+                        {headerPreview ? "Trocar imagem" : "Escolher imagem"}
+                      </label>
+                      {uploadingHeader && (
+                        <p className="mt-1 text-xs text-neutral-500">Enviando…</p>
                       )}
                     </div>
-
-                    {isMetaProvider ? (
-                      approvedTemplates.length === 0 ? (
-                        <p className="text-xs text-amber-600">
-                          Nenhum modelo aprovado encontrado. Cria um na aba Modelos.
-                        </p>
-                      ) : (
-                        <>
-                          <Select
-                            value={step.template_name || ""}
-                            onValueChange={(v) =>
-                              updateStep(i, { template_name: v, template_header_media_path: null })
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Escolha um modelo…" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {approvedTemplates.map((t) => (
-                                <SelectItem key={t.name} value={t.name}>
-                                  {t.name}
-                                  {t.hasImageHeader ? " (tem imagem)" : ""}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {templates.find((t) => t.name === step.template_name)?.hasImageHeader && (
-                            <div className="mt-2 rounded-lg border border-neutral-200 bg-white p-2">
-                              <p className="mb-1 text-xs font-medium text-neutral-600">
-                                Imagem do cabeçalho
-                              </p>
-                              {headerPreviews[i] && (
-                                <img
-                                  src={headerPreviews[i]}
-                                  alt="Prévia"
-                                  className="mb-2 max-h-24 rounded-lg border border-neutral-200 object-cover"
-                                />
-                              )}
-                              <label className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-dashed border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-600 hover:border-brand">
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  disabled={uploadingHeaderIndex === i}
-                                  onChange={(e) => {
-                                    const f = e.target.files?.[0];
-                                    if (f) void handleStepHeaderFile(i, f);
-                                  }}
-                                  className="hidden"
-                                />
-                                {headerPreviews[i] ? "Trocar imagem" : "Escolher imagem"}
-                              </label>
-                              {uploadingHeaderIndex === i && (
-                                <p className="mt-1 text-xs text-neutral-500">Enviando…</p>
-                              )}
-                            </div>
-                          )}
-                        </>
-                      )
-                    ) : (
-                      <Textarea
-                        value={step.actions[0]?.text || ""}
-                        onChange={(e) =>
-                          updateStep(i, { actions: [{ type: "text", text: e.target.value }] })
-                        }
-                        rows={2}
-                        placeholder="Mensagem que será enviada…"
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            <button
-              onClick={addStep}
-              className="mt-3 flex items-center gap-1.5 text-sm font-medium text-brand hover:underline"
-            >
-              <Plus className="h-4 w-4" /> Adicionar passo
-            </button>
+                  )}
+                </>
+              )
+            ) : source === "quick_reply" ? (
+              quickReplies.length === 0 ? (
+                <p className="text-xs text-neutral-500">
+                  Nenhuma resposta rápida cadastrada ainda.
+                </p>
+              ) : (
+                <div className="max-h-48 space-y-1.5 overflow-y-auto">
+                  {quickReplies.map((qr) => (
+                    <button
+                      key={qr.id}
+                      type="button"
+                      onClick={() => pickQuickReply(qr)}
+                      className="flex w-full items-center justify-between rounded-lg border border-neutral-200 px-3 py-2 text-left text-sm hover:border-brand/40"
+                    >
+                      {qr.title}
+                      {qr.shortcut && (
+                        <span className="text-xs text-neutral-400">/{qr.shortcut}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )
+            ) : source === "campaign" ? (
+              savedCampaigns.length === 0 ? (
+                <p className="text-xs text-neutral-500">
+                  Nenhuma campanha pronta ainda. Adota uma na aba Campanhas.
+                </p>
+              ) : (
+                <div className="max-h-48 space-y-1.5 overflow-y-auto">
+                  {savedCampaigns.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      disabled={preparingSource}
+                      onClick={() => void pickCampaign(c)}
+                      className="flex w-full items-center gap-2 rounded-lg border border-neutral-200 px-3 py-2 text-left text-sm hover:border-brand/40 disabled:opacity-50"
+                    >
+                      {c.image_path && (
+                        <img
+                          src={c.image_path}
+                          alt=""
+                          className="h-8 w-12 shrink-0 rounded object-cover"
+                        />
+                      )}
+                      <span className="min-w-0 flex-1 truncate">{c.title}</span>
+                    </button>
+                  ))}
+                </div>
+              )
+            ) : (
+              <Textarea
+                value={content.actions.find((a) => a.type === "text")?.text || ""}
+                onChange={(e) =>
+                  setContent((prev) => ({
+                    ...prev,
+                    actions: [{ type: "text", text: e.target.value }],
+                  }))
+                }
+                rows={3}
+                placeholder="Mensagem que será enviada…"
+              />
+            )}
           </section>
 
           {/* Seção 4 — Regras */}
@@ -769,7 +903,7 @@ function FollowupEditor({
                   onChange={(e) => setSkipIfReplied(e.target.checked)}
                   className="h-3.5 w-3.5 rounded border-neutral-300"
                 />
-                Pular os próximos passos se o contato já respondeu
+                Não enviar se o contato já respondeu
               </label>
               <div className="flex items-center gap-2">
                 <Label className="text-sm text-neutral-700">Limite de mensagens por contato</Label>
@@ -792,9 +926,9 @@ function FollowupEditor({
           {rule ? (
             <button
               onClick={() => void removeRule()}
-              className="flex items-center gap-1.5 text-sm text-red-600 hover:underline"
+              className="text-sm text-red-600 hover:underline"
             >
-              <Trash2 className="h-3.5 w-3.5" /> Remover follow-up
+              Remover follow-up
             </button>
           ) : (
             <span />
