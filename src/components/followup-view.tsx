@@ -76,16 +76,6 @@ function valueUnitToMinutes(value: number, unit: "minutos" | "horas" | "dias") {
   return value;
 }
 
-function emptyContent(): FollowupContent {
-  return {
-    delay_minutes: 0,
-    actions: [{ type: "text", text: "" }],
-    template_name: null,
-    template_language: null,
-    template_header_media_path: null,
-  };
-}
-
 export function FollowupView({ api }: { api: Api }) {
   const [funnels, setFunnels] = useState<Funnel[] | null>(null);
   const [rules, setRules] = useState<FollowupRule[]>([]);
@@ -354,20 +344,49 @@ function FollowupReportModal({ api, onClose }: { api: Api; onClose: () => void }
 // pra continuar mostrando a seleção na aba certa (bug reportado:
 // escolher uma resposta rápida jogava o conteúdo de volta pra
 // "Escrever" sem indicar o que tinha sido escolhido).
+// Cada mensagem tem SEU PRÓPRIO tempo/gatilho, e as 3 fontes de
+// conteúdo (escrever/resposta rápida/campanha) ficam TOTALMENTE
+// separadas — trocar de fonte nunca mistura ou "vaza" o conteúdo de
+// uma na outra (bug corrigido: antes escolher uma campanha gravava o
+// texto dela no campo de escrever, e vice-versa).
 type StepUI = {
-  content: FollowupContent;
+  delay_minutes: number;
   source: MessageSource;
+  writeActions: QuickReplyAction[]; // só usado/editado quando source === "write"
   selectedQuickReplyId: string | null;
   selectedCampaignId: string | null;
+  // Cache da campanha já processada (imagem baixada e reenviada pro
+  // bucket certo) — evita reprocessar toda vez que troca de aba e volta.
+  preparedCampaignActions: QuickReplyAction[] | null;
+  template_name: string | null; // API oficial (Meta) — modelo aprovado
+  template_language: string | null;
+  template_header_media_path: string | null;
 };
 
 function stepUIFromContent(content?: FollowupContent): StepUI {
   return {
-    content: content ?? emptyContent(),
+    delay_minutes: content?.delay_minutes ?? 0,
     source: "write",
+    writeActions: content?.actions?.length ? content.actions : [{ type: "text", text: "" }],
     selectedQuickReplyId: null,
     selectedCampaignId: null,
+    preparedCampaignActions: null,
+    template_name: content?.template_name ?? null,
+    template_language: content?.template_language ?? null,
+    template_header_media_path: content?.template_header_media_path ?? null,
   };
+}
+
+/** Conteúdo efetivo de um passo, conforme a fonte escolhida — usado na
+ * hora de salvar e na validação. */
+function resolveStepActions(step: StepUI, quickReplies: QuickReply[]): QuickReplyAction[] {
+  if (step.source === "quick_reply") {
+    return quickReplies.find((q) => q.id === step.selectedQuickReplyId)?.actions ?? [];
+  }
+  if (step.source === "campaign") {
+    return step.preparedCampaignActions ?? [];
+  }
+  return step.writeActions;
 }
 
 /** Painel único — 4 seções: Quem recebe, Quando, O que enviar, Regras. */
@@ -424,10 +443,11 @@ function FollowupEditor({
   function updateStep(i: number, patch: Partial<StepUI>) {
     setSteps((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
   }
-  function updateStepContent(i: number, patch: Partial<FollowupContent>) {
-    setSteps((prev) =>
-      prev.map((s, idx) => (idx === i ? { ...s, content: { ...s.content, ...patch } } : s)),
-    );
+  /** Só mexe no conteúdo de "escrever" — nunca toca em resposta
+   * rápida/campanha selecionada, mesmo que não seja a fonte ativa no
+   * momento (trocar de fonte e voltar preserva o que já tinha escrito). */
+  function updateWriteActions(i: number, actions: QuickReplyAction[]) {
+    updateStep(i, { writeActions: actions });
   }
   function addStep() {
     setSteps((prev) => [...prev, stepUIFromContent()]);
@@ -436,45 +456,24 @@ function FollowupEditor({
     setSteps((prev) => prev.filter((_, idx) => idx !== i));
   }
 
+  // Trocar de fonte SÓ muda qual conteúdo fica visível/vale pra
+  // salvar — nunca apaga ou mistura o que já estava em cada uma
+  // (bug corrigido: antes escolher resposta rápida/campanha gravava
+  // o texto delas no campo de escrever, e vice-versa).
   function pickQuickReply(i: number, qr: QuickReply) {
-    setSteps((prev) =>
-      prev.map((s, idx) =>
-        idx === i
-          ? {
-              ...s,
-              source: "quick_reply",
-              selectedQuickReplyId: qr.id,
-              selectedCampaignId: null,
-              content: {
-                ...s.content,
-                actions: qr.actions,
-                template_name: null,
-                template_language: null,
-                template_header_media_path: null,
-              },
-            }
-          : s,
-      ),
-    );
+    updateStep(i, { source: "quick_reply", selectedQuickReplyId: qr.id });
   }
 
   // Mesma correção já aplicada no disparo (19/09) e na 1ª versão desse
   // editor: a imagem de uma campanha vive num bucket público, diferente
-  // do bucket privado que o envio de verdade usa — baixa e reenvia pro
-  // lugar certo antes de aplicar.
+  // do bucket privado que o envio de verdade usa. Baixa e reenvia pro
+  // lugar certo antes de aplicar, sem tocar em writeActions.
   async function pickCampaign(i: number, c: SavedCampaign) {
     if (!c.image_path) {
       updateStep(i, {
         source: "campaign",
         selectedCampaignId: c.id,
-        selectedQuickReplyId: null,
-        content: {
-          ...steps[i].content,
-          actions: [{ type: "text", text: c.body_text }],
-          template_name: null,
-          template_language: null,
-          template_header_media_path: null,
-        },
+        preparedCampaignActions: [{ type: "text", text: c.body_text }],
       });
       return;
     }
@@ -498,23 +497,16 @@ function FollowupEditor({
       updateStep(i, {
         source: "campaign",
         selectedCampaignId: c.id,
-        selectedQuickReplyId: null,
-        content: {
-          ...steps[i].content,
-          actions: [
-            {
-              type: "image",
-              path: result.path as string,
-              url: result.url as string,
-              mime: result.mime as string,
-              filename: result.filename as string,
-              caption: c.body_text,
-            },
-          ],
-          template_name: null,
-          template_language: null,
-          template_header_media_path: null,
-        },
+        preparedCampaignActions: [
+          {
+            type: "image",
+            path: result.path as string,
+            url: result.url as string,
+            mime: result.mime as string,
+            filename: result.filename as string,
+            caption: c.body_text,
+          },
+        ],
       });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível preparar essa campanha.");
@@ -531,8 +523,10 @@ function FollowupEditor({
     }
     const hasMessage = (s: StepUI) =>
       isMetaProvider
-        ? !!s.content.template_name
-        : s.content.actions.some((a) => (a.type === "text" && a.text?.trim()) || a.type !== "text");
+        ? !!s.template_name
+        : resolveStepActions(s, quickReplies).some(
+            (a) => (a.type === "text" && a.text?.trim()) || a.type !== "text",
+          );
     if (!steps.every(hasMessage)) {
       return toast.error(
         isMetaProvider
@@ -542,8 +536,8 @@ function FollowupEditor({
     }
     if (isMetaProvider) {
       for (const s of steps) {
-        const tpl = templates.find((t) => t.name === s.content.template_name);
-        if (tpl?.hasImageHeader && !s.content.template_header_media_path) {
+        const tpl = templates.find((t) => t.name === s.template_name);
+        if (tpl?.hasImageHeader && !s.template_header_media_path) {
           return toast.error(
             `O modelo "${tpl.name}" tem imagem no cabeçalho, envie a imagem antes de salvar.`,
           );
@@ -561,11 +555,11 @@ function FollowupEditor({
         moment,
         skip_if_replied: skipIfReplied,
         steps: steps.map((s) => ({
-          delay_minutes: s.content.delay_minutes,
-          actions: isMetaProvider ? [] : s.content.actions,
-          template_name: isMetaProvider ? s.content.template_name : null,
+          delay_minutes: s.delay_minutes,
+          actions: isMetaProvider ? [] : resolveStepActions(s, quickReplies),
+          template_name: isMetaProvider ? s.template_name : null,
           template_language: isMetaProvider ? "pt_BR" : null,
-          template_header_media_path: isMetaProvider ? s.content.template_header_media_path : null,
+          template_header_media_path: isMetaProvider ? s.template_header_media_path : null,
         })),
       }),
     });
@@ -612,7 +606,7 @@ function FollowupEditor({
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder={isNew ? "Nome do follow-up (ex: Cobrar orçamento)" : "Nome do follow-up"}
+            placeholder="Nome do follow-up"
             className="h-9 max-w-xs font-medium"
           />
           <div className="flex shrink-0 items-center gap-2">
@@ -680,7 +674,7 @@ function FollowupEditor({
             )}
             {isNew && stageAlreadyUsed && (
               <p className="mt-1.5 text-xs text-amber-600">
-                Já existe um follow-up aí — salvar vai substituir o que já tinha.
+                Já existe um follow-up aí. Salvar vai substituir o que já tinha.
               </p>
             )}
           </section>
@@ -715,9 +709,9 @@ function FollowupEditor({
             </div>
             <p className="mt-1.5 text-[11px] text-neutral-500">
               {moment === "entered" &&
-                "Uma mensagem, contada a partir da entrada — pode ser na hora ou depois de um tempo."}
+                "Uma mensagem, contada a partir da entrada. Pode ser na hora ou depois de um tempo."}
               {moment === "left_stage" &&
-                "Uma mensagem, contada a partir do momento em que o lead sai — pode ser na hora ou depois de um tempo."}
+                "Uma mensagem, contada a partir do momento em que o lead sai. Pode ser na hora ou depois de um tempo."}
               {moment === "time_in_stage" &&
                 "Uma sequência de mensagens, cada uma com seu próprio tempo, contadas a partir da entrada."}
             </p>
@@ -747,7 +741,9 @@ function FollowupEditor({
                   preparing={preparingIndex === i}
                   api={api}
                   onSetSource={(source) => updateStep(i, { source })}
-                  onContentChange={(patch) => updateStepContent(i, patch)}
+                  onDelayChange={(delay_minutes) => updateStep(i, { delay_minutes })}
+                  onWriteActionsChange={(actions) => updateWriteActions(i, actions)}
+                  onTemplateChange={(patch) => updateStep(i, patch)}
                   onPickQuickReply={(qr) => pickQuickReply(i, qr)}
                   onPickCampaign={(c) => void pickCampaign(i, c)}
                   onRemove={() => removeStep(i)}
@@ -828,7 +824,9 @@ function StepEditor({
   preparing,
   api,
   onSetSource,
-  onContentChange,
+  onDelayChange,
+  onWriteActionsChange,
+  onTemplateChange,
   onPickQuickReply,
   onPickCampaign,
   onRemove,
@@ -846,12 +844,18 @@ function StepEditor({
   preparing: boolean;
   api: Api;
   onSetSource: (s: MessageSource) => void;
-  onContentChange: (patch: Partial<FollowupContent>) => void;
+  onDelayChange: (delay_minutes: number) => void;
+  onWriteActionsChange: (actions: QuickReplyAction[]) => void;
+  onTemplateChange: (
+    patch: Partial<
+      Pick<StepUI, "template_name" | "template_language" | "template_header_media_path">
+    >,
+  ) => void;
   onPickQuickReply: (qr: QuickReply) => void;
   onPickCampaign: (c: SavedCampaign) => void;
   onRemove: () => void;
 }) {
-  const { value: delayValue, unit: delayUnit } = minutesToValueUnit(step.content.delay_minutes);
+  const { value: delayValue, unit: delayUnit } = minutesToValueUnit(step.delay_minutes);
   const [headerPreview, setHeaderPreview] = useState<string | null>(null);
   const [uploadingHeader, setUploadingHeader] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -863,17 +867,13 @@ function StepEditor({
   const selectedCampaign = savedCampaigns.find((c) => c.id === step.selectedCampaignId) || null;
 
   function updateAction(i: number, patch: Partial<QuickReplyAction>) {
-    onContentChange({
-      actions: step.content.actions.map((a, idx) => (idx === i ? { ...a, ...patch } : a)),
-    });
+    onWriteActionsChange(step.writeActions.map((a, idx) => (idx === i ? { ...a, ...patch } : a)));
   }
   function addAction(type: QuickReplyActionType) {
-    onContentChange({
-      actions: [...step.content.actions, type === "text" ? { type, text: "" } : { type }],
-    });
+    onWriteActionsChange([...step.writeActions, type === "text" ? { type, text: "" } : { type }]);
   }
   function removeAction(i: number) {
-    onContentChange({ actions: step.content.actions.filter((_, idx) => idx !== i) });
+    onWriteActionsChange(step.writeActions.filter((_, idx) => idx !== i));
   }
 
   async function handleBlockUpload(file: File) {
@@ -929,7 +929,7 @@ function StepEditor({
         toast.error((r?.error as string) || "Falha ao enviar a imagem.");
         return;
       }
-      onContentChange({ template_header_media_path: (r.path as string) || null });
+      onTemplateChange({ template_header_media_path: (r.path as string) || null });
       setHeaderPreview(dataUrl);
     } finally {
       setUploadingHeader(false);
@@ -947,21 +947,14 @@ function StepEditor({
             min={0}
             value={delayValue}
             onChange={(e) =>
-              onContentChange({
-                delay_minutes: valueUnitToMinutes(
-                  Math.max(0, Number(e.target.value) || 0),
-                  delayUnit,
-                ),
-              })
+              onDelayChange(valueUnitToMinutes(Math.max(0, Number(e.target.value) || 0), delayUnit))
             }
             className="h-7 w-16 px-2"
           />
           <Select
             value={delayUnit}
             onValueChange={(v) =>
-              onContentChange({
-                delay_minutes: valueUnitToMinutes(delayValue, v as "minutos" | "horas" | "dias"),
-              })
+              onDelayChange(valueUnitToMinutes(delayValue, v as "minutos" | "horas" | "dias"))
             }
           >
             <SelectTrigger className="h-7 w-24 px-2 text-xs">
@@ -993,9 +986,9 @@ function StepEditor({
         ) : (
           <>
             <Select
-              value={step.content.template_name || ""}
+              value={step.template_name || ""}
               onValueChange={(v) =>
-                onContentChange({ template_name: v, template_header_media_path: null })
+                onTemplateChange({ template_name: v, template_header_media_path: null })
               }
             >
               <SelectTrigger>
@@ -1010,7 +1003,7 @@ function StepEditor({
                 ))}
               </SelectContent>
             </Select>
-            {templates.find((t) => t.name === step.content.template_name)?.hasImageHeader && (
+            {templates.find((t) => t.name === step.template_name)?.hasImageHeader && (
               <div className="mt-2 rounded-lg border border-neutral-200 bg-white p-2">
                 <p className="mb-1 text-xs font-medium text-neutral-600">Imagem do cabeçalho</p>
                 {headerPreview && (
@@ -1119,13 +1112,13 @@ function StepEditor({
             </div>
           ) : (
             <div className="space-y-2">
-              {step.content.actions.map((action, i) => (
+              {step.writeActions.map((action, i) => (
                 <div key={i} className="rounded-lg border border-neutral-200 bg-neutral-50 p-2.5">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-semibold text-neutral-700">
                       {i + 1}. {actionLabel(action.type)}
                     </span>
-                    {step.content.actions.length > 1 && (
+                    {step.writeActions.length > 1 && (
                       <button
                         type="button"
                         onClick={() => removeAction(i)}
