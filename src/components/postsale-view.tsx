@@ -41,7 +41,6 @@ export function PostsaleView({ api }: { api: Api }) {
   const [savedCampaigns, setSavedCampaigns] = useState<SavedCampaign[]>([]);
   const [isMetaProvider, setIsMetaProvider] = useState(false);
   const [active, setActive] = useState(true);
-  const [badgePeriodDays, setBadgePeriodDays] = useState(30);
   const [postSaleStep, setPostSaleStep] = useState<StepUI>(stepUIFromContent());
   const [returnStep, setReturnStep] = useState<StepUI>(stepUIFromContent());
   const [saving, setSaving] = useState(false);
@@ -49,6 +48,13 @@ export function PostsaleView({ api }: { api: Api }) {
   const [editingStep, setEditingStep] = useState<"postsale" | "return" | null>(null);
 
   async function reloadAll() {
+    // Garante o funil especial existe ANTES de qualquer coisa — a
+    // configuração precisa funcionar mesmo que ninguém nunca tenha
+    // marcado um atendimento ainda (pedido explícito do usuário, 22/09:
+    // "como é que ele vai configurar depois, sendo que quando o cara
+    // marcar o atendimento, o cliente já tem que receber o pós-venda").
+    await api("/api/public/extension/postsale-ensure", { method: "POST" });
+
     const [f, t, q, c, st] = await Promise.all([
       api("/api/public/extension/funnels"),
       api("/api/public/extension/whatsapp/templates"),
@@ -97,7 +103,6 @@ export function PostsaleView({ api }: { api: Api }) {
       );
       const found = r?.ok ? ((r.rules as PostsaleRule[]) || [])[0] || null : null;
       setActive(found?.active ?? true);
-      setBadgePeriodDays(found?.badge_period_days ?? 30);
       setPostSaleStep(stepUIFromContent(found?.steps[0]));
       setReturnStep(stepUIFromContent(found?.steps[1]));
     }
@@ -174,15 +179,9 @@ export function PostsaleView({ api }: { api: Api }) {
     }
   }
 
-  async function submit(opts?: {
-    onSuccess?: () => void;
-    overrideActive?: boolean;
-    overrideBadgePeriod?: number;
-  }) {
+  async function submit(opts?: { onSuccess?: () => void; overrideActive?: boolean }) {
     if (!funnel) {
-      toast.error(
-        "Ainda não teve nenhum atendimento marcado. Essa aba fica pronta no primeiro clique na tesoura, numa conversa.",
-      );
+      toast.error("Não consegui preparar a aba de pós-venda. Tenta recarregar a página.");
       return;
     }
     const stage = funnel.stages[0];
@@ -214,7 +213,7 @@ export function PostsaleView({ api }: { api: Api }) {
         active: opts?.overrideActive ?? active,
         moment: "time_in_stage",
         skip_if_replied: false,
-        badge_period_days: opts?.overrideBadgePeriod ?? badgePeriodDays,
+        badge_period_days: 30,
         steps: [postSaleStep, returnStep].map((s) => ({
           id: s.id,
           delay_minutes: s.delay_minutes,
@@ -240,11 +239,6 @@ export function PostsaleView({ api }: { api: Api }) {
     await submit({ overrideActive: next });
   }
 
-  async function saveBadgePeriod(days: number) {
-    setBadgePeriodDays(days);
-    await submit({ overrideBadgePeriod: days });
-  }
-
   if (funnel === undefined) {
     return <p className="text-sm text-neutral-500">Carregando…</p>;
   }
@@ -253,8 +247,7 @@ export function PostsaleView({ api }: { api: Api }) {
     return (
       <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-8 text-center">
         <p className="text-sm text-neutral-500">
-          Ainda não teve nenhum atendimento marcado. Assim que você clicar no ícone de tesoura numa
-          conversa pela primeira vez, essa aba fica pronta pra configurar.
+          Não consegui preparar a aba de pós-venda. Tenta recarregar a página.
         </p>
       </div>
     );
@@ -335,24 +328,6 @@ export function PostsaleView({ api }: { api: Api }) {
           <p className="truncate text-sm text-neutral-800">{returnSummary.content}</p>
           <span className="mt-1 text-xs font-medium text-brand">Editar</span>
         </button>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-600">
-        <span className="font-medium text-neutral-700">Contador na tesourinha:</span>
-        {[
-          { days: 7, label: "última semana" },
-          { days: 30, label: "último mês" },
-          { days: 60, label: "últimos 2 meses" },
-        ].map((opt) => (
-          <button
-            key={opt.days}
-            type="button"
-            onClick={() => void saveBadgePeriod(opt.days)}
-            className={`rounded-full border px-2.5 py-1 font-semibold ${badgePeriodDays === opt.days ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
-          >
-            {opt.label}
-          </button>
-        ))}
       </div>
 
       {editingStep && (

@@ -65,6 +65,7 @@ import { Route as ApiPublicExtensionMetaRouteImport } from './routes/api/public/
 import { Route as ApiPublicExtensionPairRouteImport } from './routes/api/public/extension/pair'
 import { Route as ApiPublicExtensionPostsaleAttendanceCountRouteImport } from './routes/api/public/extension/postsale-attendance-count'
 import { Route as ApiPublicExtensionPostsaleAttendancesRouteImport } from './routes/api/public/extension/postsale-attendances'
+import { Route as ApiPublicExtensionPostsaleEnsureRouteImport } from './routes/api/public/extension/postsale-ensure'
 import { Route as ApiPublicExtensionPostsaleReportRouteImport } from './routes/api/public/extension/postsale-report'
 import { Route as ApiPublicExtensionProductsRouteImport } from './routes/api/public/extension/products'
 import { Route as ApiPublicExtensionProfessionalsRouteImport } from './routes/api/public/extension/professionals'
@@ -428,6 +429,12 @@ const ApiPublicExtensionPostsaleAttendancesRoute =
   ApiPublicExtensionPostsaleAttendancesRouteImport.update({
     id: '/api/public/extension/postsale-attendances',
     path: '/api/public/extension/postsale-attendances',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionPostsaleEnsureRoute =
+  ApiPublicExtensionPostsaleEnsureRouteImport.update({
+    id: '/api/public/extension/postsale-ensure',
+    path: '/api/public/extension/postsale-ensure',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicExtensionPostsaleReportRoute =
@@ -799,6 +806,7 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
   '/api/public/extension/postsale-attendance-count': typeof ApiPublicExtensionPostsaleAttendanceCountRoute
   '/api/public/extension/postsale-attendances': typeof ApiPublicExtensionPostsaleAttendancesRoute
+  '/api/public/extension/postsale-ensure': typeof ApiPublicExtensionPostsaleEnsureRoute
   '/api/public/extension/postsale-report': typeof ApiPublicExtensionPostsaleReportRoute
   '/api/public/extension/products': typeof ApiPublicExtensionProductsRouteWithChildren
   '/api/public/extension/professionals': typeof ApiPublicExtensionProfessionalsRouteWithChildren
@@ -909,6 +917,7 @@ export interface FileRoutesByTo {
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
   '/api/public/extension/postsale-attendance-count': typeof ApiPublicExtensionPostsaleAttendanceCountRoute
   '/api/public/extension/postsale-attendances': typeof ApiPublicExtensionPostsaleAttendancesRoute
+  '/api/public/extension/postsale-ensure': typeof ApiPublicExtensionPostsaleEnsureRoute
   '/api/public/extension/postsale-report': typeof ApiPublicExtensionPostsaleReportRoute
   '/api/public/extension/products': typeof ApiPublicExtensionProductsRouteWithChildren
   '/api/public/extension/professionals': typeof ApiPublicExtensionProfessionalsRouteWithChildren
@@ -1020,6 +1029,7 @@ export interface FileRoutesById {
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
   '/api/public/extension/postsale-attendance-count': typeof ApiPublicExtensionPostsaleAttendanceCountRoute
   '/api/public/extension/postsale-attendances': typeof ApiPublicExtensionPostsaleAttendancesRoute
+  '/api/public/extension/postsale-ensure': typeof ApiPublicExtensionPostsaleEnsureRoute
   '/api/public/extension/postsale-report': typeof ApiPublicExtensionPostsaleReportRoute
   '/api/public/extension/products': typeof ApiPublicExtensionProductsRouteWithChildren
   '/api/public/extension/professionals': typeof ApiPublicExtensionProfessionalsRouteWithChildren
@@ -1132,6 +1142,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/pair'
     | '/api/public/extension/postsale-attendance-count'
     | '/api/public/extension/postsale-attendances'
+    | '/api/public/extension/postsale-ensure'
     | '/api/public/extension/postsale-report'
     | '/api/public/extension/products'
     | '/api/public/extension/professionals'
@@ -1242,6 +1253,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/pair'
     | '/api/public/extension/postsale-attendance-count'
     | '/api/public/extension/postsale-attendances'
+    | '/api/public/extension/postsale-ensure'
     | '/api/public/extension/postsale-report'
     | '/api/public/extension/products'
     | '/api/public/extension/professionals'
@@ -1352,6 +1364,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/pair'
     | '/api/public/extension/postsale-attendance-count'
     | '/api/public/extension/postsale-attendances'
+    | '/api/public/extension/postsale-ensure'
     | '/api/public/extension/postsale-report'
     | '/api/public/extension/products'
     | '/api/public/extension/professionals'
@@ -1461,6 +1474,7 @@ export interface RootRouteChildren {
   ApiPublicExtensionPairRoute: typeof ApiPublicExtensionPairRoute
   ApiPublicExtensionPostsaleAttendanceCountRoute: typeof ApiPublicExtensionPostsaleAttendanceCountRoute
   ApiPublicExtensionPostsaleAttendancesRoute: typeof ApiPublicExtensionPostsaleAttendancesRoute
+  ApiPublicExtensionPostsaleEnsureRoute: typeof ApiPublicExtensionPostsaleEnsureRoute
   ApiPublicExtensionPostsaleReportRoute: typeof ApiPublicExtensionPostsaleReportRoute
   ApiPublicExtensionProductsRoute: typeof ApiPublicExtensionProductsRouteWithChildren
   ApiPublicExtensionProfessionalsRoute: typeof ApiPublicExtensionProfessionalsRouteWithChildren
@@ -1882,6 +1896,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/extension/postsale-attendances'
       fullPath: '/api/public/extension/postsale-attendances'
       preLoaderRoute: typeof ApiPublicExtensionPostsaleAttendancesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/postsale-ensure': {
+      id: '/api/public/extension/postsale-ensure'
+      path: '/api/public/extension/postsale-ensure'
+      fullPath: '/api/public/extension/postsale-ensure'
+      preLoaderRoute: typeof ApiPublicExtensionPostsaleEnsureRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/extension/postsale-report': {
@@ -2667,6 +2688,7 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicExtensionPostsaleAttendanceCountRoute,
   ApiPublicExtensionPostsaleAttendancesRoute:
     ApiPublicExtensionPostsaleAttendancesRoute,
+  ApiPublicExtensionPostsaleEnsureRoute: ApiPublicExtensionPostsaleEnsureRoute,
   ApiPublicExtensionPostsaleReportRoute: ApiPublicExtensionPostsaleReportRoute,
   ApiPublicExtensionProductsRoute: ApiPublicExtensionProductsRouteWithChildren,
   ApiPublicExtensionProfessionalsRoute:

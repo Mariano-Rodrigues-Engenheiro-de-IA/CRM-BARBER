@@ -14,9 +14,7 @@ import { jsonResponse, preflight } from "@/lib/extension-cors";
 import { authenticateExtension } from "@/lib/extension-auth";
 import { recordReentry, recordStageChange } from "@/lib/funnel-stage-history.server";
 import { ensureCustomerId } from "@/lib/customer-linking.server";
-
-const POSTSALE_FUNNEL_NAME = "Pós-venda";
-const POSTSALE_STAGE_NAME = "Atendidos";
+import { ensurePostsaleFunnel } from "@/lib/postsale-funnel.server";
 
 const bodySchema = z.object({
   phone: z.string().trim().min(1),
@@ -71,56 +69,15 @@ export const Route = createFileRoute("/api/public/extension/mark-attendance")({
         }
 
         // Garante o funil especial "Pós-venda" + etapa fixa "Atendidos"
-        // — cria na primeira vez que alguém marca um atendimento nessa
-        // barbearia, mesmo padrão de auto-criação do funil "Listas".
-        let { data: funnel } = await supabaseAdmin
-          .from("funnels")
-          .select("id")
-          .eq("barbershop_id", shop)
-          .eq("mode", "postsale")
-          .maybeSingle();
-        if (!funnel) {
-          const { data: createdFunnel, error: funnelErr } = await supabaseAdmin
-            .from("funnels")
-            .insert({ barbershop_id: shop, name: POSTSALE_FUNNEL_NAME, mode: "postsale" })
-            .select("id")
-            .single();
-          if (funnelErr || !createdFunnel) {
-            return jsonResponse(
-              request,
-              { ok: false, error: funnelErr?.message ?? "Falha ao criar funil de pós-venda" },
-              { status: 500 },
-            );
-          }
-          funnel = createdFunnel;
+        // — normalmente já existe (a tela de configuração cria
+        // proativamente ao abrir), mas garante de novo aqui por
+        // segurança caso alguém marque atendimento sem nunca ter
+        // aberto a aba de configuração antes.
+        const ensured = await ensurePostsaleFunnel(supabaseAdmin, shop);
+        if ("error" in ensured) {
+          return jsonResponse(request, { ok: false, error: ensured.error }, { status: 500 });
         }
-
-        let { data: stage } = await supabaseAdmin
-          .from("funnel_stages")
-          .select("id")
-          .eq("funnel_id", funnel.id)
-          .eq("barbershop_id", shop)
-          .maybeSingle();
-        if (!stage) {
-          const { data: createdStage, error: stageErr } = await supabaseAdmin
-            .from("funnel_stages")
-            .insert({
-              barbershop_id: shop,
-              funnel_id: funnel.id,
-              name: POSTSALE_STAGE_NAME,
-              sort_order: 0,
-            })
-            .select("id")
-            .single();
-          if (stageErr || !createdStage) {
-            return jsonResponse(
-              request,
-              { ok: false, error: stageErr?.message ?? "Falha ao criar etapa de pós-venda" },
-              { status: 500 },
-            );
-          }
-          stage = createdStage;
-        }
+        const { funnel, stage } = ensured;
 
         // Já existe um card desse cliente nesse funil? (mesmo telefone,
         // ou mesmo wa_contact_id se disponível)
