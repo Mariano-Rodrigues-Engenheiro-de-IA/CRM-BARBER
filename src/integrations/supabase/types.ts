@@ -1307,6 +1307,7 @@ export type Database = {
           funnel_id: string;
           id: string;
           max_messages_per_contact: number | null;
+          skip_if_replied: boolean;
           stage_id: string;
           trigger_type: string;
           updated_at: string;
@@ -1318,6 +1319,7 @@ export type Database = {
           funnel_id: string;
           id?: string;
           max_messages_per_contact?: number | null;
+          skip_if_replied?: boolean;
           stage_id: string;
           trigger_type?: string;
           updated_at?: string;
@@ -1329,6 +1331,7 @@ export type Database = {
           funnel_id?: string;
           id?: string;
           max_messages_per_contact?: number | null;
+          skip_if_replied?: boolean;
           stage_id?: string;
           trigger_type?: string;
           updated_at?: string;

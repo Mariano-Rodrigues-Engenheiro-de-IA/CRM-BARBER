@@ -11,7 +11,7 @@ import { authenticateExtension } from "@/lib/extension-auth";
 import { funnelFollowupRuleSchema } from "@/lib/funnel-followups";
 
 const STEP_COLS =
-  "id, delay_minutes, actions, template_name, template_language, template_header_media_path, skip_if_replied, sort_order";
+  "id, delay_minutes, actions, template_name, template_language, template_header_media_path, sort_order";
 
 export const Route = createFileRoute("/api/public/extension/funnel-followup-rules")({
   server: {
@@ -29,7 +29,7 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
         let query = supabaseAdmin
           .from("funnel_followup_rules")
           .select(
-            `id, funnel_id, stage_id, active, trigger_type, max_messages_per_contact, funnel_followup_steps (${STEP_COLS})`,
+            `id, funnel_id, stage_id, active, trigger_type, max_messages_per_contact, skip_if_replied, funnel_followup_steps (${STEP_COLS})`,
           )
           .eq("barbershop_id", auth.token.barbershop_id);
         if (funnelId) query = query.eq("funnel_id", funnelId);
@@ -102,6 +102,7 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
               active: parsed.data.active ?? true,
               trigger_type: parsed.data.trigger_type ?? "time_in_stage",
               max_messages_per_contact: parsed.data.max_messages_per_contact ?? null,
+              skip_if_replied: parsed.data.skip_if_replied ?? true,
             })
             .eq("id", ruleId);
           if (updErr)
@@ -119,6 +120,7 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
               active: parsed.data.active ?? true,
               trigger_type: parsed.data.trigger_type ?? "time_in_stage",
               max_messages_per_contact: parsed.data.max_messages_per_contact ?? null,
+              skip_if_replied: parsed.data.skip_if_replied ?? true,
             })
             .select("id")
             .single();
@@ -141,7 +143,6 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
             template_name: s.template_name ?? null,
             template_language: s.template_language ?? null,
             template_header_media_path: s.template_header_media_path ?? null,
-            skip_if_replied: s.skip_if_replied ?? false,
           })),
         );
         if (stepsErr) {
@@ -151,7 +152,7 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
         const { data: full } = await supabaseAdmin
           .from("funnel_followup_rules")
           .select(
-            `id, funnel_id, stage_id, active, trigger_type, max_messages_per_contact, funnel_followup_steps (${STEP_COLS})`,
+            `id, funnel_id, stage_id, active, trigger_type, max_messages_per_contact, skip_if_replied, funnel_followup_steps (${STEP_COLS})`,
           )
           .eq("id", ruleId)
           .single();

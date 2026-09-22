@@ -36,7 +36,6 @@ type Step = {
   template_name: string | null;
   template_language: string | null;
   template_header_media_path: string | null;
-  skip_if_replied: boolean;
 };
 
 type Rule = {
@@ -46,6 +45,7 @@ type Rule = {
   stage_id: string;
   trigger_type: string;
   max_messages_per_contact: number | null;
+  skip_if_replied: boolean;
   funnel_followup_steps: Step[];
 };
 
@@ -180,7 +180,7 @@ export const Route = createFileRoute("/api/public/hooks/evaluate-followups")({
         const { data: rules, error: rulesErr } = await supabaseAdmin
           .from("funnel_followup_rules")
           .select(
-            "id, barbershop_id, funnel_id, stage_id, trigger_type, max_messages_per_contact, funnel_followup_steps (id, delay_minutes, actions, template_name, template_language, template_header_media_path, skip_if_replied)",
+            "id, barbershop_id, funnel_id, stage_id, trigger_type, max_messages_per_contact, skip_if_replied, funnel_followup_steps (id, delay_minutes, actions, template_name, template_language, template_header_media_path)",
           )
           .eq("active", true);
         if (rulesErr) {
@@ -285,7 +285,7 @@ async function processTimeInStageRule(
       const dueAt = enteredAt + step.delay_minutes * 60_000;
       if (now.getTime() < dueAt) continue;
 
-      if (step.skip_if_replied) {
+      if (rule.skip_if_replied) {
         const replied = await hasRepliedSince(supabaseAdmin, rule.barbershop_id, card, enteredAt);
         if (replied) {
           sentSet.add(key); // não tenta de novo nessa mesma rodada
@@ -378,7 +378,7 @@ async function processLeftStageRule(
       const dueAt = leftAtMs + step.delay_minutes * 60_000;
       if (now.getTime() < dueAt) continue; // ainda não chegou a vez desse passo — reavalia na próxima rodada
 
-      if (step.skip_if_replied) {
+      if (rule.skip_if_replied) {
         const replied = await hasRepliedSince(supabaseAdmin, rule.barbershop_id, card, leftAtMs);
         if (replied) {
           processedSet.add(key);

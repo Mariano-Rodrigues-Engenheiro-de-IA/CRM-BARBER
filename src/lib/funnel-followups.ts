@@ -21,7 +21,6 @@ export const followupStepSchema = z
     template_language: z.string().trim().max(10).nullable().optional(),
     // Só quando o modelo escolhido nesse passo tiver cabeçalho de imagem.
     template_header_media_path: z.string().trim().max(400).nullable().optional(),
-    skip_if_replied: z.boolean().optional(),
   })
   .refine((v) => (v.actions && v.actions.length > 0) || !!v.template_name, {
     message: "Cada passo precisa de uma mensagem ou de um modelo.",
@@ -39,6 +38,9 @@ export const funnelFollowupRuleSchema = z.object({
   // Quantidade máxima de mensagens que um mesmo contato recebe dessa
   // regra — null/ausente = sem limite.
   max_messages_per_contact: z.number().int().min(1).max(1000).nullable().optional(),
+  // Regra do follow-up inteiro (não mais por passo) — se o contato
+  // respondeu depois do gatilho, pula os passos seguintes.
+  skip_if_replied: z.boolean().optional(),
   steps: z.array(followupStepSchema).min(1).max(20),
 });
 
@@ -49,7 +51,6 @@ export type FollowupStep = {
   template_name: string | null;
   template_language: string | null;
   template_header_media_path: string | null;
-  skip_if_replied: boolean;
   sort_order: number;
 };
 
@@ -60,5 +61,6 @@ export type FunnelFollowupRule = {
   active: boolean;
   trigger_type: "time_in_stage" | "left_stage";
   max_messages_per_contact: number | null;
+  skip_if_replied: boolean;
   steps: FollowupStep[];
 };
