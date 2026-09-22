@@ -208,6 +208,7 @@ export function PostsaleView({ api }: { api: Api }) {
         moment: "time_in_stage",
         skip_if_replied: false,
         steps: [postSaleStep, returnStep].map((s) => ({
+          id: s.id,
           delay_minutes: s.delay_minutes,
           actions: isMetaProvider ? [] : resolveStepActions(s, quickReplies),
           template_name: isMetaProvider ? s.template_name : null,

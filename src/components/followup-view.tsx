@@ -33,6 +33,7 @@ import type { SavedCampaign } from "@/components/campaigns-marketplace-view";
 export type Api = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
 
 export type FollowupContent = {
+  id?: string; // presente quando veio do backend (passo já existente) — precisa ser preservado e reenviado no submit pra o backend conseguir ATUALIZAR em vez de apagar e recriar (senão perde o histórico de já enviado)
   delay_minutes: number;
   actions: QuickReplyAction[];
   template_name: string | null;
@@ -358,6 +359,7 @@ function FollowupReportModal({ api, onClose }: { api: Api; onClose: () => void }
 // uma na outra (bug corrigido: antes escolher uma campanha gravava o
 // texto dela no campo de escrever, e vice-versa).
 export type StepUI = {
+  id?: string; // preservado do backend (ver FollowupContent) — undefined = passo novo, ainda não salvo
   delay_minutes: number;
   source: MessageSource;
   writeActions: QuickReplyAction[]; // só usado/editado quando source === "write"
@@ -373,6 +375,7 @@ export type StepUI = {
 
 export function stepUIFromContent(content?: FollowupContent): StepUI {
   return {
+    id: content?.id,
     delay_minutes: content?.delay_minutes ?? 0,
     source: "write",
     writeActions: content?.actions?.length ? content.actions : [{ type: "text", text: "" }],
@@ -565,6 +568,7 @@ function FollowupEditor({
         moment,
         skip_if_replied: skipIfReplied,
         steps: steps.map((s) => ({
+          id: s.id,
           delay_minutes: s.delay_minutes,
           actions: isMetaProvider ? [] : resolveStepActions(s, quickReplies),
           template_name: isMetaProvider ? s.template_name : null,

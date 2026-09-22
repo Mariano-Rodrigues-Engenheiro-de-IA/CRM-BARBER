@@ -100,7 +100,17 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
           .maybeSingle();
 
         let ruleId = existing?.id as string | undefined;
+        // Passos já existentes dessa regra (se houver) — usados pra
+        // decidir quem atualiza (preserva histórico), quem é novo
+        // (insere) e quem sumiu (remove só esse).
+        let existingStepIds: string[] = [];
         if (ruleId) {
+          const { data: existingSteps } = await supabaseAdmin
+            .from("funnel_followup_steps")
+            .select("id")
+            .eq("rule_id", ruleId);
+          existingStepIds = (existingSteps ?? []).map((s) => s.id as string);
+
           const { error: updErr } = await supabaseAdmin
             .from("funnel_followup_rules")
             .update({
@@ -113,9 +123,6 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
             .eq("id", ruleId);
           if (updErr)
             return jsonResponse(request, { ok: false, error: updErr.message }, { status: 500 });
-          // Recomeça os passos do zero — mais simples e previsível que
-          // tentar casar/atualizar item a item.
-          await supabaseAdmin.from("funnel_followup_steps").delete().eq("rule_id", ruleId);
         } else {
           const { data: created, error: insErr } = await supabaseAdmin
             .from("funnel_followup_rules")
@@ -141,8 +148,29 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
           ruleId = created.id;
         }
 
-        const { error: stepsErr } = await supabaseAdmin.from("funnel_followup_steps").insert(
-          parsed.data.steps.map((s, i) => ({
+        // Upsert de verdade nos passos — CRÍTICO: nunca apagar e
+        // recriar um passo que continua existindo. O histórico de "já
+        // enviado" (funnel_followup_sent_log / *_left_stage_sent)
+        // referencia o ID do passo com ON DELETE CASCADE — apagar o
+        // passo apaga junto todo o histórico de quem já recebeu, e a
+        // próxima rodada do cron manda tudo de novo pra quem já tinha
+        // recebido (bug real reportado 22/09: reativar/salvar a regra
+        // de Pós-venda mandou mensagem de novo pra quem já tinha
+        // recebido). Passos com "id" no payload que batem com um
+        // existente são ATUALIZADOS (preserva o ID); os outros são
+        // criados; os que existiam mas sumiram do payload são
+        // removidos (só esses, não todos).
+        const payloadStepIds = new Set(
+          parsed.data.steps.map((s) => s.id).filter((id): id is string => !!id),
+        );
+        const toRemove = existingStepIds.filter((id) => !payloadStepIds.has(id));
+        if (toRemove.length) {
+          await supabaseAdmin.from("funnel_followup_steps").delete().in("id", toRemove);
+        }
+
+        for (let i = 0; i < parsed.data.steps.length; i++) {
+          const s = parsed.data.steps[i];
+          const stepData = {
             rule_id: ruleId,
             sort_order: i,
             delay_minutes: s.delay_minutes,
@@ -150,10 +178,31 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
             template_name: s.template_name ?? null,
             template_language: s.template_language ?? null,
             template_header_media_path: s.template_header_media_path ?? null,
-          })),
-        );
-        if (stepsErr) {
-          return jsonResponse(request, { ok: false, error: stepsErr.message }, { status: 500 });
+          };
+          if (s.id && existingStepIds.includes(s.id)) {
+            const { error: stepUpdErr } = await supabaseAdmin
+              .from("funnel_followup_steps")
+              .update(stepData)
+              .eq("id", s.id);
+            if (stepUpdErr) {
+              return jsonResponse(
+                request,
+                { ok: false, error: stepUpdErr.message },
+                { status: 500 },
+              );
+            }
+          } else {
+            const { error: stepInsErr } = await supabaseAdmin
+              .from("funnel_followup_steps")
+              .insert(stepData);
+            if (stepInsErr) {
+              return jsonResponse(
+                request,
+                { ok: false, error: stepInsErr.message },
+                { status: 500 },
+              );
+            }
+          }
         }
 
         const { data: full } = await supabaseAdmin
