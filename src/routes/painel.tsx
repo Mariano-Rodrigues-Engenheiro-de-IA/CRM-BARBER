@@ -990,7 +990,7 @@ function Painel() {
     },
     { key: "funis", label: "Funis de Vendas", icon: <IconChart /> },
     { key: "follow-up", label: "Follow-up", icon: <IconClock /> },
-    { key: "pos-venda", label: "Pós-venda", icon: <IconScissors /> },
+    { key: "pos-venda", label: "Pós-venda / Retorno", icon: <IconScissors /> },
     { key: "disparo", label: "Disparo", icon: <IconSend /> },
     { key: "campanhas", label: "Campanhas", icon: <IconMegaphone /> },
     ...(isClinicNiche(businessType)
@@ -1494,7 +1494,7 @@ function Painel() {
 
         {section === "pos-venda" && token && (
           <>
-            <SectionHeader icon={<IconScissors />} title="Pós-venda" />
+            <SectionHeader icon={<IconScissors />} title="Pós-venda / Retorno" />
             <main className="px-4 py-4">
               <PremiumSoftLock active={!!billing && !billing.premium} onUpgrade={openCheckout}>
                 <PostsaleView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />

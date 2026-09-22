@@ -134,6 +134,10 @@ export type FunnelCard = {
   /** Quantidade de mensagens agendadas ainda pendentes (não conta
    * follow-up nem lembretes automáticos, só o que foi criado manual). */
   schedule_count?: number;
+  /** Quantas vezes esse cliente foi marcado como atendido dentro do
+   * período configurado na regra de Pós-venda — pro selinho na
+   * tesourinha. */
+  attendance_count?: number;
 };
 
 export type Funnel = {

@@ -1,4 +1,4 @@
-// Aba "Pós-venda / Resgate" — tela dedicada e simples (não o construtor
+// Aba "Pós-venda / Retorno" — tela dedicada e simples (não o construtor
 // genérico de Follow-up): exatamente 2 mensagens configuráveis —
 // Pós-venda e Retorno — disparadas quando o cliente é marcado como
 // atendido (ícone de tesoura na conversa, ver funnels-view.tsx).
@@ -30,6 +30,7 @@ type PostsaleRule = {
   funnel_id: string;
   stage_id: string;
   active: boolean;
+  badge_period_days: number;
   steps: FollowupContent[];
 };
 
@@ -40,6 +41,7 @@ export function PostsaleView({ api }: { api: Api }) {
   const [savedCampaigns, setSavedCampaigns] = useState<SavedCampaign[]>([]);
   const [isMetaProvider, setIsMetaProvider] = useState(false);
   const [active, setActive] = useState(true);
+  const [badgePeriodDays, setBadgePeriodDays] = useState(30);
   const [postSaleStep, setPostSaleStep] = useState<StepUI>(stepUIFromContent());
   const [returnStep, setReturnStep] = useState<StepUI>(stepUIFromContent());
   const [saving, setSaving] = useState(false);
@@ -95,6 +97,7 @@ export function PostsaleView({ api }: { api: Api }) {
       );
       const found = r?.ok ? ((r.rules as PostsaleRule[]) || [])[0] || null : null;
       setActive(found?.active ?? true);
+      setBadgePeriodDays(found?.badge_period_days ?? 30);
       setPostSaleStep(stepUIFromContent(found?.steps[0]));
       setReturnStep(stepUIFromContent(found?.steps[1]));
     }
@@ -201,12 +204,13 @@ export function PostsaleView({ api }: { api: Api }) {
     const r = await api("/api/public/extension/funnel-followup-rules", {
       method: "POST",
       body: JSON.stringify({
-        name: "Pós-venda / Resgate",
+        name: "Pós-venda / Retorno",
         funnel_id: funnel.id,
         stage_id: stage.id,
         active,
         moment: "time_in_stage",
         skip_if_replied: false,
+        badge_period_days: badgePeriodDays,
         steps: [postSaleStep, returnStep].map((s) => ({
           id: s.id,
           delay_minutes: s.delay_minutes,
@@ -245,7 +249,7 @@ export function PostsaleView({ api }: { api: Api }) {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-neutral-900">Pós-venda / Resgate</h3>
+          <h3 className="text-sm font-semibold text-neutral-900">Pós-venda / Retorno</h3>
           <p className="text-xs text-neutral-500">
             {active ? "Ativo" : "Pausado"} · dispara pra quem for marcado com atendimento
           </p>
@@ -263,6 +267,38 @@ export function PostsaleView({ api }: { api: Api }) {
           className="h-4 w-4 rounded border-neutral-300"
         />
         <Label className="text-sm text-neutral-700">Pós-venda ativo</Label>
+      </div>
+
+      <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+        <Label className="mb-2 block text-sm text-neutral-700">
+          Contador na tesourinha (WhatsApp e CRM)
+        </Label>
+        <p className="mb-2 text-xs text-neutral-500">
+          Quantos atendimentos aparecem no selinho, olhando pra trás:
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={() => setBadgePeriodDays(7)}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${badgePeriodDays === 7 ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
+          >
+            Última semana
+          </button>
+          <button
+            type="button"
+            onClick={() => setBadgePeriodDays(30)}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${badgePeriodDays === 30 ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
+          >
+            Último mês
+          </button>
+          <button
+            type="button"
+            onClick={() => setBadgePeriodDays(60)}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${badgePeriodDays === 60 ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
+          >
+            Últimos 2 meses
+          </button>
+        </div>
       </div>
 
       <div>

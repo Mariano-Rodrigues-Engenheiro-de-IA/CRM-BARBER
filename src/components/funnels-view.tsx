@@ -1112,13 +1112,19 @@ export function FunnelsView({
                             >
                               <IconProfile />
                             </CardAction>
-                            <CardAction
-                              title="Marcar atendimento (entra no Pós-venda)"
-                              colorClass="text-amber-600 hover:bg-amber-50"
-                              onClick={() => void handleMarkAttendance(card)}
-                            >
-                              <IconScissors />
-                            </CardAction>
+                            <div className="relative inline-block">
+                              <CardAction
+                                title="Marcar atendimento (entra no Pós-venda)"
+                                colorClass="text-amber-600 hover:bg-amber-50"
+                                onClick={() => void handleMarkAttendance(card)}
+                              >
+                                <IconScissors />
+                              </CardAction>
+                              <UnreadBadge
+                                count={card.attendance_count ?? 0}
+                                colorClass="bg-amber-600"
+                              />
+                            </div>
                             {dealValueByKey.get(card.wa_contact_id || card.phone || "") ? (
                               <span className="ml-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
                                 {formatBRL(

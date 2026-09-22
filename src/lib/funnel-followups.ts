@@ -43,6 +43,9 @@ export const funnelFollowupRuleSchema = z
     // respondeu depois do gatilho, para a sequência (não manda os
     // passos seguintes).
     skip_if_replied: z.boolean().optional(),
+    // Só usado pela regra de Pós-venda — período (em dias) que o
+    // contador da tesourinha (selinho numérico) olha pra trás.
+    badge_period_days: z.number().int().min(1).max(365).optional(),
     steps: z.array(followupStepSchema).min(1).max(20),
   })
   .refine((v) => v.moment === "time_in_stage" || v.steps.length === 1, {
@@ -69,5 +72,6 @@ export type FunnelFollowupRule = {
   trigger_type: "time_in_stage" | "left_stage";
   moment: "entered" | "left_stage" | "time_in_stage";
   skip_if_replied: boolean;
+  badge_period_days: number;
   steps: FollowupStep[];
 };

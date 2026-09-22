@@ -1302,6 +1302,7 @@ export type Database = {
       funnel_followup_rules: {
         Row: {
           active: boolean;
+          badge_period_days: number;
           barbershop_id: string;
           created_at: string;
           funnel_id: string;
@@ -1316,6 +1317,7 @@ export type Database = {
         };
         Insert: {
           active?: boolean;
+          badge_period_days?: number;
           barbershop_id: string;
           created_at?: string;
           funnel_id: string;
@@ -1330,6 +1332,7 @@ export type Database = {
         };
         Update: {
           active?: boolean;
+          badge_period_days?: number;
           barbershop_id?: string;
           created_at?: string;
           funnel_id?: string;

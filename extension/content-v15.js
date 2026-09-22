@@ -242,6 +242,7 @@
       updateFollowupBadge();
       updateNotesBadge();
       updateScheduleBadge();
+      updateAttendanceBadge();
     }
   }
 
@@ -1285,6 +1286,7 @@
         updateFollowupBadge();
         updateNotesBadge();
         updateScheduleBadge();
+        updateAttendanceBadge();
       });
     }
     paint();
@@ -1796,6 +1798,7 @@
   // nenhum estado de "carregando" perceptível.
   let notesPrefetch = null; // { key, notes }
   let schedulePrefetch = null; // { key, jobs }
+  let attendancePrefetch = null; // { key, chat, count }
 
   async function prefetchNotes() {
     const chat = await activeChat();
@@ -1818,6 +1821,20 @@
       .sendMessage({ type: "api", path: `/api/public/extension/lead-schedule?${contactQuery}` })
       .catch(() => null);
     schedulePrefetch = { key: contactQuery, chat, jobs: r?.ok ? r.jobs || [] : [] };
+  }
+
+  // Quantos atendimentos esse contato teve dentro do período configurado
+  // (padrão: último mês, ajustável na aba Pós-venda) — pedido do
+  // usuário, 22/09: mostrar isso como selinho na tesourinha, tanto no
+  // CRM quanto aqui na extensão.
+  async function prefetchAttendanceCount() {
+    const chat = await activeChat();
+    const contactQuery = contactIdentityQuery(chat?.contact_db_id, chat?.phone);
+    if (!contactQuery) return;
+    const r = await chrome.runtime
+      .sendMessage({ type: "api", path: `/api/public/extension/postsale-attendance-count?${contactQuery}` })
+      .catch(() => null);
+    attendancePrefetch = { key: contactQuery, chat, count: r?.ok ? r.count || 0 : 0 };
   }
 
   async function openNotesDialog() {
@@ -2235,6 +2252,7 @@
               // conversa, não na hora que o agendamento é criado.
               schedulePrefetch = { key: contactQuery, chat, jobs: r.jobs || [] };
               updateScheduleBadge();
+              updateAttendanceBadge();
               if (dialog.isConnected) renderList(r.jobs || []);
             }
           })
@@ -2248,6 +2266,7 @@
       const jobs = r?.ok ? r.jobs || [] : [];
       schedulePrefetch = { key: contactQuery, chat, jobs };
       updateScheduleBadge();
+      updateAttendanceBadge();
       renderList(jobs);
     }
 
@@ -2436,6 +2455,7 @@
       updateFollowupBadge();
       updateNotesBadge();
       updateScheduleBadge();
+      updateAttendanceBadge();
       return;
     }
     hasCrm?.remove();
@@ -2624,6 +2644,7 @@
     updateFollowupBadge();
     updateNotesBadge();
     updateScheduleBadge();
+    updateAttendanceBadge();
     // Dispara na hora, sem esperar o ciclo de 1.5s — é aqui que detecta
     // que a conversa mudou de verdade (cabeçalho recriado), então é o
     // ponto certo pra já checar se o novo contato está salvo.
@@ -2825,6 +2846,29 @@
       await prefetchSchedule();
       const stillSame = document.getElementById(SCHEDULE_BTN_ID) === btn;
       if (stillSame) updateScheduleBadge();
+    }
+  }
+
+  async function updateAttendanceBadge() {
+    const btn = document.getElementById(MARK_ATTENDANCE_BTN_ID);
+    if (!btn) return;
+    const chat = await activeChat();
+    const contactDbId = chat?.contact_db_id || null;
+    const phone = chat?.phone || null;
+    if (!contactDbId && !phone) {
+      setChatBtnCount(btn, 0);
+      return;
+    }
+    const matches =
+      attendancePrefetch &&
+      ((contactDbId && attendancePrefetch.chat?.contact_db_id === contactDbId) || (phone && attendancePrefetch.chat?.phone === phone));
+    if (matches) {
+      setChatBtnCount(btn, attendancePrefetch.count);
+    } else {
+      setChatBtnCount(btn, 0);
+      await prefetchAttendanceCount();
+      const stillSame = document.getElementById(MARK_ATTENDANCE_BTN_ID) === btn;
+      if (stillSame) updateAttendanceBadge();
     }
   }
 
@@ -3277,6 +3321,7 @@
           updateFollowupBadge();
           updateNotesBadge();
           updateScheduleBadge();
+          updateAttendanceBadge();
           renderRows();
           void loadFunnels();
         } else {
@@ -3309,6 +3354,7 @@
         updateFollowupBadge();
         updateNotesBadge();
         updateScheduleBadge();
+        updateAttendanceBadge();
         renderRows();
         void loadFunnels();
       } else {
@@ -4433,6 +4479,7 @@
     updateFollowupBadge();
     updateNotesBadge();
     updateScheduleBadge();
+    updateAttendanceBadge();
   }
 
   // ── Atalho "/palavra" na caixa de mensagem do WhatsApp ──────────────────

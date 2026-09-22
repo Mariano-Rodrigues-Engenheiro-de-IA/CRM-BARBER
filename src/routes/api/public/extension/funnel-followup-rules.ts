@@ -12,7 +12,8 @@ import { funnelFollowupRuleSchema } from "@/lib/funnel-followups";
 
 const STEP_COLS =
   "id, delay_minutes, actions, template_name, template_language, template_header_media_path, sort_order";
-const RULE_COLS = "id, name, funnel_id, stage_id, active, trigger_type, moment, skip_if_replied";
+const RULE_COLS =
+  "id, name, funnel_id, stage_id, active, trigger_type, moment, skip_if_replied, badge_period_days";
 
 export const Route = createFileRoute("/api/public/extension/funnel-followup-rules")({
   server: {
@@ -119,6 +120,7 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
               trigger_type: triggerType,
               moment,
               skip_if_replied: parsed.data.skip_if_replied ?? true,
+              badge_period_days: parsed.data.badge_period_days ?? 30,
             })
             .eq("id", ruleId);
           if (updErr)
@@ -135,6 +137,7 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
               trigger_type: triggerType,
               moment,
               skip_if_replied: parsed.data.skip_if_replied ?? true,
+              badge_period_days: parsed.data.badge_period_days ?? 30,
             })
             .select("id")
             .single();

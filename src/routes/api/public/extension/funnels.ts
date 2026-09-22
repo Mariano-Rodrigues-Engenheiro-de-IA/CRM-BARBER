@@ -86,7 +86,9 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
         // extra, se esse lead vai receber (e quando) ou já recebeu tudo.
         const { data: followupRules } = await supabaseAdmin
           .from("funnel_followup_rules")
-          .select("id, funnel_id, stage_id, active, funnel_followup_steps(id, delay_minutes, sort_order)")
+          .select(
+            "id, funnel_id, stage_id, active, funnel_followup_steps(id, delay_minutes, sort_order)",
+          )
           .eq("barbershop_id", shop)
           .eq("active", true);
         const ruleByStage = new Map(
@@ -122,22 +124,102 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
           .is("funnel_followup_step_id", null)
           .is("agenda_reminder_rule_id", null);
 
+        // Contador de atendimentos (selinho na tesourinha) — quantas
+        // vezes cada telefone foi marcado como atendido dentro do
+        // período configurado na regra de Pós-venda (badge_period_days,
+        // padrão 30 dias). Independente de em qual funil o card
+        // aparece aqui — casa por telefone/wa_contact_id com os cards
+        // do funil especial "Pós-venda".
+        const attendanceCountByPhone = new Map<string, number>();
+        const attendanceCountByWaContact = new Map<string, number>();
+        const { data: postsaleFunnel } = await supabaseAdmin
+          .from("funnels")
+          .select("id")
+          .eq("barbershop_id", shop)
+          .eq("mode", "postsale")
+          .maybeSingle();
+        if (postsaleFunnel) {
+          const { data: postsaleStage } = await supabaseAdmin
+            .from("funnel_stages")
+            .select("id")
+            .eq("funnel_id", postsaleFunnel.id)
+            .eq("barbershop_id", shop)
+            .maybeSingle();
+          if (postsaleStage) {
+            const { data: postsaleRule } = await supabaseAdmin
+              .from("funnel_followup_rules")
+              .select("badge_period_days")
+              .eq("funnel_id", postsaleFunnel.id)
+              .eq("stage_id", postsaleStage.id)
+              .maybeSingle();
+            const periodDays = postsaleRule?.badge_period_days ?? 30;
+            const since = new Date(Date.now() - periodDays * 24 * 3600_000).toISOString();
+            const { data: postsaleCards } = await supabaseAdmin
+              .from("funnel_cards")
+              .select("id, phone, wa_contact_id")
+              .eq("barbershop_id", shop)
+              .eq("funnel_id", postsaleFunnel.id);
+            const cardById = new Map((postsaleCards ?? []).map((c) => [c.id, c]));
+            const { data: attendanceHistory } = await supabaseAdmin
+              .from("funnel_card_stage_history")
+              .select("card_id")
+              .eq("stage_id", postsaleStage.id)
+              .gte("entered_at", since);
+            for (const h of attendanceHistory ?? []) {
+              const c = cardById.get(h.card_id);
+              if (!c) continue;
+              if (c.phone)
+                attendanceCountByPhone.set(c.phone, (attendanceCountByPhone.get(c.phone) ?? 0) + 1);
+              if (c.wa_contact_id)
+                attendanceCountByWaContact.set(
+                  c.wa_contact_id,
+                  (attendanceCountByWaContact.get(c.wa_contact_id) ?? 0) + 1,
+                );
+            }
+          }
+        }
+
         const flatCardsWithFollowup = flatCards.map((c: any) => {
           const rule = ruleByStage.get(`${c.funnel_id}:${c.stage_id}`) as
-            | { funnel_followup_steps: Array<{ id: string; delay_minutes: number; sort_order: number }> }
+            | {
+                funnel_followup_steps: Array<{
+                  id: string;
+                  delay_minutes: number;
+                  sort_order: number;
+                }>;
+              }
             | undefined;
-          const steps = (rule?.funnel_followup_steps ?? []).slice().sort((a, b) => a.sort_order - b.sort_order);
+          const steps = (rule?.funnel_followup_steps ?? [])
+            .slice()
+            .sort((a, b) => a.sort_order - b.sort_order);
           const notesCount = (notesRows ?? []).filter(
-            (n) => (c.wa_contact_id && n.wa_contact_id === c.wa_contact_id) || (c.phone && n.phone === c.phone),
+            (n) =>
+              (c.wa_contact_id && n.wa_contact_id === c.wa_contact_id) ||
+              (c.phone && n.phone === c.phone),
           ).length;
-          const scheduleCount = (scheduleRows ?? []).filter((j) => c.phone && j.phone === c.phone).length;
-          if (!steps.length) return { ...c, followup: null, notes_count: notesCount, schedule_count: scheduleCount };
+          const scheduleCount = (scheduleRows ?? []).filter(
+            (j) => c.phone && j.phone === c.phone,
+          ).length;
+          const attendanceCount =
+            (c.wa_contact_id && attendanceCountByWaContact.get(c.wa_contact_id)) ||
+            (c.phone && attendanceCountByPhone.get(c.phone)) ||
+            0;
+          if (!steps.length)
+            return {
+              ...c,
+              followup: null,
+              notes_count: notesCount,
+              schedule_count: scheduleCount,
+              attendance_count: attendanceCount,
+            };
           const sentMap = sentByCard.get(c.id) ?? new Map<string, string>();
           const sentSteps = steps.filter((s) => sentMap.has(s.id));
           const nextStep = steps.find((s) => !sentMap.has(s.id));
           const enteredAt = c.stage_entered_at ? new Date(c.stage_entered_at).getTime() : null;
           const nextDueAt =
-            nextStep && enteredAt ? new Date(enteredAt + nextStep.delay_minutes * 60_000).toISOString() : null;
+            nextStep && enteredAt
+              ? new Date(enteredAt + nextStep.delay_minutes * 60_000).toISOString()
+              : null;
           const lastSentAt = sentSteps.length
             ? sentSteps
                 .map((s) => sentMap.get(s.id) as string)
@@ -148,6 +230,7 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
             ...c,
             notes_count: notesCount,
             schedule_count: scheduleCount,
+            attendance_count: attendanceCount,
             followup: {
               total_steps: steps.length,
               sent_count: sentSteps.length,
@@ -192,14 +275,14 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
             .eq("barbershop_id", shop)
             .eq("mode", parsed.data.mode)
             .maybeSingle();
-          
+
           if (existing) {
             const { data: stages } = await supabaseAdmin
               .from("funnel_stages")
               .select("id, funnel_id, name, color, sort_order")
               .eq("funnel_id", existing.id)
               .order("sort_order", { ascending: true });
-            
+
             return jsonResponse(request, {
               ok: true,
               funnel: { ...existing, stages: stages ?? [], cards: [] },
@@ -224,7 +307,11 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
           .select("id, name, mode, source_label_id, sort_order")
           .single();
         if (error || !funnel) {
-          return jsonResponse(request, { ok: false, error: error?.message || "Erro" }, { status: 500 });
+          return jsonResponse(
+            request,
+            { ok: false, error: error?.message || "Erro" },
+            { status: 500 },
+          );
         }
 
         // Funil novo nasce sem etapas: o usuário monta as colunas depois.
@@ -243,11 +330,14 @@ export const Route = createFileRoute("/api/public/extension/funnels")({
             )
             .select("id, funnel_id, name, color, sort_order");
           if (stagesError) {
-            return jsonResponse(request, { ok: false, error: stagesError.message }, { status: 500 });
+            return jsonResponse(
+              request,
+              { ok: false, error: stagesError.message },
+              { status: 500 },
+            );
           }
           stages = data ?? [];
         }
-
 
         return jsonResponse(request, {
           ok: true,
