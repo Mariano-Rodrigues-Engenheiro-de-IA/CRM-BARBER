@@ -3,24 +3,29 @@
 // Chamado por pg_cron a cada minuto (mesmo padrão de dispatch-jobs.ts).
 // Duas famílias de regra, mesma engrenagem de baixo (createFollowupJob):
 //
-// - "time_in_stage" (padrão, inclui "assim que entrar" com delay 0):
-//   pra cada card PARADO na etapa/lista agora, cada passo cujo tempo
-//   (stage_entered_at + delay_minutes) já passou dispara.
+// - "time_in_stage" (inclui "entered", delay configurável a partir da
+//   entrada): pra cada card PARADO na etapa/lista agora, cada passo
+//   cujo tempo (stage_entered_at + delay_minutes) já passou dispara.
 // - "left_stage": pra cada SAÍDA da etapa/lista já registrada no
 //   histórico (funnel_card_stage_history.left_at) ainda não
 //   processada por essa regra, dispara os passos (contados a partir do
 //   momento da saída, não da entrada).
 //
-// "max_messages_per_contact": limite opcional por regra — conta quantas
-// mensagens essa regra já mandou pro card (nos dois tipos de gatilho,
-// somado) e para de disparar passos novos ao atingir o teto.
+// O limite de mensagens por contato é NATURAL agora — cada passo só
+// dispara uma vez por card (rastreado nas tabelas *_sent), então o
+// teto é sempre "quantos passos o usuário configurou". Não existe mais
+// um campo de limite separado (removido a pedido do usuário, 22/09).
 //
 // "skip_if_replied": usa wa_contacts.last_message_at como sinal de
-// "teve atividade na conversa depois do gatilho" — o sistema hoje não
-// guarda o TEXTO das mensagens (só metadados), então não dá pra
-// distinguir se foi o cliente ou a barbearia que mandou a última
-// mensagem; ainda assim, é um sinal útil pra não insistir numa
-// conversa que já está em andamento.
+// "teve atividade na conversa depois do gatilho" — checado UMA VEZ por
+// card, ANTES de avaliar os passos: se respondeu, PARA A SEQUÊNCIA
+// INTEIRA pra esse card (não manda nenhum passo seguinte), não só pula
+// o passo daquele momento específico — pedido explícito do usuário
+// (22/09: "se a pessoa responder antes, ela não recebe a próxima
+// mensagem"). O sistema hoje não guarda o TEXTO das mensagens (só
+// metadados), então não dá pra distinguir se foi o cliente ou a
+// barbearia que mandou a última mensagem; ainda assim, é um sinal útil
+// pra não insistir numa conversa que já está em andamento.
 //
 // Autenticação: header `apikey` = SUPABASE_PUBLISHABLE_KEY (padrão pg_cron).
 
@@ -44,7 +49,6 @@ type Rule = {
   funnel_id: string;
   stage_id: string;
   trigger_type: string;
-  max_messages_per_contact: number | null;
   skip_if_replied: boolean;
   funnel_followup_steps: Step[];
 };
@@ -180,7 +184,7 @@ export const Route = createFileRoute("/api/public/hooks/evaluate-followups")({
         const { data: rules, error: rulesErr } = await supabaseAdmin
           .from("funnel_followup_rules")
           .select(
-            "id, barbershop_id, funnel_id, stage_id, trigger_type, max_messages_per_contact, skip_if_replied, funnel_followup_steps (id, delay_minutes, actions, template_name, template_language, template_header_media_path)",
+            "id, barbershop_id, funnel_id, stage_id, trigger_type, skip_if_replied, funnel_followup_steps (id, delay_minutes, actions, template_name, template_language, template_header_media_path)",
           )
           .eq("active", true);
         if (rulesErr) {
@@ -192,7 +196,9 @@ export const Route = createFileRoute("/api/public/hooks/evaluate-followups")({
         let created = 0;
         for (const ruleRaw of rules ?? []) {
           const rule = ruleRaw as unknown as Rule;
-          const steps = (rule.funnel_followup_steps || []).slice();
+          const steps = (rule.funnel_followup_steps || [])
+            .slice()
+            .sort((a, b) => a.delay_minutes - b.delay_minutes);
           if (!steps.length) continue;
 
           if (rule.trigger_type === "left_stage") {
@@ -211,33 +217,10 @@ export const Route = createFileRoute("/api/public/hooks/evaluate-followups")({
   },
 });
 
-/** Conta quantas mensagens essa regra já mandou pro card, somando os
- * dois tipos de gatilho — usado pra respeitar max_messages_per_contact. */
-async function countSentForRule(
-  supabaseAdmin: SupabaseClient,
-  ruleId: string,
-  stepIds: string[],
-  cardId: string,
-): Promise<number> {
-  if (!stepIds.length) return 0;
-  const [timeInStageRes, leftStageRes] = await Promise.all([
-    supabaseAdmin
-      .from("funnel_followup_sent_log")
-      .select("card_id", { count: "exact", head: true })
-      .eq("card_id", cardId)
-      .in("step_id", stepIds),
-    supabaseAdmin
-      .from("funnel_followup_left_stage_sent")
-      .select("card_id", { count: "exact", head: true })
-      .eq("rule_id", ruleId)
-      .eq("card_id", cardId),
-  ]);
-  return (timeInStageRes.count ?? 0) + (leftStageRes.count ?? 0);
-}
-
 /** Gatilho padrão: passos disparam conforme o tempo parado na etapa
- * (delay 0 = assim que entrar). Lógica igual à original, só com a
- * checagem de limite adicionada. */
+ * (inclui "entered", que é só um único passo com delay configurável).
+ * skip_if_replied checado UMA VEZ por card — se respondeu, para a
+ * sequência inteira pra esse card. */
 async function processTimeInStageRule(
   supabaseAdmin: SupabaseClient,
   rule: Rule,
@@ -245,7 +228,6 @@ async function processTimeInStageRule(
   now: Date,
 ): Promise<number> {
   let created = 0;
-  const stepIds = steps.map((s) => s.id);
 
   const { data: cards, error: cardsErr } = await supabaseAdmin
     .from("funnel_cards")
@@ -274,9 +256,11 @@ async function processTimeInStageRule(
     if (!customerId) continue;
     const enteredAt = new Date(card.stage_entered_at as string).getTime();
 
-    if (rule.max_messages_per_contact != null) {
-      const sentCount = await countSentForRule(supabaseAdmin, rule.id, stepIds, card.id);
-      if (sentCount >= rule.max_messages_per_contact) continue;
+    // Checa UMA VEZ, antes de avaliar qualquer passo — respondeu, para
+    // a sequência inteira pra esse card (não só o passo da vez).
+    if (rule.skip_if_replied) {
+      const replied = await hasRepliedSince(supabaseAdmin, rule.barbershop_id, card, enteredAt);
+      if (replied) continue;
     }
 
     for (const step of steps) {
@@ -284,14 +268,6 @@ async function processTimeInStageRule(
       if (sentSet.has(key)) continue;
       const dueAt = enteredAt + step.delay_minutes * 60_000;
       if (now.getTime() < dueAt) continue;
-
-      if (rule.skip_if_replied) {
-        const replied = await hasRepliedSince(supabaseAdmin, rule.barbershop_id, card, enteredAt);
-        if (replied) {
-          sentSet.add(key); // não tenta de novo nessa mesma rodada
-          continue;
-        }
-      }
 
       const jobId = await createFollowupJob(supabaseAdmin, {
         barbershopId: rule.barbershop_id,
@@ -318,7 +294,9 @@ async function processTimeInStageRule(
  * partir do momento da saída — rastreado POR PASSO (não pela saída
  * inteira), senão um passo com espera longa (ex: 3 dias) nunca
  * chegaria a disparar: seria "descartado" na primeira rodada em que a
- * saída fosse vista, antes do prazo dele vencer. */
+ * saída fosse vista, antes do prazo dele vencer. skip_if_replied
+ * checado UMA VEZ por saída — se respondeu, para a sequência inteira
+ * pra essa saída. */
 async function processLeftStageRule(
   supabaseAdmin: SupabaseClient,
   rule: Rule,
@@ -326,7 +304,6 @@ async function processLeftStageRule(
   now: Date,
 ): Promise<number> {
   let created = 0;
-  const stepIds = steps.map((s) => s.id);
 
   // Só olha saídas dos últimos 90 dias (o maior delay possível) — sem
   // isso, a query cresceria sem limite com o tempo.
@@ -366,31 +343,19 @@ async function processLeftStageRule(
     const customerId = await ensureCustomerId(supabaseAdmin, rule.barbershop_id, card);
     if (!customerId) continue;
 
-    if (rule.max_messages_per_contact != null) {
-      const sentCount = await countSentForRule(supabaseAdmin, rule.id, stepIds, card.id);
-      if (sentCount >= rule.max_messages_per_contact) continue;
+    const leftAtMs = new Date(exit.left_at as string).getTime();
+
+    // Checa UMA VEZ, antes de avaliar qualquer passo dessa saída.
+    if (rule.skip_if_replied) {
+      const replied = await hasRepliedSince(supabaseAdmin, rule.barbershop_id, card, leftAtMs);
+      if (replied) continue;
     }
 
-    const leftAtMs = new Date(exit.left_at as string).getTime();
     for (const step of steps) {
       const key = `${exit.card_id}:${step.id}:${exit.left_at}`;
       if (processedSet.has(key)) continue;
       const dueAt = leftAtMs + step.delay_minutes * 60_000;
       if (now.getTime() < dueAt) continue; // ainda não chegou a vez desse passo — reavalia na próxima rodada
-
-      if (rule.skip_if_replied) {
-        const replied = await hasRepliedSince(supabaseAdmin, rule.barbershop_id, card, leftAtMs);
-        if (replied) {
-          processedSet.add(key);
-          await supabaseAdmin.from("funnel_followup_left_stage_sent").insert({
-            rule_id: rule.id,
-            card_id: exit.card_id,
-            step_id: step.id,
-            left_at: exit.left_at,
-          });
-          continue;
-        }
-      }
 
       const jobId = await createFollowupJob(supabaseAdmin, {
         barbershopId: rule.barbershop_id,

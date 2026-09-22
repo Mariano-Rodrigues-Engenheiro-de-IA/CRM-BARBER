@@ -1,9 +1,9 @@
-// Aba "Follow-up": UMA mensagem programada por etapa de funil OU lista.
-// O gatilho pode ser "assim que entrar", "assim que sair" ou "tempo
-// parado" — configurado num painel único com 4 seções. Pedido explícito
-// do usuário (22/09): só um passo por follow-up (múltiplos passos
-// confundiam — "assim que entrar" a pessoa recebe o passo 1 ou o 2?).
-import { useEffect, useState } from "react";
+// Aba "Follow-up": mensagem(ns) programada(s) por etapa de funil OU
+// lista, com painel único de configuração (4 seções). Pedido explícito
+// do usuário (22/09, 2ª rodada): "assim que entrar" e "assim que sair"
+// sempre mandam 1 mensagem só (mas com tempo configurável agora), só
+// "um tempo parado" permite uma SEQUÊNCIA de várias mensagens.
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,25 +17,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, FileText, X } from "lucide-react";
+import { Plus, Trash2, Clock, FileText, X } from "lucide-react";
 import { useConfirm } from "@/components/confirm-dialog";
 import type { Funnel } from "@/lib/funnels";
-import type { QuickReply } from "@/lib/quick-replies";
+import {
+  actionLabel,
+  QUICK_REPLY_ACTION_TYPES,
+  QUICK_REPLY_FUNNEL_TYPES,
+  type QuickReply,
+  type QuickReplyAction,
+  type QuickReplyActionType,
+} from "@/lib/quick-replies";
 import type { SavedCampaign } from "@/components/campaigns-marketplace-view";
 
 type Api = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
 
 type FollowupContent = {
   delay_minutes: number;
-  actions: Array<{
-    type: string;
-    text?: string;
-    path?: string;
-    url?: string | null;
-    mime?: string;
-    filename?: string;
-    caption?: string;
-  }>;
+  actions: QuickReplyAction[];
   template_name: string | null;
   template_language: string | null;
   template_header_media_path: string | null;
@@ -43,27 +42,27 @@ type FollowupContent = {
 
 type FollowupRule = {
   id: string;
+  name: string | null;
   funnel_id: string;
   stage_id: string;
   active: boolean;
   trigger_type: "time_in_stage" | "left_stage";
-  max_messages_per_contact: number | null;
+  moment: "entered" | "left_stage" | "time_in_stage";
   skip_if_replied: boolean;
-  steps: FollowupContent[]; // backend ainda guarda como array — sempre 1 item agora
+  steps: FollowupContent[];
 };
 
 type TemplateOption = { name: string; language: string; status: string; hasImageHeader: boolean };
+type Moment = "entered" | "left_stage" | "time_in_stage";
+type MessageSource = "write" | "quick_reply" | "campaign";
 
-// Momento de UI (3 opções) — "immediate" e "time_in_stage" usam o mesmo
-// trigger_type no backend ("time_in_stage"), só muda se o campo de
-// tempo aparece na tela (immediate esconde, sempre 0).
-type Moment = "immediate" | "time_in_stage" | "left_stage";
+const inputCls =
+  "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-brand";
 
-function momentFromRule(rule: FollowupRule | null): Moment {
-  if (!rule) return "immediate";
-  if (rule.trigger_type === "left_stage") return "left_stage";
-  const delay = rule.steps[0]?.delay_minutes ?? 0;
-  return delay === 0 ? "immediate" : "time_in_stage";
+function acceptedFiles(type: QuickReplyActionType) {
+  if (type === "image") return "image/*,.jpg,.jpeg,.png,.webp,.gif";
+  if (type === "video") return "video/*,.mp4,.mov,.m4v,.3gp,.webm";
+  return "audio/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.amr";
 }
 
 function minutesToValueUnit(min: number): { value: number; unit: "minutos" | "horas" | "dias" } {
@@ -149,8 +148,6 @@ export function FollowupView({ api }: { api: Api }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Nome de exibição pra cada (funil, etapa) — funis "Listas" (mode
-  // "label") mostram "Lista: X" em vez de "Funil > Etapa".
   function labelFor(
     funnelId: string,
     stageId: string,
@@ -164,9 +161,8 @@ export function FollowupView({ api }: { api: Api }) {
     };
   }
 
-  function momentLabel(rule: FollowupRule): string {
-    const m = momentFromRule(rule);
-    if (m === "immediate") return "Assim que entrar";
+  function momentLabel(m: Moment): string {
+    if (m === "entered") return "Assim que entrar";
     if (m === "left_stage") return "Assim que sair";
     return "Tempo parado";
   }
@@ -207,17 +203,22 @@ export function FollowupView({ api }: { api: Api }) {
               >
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-sm font-medium text-neutral-900">
-                    {isList ? "Lista: " : ""}
-                    {stageName}
+                    {rule.name || (isList ? "Lista: " : "") + stageName}
                   </p>
                   <span
                     className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${rule.active ? "bg-emerald-500" : "bg-neutral-300"}`}
                   />
                 </div>
-                {!isList && <p className="text-xs text-neutral-500">{funnelName}</p>}
+                <p className="text-xs text-neutral-500">
+                  {isList ? "Lista: " : `${funnelName} · `}
+                  {stageName}
+                </p>
                 <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
                   <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-600">
-                    {momentLabel(rule)}
+                    {momentLabel(rule.moment)}
+                  </span>
+                  <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-600">
+                    {rule.steps.length} mensage{rule.steps.length === 1 ? "m" : "ns"}
                   </span>
                   {!rule.active && (
                     <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
@@ -291,7 +292,7 @@ function FollowupReportModal({ api, onClose }: { api: Api; onClose: () => void }
           <div>
             <h3 className="text-base font-semibold text-neutral-900">Relatório de follow-up</h3>
             <p className="text-xs text-neutral-500">
-              Todas as mensagens já enviadas pela sequência, mais recentes primeiro.
+              Todas as mensagens já enviadas, mais recentes primeiro.
             </p>
           </div>
           <button
@@ -348,11 +349,28 @@ function FollowupReportModal({ api, onClose }: { api: Api; onClose: () => void }
   );
 }
 
-type MessageSource = "write" | "quick_reply" | "campaign";
+// Estado de UI de cada mensagem da sequência — guarda a origem
+// escolhida (write/quick_reply/campaign) e QUAL item foi selecionado,
+// pra continuar mostrando a seleção na aba certa (bug reportado:
+// escolher uma resposta rápida jogava o conteúdo de volta pra
+// "Escrever" sem indicar o que tinha sido escolhido).
+type StepUI = {
+  content: FollowupContent;
+  source: MessageSource;
+  selectedQuickReplyId: string | null;
+  selectedCampaignId: string | null;
+};
 
-/** Painel único de configuração — 4 seções: Quem recebe, Quando, O que
- * enviar (UMA mensagem só, escrita na hora, resposta rápida, ou
- * campanha salva), Regras. */
+function stepUIFromContent(content?: FollowupContent): StepUI {
+  return {
+    content: content ?? emptyContent(),
+    source: "write",
+    selectedQuickReplyId: null,
+    selectedCampaignId: null,
+  };
+}
+
+/** Painel único — 4 seções: Quem recebe, Quando, O que enviar, Regras. */
 function FollowupEditor({
   api,
   funnels,
@@ -377,88 +395,90 @@ function FollowupEditor({
   onSaved: () => void;
 }) {
   const isNew = !rule;
+  const [name, setName] = useState(rule?.name ?? "");
   const [funnelId, setFunnelId] = useState(rule?.funnel_id ?? funnels[0]?.id ?? "");
   const [stageId, setStageId] = useState(rule?.stage_id ?? "");
   const [active, setActive] = useState(rule?.active ?? true);
-  const [moment, setMoment] = useState<Moment>(momentFromRule(rule));
-  const [maxMessages, setMaxMessages] = useState<number | "">(rule?.max_messages_per_contact ?? "");
+  const [moment, setMoment] = useState<Moment>(rule?.moment ?? "entered");
   const [skipIfReplied, setSkipIfReplied] = useState(rule?.skip_if_replied ?? true);
-  const [source, setSource] = useState<MessageSource>("write");
-  const [content, setContent] = useState<FollowupContent>(rule?.steps[0] ?? emptyContent());
+  const [steps, setSteps] = useState<StepUI[]>(
+    rule?.steps.length ? rule.steps.map(stepUIFromContent) : [stepUIFromContent()],
+  );
   const [saving, setSaving] = useState(false);
-  const [preparingSource, setPreparingSource] = useState(false);
-  const [headerPreview, setHeaderPreview] = useState<string | null>(null);
-  const [uploadingHeader, setUploadingHeader] = useState(false);
+  const [preparingIndex, setPreparingIndex] = useState<number | null>(null);
   const { confirm, dialog } = useConfirm();
 
   const approvedTemplates = templates.filter((t) => t.status === "APPROVED");
   const selectedFunnel = funnels.find((f) => f.id === funnelId) || null;
   const stageKey = selectedFunnel && stageId ? `${funnelId}:${stageId}` : null;
   const stageAlreadyUsed = !!stageKey && existingRuleKeys.has(stageKey);
-  const { value: delayValue, unit: delayUnit } = minutesToValueUnit(content.delay_minutes);
+  const allowsSequence = moment === "time_in_stage";
 
   function changeMoment(next: Moment) {
     setMoment(next);
-    if (next !== "time_in_stage") {
-      setContent((prev) => ({ ...prev, delay_minutes: 0 }));
+    if (next !== "time_in_stage" && steps.length > 1) {
+      setSteps((prev) => [prev[0]]);
     }
   }
 
-  async function handleHeaderFile(file: File) {
-    setUploadingHeader(true);
-    try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result || ""));
-        reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
-        reader.readAsDataURL(file);
-      });
-      const r = await api("/api/public/extension/quick-replies/upload", {
-        method: "POST",
-        body: JSON.stringify({
-          filename: file.name,
-          mime: file.type || "image/jpeg",
-          data_base64: dataUrl,
-        }),
-      });
-      if (!r?.ok) {
-        toast.error((r?.error as string) || "Falha ao enviar a imagem.");
-        return;
-      }
-      setContent((prev) => ({ ...prev, template_header_media_path: (r.path as string) || null }));
-      setHeaderPreview(dataUrl);
-    } finally {
-      setUploadingHeader(false);
-    }
+  function updateStep(i: number, patch: Partial<StepUI>) {
+    setSteps((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
+  }
+  function updateStepContent(i: number, patch: Partial<FollowupContent>) {
+    setSteps((prev) =>
+      prev.map((s, idx) => (idx === i ? { ...s, content: { ...s.content, ...patch } } : s)),
+    );
+  }
+  function addStep() {
+    setSteps((prev) => [...prev, stepUIFromContent()]);
+  }
+  function removeStep(i: number) {
+    setSteps((prev) => prev.filter((_, idx) => idx !== i));
   }
 
-  function pickQuickReply(qr: QuickReply) {
-    setContent((prev) => ({
-      ...prev,
-      actions: qr.actions,
-      template_name: null,
-      template_language: null,
-      template_header_media_path: null,
-    }));
+  function pickQuickReply(i: number, qr: QuickReply) {
+    setSteps((prev) =>
+      prev.map((s, idx) =>
+        idx === i
+          ? {
+              ...s,
+              source: "quick_reply",
+              selectedQuickReplyId: qr.id,
+              selectedCampaignId: null,
+              content: {
+                ...s.content,
+                actions: qr.actions,
+                template_name: null,
+                template_language: null,
+                template_header_media_path: null,
+              },
+            }
+          : s,
+      ),
+    );
   }
 
-  // Mesma correção já aplicada no disparo (19/09): a imagem de uma
-  // campanha vive num bucket público (capa/preview), diferente do
-  // bucket privado que o envio de verdade usa — baixa e reenvia pro
-  // lugar certo antes de usar, senão a imagem nunca chega no
-  // WhatsApp.
-  async function pickCampaign(c: SavedCampaign) {
+  // Mesma correção já aplicada no disparo (19/09) e na 1ª versão desse
+  // editor: a imagem de uma campanha vive num bucket público, diferente
+  // do bucket privado que o envio de verdade usa — baixa e reenvia pro
+  // lugar certo antes de aplicar.
+  async function pickCampaign(i: number, c: SavedCampaign) {
     if (!c.image_path) {
-      setContent((prev) => ({
-        ...prev,
-        actions: [{ type: "text", text: c.body_text }],
-        template_name: null,
-        template_language: null,
-        template_header_media_path: null,
-      }));
+      updateStep(i, {
+        source: "campaign",
+        selectedCampaignId: c.id,
+        selectedQuickReplyId: null,
+        content: {
+          ...steps[i].content,
+          actions: [{ type: "text", text: c.body_text }],
+          template_name: null,
+          template_language: null,
+          template_header_media_path: null,
+        },
+      });
       return;
     }
-    setPreparingSource(true);
+    setPreparingIndex(i);
     try {
       const imgRes = await fetch(c.image_path);
       if (!imgRes.ok) throw new Error("Não consegui baixar a imagem dessa campanha.");
@@ -475,33 +495,31 @@ function FollowupEditor({
         body: JSON.stringify({ filename: "campanha.jpg", mime, data_base64: dataBase64 }),
       });
       if (!result?.ok) throw new Error((result?.error as string) || "Falha ao preparar a imagem");
-      setContent((prev) => ({
-        ...prev,
-        actions: [
-          {
-            type: "image",
-            path: result.path as string,
-            url: result.url as string,
-            mime: result.mime as string,
-            filename: result.filename as string,
-            caption: c.body_text,
-          },
-        ],
-        template_name: null,
-        template_language: null,
-        template_header_media_path: null,
-      }));
+      updateStep(i, {
+        source: "campaign",
+        selectedCampaignId: c.id,
+        selectedQuickReplyId: null,
+        content: {
+          ...steps[i].content,
+          actions: [
+            {
+              type: "image",
+              path: result.path as string,
+              url: result.url as string,
+              mime: result.mime as string,
+              filename: result.filename as string,
+              caption: c.body_text,
+            },
+          ],
+          template_name: null,
+          template_language: null,
+          template_header_media_path: null,
+        },
+      });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível preparar essa campanha.");
-      setContent((prev) => ({
-        ...prev,
-        actions: [{ type: "text", text: c.body_text }],
-        template_name: null,
-        template_language: null,
-        template_header_media_path: null,
-      }));
     } finally {
-      setPreparingSource(false);
+      setPreparingIndex(null);
     }
   }
 
@@ -511,39 +529,44 @@ function FollowupEditor({
         selectedFunnel?.mode === "label" ? "Escolhe uma lista." : "Escolhe um funil e uma etapa.",
       );
     }
-    const hasMessage = isMetaProvider
-      ? !!content.template_name
-      : content.actions.some((a) => (a.type === "text" && a.text?.trim()) || a.type === "image");
-    if (!hasMessage) {
+    const hasMessage = (s: StepUI) =>
+      isMetaProvider
+        ? !!s.content.template_name
+        : s.content.actions.some((a) => (a.type === "text" && a.text?.trim()) || a.type !== "text");
+    if (!steps.every(hasMessage)) {
       return toast.error(
-        isMetaProvider ? "Escolhe um modelo aprovado." : "Escreve ou escolhe uma mensagem.",
+        isMetaProvider
+          ? "Escolhe um modelo aprovado em cada mensagem."
+          : "Cada mensagem precisa de conteúdo.",
       );
     }
     if (isMetaProvider) {
-      const tpl = templates.find((t) => t.name === content.template_name);
-      if (tpl?.hasImageHeader && !content.template_header_media_path) {
-        return toast.error("Esse modelo tem imagem no cabeçalho, envie a imagem antes de salvar.");
+      for (const s of steps) {
+        const tpl = templates.find((t) => t.name === s.content.template_name);
+        if (tpl?.hasImageHeader && !s.content.template_header_media_path) {
+          return toast.error(
+            `O modelo "${tpl.name}" tem imagem no cabeçalho, envie a imagem antes de salvar.`,
+          );
+        }
       }
     }
     setSaving(true);
     const r = await api("/api/public/extension/funnel-followup-rules", {
       method: "POST",
       body: JSON.stringify({
+        name: name.trim() || undefined,
         funnel_id: funnelId,
         stage_id: stageId,
         active,
-        trigger_type: moment === "left_stage" ? "left_stage" : "time_in_stage",
-        max_messages_per_contact: maxMessages === "" ? null : maxMessages,
+        moment,
         skip_if_replied: skipIfReplied,
-        steps: [
-          {
-            delay_minutes: content.delay_minutes,
-            actions: isMetaProvider ? [] : content.actions,
-            template_name: isMetaProvider ? content.template_name : null,
-            template_language: isMetaProvider ? "pt_BR" : null,
-            template_header_media_path: isMetaProvider ? content.template_header_media_path : null,
-          },
-        ],
+        steps: steps.map((s) => ({
+          delay_minutes: s.content.delay_minutes,
+          actions: isMetaProvider ? [] : s.content.actions,
+          template_name: isMetaProvider ? s.content.template_name : null,
+          template_language: isMetaProvider ? "pt_BR" : null,
+          template_header_media_path: isMetaProvider ? s.content.template_header_media_path : null,
+        })),
       }),
     });
     setSaving(false);
@@ -585,11 +608,14 @@ function FollowupEditor({
         className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-neutral-900">
-            {isNew ? "Novo follow-up" : "Editar follow-up"}
-          </h3>
-          <div className="flex items-center gap-2">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={isNew ? "Nome do follow-up (ex: Cobrar orçamento)" : "Nome do follow-up"}
+            className="h-9 max-w-xs font-medium"
+          />
+          <div className="flex shrink-0 items-center gap-2">
             <span className="text-xs text-neutral-500">{active ? "Ativo" : "Pausado"}</span>
             <Switch checked={active} onCheckedChange={setActive} />
           </div>
@@ -667,8 +693,8 @@ function FollowupEditor({
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
-                onClick={() => changeMoment("immediate")}
-                className={`rounded-lg border px-3 py-2 text-xs font-semibold ${moment === "immediate" ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
+                onClick={() => changeMoment("entered")}
+                className={`rounded-lg border px-3 py-2 text-xs font-semibold ${moment === "entered" ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
               >
                 Assim que entrar
               </button>
@@ -687,206 +713,54 @@ function FollowupEditor({
                 Um tempo parado
               </button>
             </div>
-            {moment === "time_in_stage" && (
-              <div className="mt-2 flex items-center gap-2">
-                <Input
-                  type="number"
-                  min={0}
-                  value={delayValue}
-                  onChange={(e) =>
-                    setContent((prev) => ({
-                      ...prev,
-                      delay_minutes: valueUnitToMinutes(
-                        Math.max(0, Number(e.target.value) || 0),
-                        delayUnit,
-                      ),
-                    }))
-                  }
-                  className="h-8 w-20"
-                />
-                <Select
-                  value={delayUnit}
-                  onValueChange={(v) =>
-                    setContent((prev) => ({
-                      ...prev,
-                      delay_minutes: valueUnitToMinutes(
-                        delayValue,
-                        v as "minutos" | "horas" | "dias",
-                      ),
-                    }))
-                  }
-                >
-                  <SelectTrigger className="h-8 w-28 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="minutos">minutos</SelectItem>
-                    <SelectItem value="horas">horas</SelectItem>
-                    <SelectItem value="dias">dias</SelectItem>
-                  </SelectContent>
-                </Select>
-                <span className="text-xs text-neutral-500">parado(a) aqui</span>
-              </div>
-            )}
+            <p className="mt-1.5 text-[11px] text-neutral-500">
+              {moment === "entered" &&
+                "Uma mensagem, contada a partir da entrada — pode ser na hora ou depois de um tempo."}
+              {moment === "left_stage" &&
+                "Uma mensagem, contada a partir do momento em que o lead sai — pode ser na hora ou depois de um tempo."}
+              {moment === "time_in_stage" &&
+                "Uma sequência de mensagens, cada uma com seu próprio tempo, contadas a partir da entrada."}
+            </p>
           </section>
 
           {/* Seção 3 — O que enviar */}
           <section>
-            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-              O que enviar
-            </h4>
-            {isMetaProvider ? (
-              <p className="mb-2 text-xs text-neutral-500">
-                Seu número está conectado via Meta, então precisa de um modelo aprovado.
-              </p>
-            ) : (
-              <div className="mb-2 grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSource("write")}
-                  className={`rounded-lg border px-3 py-2 text-xs font-semibold ${source === "write" ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
-                >
-                  Escrever
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSource("quick_reply")}
-                  className={`rounded-lg border px-3 py-2 text-xs font-semibold ${source === "quick_reply" ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
-                >
-                  Resposta rápida
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSource("campaign")}
-                  className={`rounded-lg border px-3 py-2 text-xs font-semibold ${source === "campaign" ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
-                >
-                  Campanha salva
-                </button>
-              </div>
-            )}
-
-            {isMetaProvider ? (
-              approvedTemplates.length === 0 ? (
-                <p className="text-xs text-amber-600">
-                  Nenhum modelo aprovado encontrado. Cria um na aba Modelos.
-                </p>
-              ) : (
-                <>
-                  <Select
-                    value={content.template_name || ""}
-                    onValueChange={(v) =>
-                      setContent((prev) => ({
-                        ...prev,
-                        template_name: v,
-                        template_header_media_path: null,
-                      }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Escolha um modelo…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {approvedTemplates.map((t) => (
-                        <SelectItem key={t.name} value={t.name}>
-                          {t.name}
-                          {t.hasImageHeader ? " (tem imagem)" : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {templates.find((t) => t.name === content.template_name)?.hasImageHeader && (
-                    <div className="mt-2 rounded-lg border border-neutral-200 bg-white p-2">
-                      <p className="mb-1 text-xs font-medium text-neutral-600">
-                        Imagem do cabeçalho
-                      </p>
-                      {headerPreview && (
-                        <img
-                          src={headerPreview}
-                          alt="Prévia"
-                          className="mb-2 max-h-24 rounded-lg border border-neutral-200 object-cover"
-                        />
-                      )}
-                      <label className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-dashed border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-600 hover:border-brand">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          disabled={uploadingHeader}
-                          onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) void handleHeaderFile(f);
-                          }}
-                          className="hidden"
-                        />
-                        {headerPreview ? "Trocar imagem" : "Escolher imagem"}
-                      </label>
-                      {uploadingHeader && (
-                        <p className="mt-1 text-xs text-neutral-500">Enviando…</p>
-                      )}
-                    </div>
-                  )}
-                </>
-              )
-            ) : source === "quick_reply" ? (
-              quickReplies.length === 0 ? (
-                <p className="text-xs text-neutral-500">
-                  Nenhuma resposta rápida cadastrada ainda.
-                </p>
-              ) : (
-                <div className="max-h-48 space-y-1.5 overflow-y-auto">
-                  {quickReplies.map((qr) => (
-                    <button
-                      key={qr.id}
-                      type="button"
-                      onClick={() => pickQuickReply(qr)}
-                      className="flex w-full items-center justify-between rounded-lg border border-neutral-200 px-3 py-2 text-left text-sm hover:border-brand/40"
-                    >
-                      {qr.title}
-                      {qr.shortcut && (
-                        <span className="text-xs text-neutral-400">/{qr.shortcut}</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )
-            ) : source === "campaign" ? (
-              savedCampaigns.length === 0 ? (
-                <p className="text-xs text-neutral-500">
-                  Nenhuma campanha pronta ainda. Adota uma na aba Campanhas.
-                </p>
-              ) : (
-                <div className="max-h-48 space-y-1.5 overflow-y-auto">
-                  {savedCampaigns.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      disabled={preparingSource}
-                      onClick={() => void pickCampaign(c)}
-                      className="flex w-full items-center gap-2 rounded-lg border border-neutral-200 px-3 py-2 text-left text-sm hover:border-brand/40 disabled:opacity-50"
-                    >
-                      {c.image_path && (
-                        <img
-                          src={c.image_path}
-                          alt=""
-                          className="h-8 w-12 shrink-0 rounded object-cover"
-                        />
-                      )}
-                      <span className="min-w-0 flex-1 truncate">{c.title}</span>
-                    </button>
-                  ))}
-                </div>
-              )
-            ) : (
-              <Textarea
-                value={content.actions.find((a) => a.type === "text")?.text || ""}
-                onChange={(e) =>
-                  setContent((prev) => ({
-                    ...prev,
-                    actions: [{ type: "text", text: e.target.value }],
-                  }))
-                }
-                rows={3}
-                placeholder="Mensagem que será enviada…"
-              />
+            <div className="mb-2 flex items-center justify-between">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                {allowsSequence ? "O que enviar (sequência)" : "O que enviar"}
+              </h4>
+            </div>
+            <div className="space-y-3">
+              {steps.map((step, i) => (
+                <StepEditor
+                  key={i}
+                  index={i}
+                  step={step}
+                  showTime
+                  showRemove={allowsSequence && steps.length > 1}
+                  isMetaProvider={isMetaProvider}
+                  approvedTemplates={approvedTemplates}
+                  templates={templates}
+                  quickReplies={quickReplies}
+                  savedCampaigns={savedCampaigns}
+                  funnels={funnels}
+                  preparing={preparingIndex === i}
+                  api={api}
+                  onSetSource={(source) => updateStep(i, { source })}
+                  onContentChange={(patch) => updateStepContent(i, patch)}
+                  onPickQuickReply={(qr) => pickQuickReply(i, qr)}
+                  onPickCampaign={(c) => void pickCampaign(i, c)}
+                  onRemove={() => removeStep(i)}
+                />
+              ))}
+            </div>
+            {allowsSequence && (
+              <button
+                onClick={addStep}
+                className="mt-3 flex items-center gap-1.5 text-sm font-medium text-brand hover:underline"
+              >
+                <Plus className="h-4 w-4" /> Adicionar mensagem à sequência
+              </button>
             )}
           </section>
 
@@ -895,7 +769,7 @@ function FollowupEditor({
             <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
               Regras
             </h4>
-            <div className="space-y-2 rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+            <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
               <label className="flex items-center gap-2 text-sm text-neutral-700">
                 <input
                   type="checkbox"
@@ -903,21 +777,10 @@ function FollowupEditor({
                   onChange={(e) => setSkipIfReplied(e.target.checked)}
                   className="h-3.5 w-3.5 rounded border-neutral-300"
                 />
-                Não enviar se o contato já respondeu
+                {allowsSequence
+                  ? "Se o contato responder, não envia mais nenhuma mensagem da sequência"
+                  : "Não envia se o contato já respondeu"}
               </label>
-              <div className="flex items-center gap-2">
-                <Label className="text-sm text-neutral-700">Limite de mensagens por contato</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  placeholder="Sem limite"
-                  value={maxMessages}
-                  onChange={(e) =>
-                    setMaxMessages(e.target.value === "" ? "" : Math.max(1, Number(e.target.value)))
-                  }
-                  className="h-8 w-28"
-                />
-              </div>
             </div>
           </section>
         </div>
@@ -943,6 +806,434 @@ function FollowupEditor({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** UMA mensagem da sequência (ou a única, se moment != time_in_stage) —
+ * tempo (se aplicável), origem (Escrever/Resposta rápida/Campanha), e
+ * o conteúdo em si. A escolha de resposta rápida/campanha FICA visível
+ * na própria aba (bug corrigido: antes sumia ao trocar pra "Escrever"
+ * sem indicar o que tinha sido escolhido). */
+function StepEditor({
+  index,
+  step,
+  showRemove,
+  isMetaProvider,
+  approvedTemplates,
+  templates,
+  quickReplies,
+  savedCampaigns,
+  funnels,
+  preparing,
+  api,
+  onSetSource,
+  onContentChange,
+  onPickQuickReply,
+  onPickCampaign,
+  onRemove,
+}: {
+  index: number;
+  step: StepUI;
+  showTime: boolean;
+  showRemove: boolean;
+  isMetaProvider: boolean;
+  approvedTemplates: TemplateOption[];
+  templates: TemplateOption[];
+  quickReplies: QuickReply[];
+  savedCampaigns: SavedCampaign[];
+  funnels: Funnel[];
+  preparing: boolean;
+  api: Api;
+  onSetSource: (s: MessageSource) => void;
+  onContentChange: (patch: Partial<FollowupContent>) => void;
+  onPickQuickReply: (qr: QuickReply) => void;
+  onPickCampaign: (c: SavedCampaign) => void;
+  onRemove: () => void;
+}) {
+  const { value: delayValue, unit: delayUnit } = minutesToValueUnit(step.content.delay_minutes);
+  const [headerPreview, setHeaderPreview] = useState<string | null>(null);
+  const [uploadingHeader, setUploadingHeader] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const uploadIndexRef = useRef<number | null>(null);
+  const fileInput = useRef<HTMLInputElement | null>(null);
+
+  const selectedQuickReply = quickReplies.find((q) => q.id === step.selectedQuickReplyId) || null;
+  const selectedCampaign = savedCampaigns.find((c) => c.id === step.selectedCampaignId) || null;
+
+  function updateAction(i: number, patch: Partial<QuickReplyAction>) {
+    onContentChange({
+      actions: step.content.actions.map((a, idx) => (idx === i ? { ...a, ...patch } : a)),
+    });
+  }
+  function addAction(type: QuickReplyActionType) {
+    onContentChange({
+      actions: [...step.content.actions, type === "text" ? { type, text: "" } : { type }],
+    });
+  }
+  function removeAction(i: number) {
+    onContentChange({ actions: step.content.actions.filter((_, idx) => idx !== i) });
+  }
+
+  async function handleBlockUpload(file: File) {
+    const i = uploadIndexRef.current;
+    if (i === null) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const dataBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
+        reader.readAsDataURL(file);
+      });
+      const result = await api("/api/public/extension/quick-replies/upload", {
+        method: "POST",
+        body: JSON.stringify({ filename: file.name, mime: file.type, data_base64: dataBase64 }),
+      });
+      if (!result?.ok) throw new Error((result?.error as string) || "Falha no upload");
+      updateAction(i, {
+        path: result.path as string,
+        url: result.url as string,
+        mime: result.mime as string,
+        filename: result.filename as string,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+      uploadIndexRef.current = null;
+      if (fileInput.current) fileInput.current.value = "";
+    }
+  }
+
+  async function handleHeaderFile(file: File) {
+    setUploadingHeader(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
+        reader.readAsDataURL(file);
+      });
+      const r = await api("/api/public/extension/quick-replies/upload", {
+        method: "POST",
+        body: JSON.stringify({
+          filename: file.name,
+          mime: file.type || "image/jpeg",
+          data_base64: dataUrl,
+        }),
+      });
+      if (!r?.ok) {
+        toast.error((r?.error as string) || "Falha ao enviar a imagem.");
+        return;
+      }
+      onContentChange({ template_header_media_path: (r.path as string) || null });
+      setHeaderPreview(dataUrl);
+    } finally {
+      setUploadingHeader(false);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-neutral-200 p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-neutral-600">
+          <Clock className="h-3.5 w-3.5" />
+          {index + 1}.
+          <Input
+            type="number"
+            min={0}
+            value={delayValue}
+            onChange={(e) =>
+              onContentChange({
+                delay_minutes: valueUnitToMinutes(
+                  Math.max(0, Number(e.target.value) || 0),
+                  delayUnit,
+                ),
+              })
+            }
+            className="h-7 w-16 px-2"
+          />
+          <Select
+            value={delayUnit}
+            onValueChange={(v) =>
+              onContentChange({
+                delay_minutes: valueUnitToMinutes(delayValue, v as "minutos" | "horas" | "dias"),
+              })
+            }
+          >
+            <SelectTrigger className="h-7 w-24 px-2 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="minutos">minutos</SelectItem>
+              <SelectItem value="horas">horas</SelectItem>
+              <SelectItem value="dias">dias</SelectItem>
+            </SelectContent>
+          </Select>
+          depois
+        </div>
+        {showRemove && (
+          <button
+            onClick={onRemove}
+            className="rounded-md p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
+      {isMetaProvider ? (
+        approvedTemplates.length === 0 ? (
+          <p className="text-xs text-amber-600">
+            Nenhum modelo aprovado encontrado. Cria um na aba Modelos.
+          </p>
+        ) : (
+          <>
+            <Select
+              value={step.content.template_name || ""}
+              onValueChange={(v) =>
+                onContentChange({ template_name: v, template_header_media_path: null })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Escolha um modelo…" />
+              </SelectTrigger>
+              <SelectContent>
+                {approvedTemplates.map((t) => (
+                  <SelectItem key={t.name} value={t.name}>
+                    {t.name}
+                    {t.hasImageHeader ? " (tem imagem)" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {templates.find((t) => t.name === step.content.template_name)?.hasImageHeader && (
+              <div className="mt-2 rounded-lg border border-neutral-200 bg-white p-2">
+                <p className="mb-1 text-xs font-medium text-neutral-600">Imagem do cabeçalho</p>
+                {headerPreview && (
+                  <img
+                    src={headerPreview}
+                    alt="Prévia"
+                    className="mb-2 max-h-24 rounded-lg border border-neutral-200 object-cover"
+                  />
+                )}
+                <label className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-dashed border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-600 hover:border-brand">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={uploadingHeader}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void handleHeaderFile(f);
+                    }}
+                    className="hidden"
+                  />
+                  {headerPreview ? "Trocar imagem" : "Escolher imagem"}
+                </label>
+                {uploadingHeader && <p className="mt-1 text-xs text-neutral-500">Enviando…</p>}
+              </div>
+            )}
+          </>
+        )
+      ) : (
+        <>
+          <div className="mb-2 grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => onSetSource("write")}
+              className={`rounded-lg border px-3 py-2 text-xs font-semibold ${step.source === "write" ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
+            >
+              Escrever
+            </button>
+            <button
+              type="button"
+              onClick={() => onSetSource("quick_reply")}
+              className={`rounded-lg border px-3 py-2 text-xs font-semibold ${step.source === "quick_reply" ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
+            >
+              Resposta rápida
+            </button>
+            <button
+              type="button"
+              onClick={() => onSetSource("campaign")}
+              className={`rounded-lg border px-3 py-2 text-xs font-semibold ${step.source === "campaign" ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
+            >
+              Campanha salva
+            </button>
+          </div>
+
+          {step.source === "quick_reply" ? (
+            <div className="max-h-48 space-y-1.5 overflow-y-auto">
+              {quickReplies.length === 0 ? (
+                <p className="text-xs text-neutral-500">
+                  Nenhuma resposta rápida cadastrada ainda.
+                </p>
+              ) : (
+                quickReplies.map((qr) => (
+                  <button
+                    key={qr.id}
+                    type="button"
+                    onClick={() => onPickQuickReply(qr)}
+                    className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm ${selectedQuickReply?.id === qr.id ? "border-brand bg-brand/5" : "border-neutral-200 hover:border-brand/40"}`}
+                  >
+                    {qr.title}
+                    {selectedQuickReply?.id === qr.id && (
+                      <span className="text-xs font-semibold text-brand">Selecionada</span>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          ) : step.source === "campaign" ? (
+            <div className="max-h-48 space-y-1.5 overflow-y-auto">
+              {savedCampaigns.length === 0 ? (
+                <p className="text-xs text-neutral-500">
+                  Nenhuma campanha pronta ainda. Adota uma na aba Campanhas.
+                </p>
+              ) : (
+                savedCampaigns.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    disabled={preparing}
+                    onClick={() => onPickCampaign(c)}
+                    className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm disabled:opacity-50 ${selectedCampaign?.id === c.id ? "border-brand bg-brand/5" : "border-neutral-200 hover:border-brand/40"}`}
+                  >
+                    {c.image_path && (
+                      <img
+                        src={c.image_path}
+                        alt=""
+                        className="h-8 w-12 shrink-0 rounded object-cover"
+                      />
+                    )}
+                    <span className="min-w-0 flex-1 truncate">{c.title}</span>
+                    {selectedCampaign?.id === c.id && (
+                      <span className="shrink-0 text-xs font-semibold text-brand">Selecionada</span>
+                    )}
+                  </button>
+                ))
+              )}
+              {preparing && <p className="text-xs text-neutral-500">Preparando imagem…</p>}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {step.content.actions.map((action, i) => (
+                <div key={i} className="rounded-lg border border-neutral-200 bg-neutral-50 p-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-neutral-700">
+                      {i + 1}. {actionLabel(action.type)}
+                    </span>
+                    {step.content.actions.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeAction(i)}
+                        className="text-xs text-red-600"
+                      >
+                        Remover
+                      </button>
+                    )}
+                  </div>
+                  {action.type === "text" ? (
+                    <Textarea
+                      value={action.text ?? ""}
+                      onChange={(e) => updateAction(i, { text: e.target.value })}
+                      rows={2}
+                      placeholder="Escreva esse bloco da mensagem…"
+                      className="mt-2"
+                    />
+                  ) : action.type === "funnel_add" || action.type === "funnel_remove" ? (
+                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                      <select
+                        value={action.funnel_id ?? ""}
+                        onChange={(e) =>
+                          updateAction(i, {
+                            funnel_id: e.target.value || undefined,
+                            stage_id: undefined,
+                          })
+                        }
+                        className={inputCls}
+                      >
+                        <option value="">Escolha o funil/lista</option>
+                        {funnels.map((f) => (
+                          <option key={f.id} value={f.id}>
+                            {f.mode === "label" ? "Listas" : f.name}
+                          </option>
+                        ))}
+                      </select>
+                      {action.type === "funnel_add" && (
+                        <select
+                          value={action.stage_id ?? ""}
+                          onChange={(e) =>
+                            updateAction(i, { stage_id: e.target.value || undefined })
+                          }
+                          className={inputCls}
+                        >
+                          <option value="">Escolha a etapa/lista</option>
+                          {(funnels.find((f) => f.id === action.funnel_id)?.stages ?? []).map(
+                            (s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.name}
+                              </option>
+                            ),
+                          )}
+                        </select>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="mt-2 space-y-2">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => {
+                          uploadIndexRef.current = i;
+                          if (fileInput.current)
+                            fileInput.current.accept = acceptedFiles(action.type);
+                          fileInput.current?.click();
+                        }}
+                        className="rounded-xl border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold disabled:opacity-50"
+                      >
+                        {action.path
+                          ? action.filename || "Trocar arquivo"
+                          : `Escolher ${actionLabel(action.type).toLowerCase()}`}
+                      </button>
+                      <input
+                        value={action.caption ?? ""}
+                        onChange={(e) => updateAction(i, { caption: e.target.value })}
+                        placeholder="Legenda (opcional)"
+                        className={inputCls}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div className="flex flex-wrap gap-2">
+                {[...QUICK_REPLY_ACTION_TYPES, ...QUICK_REPLY_FUNNEL_TYPES].map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => addAction(type)}
+                    className="rounded-lg border border-neutral-300 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-100"
+                  >
+                    + {actionLabel(type)}
+                  </button>
+                ))}
+              </div>
+              <input
+                ref={fileInput}
+                type="file"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void handleBlockUpload(f);
+                }}
+              />
+              {error && <p className="text-xs text-red-600">{error}</p>}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

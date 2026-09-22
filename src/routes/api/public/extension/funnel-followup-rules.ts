@@ -12,6 +12,7 @@ import { funnelFollowupRuleSchema } from "@/lib/funnel-followups";
 
 const STEP_COLS =
   "id, delay_minutes, actions, template_name, template_language, template_header_media_path, sort_order";
+const RULE_COLS = "id, name, funnel_id, stage_id, active, trigger_type, moment, skip_if_replied";
 
 export const Route = createFileRoute("/api/public/extension/funnel-followup-rules")({
   server: {
@@ -28,9 +29,7 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
         const funnelId = url.searchParams.get("funnel_id");
         let query = supabaseAdmin
           .from("funnel_followup_rules")
-          .select(
-            `id, funnel_id, stage_id, active, trigger_type, max_messages_per_contact, skip_if_replied, funnel_followup_steps (${STEP_COLS})`,
-          )
+          .select(`${RULE_COLS}, funnel_followup_steps (${STEP_COLS})`)
           .eq("barbershop_id", auth.token.barbershop_id);
         if (funnelId) query = query.eq("funnel_id", funnelId);
         const { data, error } = await query;
@@ -82,6 +81,12 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
           );
         }
 
+        const moment = parsed.data.moment ?? "time_in_stage";
+        // "entered" e "time_in_stage" usam o mesmo trigger_type
+        // internamente (ambos contam a partir da entrada na etapa) —
+        // só "left_stage" muda a lógica de avaliação de verdade.
+        const triggerType = moment === "left_stage" ? "left_stage" : "time_in_stage";
+
         // Upsert manual por (funnel_id, stage_id) — se já existe uma regra
         // pra essa etapa, edita ela (substitui os passos) em vez de criar
         // duplicada (o índice único no banco pegaria isso, mas fazer a
@@ -99,9 +104,10 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
           const { error: updErr } = await supabaseAdmin
             .from("funnel_followup_rules")
             .update({
+              name: parsed.data.name ?? null,
               active: parsed.data.active ?? true,
-              trigger_type: parsed.data.trigger_type ?? "time_in_stage",
-              max_messages_per_contact: parsed.data.max_messages_per_contact ?? null,
+              trigger_type: triggerType,
+              moment,
               skip_if_replied: parsed.data.skip_if_replied ?? true,
             })
             .eq("id", ruleId);
@@ -115,11 +121,12 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
             .from("funnel_followup_rules")
             .insert({
               barbershop_id: shop,
+              name: parsed.data.name ?? null,
               funnel_id: parsed.data.funnel_id,
               stage_id: parsed.data.stage_id,
               active: parsed.data.active ?? true,
-              trigger_type: parsed.data.trigger_type ?? "time_in_stage",
-              max_messages_per_contact: parsed.data.max_messages_per_contact ?? null,
+              trigger_type: triggerType,
+              moment,
               skip_if_replied: parsed.data.skip_if_replied ?? true,
             })
             .select("id")
@@ -151,9 +158,7 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
 
         const { data: full } = await supabaseAdmin
           .from("funnel_followup_rules")
-          .select(
-            `id, funnel_id, stage_id, active, trigger_type, max_messages_per_contact, skip_if_replied, funnel_followup_steps (${STEP_COLS})`,
-          )
+          .select(`${RULE_COLS}, funnel_followup_steps (${STEP_COLS})`)
           .eq("id", ruleId)
           .single();
         return jsonResponse(request, { ok: true, rule: full });

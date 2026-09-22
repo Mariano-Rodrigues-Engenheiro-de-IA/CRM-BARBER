@@ -14,8 +14,9 @@ export const followupStepSchema = z
       .int()
       .min(0)
       .max(60 * 24 * 90), // até 90 dias
-    // Texto livre (só funciona no provedor não oficial) OU modelo
-    // aprovado (obrigatório se conectado via Meta) — um dos dois.
+    // Texto livre, mídia (imagem/vídeo/áudio) e/ou mover de funil/lista
+    // (mesma estrutura já usada em Respostas Rápidas — vários blocos
+    // por passo) OU modelo aprovado (obrigatório se conectado via Meta).
     actions: z.array(quickReplyActionSchema).max(10).optional(),
     template_name: z.string().trim().max(512).nullable().optional(),
     template_language: z.string().trim().max(10).nullable().optional(),
@@ -27,22 +28,27 @@ export const followupStepSchema = z
     path: ["actions"],
   });
 
-export const funnelFollowupRuleSchema = z.object({
-  funnel_id: z.string().uuid(),
-  stage_id: z.string().uuid(),
-  active: z.boolean().optional(),
-  // "time_in_stage" (padrão): cada passo dispara conforme o tempo
-  // parado (delay 0 = assim que entrar). "left_stage": dispara quando
-  // o lead SAI da etapa/lista, sem depender de tempo parado.
-  trigger_type: z.enum(["time_in_stage", "left_stage"]).optional(),
-  // Quantidade máxima de mensagens que um mesmo contato recebe dessa
-  // regra — null/ausente = sem limite.
-  max_messages_per_contact: z.number().int().min(1).max(1000).nullable().optional(),
-  // Regra do follow-up inteiro (não mais por passo) — se o contato
-  // respondeu depois do gatilho, pula os passos seguintes.
-  skip_if_replied: z.boolean().optional(),
-  steps: z.array(followupStepSchema).min(1).max(20),
-});
+export const funnelFollowupRuleSchema = z
+  .object({
+    name: z.string().trim().max(120).optional(),
+    funnel_id: z.string().uuid(),
+    stage_id: z.string().uuid(),
+    active: z.boolean().optional(),
+    // "entered": 1 mensagem só, contada a partir da entrada (tempo
+    // configurável). "left_stage": 1 mensagem só, contada a partir da
+    // saída. "time_in_stage": sequência de 1+ mensagens, cada uma com
+    // seu próprio tempo — só esse modo permite mais de um passo.
+    moment: z.enum(["entered", "left_stage", "time_in_stage"]).optional(),
+    // Regra do follow-up inteiro (não mais por passo) — se o contato
+    // respondeu depois do gatilho, para a sequência (não manda os
+    // passos seguintes).
+    skip_if_replied: z.boolean().optional(),
+    steps: z.array(followupStepSchema).min(1).max(20),
+  })
+  .refine((v) => v.moment === "time_in_stage" || v.steps.length === 1, {
+    message: '"Assim que entrar" e "Assim que sair" só permitem uma mensagem.',
+    path: ["steps"],
+  });
 
 export type FollowupStep = {
   id: string;
@@ -56,11 +62,12 @@ export type FollowupStep = {
 
 export type FunnelFollowupRule = {
   id: string;
+  name: string | null;
   funnel_id: string;
   stage_id: string;
   active: boolean;
   trigger_type: "time_in_stage" | "left_stage";
-  max_messages_per_contact: number | null;
+  moment: "entered" | "left_stage" | "time_in_stage";
   skip_if_replied: boolean;
   steps: FollowupStep[];
 };
