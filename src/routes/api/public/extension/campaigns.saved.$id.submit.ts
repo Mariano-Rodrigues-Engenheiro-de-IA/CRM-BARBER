@@ -83,7 +83,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns/saved/$id/
 
         const { data: instance, error: instanceErr } = await supabaseAdmin
           .from("whatsapp_instances")
-          .select("provider, waba_id, meta_access_token")
+          .select("provider, status, waba_id, meta_access_token")
           .eq("barbershop_id", auth.token.barbershop_id)
           .maybeSingle();
         if (instanceErr) {
@@ -92,6 +92,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns/saved/$id/
         if (
           !instance ||
           instance.provider !== "meta" ||
+          instance.status !== "connected" ||
           !instance.waba_id ||
           !instance.meta_access_token
         ) {

@@ -14,8 +14,9 @@ import {
   type QuickReplyActionType,
 } from "@/lib/quick-replies";
 import type { Funnel } from "@/lib/funnels";
+import type { SavedCampaign } from "@/components/campaigns-marketplace-view";
 
-type MessageMode = "custom" | "quick";
+type MessageMode = "custom" | "quick" | "campaign";
 type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
 
 const inputCls =
@@ -49,6 +50,7 @@ export function MessageComposerStep({
   onActions,
   onVariants,
   onClearReply,
+  savedCampaigns,
 }: {
   api: ApiFn;
   funnels: Funnel[];
@@ -62,6 +64,10 @@ export function MessageComposerStep({
   onActions: React.Dispatch<React.SetStateAction<QuickReplyAction[]>>;
   onVariants: React.Dispatch<React.SetStateAction<string[]>>;
   onClearReply: () => void;
+  // Campanhas do marketplace já adotadas e prontas pra usar (status
+  // "approved") — terceira opção de mensagem, ao lado de Criar
+  // mensagem e Usar resposta rápida.
+  savedCampaigns: SavedCampaign[];
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,9 +113,15 @@ export function MessageComposerStep({
     }
   }
 
+  function pickCampaign(c: SavedCampaign) {
+    onClearReply();
+    onActions([{ type: "text", text: c.body_text }]);
+    onVariants([c.body_text]);
+  }
+
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <button
           type="button"
           onClick={() => {
@@ -127,9 +139,45 @@ export function MessageComposerStep({
         >
           Usar resposta rápida
         </button>
+        <button
+          type="button"
+          onClick={() => onMode("campaign")}
+          className={`rounded-lg border px-3 py-2 text-sm font-semibold ${mode === "campaign" ? "border-brand bg-brand text-white" : "border-neutral-300 text-neutral-700"}`}
+        >
+          Usar campanha salva
+        </button>
       </div>
 
-      {mode === "quick" ? (
+      {mode === "campaign" ? (
+        <div className="space-y-2">
+          {savedCampaigns.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-neutral-300 bg-white p-4 text-center text-sm text-neutral-400">
+              Nenhuma campanha pronta ainda. Adota uma no calendário da aba Campanhas.
+            </p>
+          ) : (
+            savedCampaigns.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => pickCampaign(c)}
+                className="flex w-full items-center gap-3 rounded-lg border border-neutral-200 px-3 py-2 text-left text-sm hover:border-brand"
+              >
+                {c.image_path && (
+                  <img
+                    src={c.image_path}
+                    alt=""
+                    className="h-10 w-14 shrink-0 rounded object-cover"
+                  />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold text-neutral-900">{c.title}</p>
+                  <p className="truncate text-xs text-neutral-500">{c.body_text}</p>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      ) : mode === "quick" ? (
         <div className="space-y-2">
           {replies.map((reply) => (
             <button

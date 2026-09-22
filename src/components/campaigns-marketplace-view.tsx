@@ -17,7 +17,7 @@ type CatalogCampaign = {
   cover_image_url: string | null;
 };
 
-type SavedCampaign = {
+export type SavedCampaign = {
   id: string;
   catalog_campaign_id: string | null;
   title: string;

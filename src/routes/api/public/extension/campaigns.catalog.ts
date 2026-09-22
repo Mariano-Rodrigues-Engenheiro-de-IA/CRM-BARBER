@@ -139,10 +139,10 @@ export const Route = createFileRoute("/api/public/extension/campaigns/catalog")(
         // envio (fase seguinte) — aqui sempre nasce como 'draft'.
         const { data: instance } = await supabaseAdmin
           .from("whatsapp_instances")
-          .select("provider")
+          .select("provider, status")
           .eq("barbershop_id", auth.token.barbershop_id)
           .maybeSingle();
-        const isMeta = instance?.provider === "meta";
+        const isMeta = instance?.provider === "meta" && instance?.status === "connected";
 
         const { data: created, error } = await supabaseAdmin
           .from("saved_campaigns")

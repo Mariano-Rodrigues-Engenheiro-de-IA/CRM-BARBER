@@ -14,6 +14,7 @@ import { type QuickReply, type QuickReplyAction } from "@/lib/quick-replies";
 import type { Funnel, WaContact, WaLabel } from "@/lib/funnels";
 import { AudienceStep } from "@/components/dispatch-step-audience";
 import { MessageComposerStep } from "@/components/dispatch-step-message";
+import type { SavedCampaign } from "@/components/campaigns-marketplace-view";
 import { MessagePreview } from "@/components/dispatch-message-preview";
 import { TemplatePreview } from "@/components/whatsapp-template-preview";
 import type { AudienceContact, AudienceSource, DispatchCustomer } from "@/lib/dispatch-audience";
@@ -22,7 +23,7 @@ import { ensureFreshLabelFunnels } from "@/lib/label-funnel-sync";
 
 type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
 
-type MessageMode = "custom" | "quick";
+type MessageMode = "custom" | "quick" | "campaign";
 type DispatchType = "message" | "template";
 type TemplateOption = {
   name: string;
@@ -143,6 +144,7 @@ export function DispatchCenter({
   const [variants, setVariants] = useState<string[]>([""]);
   const [actions, setActions] = useState<QuickReplyAction[]>([{ type: "text", text: "" }]);
   const [replies, setReplies] = useState<QuickReply[]>([]);
+  const [savedCampaigns, setSavedCampaigns] = useState<SavedCampaign[]>([]);
   const [replyId, setReplyId] = useState("");
   const [messageMode, setMessageMode] = useState<MessageMode>("custom");
   const [dispatchType, setDispatchType] = useState<DispatchType>("message");
@@ -171,17 +173,22 @@ export function DispatchCenter({
 
   useEffect(() => {
     void (async () => {
-      const [f, q, w, t, st] = await Promise.all([
+      const [f, q, w, t, st, camp] = await Promise.all([
         api("/api/public/extension/funnels"),
         api("/api/public/extension/quick-replies"),
         api("/api/public/extension/wa/data"),
         api("/api/public/extension/whatsapp/templates"),
         api("/api/public/extension/whatsapp/status"),
+        api("/api/public/extension/campaigns/catalog"),
       ]);
       if (f?.ok) {
         setFunnels((f.funnels as Funnel[]) || []);
       }
       if (q?.ok) setReplies((q.quick_replies as QuickReply[]) || []);
+      if (camp?.ok) {
+        const all = (camp.saved as SavedCampaign[]) || [];
+        setSavedCampaigns(all.filter((c) => c.status === "approved"));
+      }
       if (w?.ok) {
         setLabels((w.labels as WaLabel[]) || []);
         setContacts((w.contacts as WaContact[]) || []);
@@ -654,6 +661,7 @@ export function DispatchCenter({
                       onActions={setActions}
                       onVariants={setVariants}
                       onClearReply={() => setReplyId("")}
+                      savedCampaigns={savedCampaigns}
                     />
                   )}
                 </div>

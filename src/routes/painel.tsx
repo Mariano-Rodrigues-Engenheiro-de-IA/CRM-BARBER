@@ -880,7 +880,9 @@ function Painel() {
     });
     api(token, "/api/public/extension/whatsapp/status").then((r) => {
       if (r?.ok && r.connection) {
-        const meta = (r.connection as { provider?: string }).provider === "meta";
+        const meta =
+          (r.connection as { provider?: string; status?: string }).provider === "meta" &&
+          (r.connection as { provider?: string; status?: string }).status === "connected";
         setIsMetaProvider(meta);
         try {
           sessionStorage.setItem("crm_is_meta_provider", meta ? "1" : "0");
