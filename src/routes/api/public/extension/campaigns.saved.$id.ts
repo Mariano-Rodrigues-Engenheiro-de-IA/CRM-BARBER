@@ -47,6 +47,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns/saved/$id"
         if (typeof body.body_text === "string" && body.body_text.trim())
           patch.body_text = body.body_text.trim();
         if (typeof body.image_path === "string") patch.image_path = body.image_path || null;
+        if (typeof body.audio_path === "string") patch.audio_path = body.audio_path || null;
 
         // Editar um modelo já enviado/aprovado na Meta invalida o que foi
         // aprovado — volta pra rascunho, precisa reenviar pra aprovação.
@@ -62,7 +63,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns/saved/$id"
           .update(patch as any)
           .eq("id", params.id)
           .select(
-            "id, catalog_campaign_id, title, body_text, image_path, status, rejection_reason, whatsapp_template_name, created_at",
+            "id, catalog_campaign_id, title, body_text, image_path, audio_path, status, rejection_reason, whatsapp_template_name, created_at",
           )
           .single();
         if (error) {

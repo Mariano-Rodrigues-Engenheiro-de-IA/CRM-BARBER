@@ -10,6 +10,9 @@ import {
   adminUpdateCampaign,
   adminDeleteCampaign,
   adminUploadCampaignCover,
+  adminUploadCampaignAudio,
+  adminGetCalendarConfig,
+  adminSetCalendarConfig,
   type CampaignCatalogRow,
 } from "@/lib/admin-campaigns.functions";
 import { useCachedFetch } from "@/lib/api-cache";
@@ -34,6 +37,8 @@ export function AdminCampaignsPanel() {
   const createCampaign = useServerFn(adminCreateCampaign);
   const updateCampaign = useServerFn(adminUpdateCampaign);
   const deleteCampaign = useServerFn(adminDeleteCampaign);
+  const getCalendarConfig = useServerFn(adminGetCalendarConfig);
+  const setCalendarConfig = useServerFn(adminSetCalendarConfig);
 
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
@@ -48,6 +53,21 @@ export function AdminCampaignsPanel() {
       }
     },
   );
+  const { data: calendarConfig, refetch: reloadCalendarConfig } = useCachedFetch<{
+    unlocked_through_month: number;
+  }>("admin-campaigns-calendar-config", async () => {
+    try {
+      return await getCalendarConfig();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      return { unlocked_through_month: 12 };
+    }
+  });
+
+  async function handleChangeUnlockedMonth(month: number) {
+    await setCalendarConfig({ data: { unlocked_through_month: month } });
+    await reloadCalendarConfig();
+  }
 
   async function handleToggleActive(c: CampaignCatalogRow) {
     await updateCampaign({ data: { id: c.id, active: !c.active } });
@@ -86,6 +106,27 @@ export function AdminCampaignsPanel() {
             {error}
           </div>
         )}
+
+        <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-white p-4">
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-neutral-900">Mês liberado pro cliente ver</p>
+            <p className="text-xs text-neutral-500">
+              Meses depois desse aparecem trancados (cadeado) pro cliente, mesmo já tendo campanha
+              cadastrada.
+            </p>
+          </div>
+          <select
+            value={calendarConfig?.unlocked_through_month ?? 12}
+            onChange={(e) => handleChangeUnlockedMonth(Number(e.target.value))}
+            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-brand"
+          >
+            {MONTH_NAMES.map((name, i) => (
+              <option key={name} value={i + 1}>
+                Até {name}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <div className="space-y-2">
           {!campaigns ? (
@@ -181,17 +222,21 @@ function CampaignFormModal({
   updateCampaign: ReturnType<typeof useServerFn<typeof adminUpdateCampaign>>;
 }) {
   const uploadCover = useServerFn(adminUploadCampaignCover);
+  const uploadAudio = useServerFn(adminUploadCampaignAudio);
   const [title, setTitle] = useState(editing?.title ?? "");
   const [month, setMonth] = useState<number | "">(editing?.month ?? "");
   const [theme, setTheme] = useState(editing?.theme ?? "");
   const [ideaSummary, setIdeaSummary] = useState(editing?.idea_summary ?? "");
   const [suggestedCopy, setSuggestedCopy] = useState(editing?.suggested_copy ?? "");
   const [coverImageUrl, setCoverImageUrl] = useState(editing?.cover_image_url ?? "");
+  const [audioUrl, setAudioUrl] = useState(editing?.audio_url ?? "");
   const [uploading, setUploading] = useState(false);
+  const [uploadingAudio, setUploadingAudio] = useState(false);
   const [sortOrder, setSortOrder] = useState(editing?.sort_order ?? 0);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -216,6 +261,29 @@ function CampaignFormModal({
     }
   }
 
+  async function handleAudioFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAudio(true);
+    setErr(null);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const result = await uploadAudio({
+        data: { fileName: file.name, contentType: file.type, base64 },
+      });
+      setAudioUrl(result.url);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Erro ao enviar o áudio");
+    } finally {
+      setUploadingAudio(false);
+    }
+  }
+
   const valid = title.trim() && ideaSummary.trim() && suggestedCopy.trim();
 
   async function handleSave() {
@@ -230,6 +298,7 @@ function CampaignFormModal({
         idea_summary: ideaSummary.trim(),
         suggested_copy: suggestedCopy.trim(),
         cover_image_url: coverImageUrl.trim() || undefined,
+        audio_url: audioUrl.trim() || undefined,
         sort_order: sortOrder,
       };
       if (editing) {
@@ -344,6 +413,31 @@ function CampaignFormModal({
                   Formato paisagem funciona melhor pra capa de card.
                 </p>
               </div>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-neutral-600">Áudio (opcional)</label>
+            <div className="flex items-center gap-3">
+              {audioUrl ? (
+                <audio controls src={audioUrl} className="h-10 flex-1" />
+              ) : (
+                <p className="flex-1 text-xs text-neutral-400">Nenhum áudio enviado ainda.</p>
+              )}
+              <input
+                ref={audioInputRef}
+                type="file"
+                accept="audio/*"
+                className="hidden"
+                onChange={handleAudioFileChange}
+              />
+              <button
+                type="button"
+                disabled={uploadingAudio}
+                onClick={() => audioInputRef.current?.click()}
+                className="shrink-0 rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:bg-neutral-50 disabled:opacity-50"
+              >
+                {uploadingAudio ? "Enviando..." : audioUrl ? "Trocar áudio" : "Enviar áudio"}
+              </button>
             </div>
           </div>
           <div className="space-y-1">

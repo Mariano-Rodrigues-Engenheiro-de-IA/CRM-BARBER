@@ -14,12 +14,13 @@ export type CampaignCatalogRow = {
   idea_summary: string;
   suggested_copy: string;
   cover_image_url: string | null;
+  audio_url: string | null;
   sort_order: number;
   active: boolean;
 };
 
 const CAMPAIGN_COLUMNS =
-  "id, title, month, theme, idea_summary, suggested_copy, cover_image_url, sort_order, active";
+  "id, title, month, theme, idea_summary, suggested_copy, cover_image_url, audio_url, sort_order, active";
 
 export const adminListCampaigns = createServerFn({ method: "GET" }).handler(
   async (): Promise<CampaignCatalogRow[]> => {
@@ -41,6 +42,7 @@ const campaignInputSchema = z.object({
   idea_summary: z.string().trim().min(1).max(600),
   suggested_copy: z.string().trim().min(1).max(1200),
   cover_image_url: z.string().trim().url().max(500).optional(),
+  audio_url: z.string().trim().url().max(500).optional(),
   sort_order: z.number().int().optional(),
 });
 
@@ -65,6 +67,7 @@ const campaignUpdateSchema = z.object({
   idea_summary: z.string().trim().min(1).max(600).optional(),
   suggested_copy: z.string().trim().min(1).max(1200).optional(),
   cover_image_url: z.string().trim().url().max(500).optional().nullable(),
+  audio_url: z.string().trim().url().max(500).optional().nullable(),
   sort_order: z.number().int().optional(),
   active: z.boolean().optional(),
 });
@@ -93,6 +96,36 @@ export const adminDeleteCampaign = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// Mês liberado do calendário — meses seguintes aparecem trancados
+// (cadeado) na tela do cliente. Linha única (singleton).
+export const adminGetCalendarConfig = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin
+    .from("campaign_calendar_config")
+    .select("unlocked_through_month")
+    .eq("id", true)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return { unlocked_through_month: data?.unlocked_through_month ?? 12 };
+});
+
+export const adminSetCalendarConfig = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) =>
+    z.object({ unlocked_through_month: z.number().int().min(1).max(12) }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("campaign_calendar_config")
+      .update({
+        unlocked_through_month: data.unlocked_through_month,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", true);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 // Upload da capa — recebe o arquivo em base64 (data URL), sobe pro
 // Storage via service_role, devolve a URL pública. Mesmo padrão de
 // adminUploadModuleCover (admin-modules.functions.ts).
@@ -108,6 +141,23 @@ export const adminUploadCampaignCover = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const bytes = Buffer.from(data.base64, "base64");
     const path = `${Date.now()}-${data.fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+    const { error } = await supabaseAdmin.storage.from("campaign-covers").upload(path, bytes, {
+      contentType: data.contentType,
+      upsert: false,
+    });
+    if (error) throw new Error(error.message);
+    const { data: pub } = supabaseAdmin.storage.from("campaign-covers").getPublicUrl(path);
+    return { url: pub.publicUrl };
+  });
+
+// Upload de áudio — mesmo padrão, reaproveita o bucket já existente
+// (armazenamento não é restrito por tipo de arquivo).
+export const adminUploadCampaignAudio = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => uploadCoverSchema.parse(data))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const bytes = Buffer.from(data.base64, "base64");
+    const path = `audio-${Date.now()}-${data.fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
     const { error } = await supabaseAdmin.storage.from("campaign-covers").upload(path, bytes, {
       contentType: data.contentType,
       upsert: false,

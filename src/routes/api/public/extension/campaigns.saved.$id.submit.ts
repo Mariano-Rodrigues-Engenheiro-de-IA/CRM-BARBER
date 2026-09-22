@@ -57,6 +57,11 @@ export const Route = createFileRoute("/api/public/extension/campaigns/saved/$id/
           return jsonResponse(request, { ok: false, error: auth.error }, { status: auth.status });
         }
 
+        // audio_path não entra aqui de propósito: a Meta não aceita áudio
+        // como cabeçalho de modelo (só IMAGE, VIDEO, DOCUMENT) — é uma
+        // limitação real da própria API oficial, não uma omissão. O
+        // áudio de uma campanha só é usado no disparo pela API
+        // não-oficial (fora de modelo).
         const { data: campaign, error: campaignErr } = await supabaseAdmin
           .from("saved_campaigns")
           .select("id, title, body_text, image_path, status")

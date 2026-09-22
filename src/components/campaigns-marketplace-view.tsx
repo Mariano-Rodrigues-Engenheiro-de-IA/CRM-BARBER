@@ -15,6 +15,7 @@ type CatalogCampaign = {
   idea_summary: string;
   suggested_copy: string;
   cover_image_url: string | null;
+  audio_url: string | null;
 };
 
 export type SavedCampaign = {
@@ -23,6 +24,7 @@ export type SavedCampaign = {
   title: string;
   body_text: string;
   image_path: string | null;
+  audio_path: string | null;
   status: "draft" | "pending_approval" | "approved" | "rejected";
   rejection_reason: string | null;
   whatsapp_template_name: string | null;
@@ -60,6 +62,7 @@ export function CampaignsMarketplaceView({
 }) {
   const [catalog, setCatalog] = useState<CatalogCampaign[] | null>(null);
   const [saved, setSaved] = useState<SavedCampaign[] | null>(null);
+  const [unlockedThroughMonth, setUnlockedThroughMonth] = useState(12);
   const [error, setError] = useState<string | null>(null);
   const [openMonth, setOpenMonth] = useState<number | null>(new Date().getMonth() + 1);
   const [detail, setDetail] = useState<CatalogCampaign | null>(null);
@@ -71,6 +74,9 @@ export function CampaignsMarketplaceView({
       if (r?.ok) {
         setCatalog((r.catalog as CatalogCampaign[]) ?? []);
         setSaved((r.saved as SavedCampaign[]) ?? []);
+        const unlocked = (r.unlocked_through_month as number) ?? 12;
+        setUnlockedThroughMonth(unlocked);
+        setOpenMonth((current) => (current !== null && current > unlocked ? unlocked : current));
       } else {
         setError((r?.error as string) ?? "Não foi possível carregar as campanhas.");
       }
@@ -104,6 +110,7 @@ export function CampaignsMarketplaceView({
         title: c.title,
         body_text: c.suggested_copy,
         image_path: c.cover_image_url,
+        audio_path: c.audio_url,
       }),
     });
     if (r?.ok) {
@@ -155,29 +162,39 @@ export function CampaignsMarketplaceView({
             const monthNum = i + 1;
             const count = byMonth.get(monthNum)?.length ?? 0;
             const active = openMonth === monthNum;
+            const locked = monthNum > unlockedThroughMonth;
             return (
               <button
                 key={name}
-                onClick={() => setOpenMonth(active ? null : monthNum)}
+                onClick={() => {
+                  if (locked) return;
+                  setOpenMonth(active ? null : monthNum);
+                }}
                 className={
                   "relative rounded-xl border px-3 py-3 text-left text-sm font-semibold transition " +
-                  (active
-                    ? "border-brand bg-brand text-white shadow-md"
-                    : count > 0
-                      ? "border-neutral-300 bg-white text-neutral-900 hover:border-brand"
-                      : "border-neutral-200 bg-neutral-50 text-neutral-400")
+                  (locked
+                    ? "cursor-not-allowed border-neutral-200 bg-neutral-50 text-neutral-300"
+                    : active
+                      ? "border-brand bg-brand text-white shadow-md"
+                      : count > 0
+                        ? "border-neutral-300 bg-white text-neutral-900 hover:border-brand"
+                        : "border-neutral-200 bg-neutral-50 text-neutral-400")
                 }
               >
                 {name}
-                {count > 0 && (
-                  <span
-                    className={
-                      "absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold " +
-                      (active ? "bg-white text-brand" : "bg-brand text-white")
-                    }
-                  >
-                    {count}
-                  </span>
+                {locked ? (
+                  <span className="absolute right-2 top-2 text-neutral-400">🔒</span>
+                ) : (
+                  count > 0 && (
+                    <span
+                      className={
+                        "absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold " +
+                        (active ? "bg-white text-brand" : "bg-brand text-white")
+                      }
+                    >
+                      {count}
+                    </span>
+                  )
                 )}
               </button>
             );
@@ -246,6 +263,9 @@ export function CampaignsMarketplaceView({
                       <p className="mt-0.5 truncate text-xs text-red-600">
                         Motivo: {s.rejection_reason}
                       </p>
+                    )}
+                    {s.audio_path && (
+                      <audio controls src={s.audio_path} className="mt-1 h-8 max-w-[220px]" />
                     )}
                   </div>
                   <span
@@ -370,6 +390,12 @@ function CampaignDetailModal({
               {campaign.suggested_copy}
             </p>
           </div>
+          {campaign.audio_url && (
+            <div>
+              <p className="text-xs font-semibold text-neutral-500">Áudio</p>
+              <audio controls src={campaign.audio_url} className="w-full" />
+            </div>
+          )}
           <div className="flex justify-end gap-2 pt-2">
             <button
               onClick={onClose}

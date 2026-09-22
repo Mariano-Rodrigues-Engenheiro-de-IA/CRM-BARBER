@@ -498,6 +498,7 @@ export type Database = {
       campaign_catalog: {
         Row: {
           active: boolean;
+          audio_url: string | null;
           cover_image_url: string | null;
           created_at: string;
           id: string;
@@ -511,6 +512,7 @@ export type Database = {
         };
         Insert: {
           active?: boolean;
+          audio_url?: string | null;
           cover_image_url?: string | null;
           created_at?: string;
           id?: string;
@@ -524,6 +526,7 @@ export type Database = {
         };
         Update: {
           active?: boolean;
+          audio_url?: string | null;
           cover_image_url?: string | null;
           created_at?: string;
           id?: string;
@@ -533,6 +536,24 @@ export type Database = {
           suggested_copy?: string;
           theme?: string | null;
           title?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      campaign_calendar_config: {
+        Row: {
+          id: boolean;
+          unlocked_through_month: number;
+          updated_at: string;
+        };
+        Insert: {
+          id?: boolean;
+          unlocked_through_month?: number;
+          updated_at?: string;
+        };
+        Update: {
+          id?: boolean;
+          unlocked_through_month?: number;
           updated_at?: string;
         };
         Relationships: [];
@@ -2070,6 +2091,7 @@ export type Database = {
       };
       saved_campaigns: {
         Row: {
+          audio_path: string | null;
           barbershop_id: string;
           body_text: string;
           catalog_campaign_id: string | null;
@@ -2083,6 +2105,7 @@ export type Database = {
           whatsapp_template_name: string | null;
         };
         Insert: {
+          audio_path?: string | null;
           barbershop_id: string;
           body_text: string;
           catalog_campaign_id?: string | null;
@@ -2096,6 +2119,7 @@ export type Database = {
           whatsapp_template_name?: string | null;
         };
         Update: {
+          audio_path?: string | null;
           barbershop_id?: string;
           body_text?: string;
           catalog_campaign_id?: string | null;
