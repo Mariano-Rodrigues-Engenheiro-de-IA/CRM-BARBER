@@ -1747,6 +1747,7 @@
   const PROFILE_BTN_ID = "crm-chat-profile";
   const SAVE_CONTACT_BTN_ID = "crm-chat-save-contact";
   const FOLLOWUP_BTN_ID = "crm-chat-followup";
+  const MARK_ATTENDANCE_BTN_ID = "crm-chat-mark-attendance";
   const BOLT_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>`;
   const PROFILE_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="18" height="17" rx="3.2"/><circle cx="12" cy="10" r="3"/><path d="M6.5 17.2c.9-2.3 3-3.7 5.5-3.7s4.6 1.4 5.5 3.7"/></svg>`;
   // Pessoa com "+" — aparece só quando o contato ainda não está salvo na
@@ -1755,6 +1756,9 @@
   const DEAL_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9v.01M18 15v.01"/></svg>`;
   const NOTES_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3.3A1.3 1.3 0 0 1 10.3 2h3.4A1.3 1.3 0 0 1 15 3.3V4"/><path d="m10 17 6.2-6.2a1.15 1.15 0 0 0-1.6-1.6L8.4 15.4l-.5 2.1z"/></svg>`;
   const SCHEDULE_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5h11"/><path d="M14.5 4.5H5.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2H10"/><path d="M8 3v3M12 3v3"/><circle cx="16.5" cy="15.5" r="5"/><path d="M16.5 13v2.5l1.7 1"/></svg>`;
+  // Marcar atendimento — mesmo ícone de tesoura usado no site (React),
+  // pra ficar consistente entre as duas interfaces.
+  const MARK_ATTENDANCE_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12"/></svg>`;
 
   function formatDateTime(iso) {
     if (!iso) return "";
@@ -2420,12 +2424,13 @@
     const hasBolt = document.getElementById(RAIO_BTN_ID);
     const hasNotes = document.getElementById(NOTES_BTN_ID);
     const hasSchedule = document.getElementById(SCHEDULE_BTN_ID);
+    const hasMarkAttendance = document.getElementById(MARK_ATTENDANCE_BTN_ID);
     const hasProfile = document.getElementById(PROFILE_BTN_ID);
     const hasSaveContact = document.getElementById(SAVE_CONTACT_BTN_ID);
     const hasFollowup = document.getElementById(FOLLOWUP_BTN_ID);
     if (
-      hasCrm && hasBolt && hasNotes && hasSchedule && hasProfile && hasSaveContact && hasFollowup &&
-      header.contains(hasCrm) && header.contains(hasBolt) && header.contains(hasNotes) && header.contains(hasSchedule) && header.contains(hasProfile) && header.contains(hasSaveContact) && header.contains(hasFollowup)
+      hasCrm && hasBolt && hasNotes && hasSchedule && hasMarkAttendance && hasProfile && hasSaveContact && hasFollowup &&
+      header.contains(hasCrm) && header.contains(hasBolt) && header.contains(hasNotes) && header.contains(hasSchedule) && header.contains(hasMarkAttendance) && header.contains(hasProfile) && header.contains(hasSaveContact) && header.contains(hasFollowup)
     ) {
       updateFunnelBadge();
       updateFollowupBadge();
@@ -2437,6 +2442,7 @@
     hasBolt?.remove();
     hasNotes?.remove();
     hasSchedule?.remove();
+    hasMarkAttendance?.remove();
     hasProfile?.remove();
     hasSaveContact?.remove();
     hasFollowup?.remove();
@@ -2485,6 +2491,44 @@
       e.preventDefault();
       e.stopPropagation();
       void openScheduleDialog();
+    });
+
+    // Marcar atendimento — entra no funil especial "Pós-venda" (ver
+    // mark-attendance.ts), sempre com confirmação antes (ação real,
+    // dispara a sequência de pós-venda/retorno pra esse cliente).
+    const markAttendanceBtn = document.createElement("button");
+    markAttendanceBtn.id = MARK_ATTENDANCE_BTN_ID;
+    markAttendanceBtn.className = "crm-chat-btn crm-chat-btn-icon";
+    markAttendanceBtn.type = "button";
+    markAttendanceBtn.setAttribute("data-label", "Marcar atendimento");
+    markAttendanceBtn.innerHTML = MARK_ATTENDANCE_SVG;
+    markAttendanceBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const chat = await activeChat();
+      if (!chat?.phone) {
+        crmToast("Não consegui identificar o telefone dessa conversa.", "err", markAttendanceBtn);
+        return;
+      }
+      const ok = await openConfirmPop(markAttendanceBtn, {
+        text: `Confirma que ${chat.push_name || chat.phone} foi atendido agora? Ele vai entrar no Pós-venda.`,
+        confirmLabel: "Marcar",
+        danger: false,
+      });
+      if (!ok) return;
+      const r = await safeSendMessage({
+        type: "api",
+        path: "/api/public/extension/mark-attendance",
+        opts: {
+          method: "POST",
+          body: JSON.stringify({ phone: chat.phone, title: chat.push_name, wa_contact_id: chat.contact_db_id }),
+        },
+      }).catch(() => null);
+      if (r?.ok) {
+        crmToast("Atendimento marcado!", "ok", markAttendanceBtn);
+      } else {
+        crmToast(r?.error || "Não consegui marcar o atendimento.", "err", markAttendanceBtn);
+      }
     });
 
     // Só um segundo botão na conversa agora: o raio. Ele é a porta de
@@ -2559,6 +2603,7 @@
       header.appendChild(followupBtn);
       header.appendChild(notesBtn);
       header.appendChild(scheduleBtn);
+      header.appendChild(markAttendanceBtn);
       header.appendChild(profileBtn);
       header.appendChild(saveContactBtn);
       header.appendChild(boltBtn);
@@ -2567,7 +2612,8 @@
       btn.insertAdjacentElement("afterend", followupBtn);
       followupBtn.insertAdjacentElement("afterend", notesBtn);
       notesBtn.insertAdjacentElement("afterend", scheduleBtn);
-      scheduleBtn.insertAdjacentElement("afterend", profileBtn);
+      scheduleBtn.insertAdjacentElement("afterend", markAttendanceBtn);
+      markAttendanceBtn.insertAdjacentElement("afterend", profileBtn);
       profileBtn.insertAdjacentElement("afterend", saveContactBtn);
       saveContactBtn.insertAdjacentElement("afterend", boltBtn);
     }
