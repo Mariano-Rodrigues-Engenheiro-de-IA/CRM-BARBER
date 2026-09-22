@@ -9,6 +9,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Clock } from "lucide-react";
+import { toast } from "sonner";
+import { useConfirm } from "@/components/confirm-dialog";
 import {
   formatBRL,
   type Funnel,
@@ -53,6 +55,37 @@ export function FunnelsView({
   const [loading, setLoading] = useState(!funnelsCache);
   const [err, setErr] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const { confirm, dialog: confirmDialog } = useConfirm();
+
+  async function handleMarkAttendance(card: {
+    phone: string | null;
+    title: string;
+    wa_contact_id?: string | null;
+  }) {
+    if (!card.phone) {
+      toast.error("Esse lead não tem telefone — não dá pra marcar atendimento.");
+      return;
+    }
+    const ok = await confirm({
+      title: "Marcar atendimento?",
+      description: `Confirma que ${card.title || card.phone} foi atendido agora? Ele vai entrar na aba Pós-venda.`,
+      confirmLabel: "Marcar",
+    });
+    if (!ok) return;
+    const r = await api("/api/public/extension/mark-attendance", {
+      method: "POST",
+      body: JSON.stringify({
+        phone: card.phone,
+        title: card.title,
+        wa_contact_id: card.wa_contact_id || undefined,
+      }),
+    });
+    if (r?.ok) {
+      toast.success("Atendimento marcado.");
+    } else {
+      toast.error((r?.error as string) || "Não consegui marcar o atendimento.");
+    }
+  }
   const [detail, setDetail] = useState<FunnelCard | null>(null);
   const [bulkMoveTarget, setBulkMoveTarget] = useState<{
     stageId: string;
@@ -547,6 +580,7 @@ export function FunnelsView({
 
   return (
     <div className="space-y-3">
+      {confirmDialog}
       {headerHost ? (
         createPortal(header, headerHost)
       ) : (
@@ -1068,6 +1102,13 @@ export function FunnelsView({
                             >
                               <IconProfile />
                             </CardAction>
+                            <CardAction
+                              title="Marcar atendimento (entra no Pós-venda)"
+                              colorClass="text-amber-600 hover:bg-amber-50"
+                              onClick={() => void handleMarkAttendance(card)}
+                            >
+                              <IconScissors />
+                            </CardAction>
                             {dealValueByKey.get(card.wa_contact_id || card.phone || "") ? (
                               <span className="ml-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
                                 {formatBRL(
@@ -1565,6 +1606,23 @@ const IconClock = () => (
     <path d="M8 3v3M12 3v3" />
     <circle cx="16.5" cy="15.5" r="5" />
     <path d="M16.5 13v2.5l1.7 1" />
+  </svg>
+);
+const IconScissors = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <circle cx="6" cy="6" r="3" />
+    <circle cx="6" cy="18" r="3" />
+    <path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12" />
   </svg>
 );
 const IconProfile = () => (

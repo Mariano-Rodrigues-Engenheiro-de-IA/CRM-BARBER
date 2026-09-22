@@ -35,3 +35,28 @@ export async function recordStageChange(
     entered_at: now,
   });
 }
+
+/** Registra uma NOVA entrada na etapa mesmo que o card já estivesse
+ * nela — usado por "Marcar atendimento": cada clique é um evento novo
+ * (o cliente voltou), não uma mudança de etapa de verdade, então o
+ * fechamento condicional de recordStageChange (só fecha se saiu de
+ * outra etapa) não se aplica aqui. Fecha SEMPRE o registro aberto
+ * anterior (se houver) e abre um novo. */
+export async function recordReentry(
+  supabaseAdmin: SupabaseClient,
+  params: { cardId: string; funnelId: string; stageId: string },
+): Promise<void> {
+  const now = new Date().toISOString();
+  await supabaseAdmin
+    .from("funnel_card_stage_history")
+    .update({ left_at: now })
+    .eq("card_id", params.cardId)
+    .eq("stage_id", params.stageId)
+    .is("left_at", null);
+  await supabaseAdmin.from("funnel_card_stage_history").insert({
+    card_id: params.cardId,
+    funnel_id: params.funnelId,
+    stage_id: params.stageId,
+    entered_at: now,
+  });
+}

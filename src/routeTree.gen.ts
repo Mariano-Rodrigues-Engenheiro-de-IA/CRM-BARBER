@@ -60,6 +60,7 @@ import { Route as ApiPublicExtensionFunnelsRouteImport } from './routes/api/publ
 import { Route as ApiPublicExtensionLeadNotesRouteImport } from './routes/api/public/extension/lead-notes'
 import { Route as ApiPublicExtensionLeadScheduleRouteImport } from './routes/api/public/extension/lead-schedule'
 import { Route as ApiPublicExtensionLessonsRouteImport } from './routes/api/public/extension/lessons'
+import { Route as ApiPublicExtensionMarkAttendanceRouteImport } from './routes/api/public/extension/mark-attendance'
 import { Route as ApiPublicExtensionMetaRouteImport } from './routes/api/public/extension/meta'
 import { Route as ApiPublicExtensionPairRouteImport } from './routes/api/public/extension/pair'
 import { Route as ApiPublicExtensionProductsRouteImport } from './routes/api/public/extension/products'
@@ -396,6 +397,12 @@ const ApiPublicExtensionLessonsRoute =
   ApiPublicExtensionLessonsRouteImport.update({
     id: '/api/public/extension/lessons',
     path: '/api/public/extension/lessons',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionMarkAttendanceRoute =
+  ApiPublicExtensionMarkAttendanceRouteImport.update({
+    id: '/api/public/extension/mark-attendance',
+    path: '/api/public/extension/mark-attendance',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicExtensionMetaRoute = ApiPublicExtensionMetaRouteImport.update({
@@ -766,6 +773,7 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/lead-notes': typeof ApiPublicExtensionLeadNotesRouteWithChildren
   '/api/public/extension/lead-schedule': typeof ApiPublicExtensionLeadScheduleRouteWithChildren
   '/api/public/extension/lessons': typeof ApiPublicExtensionLessonsRoute
+  '/api/public/extension/mark-attendance': typeof ApiPublicExtensionMarkAttendanceRoute
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
   '/api/public/extension/products': typeof ApiPublicExtensionProductsRouteWithChildren
@@ -872,6 +880,7 @@ export interface FileRoutesByTo {
   '/api/public/extension/lead-notes': typeof ApiPublicExtensionLeadNotesRouteWithChildren
   '/api/public/extension/lead-schedule': typeof ApiPublicExtensionLeadScheduleRouteWithChildren
   '/api/public/extension/lessons': typeof ApiPublicExtensionLessonsRoute
+  '/api/public/extension/mark-attendance': typeof ApiPublicExtensionMarkAttendanceRoute
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
   '/api/public/extension/products': typeof ApiPublicExtensionProductsRouteWithChildren
@@ -979,6 +988,7 @@ export interface FileRoutesById {
   '/api/public/extension/lead-notes': typeof ApiPublicExtensionLeadNotesRouteWithChildren
   '/api/public/extension/lead-schedule': typeof ApiPublicExtensionLeadScheduleRouteWithChildren
   '/api/public/extension/lessons': typeof ApiPublicExtensionLessonsRoute
+  '/api/public/extension/mark-attendance': typeof ApiPublicExtensionMarkAttendanceRoute
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
   '/api/public/extension/products': typeof ApiPublicExtensionProductsRouteWithChildren
@@ -1087,6 +1097,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/lead-notes'
     | '/api/public/extension/lead-schedule'
     | '/api/public/extension/lessons'
+    | '/api/public/extension/mark-attendance'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
     | '/api/public/extension/products'
@@ -1193,6 +1204,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/lead-notes'
     | '/api/public/extension/lead-schedule'
     | '/api/public/extension/lessons'
+    | '/api/public/extension/mark-attendance'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
     | '/api/public/extension/products'
@@ -1299,6 +1311,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/lead-notes'
     | '/api/public/extension/lead-schedule'
     | '/api/public/extension/lessons'
+    | '/api/public/extension/mark-attendance'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
     | '/api/public/extension/products'
@@ -1404,6 +1417,7 @@ export interface RootRouteChildren {
   ApiPublicExtensionLeadNotesRoute: typeof ApiPublicExtensionLeadNotesRouteWithChildren
   ApiPublicExtensionLeadScheduleRoute: typeof ApiPublicExtensionLeadScheduleRouteWithChildren
   ApiPublicExtensionLessonsRoute: typeof ApiPublicExtensionLessonsRoute
+  ApiPublicExtensionMarkAttendanceRoute: typeof ApiPublicExtensionMarkAttendanceRoute
   ApiPublicExtensionMetaRoute: typeof ApiPublicExtensionMetaRoute
   ApiPublicExtensionPairRoute: typeof ApiPublicExtensionPairRoute
   ApiPublicExtensionProductsRoute: typeof ApiPublicExtensionProductsRouteWithChildren
@@ -1791,6 +1805,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/extension/lessons'
       fullPath: '/api/public/extension/lessons'
       preLoaderRoute: typeof ApiPublicExtensionLessonsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/mark-attendance': {
+      id: '/api/public/extension/mark-attendance'
+      path: '/api/public/extension/mark-attendance'
+      fullPath: '/api/public/extension/mark-attendance'
+      preLoaderRoute: typeof ApiPublicExtensionMarkAttendanceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/extension/meta': {
@@ -2576,6 +2597,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicExtensionLeadScheduleRoute:
     ApiPublicExtensionLeadScheduleRouteWithChildren,
   ApiPublicExtensionLessonsRoute: ApiPublicExtensionLessonsRoute,
+  ApiPublicExtensionMarkAttendanceRoute: ApiPublicExtensionMarkAttendanceRoute,
   ApiPublicExtensionMetaRoute: ApiPublicExtensionMetaRoute,
   ApiPublicExtensionPairRoute: ApiPublicExtensionPairRoute,
   ApiPublicExtensionProductsRoute: ApiPublicExtensionProductsRouteWithChildren,
