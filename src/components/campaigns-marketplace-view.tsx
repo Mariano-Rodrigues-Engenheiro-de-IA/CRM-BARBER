@@ -63,6 +63,7 @@ export function CampaignsMarketplaceView({
   const [error, setError] = useState<string | null>(null);
   const [openMonth, setOpenMonth] = useState<number | null>(new Date().getMonth() + 1);
   const [detail, setDetail] = useState<CatalogCampaign | null>(null);
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -119,6 +120,21 @@ export function CampaignsMarketplaceView({
     await load();
   }
 
+  async function handleSubmitForApproval(s: SavedCampaign) {
+    setSubmittingId(s.id);
+    try {
+      const r = await api(`/api/public/extension/campaigns/saved/${s.id}/submit`, {
+        method: "POST",
+      });
+      if (!r?.ok) {
+        setError((r?.error as string) ?? "Não foi possível enviar essa campanha pra aprovação.");
+      }
+      await load();
+    } finally {
+      setSubmittingId(null);
+    }
+  }
+
   return (
     <div className="space-y-8 p-5">
       {error && (
@@ -131,7 +147,7 @@ export function CampaignsMarketplaceView({
       <div>
         <h2 className="text-lg font-bold text-neutral-900">Calendário de campanhas</h2>
         <p className="mb-4 text-sm text-neutral-500">
-          Campanhas prontas pra cada época do ano — escolha o mês, veja a ideia e a copy, e use com
+          Campanhas prontas pra cada época do ano. Escolha o mês, veja a ideia e a copy, e use com
           um clique.
         </p>
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
@@ -198,7 +214,7 @@ export function CampaignsMarketplaceView({
       <div>
         <h2 className="text-lg font-bold text-neutral-900">Minhas campanhas</h2>
         <p className="mb-4 text-sm text-neutral-500">
-          O que você já adotou — pronto pra usar no disparo
+          O que você já adotou, pronto pra usar no disparo
           {isMetaProvider ? " (ou aguardando aprovação da Meta)" : ""}.
         </p>
         {!saved || saved.length === 0 ? (
@@ -239,6 +255,19 @@ export function CampaignsMarketplaceView({
                   >
                     {st.label}
                   </span>
+                  {isMetaProvider && (s.status === "draft" || s.status === "rejected") && (
+                    <button
+                      onClick={() => handleSubmitForApproval(s)}
+                      disabled={submittingId === s.id}
+                      className="shrink-0 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
+                    >
+                      {submittingId === s.id
+                        ? "Enviando..."
+                        : s.status === "rejected"
+                          ? "Reenviar pra aprovação"
+                          : "Enviar pra aprovação"}
+                    </button>
+                  )}
                   <button
                     onClick={() => handleDeleteSaved(s)}
                     className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"

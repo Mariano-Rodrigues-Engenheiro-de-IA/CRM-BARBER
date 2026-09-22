@@ -52,10 +52,54 @@ export const Route = createFileRoute("/api/public/extension/campaigns/catalog")(
             { status: 500 },
           );
         }
+
+        const saved = savedRes.data ?? [];
+        const pending = saved.filter(
+          (s) => s.status === "pending_approval" && s.whatsapp_template_name,
+        );
+        if (pending.length > 0) {
+          const { data: instance } = await supabaseAdmin
+            .from("whatsapp_instances")
+            .select("waba_id, meta_access_token")
+            .eq("barbershop_id", auth.token.barbershop_id)
+            .maybeSingle();
+          if (instance?.waba_id && instance?.meta_access_token) {
+            const { getWhatsAppProviderByName } = await import("@/lib/whatsapp/provider.server");
+            const provider = getWhatsAppProviderByName("meta");
+            if (provider.listTemplates) {
+              const result = await provider.listTemplates({
+                instance_token: instance.meta_access_token,
+                waba_id: instance.waba_id,
+              });
+              if (result.ok) {
+                const byName = new Map(result.templates.map((t) => [t.name, t]));
+                for (const s of pending) {
+                  const meta = byName.get(s.whatsapp_template_name!);
+                  if (!meta) continue;
+                  let newStatus: "approved" | "rejected" | null = null;
+                  if (meta.status === "APPROVED") newStatus = "approved";
+                  else if (meta.status === "REJECTED") newStatus = "rejected";
+                  if (newStatus) {
+                    await supabaseAdmin
+                      .from("saved_campaigns")
+                      .update({
+                        status: newStatus,
+                        rejection_reason: meta.rejected_reason ?? null,
+                        updated_at: new Date().toISOString(),
+                      })
+                      .eq("id", s.id);
+                    s.status = newStatus;
+                    s.rejection_reason = meta.rejected_reason ?? null;
+                  }
+                }
+              }
+            }
+          }
+        }
         return jsonResponse(request, {
           ok: true,
           catalog: catalogRes.data ?? [],
-          saved: savedRes.data ?? [],
+          saved,
         });
       },
 

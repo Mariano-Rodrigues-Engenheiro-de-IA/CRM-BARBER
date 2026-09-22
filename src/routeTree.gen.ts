@@ -112,6 +112,7 @@ import { Route as ApiPublicExtensionWhatsappTemplatesRouteImport } from './route
 import { Route as ApiPublicAiProductsIdCalcularRouteImport } from './routes/api/public/ai/products.$id.calcular'
 import { Route as ApiPublicExtensionCampaignsSavedIdRouteImport } from './routes/api/public/extension/campaigns.saved.$id'
 import { Route as ApiPublicExtensionWhatsappTemplatesIdRouteImport } from './routes/api/public/extension/whatsapp.templates.$id'
+import { Route as ApiPublicExtensionCampaignsSavedIdSubmitRouteImport } from './routes/api/public/extension/campaigns.saved.$id.submit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -706,6 +707,12 @@ const ApiPublicExtensionWhatsappTemplatesIdRoute =
     path: '/$id',
     getParentRoute: () => ApiPublicExtensionWhatsappTemplatesRoute,
   } as any)
+const ApiPublicExtensionCampaignsSavedIdSubmitRoute =
+  ApiPublicExtensionCampaignsSavedIdSubmitRouteImport.update({
+    id: '/submit',
+    path: '/submit',
+    getParentRoute: () => ApiPublicExtensionCampaignsSavedIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -809,8 +816,9 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/whatsapp/status': typeof ApiPublicExtensionWhatsappStatusRoute
   '/api/public/extension/whatsapp/templates': typeof ApiPublicExtensionWhatsappTemplatesRouteWithChildren
   '/api/public/ai/products/$id/calcular': typeof ApiPublicAiProductsIdCalcularRoute
-  '/api/public/extension/campaigns/saved/$id': typeof ApiPublicExtensionCampaignsSavedIdRoute
+  '/api/public/extension/campaigns/saved/$id': typeof ApiPublicExtensionCampaignsSavedIdRouteWithChildren
   '/api/public/extension/whatsapp/templates/$id': typeof ApiPublicExtensionWhatsappTemplatesIdRoute
+  '/api/public/extension/campaigns/saved/$id/submit': typeof ApiPublicExtensionCampaignsSavedIdSubmitRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -914,8 +922,9 @@ export interface FileRoutesByTo {
   '/api/public/extension/whatsapp/status': typeof ApiPublicExtensionWhatsappStatusRoute
   '/api/public/extension/whatsapp/templates': typeof ApiPublicExtensionWhatsappTemplatesRouteWithChildren
   '/api/public/ai/products/$id/calcular': typeof ApiPublicAiProductsIdCalcularRoute
-  '/api/public/extension/campaigns/saved/$id': typeof ApiPublicExtensionCampaignsSavedIdRoute
+  '/api/public/extension/campaigns/saved/$id': typeof ApiPublicExtensionCampaignsSavedIdRouteWithChildren
   '/api/public/extension/whatsapp/templates/$id': typeof ApiPublicExtensionWhatsappTemplatesIdRoute
+  '/api/public/extension/campaigns/saved/$id/submit': typeof ApiPublicExtensionCampaignsSavedIdSubmitRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -1020,8 +1029,9 @@ export interface FileRoutesById {
   '/api/public/extension/whatsapp/status': typeof ApiPublicExtensionWhatsappStatusRoute
   '/api/public/extension/whatsapp/templates': typeof ApiPublicExtensionWhatsappTemplatesRouteWithChildren
   '/api/public/ai/products/$id/calcular': typeof ApiPublicAiProductsIdCalcularRoute
-  '/api/public/extension/campaigns/saved/$id': typeof ApiPublicExtensionCampaignsSavedIdRoute
+  '/api/public/extension/campaigns/saved/$id': typeof ApiPublicExtensionCampaignsSavedIdRouteWithChildren
   '/api/public/extension/whatsapp/templates/$id': typeof ApiPublicExtensionWhatsappTemplatesIdRoute
+  '/api/public/extension/campaigns/saved/$id/submit': typeof ApiPublicExtensionCampaignsSavedIdSubmitRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -1129,6 +1139,7 @@ export interface FileRouteTypes {
     | '/api/public/ai/products/$id/calcular'
     | '/api/public/extension/campaigns/saved/$id'
     | '/api/public/extension/whatsapp/templates/$id'
+    | '/api/public/extension/campaigns/saved/$id/submit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1234,6 +1245,7 @@ export interface FileRouteTypes {
     | '/api/public/ai/products/$id/calcular'
     | '/api/public/extension/campaigns/saved/$id'
     | '/api/public/extension/whatsapp/templates/$id'
+    | '/api/public/extension/campaigns/saved/$id/submit'
   id:
     | '__root__'
     | '/'
@@ -1339,6 +1351,7 @@ export interface FileRouteTypes {
     | '/api/public/ai/products/$id/calcular'
     | '/api/public/extension/campaigns/saved/$id'
     | '/api/public/extension/whatsapp/templates/$id'
+    | '/api/public/extension/campaigns/saved/$id/submit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -2144,6 +2157,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensionWhatsappTemplatesIdRouteImport
       parentRoute: typeof ApiPublicExtensionWhatsappTemplatesRoute
     }
+    '/api/public/extension/campaigns/saved/$id/submit': {
+      id: '/api/public/extension/campaigns/saved/$id/submit'
+      path: '/submit'
+      fullPath: '/api/public/extension/campaigns/saved/$id/submit'
+      preLoaderRoute: typeof ApiPublicExtensionCampaignsSavedIdSubmitRouteImport
+      parentRoute: typeof ApiPublicExtensionCampaignsSavedIdRoute
+    }
   }
 }
 
@@ -2214,10 +2234,25 @@ const ApiPublicExtensionBodyMapMarkingsRouteWithChildren =
     ApiPublicExtensionBodyMapMarkingsRouteChildren,
   )
 
+interface ApiPublicExtensionCampaignsSavedIdRouteChildren {
+  ApiPublicExtensionCampaignsSavedIdSubmitRoute: typeof ApiPublicExtensionCampaignsSavedIdSubmitRoute
+}
+
+const ApiPublicExtensionCampaignsSavedIdRouteChildren: ApiPublicExtensionCampaignsSavedIdRouteChildren =
+  {
+    ApiPublicExtensionCampaignsSavedIdSubmitRoute:
+      ApiPublicExtensionCampaignsSavedIdSubmitRoute,
+  }
+
+const ApiPublicExtensionCampaignsSavedIdRouteWithChildren =
+  ApiPublicExtensionCampaignsSavedIdRoute._addFileChildren(
+    ApiPublicExtensionCampaignsSavedIdRouteChildren,
+  )
+
 interface ApiPublicExtensionCampaignsRouteChildren {
   ApiPublicExtensionCampaignsIdRoute: typeof ApiPublicExtensionCampaignsIdRoute
   ApiPublicExtensionCampaignsCatalogRoute: typeof ApiPublicExtensionCampaignsCatalogRoute
-  ApiPublicExtensionCampaignsSavedIdRoute: typeof ApiPublicExtensionCampaignsSavedIdRoute
+  ApiPublicExtensionCampaignsSavedIdRoute: typeof ApiPublicExtensionCampaignsSavedIdRouteWithChildren
 }
 
 const ApiPublicExtensionCampaignsRouteChildren: ApiPublicExtensionCampaignsRouteChildren =
@@ -2226,7 +2261,7 @@ const ApiPublicExtensionCampaignsRouteChildren: ApiPublicExtensionCampaignsRoute
     ApiPublicExtensionCampaignsCatalogRoute:
       ApiPublicExtensionCampaignsCatalogRoute,
     ApiPublicExtensionCampaignsSavedIdRoute:
-      ApiPublicExtensionCampaignsSavedIdRoute,
+      ApiPublicExtensionCampaignsSavedIdRouteWithChildren,
   }
 
 const ApiPublicExtensionCampaignsRouteWithChildren =

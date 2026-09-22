@@ -70,7 +70,7 @@ export function AdminCampaignsPanel() {
           <div>
             <h1 className="text-xl font-bold text-neutral-900">Campanhas</h1>
             <p className="text-sm text-neutral-500">
-              Catálogo do calendário de campanhas — visível pra todos os clientes na aba Campanhas.
+              Catálogo do calendário de campanhas, visível pra todos os clientes na aba Campanhas.
             </p>
           </div>
           <button
@@ -262,7 +262,7 @@ function CampaignFormModal({
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: Black Friday — assinatura com desconto"
+              placeholder="Ex: Black Friday, assinatura com desconto"
               className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-brand"
             />
           </div>
