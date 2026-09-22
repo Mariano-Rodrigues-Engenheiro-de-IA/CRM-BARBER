@@ -16,6 +16,18 @@
 // teto é sempre "quantos passos o usuário configurou". Não existe mais
 // um campo de limite separado (removido a pedido do usuário, 22/09).
 //
+// ⚠️ Corrigido (22/09): bug real reportado — um único atendimento
+// marcado mandou 5 mensagens do mesmo passo. Causa: o "já enviado"
+// era registrado DEPOIS de criar a mensagem, sem checar erro do
+// insert — se duas execuções do cron (a cada 1 minuto) se
+// sobrepusessem no tempo (mais provável com delay 0, como "assim que
+// entrar"), as duas liam "ainda não enviado" ao mesmo tempo e cada
+// uma mandava a mensagem. Corrigido invertendo a ordem: agora tenta
+// RESERVAR o envio primeiro (insert no *_sent, que tem UNIQUE
+// (card_id, step_id)) e só manda a mensagem se a reserva teve
+// sucesso — se outra execução já reservou, o insert falha por
+// colisão de UNIQUE e essa execução pula sem duplicar nada.
+//
 // "skip_if_replied": usa wa_contacts.last_message_at como sinal de
 // "teve atividade na conversa depois do gatilho" — checado UMA VEZ por
 // card, ANTES de avaliar os passos: se respondeu, PARA A SEQUÊNCIA
@@ -269,6 +281,20 @@ async function processTimeInStageRule(
       const dueAt = enteredAt + step.delay_minutes * 60_000;
       if (now.getTime() < dueAt) continue;
 
+      // Reserva o envio ANTES de mandar qualquer coisa — se outra
+      // execução do cron já reservou esse (card, passo) entre a
+      // leitura de sentRows e agora, o insert falha por colisão do
+      // UNIQUE (card_id, step_id) e pula, sem duplicar a mensagem.
+      const { data: reserved, error: reserveErr } = await supabaseAdmin
+        .from("funnel_followup_sent_log")
+        .insert({ card_id: card.id, step_id: step.id })
+        .select("id")
+        .maybeSingle();
+      if (reserveErr || !reserved) {
+        sentSet.add(key); // já reservado (por essa ou outra execução) — não tenta de novo
+        continue;
+      }
+
       const jobId = await createFollowupJob(supabaseAdmin, {
         barbershopId: rule.barbershop_id,
         customerId,
@@ -276,14 +302,19 @@ async function processTimeInStageRule(
         step,
         now,
       });
-      if (!jobId) continue;
-      await supabaseAdmin.from("funnel_followup_sent_log").insert({
-        card_id: card.id,
-        step_id: step.id,
-        message_job_id: jobId,
-      });
-      sentSet.add(key);
-      created += 1;
+      if (jobId) {
+        await supabaseAdmin
+          .from("funnel_followup_sent_log")
+          .update({ message_job_id: jobId })
+          .eq("id", reserved.id);
+        sentSet.add(key);
+        created += 1;
+      } else {
+        // Reservou mas não conseguiu criar a mensagem de verdade — libera
+        // a reserva pra tentar de novo na próxima rodada, em vez de
+        // marcar como "enviado" algo que não foi.
+        await supabaseAdmin.from("funnel_followup_sent_log").delete().eq("id", reserved.id);
+      }
     }
   }
   return created;
@@ -357,6 +388,24 @@ async function processLeftStageRule(
       const dueAt = leftAtMs + step.delay_minutes * 60_000;
       if (now.getTime() < dueAt) continue; // ainda não chegou a vez desse passo — reavalia na próxima rodada
 
+      // Mesma correção do gatilho "tempo parado": reserva antes de
+      // mandar, usando o UNIQUE (step_id, card_id, left_at) como trava
+      // contra execuções do cron se sobrepondo no tempo.
+      const { data: reserved, error: reserveErr } = await supabaseAdmin
+        .from("funnel_followup_left_stage_sent")
+        .insert({
+          rule_id: rule.id,
+          card_id: exit.card_id,
+          step_id: step.id,
+          left_at: exit.left_at,
+        })
+        .select("id")
+        .maybeSingle();
+      if (reserveErr || !reserved) {
+        processedSet.add(key);
+        continue;
+      }
+
       const jobId = await createFollowupJob(supabaseAdmin, {
         barbershopId: rule.barbershop_id,
         customerId,
@@ -364,16 +413,16 @@ async function processLeftStageRule(
         step,
         now,
       });
-      if (!jobId) continue;
-      await supabaseAdmin.from("funnel_followup_left_stage_sent").insert({
-        rule_id: rule.id,
-        card_id: exit.card_id,
-        step_id: step.id,
-        left_at: exit.left_at,
-        message_job_id: jobId,
-      });
-      processedSet.add(key);
-      created += 1;
+      if (jobId) {
+        await supabaseAdmin
+          .from("funnel_followup_left_stage_sent")
+          .update({ message_job_id: jobId })
+          .eq("id", reserved.id);
+        processedSet.add(key);
+        created += 1;
+      } else {
+        await supabaseAdmin.from("funnel_followup_left_stage_sent").delete().eq("id", reserved.id);
+      }
     }
   }
   return created;
