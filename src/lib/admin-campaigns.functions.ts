@@ -2,6 +2,13 @@
 // sazonal) — conteúdo global de campanhas prontas, mesmo padrão de auth
 // das outras telas admin (atrás da autenticação do site). Ver
 // admin-lessons.functions.ts para o mesmo padrão em Aulas.
+//
+// Por pedido do usuário (20/09): por enquanto só texto e imagem nas
+// campanhas (áudio fica pra depois — coluna audio_url continua no
+// banco, sem uso, sem função de upload pra ela). Imagem da CAPA
+// (thumbnail do card no calendário) e imagem da MENSAGEM (o que
+// realmente é anexado no disparo) agora são campos separados —
+// antes a capa era reaproveitada como imagem de mensagem por engano.
 
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -14,13 +21,13 @@ export type CampaignCatalogRow = {
   idea_summary: string;
   suggested_copy: string;
   cover_image_url: string | null;
-  audio_url: string | null;
+  message_image_url: string | null;
   sort_order: number;
   active: boolean;
 };
 
 const CAMPAIGN_COLUMNS =
-  "id, title, month, theme, idea_summary, suggested_copy, cover_image_url, audio_url, sort_order, active";
+  "id, title, month, theme, idea_summary, suggested_copy, cover_image_url, message_image_url, sort_order, active";
 
 export const adminListCampaigns = createServerFn({ method: "GET" }).handler(
   async (): Promise<CampaignCatalogRow[]> => {
@@ -42,7 +49,7 @@ const campaignInputSchema = z.object({
   idea_summary: z.string().trim().min(1).max(600),
   suggested_copy: z.string().trim().min(1).max(1200),
   cover_image_url: z.string().trim().url().max(500).optional(),
-  audio_url: z.string().trim().url().max(500).optional(),
+  message_image_url: z.string().trim().url().max(500).optional(),
   sort_order: z.number().int().optional(),
 });
 
@@ -67,7 +74,7 @@ const campaignUpdateSchema = z.object({
   idea_summary: z.string().trim().min(1).max(600).optional(),
   suggested_copy: z.string().trim().min(1).max(1200).optional(),
   cover_image_url: z.string().trim().url().max(500).optional().nullable(),
-  audio_url: z.string().trim().url().max(500).optional().nullable(),
+  message_image_url: z.string().trim().url().max(500).optional().nullable(),
   sort_order: z.number().int().optional(),
   active: z.boolean().optional(),
 });
@@ -126,17 +133,18 @@ export const adminSetCalendarConfig = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// Upload da capa — recebe o arquivo em base64 (data URL), sobe pro
-// Storage via service_role, devolve a URL pública. Mesmo padrão de
-// adminUploadModuleCover (admin-modules.functions.ts).
-const uploadCoverSchema = z.object({
+// Upload da capa (miniatura do card no calendário) — recebe o arquivo
+// em base64 (data URL), sobe pro Storage via service_role, devolve a
+// URL pública. Mesmo padrão de adminUploadModuleCover
+// (admin-modules.functions.ts).
+const uploadFileSchema = z.object({
   fileName: z.string().trim().min(1).max(200),
   contentType: z.string().trim().min(1).max(100),
   base64: z.string().min(1),
 });
 
 export const adminUploadCampaignCover = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => uploadCoverSchema.parse(data))
+  .inputValidator((data: unknown) => uploadFileSchema.parse(data))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const bytes = Buffer.from(data.base64, "base64");
@@ -150,14 +158,14 @@ export const adminUploadCampaignCover = createServerFn({ method: "POST" })
     return { url: pub.publicUrl };
   });
 
-// Upload de áudio — mesmo padrão, reaproveita o bucket já existente
-// (armazenamento não é restrito por tipo de arquivo).
-export const adminUploadCampaignAudio = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => uploadCoverSchema.parse(data))
+// Upload da imagem de MENSAGEM (o que é anexado no disparo de
+// verdade, separado da capa) — mesmo padrão, mesmo bucket.
+export const adminUploadCampaignMessageImage = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => uploadFileSchema.parse(data))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const bytes = Buffer.from(data.base64, "base64");
-    const path = `audio-${Date.now()}-${data.fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+    const path = `msg-${Date.now()}-${data.fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
     const { error } = await supabaseAdmin.storage.from("campaign-covers").upload(path, bytes, {
       contentType: data.contentType,
       upsert: false,

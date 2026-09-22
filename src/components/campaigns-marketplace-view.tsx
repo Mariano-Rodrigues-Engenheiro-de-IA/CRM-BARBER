@@ -15,7 +15,7 @@ type CatalogCampaign = {
   idea_summary: string;
   suggested_copy: string;
   cover_image_url: string | null;
-  audio_url: string | null;
+  message_image_url: string | null;
 };
 
 export type SavedCampaign = {
@@ -24,7 +24,6 @@ export type SavedCampaign = {
   title: string;
   body_text: string;
   image_path: string | null;
-  audio_path: string | null;
   status: "draft" | "pending_approval" | "approved" | "rejected";
   rejection_reason: string | null;
   whatsapp_template_name: string | null;
@@ -56,9 +55,14 @@ const STATUS_LABEL: Record<SavedCampaign["status"], { label: string; cls: string
 export function CampaignsMarketplaceView({
   api,
   isMetaProvider,
+  onUseCampaign,
 }: {
   api: ApiFn;
   isMetaProvider: boolean;
+  // Botão "Usar campanha" (só aparece pra campanhas prontas, status
+  // "approved") — leva direto pra aba Disparo, já com essa campanha
+  // pré-selecionada como mensagem.
+  onUseCampaign: (campaignId: string) => void;
 }) {
   const [catalog, setCatalog] = useState<CatalogCampaign[] | null>(null);
   const [saved, setSaved] = useState<SavedCampaign[] | null>(null);
@@ -109,8 +113,7 @@ export function CampaignsMarketplaceView({
         catalog_campaign_id: c.id,
         title: c.title,
         body_text: c.suggested_copy,
-        image_path: c.cover_image_url,
-        audio_path: c.audio_url,
+        image_path: c.message_image_url,
       }),
     });
     if (r?.ok) {
@@ -264,9 +267,6 @@ export function CampaignsMarketplaceView({
                         Motivo: {s.rejection_reason}
                       </p>
                     )}
-                    {s.audio_path && (
-                      <audio controls src={s.audio_path} className="mt-1 h-8 max-w-[220px]" />
-                    )}
                   </div>
                   <span
                     className={
@@ -275,6 +275,14 @@ export function CampaignsMarketplaceView({
                   >
                     {st.label}
                   </span>
+                  {s.status === "approved" && (
+                    <button
+                      onClick={() => onUseCampaign(s.id)}
+                      className="flex shrink-0 items-center gap-1 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-strong"
+                    >
+                      ✈️ Usar campanha
+                    </button>
+                  )}
                   {isMetaProvider && (s.status === "draft" || s.status === "rejected") && (
                     <button
                       onClick={() => handleSubmitForApproval(s)}
@@ -390,10 +398,14 @@ function CampaignDetailModal({
               {campaign.suggested_copy}
             </p>
           </div>
-          {campaign.audio_url && (
+          {campaign.message_image_url && (
             <div>
-              <p className="text-xs font-semibold text-neutral-500">Áudio</p>
-              <audio controls src={campaign.audio_url} className="w-full" />
+              <p className="text-xs font-semibold text-neutral-500">Imagem da mensagem</p>
+              <img
+                src={campaign.message_image_url}
+                alt=""
+                className="max-h-40 rounded-lg border border-neutral-200 object-cover"
+              />
             </div>
           )}
           <div className="flex justify-end gap-2 pt-2">

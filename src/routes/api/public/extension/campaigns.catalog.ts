@@ -25,7 +25,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns/catalog")(
           supabaseAdmin
             .from("campaign_catalog")
             .select(
-              "id, title, month, theme, idea_summary, suggested_copy, cover_image_url, audio_url, sort_order",
+              "id, title, month, theme, idea_summary, suggested_copy, cover_image_url, message_image_url, sort_order",
             )
             .eq("active", true)
             .order("month", { ascending: true, nullsFirst: false })
@@ -33,7 +33,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns/catalog")(
           supabaseAdmin
             .from("saved_campaigns")
             .select(
-              "id, catalog_campaign_id, title, body_text, image_path, audio_path, status, rejection_reason, whatsapp_template_name, created_at",
+              "id, catalog_campaign_id, title, body_text, image_path, status, rejection_reason, whatsapp_template_name, created_at",
             )
             .eq("barbershop_id", auth.token.barbershop_id)
             .order("created_at", { ascending: false }),
@@ -131,8 +131,6 @@ export const Route = createFileRoute("/api/public/extension/campaigns/catalog")(
             : null;
         const imagePath =
           typeof body.image_path === "string" && body.image_path ? body.image_path : null;
-        const audioPath =
-          typeof body.audio_path === "string" && body.audio_path ? body.audio_path : null;
 
         if (!title || !bodyText) {
           return jsonResponse(
@@ -160,11 +158,10 @@ export const Route = createFileRoute("/api/public/extension/campaigns/catalog")(
             title,
             body_text: bodyText,
             image_path: imagePath,
-            audio_path: audioPath,
             status: isMeta ? "draft" : "approved",
           })
           .select(
-            "id, catalog_campaign_id, title, body_text, image_path, audio_path, status, rejection_reason, whatsapp_template_name, created_at",
+            "id, catalog_campaign_id, title, body_text, image_path, status, rejection_reason, whatsapp_template_name, created_at",
           )
           .single();
         if (error) {

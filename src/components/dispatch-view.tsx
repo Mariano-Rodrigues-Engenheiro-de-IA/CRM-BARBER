@@ -106,6 +106,8 @@ export function DispatchCenter({
   onNeedConnection,
   onDone,
   isBarbearia,
+  pendingSavedCampaignId,
+  onPendingSavedCampaignConsumed,
 }: {
   api: ApiFn;
   customers: DispatchCustomer[];
@@ -116,6 +118,11 @@ export function DispatchCenter({
   // assinatura) — vazava pro nicho genérico/clínica, que nunca tem
   // esse kanban. Achado de bug real reportado pelo Mariano.
   isBarbearia: boolean;
+  // Vindo do botão "Usar campanha" na aba Campanhas — ao montar (ou
+  // assim que as campanhas salvas carregarem), pré-seleciona essa
+  // campanha específica como mensagem e já avança pra Etapa 2.
+  pendingSavedCampaignId?: string | null;
+  onPendingSavedCampaignConsumed?: () => void;
 }) {
   // Funis
   const [funnels, setFunnels] = useState<Funnel[]>([]);
@@ -261,6 +268,22 @@ export function DispatchCenter({
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Campanha pendente vinda do botão "Usar campanha" (aba Campanhas) —
+  // assim que a lista de campanhas salvas carregar, se tiver um ID
+  // pendente, já pré-seleciona ela como mensagem e avança pra Etapa 2.
+  useEffect(() => {
+    if (!pendingSavedCampaignId || savedCampaigns.length === 0) return;
+    const campaign = savedCampaigns.find((c) => c.id === pendingSavedCampaignId);
+    if (!campaign) return;
+    setMessageMode("campaign");
+    setReplyId("");
+    setActions([{ type: "text", text: campaign.body_text }]);
+    setVariants([campaign.body_text]);
+    setStep(2);
+    onPendingSavedCampaignConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingSavedCampaignId, savedCampaigns]);
 
   const total = finalAudience.length;
 

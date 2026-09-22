@@ -5,7 +5,11 @@
 
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { adminListClientsOverview, adminSetBusinessType, adminSetIsAdmin } from "@/lib/admin-whatsapp.functions";
+import {
+  adminListClientsOverview,
+  adminSetBusinessType,
+  adminSetIsAdmin,
+} from "@/lib/admin-whatsapp.functions";
 import { adminIssueToken } from "@/lib/admin-tokens.functions";
 import { useCachedFetch } from "@/lib/api-cache";
 
@@ -49,11 +53,16 @@ export function AdminClientsPanel() {
     }
   });
 
-  async function handleBusinessTypeChange(barbershop_id: string, business_type: "barbearia" | "odontologia" | "estetica" | "outros") {
+  async function handleBusinessTypeChange(
+    barbershop_id: string,
+    business_type: "barbearia" | "odontologia" | "estetica" | "outros",
+  ) {
     // Otimista: atualiza a tela na hora, sem esperar o servidor — só
     // volta atrás se der erro de verdade.
     const previous = rows;
-    setRows((current) => (current ?? []).map((r) => (r.barbershop_id === barbershop_id ? { ...r, business_type } : r)));
+    setRows((current) =>
+      (current ?? []).map((r) => (r.barbershop_id === barbershop_id ? { ...r, business_type } : r)),
+    );
     setSavingId(barbershop_id);
     try {
       await setBusinessType({ data: { barbershop_id, business_type } });
@@ -67,7 +76,9 @@ export function AdminClientsPanel() {
 
   async function handleIsAdminToggle(barbershop_id: string, is_admin: boolean) {
     const previous = rows;
-    setRows((current) => (current ?? []).map((r) => (r.barbershop_id === barbershop_id ? { ...r, is_admin } : r)));
+    setRows((current) =>
+      (current ?? []).map((r) => (r.barbershop_id === barbershop_id ? { ...r, is_admin } : r)),
+    );
     setSavingId(barbershop_id);
     try {
       await setIsAdmin({ data: { barbershop_id, is_admin } });
@@ -109,7 +120,11 @@ export function AdminClientsPanel() {
         <p className="text-sm text-neutral-500">Visão geral — contato, conexão WhatsApp e uso.</p>
       </div>
 
-      {error && <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
+      {error && (
+        <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       <input
         value={search}
@@ -119,8 +134,8 @@ export function AdminClientsPanel() {
       />
 
       <div className="overflow-x-auto rounded-xl border border-neutral-300 bg-white">
-        <table className="w-full text-sm">
-          <thead className="bg-neutral-50 text-left text-[11px] uppercase tracking-wide text-neutral-500">
+        <table className="w-full text-sm" style={{ tableLayout: "auto" }}>
+          <thead className="bg-neutral-50 text-left text-[11px] uppercase tracking-wide text-neutral-500 whitespace-nowrap">
             <tr>
               <th className="px-4 py-3 font-medium">Nome</th>
               <th className="px-4 py-3 font-medium">Nicho</th>
@@ -149,14 +164,17 @@ export function AdminClientsPanel() {
               </tr>
             ) : (
               filtered.map((r) => (
-                <tr key={r.barbershop_id}>
+                <tr key={r.barbershop_id} className="whitespace-nowrap">
                   <td className="px-4 py-3 font-medium text-neutral-900">{r.name}</td>
                   <td className="px-4 py-3">
                     <select
                       value={r.business_type}
                       disabled={savingId === r.barbershop_id}
                       onChange={(e) =>
-                        handleBusinessTypeChange(r.barbershop_id, e.target.value as "barbearia" | "odontologia" | "estetica" | "outros")
+                        handleBusinessTypeChange(
+                          r.barbershop_id,
+                          e.target.value as "barbearia" | "odontologia" | "estetica" | "outros",
+                        )
                       }
                       className="rounded-lg border border-neutral-300 bg-white px-2 py-1 text-xs outline-none focus:border-brand disabled:opacity-50"
                     >
@@ -171,10 +189,16 @@ export function AdminClientsPanel() {
                   <td className="px-4 py-3 text-neutral-700">{r.owner_email || "—"}</td>
                   <td className="px-4 py-3 text-neutral-700">{r.customers_count}</td>
                   <td className="px-4 py-3 text-neutral-700">
-                    {r.provider === "meta" ? "API Oficial" : r.provider === "uazapi" ? "API não oficial" : "—"}
+                    {r.provider === "meta"
+                      ? "API Oficial"
+                      : r.provider === "uazapi"
+                        ? "API não oficial"
+                        : "—"}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusBadge(r.status)}`}>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusBadge(r.status)}`}
+                    >
                       {statusLabel(r.status)}
                     </span>
                   </td>
@@ -193,7 +217,9 @@ export function AdminClientsPanel() {
                       disabled={savingId === r.barbershop_id}
                       onClick={() => handleIsAdminToggle(r.barbershop_id, !r.is_admin)}
                       className={`rounded-full px-3 py-1 text-[11px] font-semibold transition disabled:opacity-50 ${
-                        r.is_admin ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
+                        r.is_admin
+                          ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                          : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
                       }`}
                     >
                       {r.is_admin ? "Admin ✓" : "Tornar admin"}

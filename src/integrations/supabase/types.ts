@@ -503,6 +503,7 @@ export type Database = {
           created_at: string;
           id: string;
           idea_summary: string;
+          message_image_url: string | null;
           month: number | null;
           sort_order: number;
           suggested_copy: string;
@@ -517,6 +518,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           idea_summary: string;
+          message_image_url?: string | null;
           month?: number | null;
           sort_order?: number;
           suggested_copy: string;
@@ -531,6 +533,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           idea_summary?: string;
+          message_image_url?: string | null;
           month?: number | null;
           sort_order?: number;
           suggested_copy?: string;

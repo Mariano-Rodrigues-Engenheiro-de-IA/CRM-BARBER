@@ -752,6 +752,14 @@ function Painel() {
     setPendingTrainingModule(moduleTitle);
     setSection("treinamento");
   }
+  // Campanha salva "Usar campanha" (aba Campanhas) — leva direto pro
+  // Disparo, já com essa campanha pré-selecionada como mensagem.
+  const [pendingSavedCampaignId, setPendingSavedCampaignId] = useState<string | null>(null);
+  function useCampaignInDispatch(campaignId: string) {
+    setPendingSavedCampaignId(campaignId);
+    setDisparoTab("novo");
+    setSection("disparo");
+  }
   // Modo "só agenda" — usado pelo link dedicado de Configurações >
   // Gerais ("Minha agenda"), pra abrir SÓ a Agenda no celular, sem o
   // menu inteiro do sistema. Detectado uma vez, não muda durante a
@@ -1318,6 +1326,7 @@ function Painel() {
             <CampaignsMarketplaceView
               api={(path: string, opts?: RequestInit) => api(token, path, opts)}
               isMetaProvider={isMetaProvider}
+              onUseCampaign={useCampaignInDispatch}
             />
           </>
         )}
@@ -1432,6 +1441,8 @@ function Painel() {
                   onNeedConnection={() => setSection("conexao")}
                   onDone={() => setDisparoTab("campanhas")}
                   isBarbearia={businessType === "barbearia"}
+                  pendingSavedCampaignId={pendingSavedCampaignId}
+                  onPendingSavedCampaignConsumed={() => setPendingSavedCampaignId(null)}
                 />
               )}
               {disparoTab === "campanhas" && <CampaignsView token={token} />}

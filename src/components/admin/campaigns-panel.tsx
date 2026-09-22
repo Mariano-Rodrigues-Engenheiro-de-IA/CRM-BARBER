@@ -10,7 +10,7 @@ import {
   adminUpdateCampaign,
   adminDeleteCampaign,
   adminUploadCampaignCover,
-  adminUploadCampaignAudio,
+  adminUploadCampaignMessageImage,
   adminGetCalendarConfig,
   adminSetCalendarConfig,
   type CampaignCatalogRow,
@@ -222,21 +222,21 @@ function CampaignFormModal({
   updateCampaign: ReturnType<typeof useServerFn<typeof adminUpdateCampaign>>;
 }) {
   const uploadCover = useServerFn(adminUploadCampaignCover);
-  const uploadAudio = useServerFn(adminUploadCampaignAudio);
+  const uploadMessageImage = useServerFn(adminUploadCampaignMessageImage);
   const [title, setTitle] = useState(editing?.title ?? "");
   const [month, setMonth] = useState<number | "">(editing?.month ?? "");
   const [theme, setTheme] = useState(editing?.theme ?? "");
   const [ideaSummary, setIdeaSummary] = useState(editing?.idea_summary ?? "");
   const [suggestedCopy, setSuggestedCopy] = useState(editing?.suggested_copy ?? "");
   const [coverImageUrl, setCoverImageUrl] = useState(editing?.cover_image_url ?? "");
-  const [audioUrl, setAudioUrl] = useState(editing?.audio_url ?? "");
+  const [messageImageUrl, setMessageImageUrl] = useState(editing?.message_image_url ?? "");
   const [uploading, setUploading] = useState(false);
-  const [uploadingAudio, setUploadingAudio] = useState(false);
+  const [uploadingMessageImage, setUploadingMessageImage] = useState(false);
   const [sortOrder, setSortOrder] = useState(editing?.sort_order ?? 0);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const audioInputRef = useRef<HTMLInputElement>(null);
+  const messageImageInputRef = useRef<HTMLInputElement>(null);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -261,10 +261,10 @@ function CampaignFormModal({
     }
   }
 
-  async function handleAudioFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleMessageImageFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploadingAudio(true);
+    setUploadingMessageImage(true);
     setErr(null);
     try {
       const base64 = await new Promise<string>((resolve, reject) => {
@@ -273,14 +273,14 @@ function CampaignFormModal({
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
-      const result = await uploadAudio({
+      const result = await uploadMessageImage({
         data: { fileName: file.name, contentType: file.type, base64 },
       });
-      setAudioUrl(result.url);
+      setMessageImageUrl(result.url);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Erro ao enviar o áudio");
+      setErr(e instanceof Error ? e.message : "Erro ao enviar a imagem da mensagem");
     } finally {
-      setUploadingAudio(false);
+      setUploadingMessageImage(false);
     }
   }
 
@@ -298,7 +298,7 @@ function CampaignFormModal({
         idea_summary: ideaSummary.trim(),
         suggested_copy: suggestedCopy.trim(),
         cover_image_url: coverImageUrl.trim() || undefined,
-        audio_url: audioUrl.trim() || undefined,
+        message_image_url: messageImageUrl.trim() || undefined,
         sort_order: sortOrder,
       };
       if (editing) {
@@ -416,28 +416,40 @@ function CampaignFormModal({
             </div>
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-neutral-600">Áudio (opcional)</label>
-            <div className="flex items-center gap-3">
-              {audioUrl ? (
-                <audio controls src={audioUrl} className="h-10 flex-1" />
-              ) : (
-                <p className="flex-1 text-xs text-neutral-400">Nenhum áudio enviado ainda.</p>
-              )}
-              <input
-                ref={audioInputRef}
-                type="file"
-                accept="audio/*"
-                className="hidden"
-                onChange={handleAudioFileChange}
-              />
-              <button
-                type="button"
-                disabled={uploadingAudio}
-                onClick={() => audioInputRef.current?.click()}
-                className="shrink-0 rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:bg-neutral-50 disabled:opacity-50"
-              >
-                {uploadingAudio ? "Enviando..." : audioUrl ? "Trocar áudio" : "Enviar áudio"}
-              </button>
+            <label className="text-xs font-medium text-neutral-600">
+              Imagem da mensagem (opcional)
+            </label>
+            <div className="flex items-start gap-3">
+              <div className="h-20 w-32 shrink-0 overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100">
+                {messageImageUrl && (
+                  <img src={messageImageUrl} alt="" className="h-full w-full object-cover" />
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <input
+                  ref={messageImageInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleMessageImageFileChange}
+                />
+                <button
+                  type="button"
+                  disabled={uploadingMessageImage}
+                  onClick={() => messageImageInputRef.current?.click()}
+                  className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:bg-neutral-50 disabled:opacity-50"
+                >
+                  {uploadingMessageImage
+                    ? "Enviando..."
+                    : messageImageUrl
+                      ? "Trocar imagem"
+                      : "Enviar imagem"}
+                </button>
+                <p className="text-[11px] text-neutral-400">
+                  Essa é a imagem que vai anexada de verdade no disparo — diferente da capa, que é
+                  só a miniatura do card aqui no calendário.
+                </p>
+              </div>
             </div>
           </div>
           <div className="space-y-1">
