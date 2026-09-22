@@ -43,6 +43,7 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { ensureCustomerId } from "@/lib/customer-linking.server";
 
 const BATCH_LIMIT = 300; // cards/saídas avaliados por regra, por rodada
 
@@ -64,45 +65,6 @@ type Rule = {
   skip_if_replied: boolean;
   funnel_followup_steps: Step[];
 };
-
-/** Garante um customer_id de verdade pro card (message_jobs exige um) —
- * muitos leads vindos direto do WhatsApp não têm um vinculado ainda.
- * Reaproveita um cliente já existente com esse telefone, ou cria um
- * (arquivado, mesma convenção já usada em lead-schedule.ts). */
-async function ensureCustomerId(
-  supabaseAdmin: SupabaseClient,
-  barbershopId: string,
-  card: { id: string; title: string | null; phone: string | null; customer_id: string | null },
-): Promise<string | null> {
-  if (card.customer_id) return card.customer_id;
-  if (!card.phone) return null;
-  const { data: existingCustomer } = await supabaseAdmin
-    .from("customers")
-    .select("id")
-    .eq("barbershop_id", barbershopId)
-    .eq("phone", card.phone)
-    .maybeSingle();
-  let customerId = existingCustomer?.id ?? null;
-  if (!customerId) {
-    const { data: createdCustomer } = await supabaseAdmin
-      .from("customers")
-      .insert({
-        barbershop_id: barbershopId,
-        name: card.title || card.phone,
-        phone: card.phone,
-        status: "lead",
-        source: "funil",
-        archived_at: new Date().toISOString(),
-      })
-      .select("id")
-      .single();
-    customerId = createdCustomer?.id ?? null;
-  }
-  if (customerId) {
-    await supabaseAdmin.from("funnel_cards").update({ customer_id: customerId }).eq("id", card.id);
-  }
-  return customerId;
-}
 
 /** Verifica se teve atividade na conversa depois do momento de
  * referência (entrada ou saída, conforme o gatilho) — sinal de

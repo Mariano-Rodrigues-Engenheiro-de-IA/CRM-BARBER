@@ -100,8 +100,20 @@ export function FollowupView({ api }: { api: Api }) {
       api("/api/public/extension/funnels"),
       api("/api/public/extension/funnel-followup-rules"),
     ]);
-    if (f?.ok) setFunnels(((f.funnels as Funnel[]) || []).filter((fn) => fn.mode !== "postsale"));
-    if (r?.ok) setRules((r.rules as FollowupRule[]) || []);
+    const allFunnels = f?.ok ? (f.funnels as Funnel[]) || [] : [];
+    setFunnels(allFunnels.filter((fn) => fn.mode !== "postsale"));
+    // A regra de Pós-venda/Retorno usa a mesma engrenagem por baixo,
+    // mas tem tela própria — não deve aparecer aqui, pedido explícito
+    // do usuário pra não "poluir" a aba genérica de Follow-up.
+    const postsaleFunnelIds = new Set(
+      allFunnels.filter((fn) => fn.mode === "postsale").map((fn) => fn.id),
+    );
+    if (r?.ok)
+      setRules(
+        ((r.rules as FollowupRule[]) || []).filter(
+          (rule) => !postsaleFunnelIds.has(rule.funnel_id),
+        ),
+      );
   }
 
   useEffect(() => {

@@ -43,7 +43,7 @@ export const Route = createFileRoute("/api/public/extension/postsale-attendances
 
         let query = supabaseAdmin
           .from("funnel_card_stage_history")
-          .select("id, entered_at, funnel_cards(title, phone)")
+          .select("id, entered_at, funnel_cards(phone, title, customer_id, wa_contact_id)")
           .eq("stage_id", stage.id)
           .order("entered_at", { ascending: false })
           .limit(500);
@@ -55,15 +55,54 @@ export const Route = createFileRoute("/api/public/extension/postsale-attendances
           return jsonResponse(request, { ok: false, error: error.message }, { status: 500 });
         }
 
-        const attendances = (data ?? []).map((row) => {
-          const card = row.funnel_cards as unknown as {
-            title: string | null;
-            phone: string | null;
-          };
+        type CardRow = {
+          phone: string | null;
+          title: string | null;
+          customer_id: string | null;
+          wa_contact_id: string | null;
+        };
+        const rows = (data ?? []).map((row) => ({
+          id: row.id,
+          entered_at: row.entered_at,
+          card: row.funnel_cards as unknown as CardRow | null,
+        }));
+
+        // O card às vezes só tem o telefone salvo como "nome" (quando o
+        // WhatsApp ainda não tinha o nome do contato disponível no
+        // momento de marcar) — busca um nome melhor em duas fontes que
+        // costumam já ter isso: o cadastro de cliente (customers) e o
+        // contato sincronizado do WhatsApp (wa_contacts).
+        const customerIds = [
+          ...new Set(rows.map((r) => r.card?.customer_id).filter(Boolean)),
+        ] as string[];
+        const waContactIds = [
+          ...new Set(rows.map((r) => r.card?.wa_contact_id).filter(Boolean)),
+        ] as string[];
+        const [{ data: customers }, { data: waContacts }] = await Promise.all([
+          customerIds.length
+            ? supabaseAdmin.from("customers").select("id, name").in("id", customerIds)
+            : Promise.resolve({ data: [] as { id: string; name: string | null }[] }),
+          waContactIds.length
+            ? supabaseAdmin.from("wa_contacts").select("id, name").in("id", waContactIds)
+            : Promise.resolve({ data: [] as { id: string; name: string | null }[] }),
+        ]);
+        const customerNameById = new Map((customers ?? []).map((c) => [c.id, c.name]));
+        const waContactNameById = new Map((waContacts ?? []).map((c) => [c.id, c.name]));
+
+        const attendances = rows.map((r) => {
+          const card = r.card;
+          const looksLikePhone = card?.title && card.title.replace(/\D/g, "") === card.title;
+          const bestName =
+            (card?.title && !looksLikePhone && card.title) ||
+            (card?.customer_id && customerNameById.get(card.customer_id)) ||
+            (card?.wa_contact_id && waContactNameById.get(card.wa_contact_id)) ||
+            card?.title ||
+            card?.phone ||
+            "Sem nome";
           return {
-            id: row.id,
-            entered_at: row.entered_at,
-            name: card?.title || card?.phone || "Sem nome",
+            id: r.id,
+            entered_at: r.entered_at,
+            name: bestName,
             phone: card?.phone || null,
           };
         });

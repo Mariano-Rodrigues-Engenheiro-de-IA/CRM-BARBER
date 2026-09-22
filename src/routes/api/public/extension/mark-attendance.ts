@@ -13,6 +13,7 @@ import { z } from "zod";
 import { jsonResponse, preflight } from "@/lib/extension-cors";
 import { authenticateExtension } from "@/lib/extension-auth";
 import { recordReentry, recordStageChange } from "@/lib/funnel-stage-history.server";
+import { ensureCustomerId } from "@/lib/customer-linking.server";
 
 const POSTSALE_FUNNEL_NAME = "Pós-venda";
 const POSTSALE_STAGE_NAME = "Atendidos";
@@ -125,7 +126,7 @@ export const Route = createFileRoute("/api/public/extension/mark-attendance")({
         // ou mesmo wa_contact_id se disponível)
         let existingQuery = supabaseAdmin
           .from("funnel_cards")
-          .select("id")
+          .select("id, title, phone, customer_id")
           .eq("barbershop_id", shop)
           .eq("funnel_id", funnel.id);
         existingQuery = parsed.data.wa_contact_id
@@ -146,6 +147,14 @@ export const Route = createFileRoute("/api/public/extension/mark-attendance")({
           // — esse é um atendimento NOVO, a sequência recomeça do zero.
           await supabaseAdmin.from("funnel_followup_sent_log").delete().eq("card_id", cardId);
           await recordReentry(supabaseAdmin, { cardId, funnelId: funnel.id, stageId: stage.id });
+          // Vincula (ou cria) um cliente de verdade — fonte de nome
+          // melhor que o telefone cru, usada pela lista de atendimentos.
+          await ensureCustomerId(supabaseAdmin, shop, {
+            id: cardId,
+            title: parsed.data.title || existing.title,
+            phone: normalizedPhone,
+            customer_id: existing.customer_id,
+          });
         } else {
           const { data: created, error: createErr } = await supabaseAdmin
             .from("funnel_cards")
@@ -173,6 +182,12 @@ export const Route = createFileRoute("/api/public/extension/mark-attendance")({
             funnelId: funnel.id,
             fromStageId: null,
             toStageId: stage.id,
+          });
+          await ensureCustomerId(supabaseAdmin, shop, {
+            id: cardId,
+            title: parsed.data.title || normalizedPhone,
+            phone: normalizedPhone,
+            customer_id: null,
           });
         }
 

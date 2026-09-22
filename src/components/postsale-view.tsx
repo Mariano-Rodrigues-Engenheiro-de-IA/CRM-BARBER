@@ -9,9 +9,8 @@
 // de disparo, avaliação e limite construída e refinada em Follow-up.
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { FileText } from "lucide-react";
 import type { Funnel } from "@/lib/funnels";
 import type { QuickReply } from "@/lib/quick-replies";
 import type { SavedCampaign } from "@/components/campaigns-marketplace-view";
@@ -19,6 +18,7 @@ import {
   StepEditor,
   stepUIFromContent,
   resolveStepActions,
+  minutesToValueUnit,
   type Api,
   type TemplateOption,
   type StepUI,
@@ -46,7 +46,7 @@ export function PostsaleView({ api }: { api: Api }) {
   const [returnStep, setReturnStep] = useState<StepUI>(stepUIFromContent());
   const [saving, setSaving] = useState(false);
   const [preparingIndex, setPreparingIndex] = useState<number | null>(null);
-  const [showReport, setShowReport] = useState(false);
+  const [editingStep, setEditingStep] = useState<"postsale" | "return" | null>(null);
 
   async function reloadAll() {
     const [f, t, q, c, st] = await Promise.all([
@@ -174,7 +174,11 @@ export function PostsaleView({ api }: { api: Api }) {
     }
   }
 
-  async function submit() {
+  async function submit(opts?: {
+    onSuccess?: () => void;
+    overrideActive?: boolean;
+    overrideBadgePeriod?: number;
+  }) {
     if (!funnel) {
       toast.error(
         "Ainda não teve nenhum atendimento marcado. Essa aba fica pronta no primeiro clique na tesoura, numa conversa.",
@@ -207,10 +211,10 @@ export function PostsaleView({ api }: { api: Api }) {
         name: "Pós-venda / Retorno",
         funnel_id: funnel.id,
         stage_id: stage.id,
-        active,
+        active: opts?.overrideActive ?? active,
         moment: "time_in_stage",
         skip_if_replied: false,
-        badge_period_days: badgePeriodDays,
+        badge_period_days: opts?.overrideBadgePeriod ?? badgePeriodDays,
         steps: [postSaleStep, returnStep].map((s) => ({
           id: s.id,
           delay_minutes: s.delay_minutes,
@@ -225,9 +229,20 @@ export function PostsaleView({ api }: { api: Api }) {
     if (r?.ok) {
       toast.success("Pós-venda salvo.");
       void reloadAll();
+      opts?.onSuccess?.();
     } else {
       toast.error((r?.error as string) || "Não consegui salvar.");
     }
+  }
+
+  async function saveActiveToggle(next: boolean) {
+    setActive(next);
+    await submit({ overrideActive: next });
+  }
+
+  async function saveBadgePeriod(days: number) {
+    setBadgePeriodDays(days);
+    await submit({ overrideBadgePeriod: days });
   }
 
   if (funnel === undefined) {
@@ -245,6 +260,34 @@ export function PostsaleView({ api }: { api: Api }) {
     );
   }
 
+  function summarizeStep(step: StepUI): { time: string; content: string } {
+    const { value, unit } = minutesToValueUnit(step.delay_minutes);
+    const time = value === 0 ? "Na hora" : `${value} ${unit} depois`;
+    if (isMetaProvider) {
+      return {
+        time,
+        content: step.template_name ? `Modelo: ${step.template_name}` : "Nenhum modelo escolhido",
+      };
+    }
+    if (step.source === "quick_reply") {
+      const qr = quickReplies.find((q) => q.id === step.selectedQuickReplyId);
+      return { time, content: qr ? `Resposta rápida: ${qr.title}` : "Nenhuma resposta escolhida" };
+    }
+    if (step.source === "campaign") {
+      const c = savedCampaigns.find((c) => c.id === step.selectedCampaignId);
+      return { time, content: c ? `Campanha: ${c.title}` : "Nenhuma campanha escolhida" };
+    }
+    const text = step.writeActions.find((a) => a.type === "text")?.text?.trim();
+    const media = step.writeActions.find((a) => a.type !== "text");
+    return {
+      time,
+      content: text || (media ? "Mídia sem legenda" : "Mensagem em branco"),
+    };
+  }
+
+  const postSaleSummary = summarizeStep(postSaleStep);
+  const returnSummary = summarizeStep(returnStep);
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -254,147 +297,195 @@ export function PostsaleView({ api }: { api: Api }) {
             {active ? "Ativo" : "Pausado"} · dispara pra quem for marcado com atendimento
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setShowReport(true)} className="gap-1.5">
-          <FileText className="h-3.5 w-3.5" /> Relatório
-        </Button>
-      </div>
-
-      <div className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-3">
-        <input
-          type="checkbox"
-          checked={active}
-          onChange={(e) => setActive(e.target.checked)}
-          className="h-4 w-4 rounded border-neutral-300"
-        />
-        <Label className="text-sm text-neutral-700">Pós-venda ativo</Label>
-      </div>
-
-      <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3">
-        <Label className="mb-2 block text-sm text-neutral-700">
-          Contador na tesourinha (WhatsApp e CRM)
-        </Label>
-        <p className="mb-2 text-xs text-neutral-500">
-          Quantos atendimentos aparecem no selinho, olhando pra trás:
-        </p>
-        <div className="grid grid-cols-3 gap-2">
-          <button
-            type="button"
-            onClick={() => setBadgePeriodDays(7)}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${badgePeriodDays === 7 ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
-          >
-            Última semana
-          </button>
-          <button
-            type="button"
-            onClick={() => setBadgePeriodDays(30)}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${badgePeriodDays === 30 ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
-          >
-            Último mês
-          </button>
-          <button
-            type="button"
-            onClick={() => setBadgePeriodDays(60)}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${badgePeriodDays === 60 ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
-          >
-            Últimos 2 meses
-          </button>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-neutral-500">{active ? "Ativo" : "Pausado"}</span>
+          <Switch checked={active} onCheckedChange={(v) => void saveActiveToggle(v)} />
         </div>
       </div>
 
-      <div>
-        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-          Mensagem de pós-venda
-        </h4>
-        <p className="mb-2 text-xs text-neutral-500">
-          Enviada depois do tempo abaixo, contado a partir do momento em que o atendimento foi
-          marcado.
-        </p>
-        <StepEditor
-          index={0}
-          step={postSaleStep}
-          showTime
-          showRemove={false}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <button
+          onClick={() => setEditingStep("postsale")}
+          className="flex flex-col gap-1.5 rounded-xl border border-neutral-200 bg-white p-4 text-left shadow-sm transition hover:border-brand/40"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+              Pós-venda
+            </span>
+            <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-600">
+              {postSaleSummary.time}
+            </span>
+          </div>
+          <p className="truncate text-sm text-neutral-800">{postSaleSummary.content}</p>
+          <span className="mt-1 text-xs font-medium text-brand">Editar</span>
+        </button>
+
+        <button
+          onClick={() => setEditingStep("return")}
+          className="flex flex-col gap-1.5 rounded-xl border border-neutral-200 bg-white p-4 text-left shadow-sm transition hover:border-brand/40"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+              Retorno
+            </span>
+            <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-600">
+              {returnSummary.time}
+            </span>
+          </div>
+          <p className="truncate text-sm text-neutral-800">{returnSummary.content}</p>
+          <span className="mt-1 text-xs font-medium text-brand">Editar</span>
+        </button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-600">
+        <span className="font-medium text-neutral-700">Contador na tesourinha:</span>
+        {[
+          { days: 7, label: "última semana" },
+          { days: 30, label: "último mês" },
+          { days: 60, label: "últimos 2 meses" },
+        ].map((opt) => (
+          <button
+            key={opt.days}
+            type="button"
+            onClick={() => void saveBadgePeriod(opt.days)}
+            className={`rounded-full border px-2.5 py-1 font-semibold ${badgePeriodDays === opt.days ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      {editingStep && (
+        <StepEditModal
+          title={editingStep === "postsale" ? "Mensagem de pós-venda" : "Mensagem de retorno"}
+          hint={
+            editingStep === "postsale"
+              ? "Enviada depois do tempo abaixo, contado a partir do momento em que o atendimento foi marcado."
+              : "Enviada depois do tempo abaixo, contado a partir do MESMO atendimento (sempre o mais recente). Se o cliente voltar antes desse prazo, a contagem recomeça do zero."
+          }
+          step={editingStep === "postsale" ? postSaleStep : returnStep}
+          setStep={editingStep === "postsale" ? setPostSaleStep : setReturnStep}
+          stepIndex={editingStep === "postsale" ? 0 : 1}
           isMetaProvider={isMetaProvider}
-          approvedTemplates={templateOptions}
+          templateOptions={templateOptions}
           templates={templates}
           quickReplies={quickReplies}
           savedCampaigns={savedCampaigns}
-          funnels={[funnel]}
-          preparing={preparingIndex === 0}
+          funnel={funnel}
+          preparing={preparingIndex === (editingStep === "postsale" ? 0 : 1)}
           api={api}
-          onSetSource={(source) => setPostSaleStep((prev) => ({ ...prev, source }))}
-          onDelayChange={(delay_minutes) => setPostSaleStep((prev) => ({ ...prev, delay_minutes }))}
-          onWriteActionsChange={(writeActions) =>
-            setPostSaleStep((prev) => ({ ...prev, writeActions }))
-          }
-          onTemplateChange={(patch) => setPostSaleStep((prev) => ({ ...prev, ...patch }))}
-          onPickQuickReply={(qr) => pickQuickReplyFor(setPostSaleStep, qr)}
-          onPickCampaign={(c) => void pickCampaignFor(setPostSaleStep, 0, c)}
-          onRemove={() => {}}
+          saving={saving}
+          onPickQuickReply={pickQuickReplyFor}
+          onPickCampaign={pickCampaignFor}
+          onSave={() => void submit({ onSuccess: () => setEditingStep(null) })}
+          onClose={() => setEditingStep(null)}
         />
-      </div>
-
-      <div>
-        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-          Mensagem de retorno
-        </h4>
-        <p className="mb-2 text-xs text-neutral-500">
-          Enviada depois do tempo abaixo, contado a partir do MESMO atendimento (sempre o mais
-          recente. Se o cliente voltar antes desse prazo, a contagem recomeça do zero).
-        </p>
-        <StepEditor
-          index={1}
-          step={returnStep}
-          showTime
-          showRemove={false}
-          isMetaProvider={isMetaProvider}
-          approvedTemplates={templateOptions}
-          templates={templates}
-          quickReplies={quickReplies}
-          savedCampaigns={savedCampaigns}
-          funnels={[funnel]}
-          preparing={preparingIndex === 1}
-          api={api}
-          onSetSource={(source) => setReturnStep((prev) => ({ ...prev, source }))}
-          onDelayChange={(delay_minutes) => setReturnStep((prev) => ({ ...prev, delay_minutes }))}
-          onWriteActionsChange={(writeActions) =>
-            setReturnStep((prev) => ({ ...prev, writeActions }))
-          }
-          onTemplateChange={(patch) => setReturnStep((prev) => ({ ...prev, ...patch }))}
-          onPickQuickReply={(qr) => pickQuickReplyFor(setReturnStep, qr)}
-          onPickCampaign={(c) => void pickCampaignFor(setReturnStep, 1, c)}
-          onRemove={() => {}}
-        />
-      </div>
-
-      <div className="flex justify-end">
-        <Button onClick={() => void submit()} disabled={saving}>
-          {saving ? "Salvando…" : "Salvar"}
-        </Button>
-      </div>
-
-      {showReport && (
-        <PostsaleReportModal api={api} funnelId={funnel.id} onClose={() => setShowReport(false)} />
       )}
+
+      <AttendanceSection api={api} funnelId={funnel.id} />
     </div>
   );
 }
 
-function PostsaleReportModal({
+/** Modal de edição de UM passo (Pós-venda ou Retorno) — abre a partir
+ * do card resumido, reaproveita o mesmo StepEditor do Follow-up. Salvar
+ * aqui manda os DOIS passos juntos (a regra inteira), já que os dois
+ * estados já ficam na memória o tempo todo — só o passo que o usuário
+ * está olhando muda visualmente. */
+function StepEditModal({
+  title,
+  hint,
+  step,
+  setStep,
+  stepIndex,
+  isMetaProvider,
+  templateOptions,
+  templates,
+  quickReplies,
+  savedCampaigns,
+  funnel,
+  preparing,
   api,
-  funnelId,
+  saving,
+  onPickQuickReply,
+  onPickCampaign,
+  onSave,
   onClose,
 }: {
+  title: string;
+  hint: string;
+  step: StepUI;
+  setStep: React.Dispatch<React.SetStateAction<StepUI>>;
+  stepIndex: number;
+  isMetaProvider: boolean;
+  templateOptions: TemplateOption[];
+  templates: TemplateOption[];
+  quickReplies: QuickReply[];
+  savedCampaigns: SavedCampaign[];
+  funnel: Funnel;
+  preparing: boolean;
   api: Api;
-  funnelId: string;
+  saving: boolean;
+  onPickQuickReply: (setStep: React.Dispatch<React.SetStateAction<StepUI>>, qr: QuickReply) => void;
+  onPickCampaign: (
+    setStep: React.Dispatch<React.SetStateAction<StepUI>>,
+    stepIndex: number,
+    c: SavedCampaign,
+  ) => void;
+  onSave: () => void;
   onClose: () => void;
 }) {
-  const [period, setPeriod] = useState<"day" | "week" | "month">("week");
-  const [report, setReport] = useState<{
-    attendances: number;
-    postsale_sent: number;
-    return_sent: number;
-  } | null>(null);
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="mb-1 text-base font-semibold text-neutral-900">{title}</h3>
+        <p className="mb-3 text-xs text-neutral-500">{hint}</p>
+        <StepEditor
+          index={stepIndex}
+          step={step}
+          showTime
+          showRemove={false}
+          isMetaProvider={isMetaProvider}
+          approvedTemplates={templateOptions}
+          templates={templates}
+          quickReplies={quickReplies}
+          savedCampaigns={savedCampaigns}
+          funnels={[funnel]}
+          preparing={preparing}
+          api={api}
+          onSetSource={(source) => setStep((prev) => ({ ...prev, source }))}
+          onDelayChange={(delay_minutes) => setStep((prev) => ({ ...prev, delay_minutes }))}
+          onWriteActionsChange={(writeActions) => setStep((prev) => ({ ...prev, writeActions }))}
+          onTemplateChange={(patch) => setStep((prev) => ({ ...prev, ...patch }))}
+          onPickQuickReply={(qr) => onPickQuickReply(setStep, qr)}
+          onPickCampaign={(c) => void onPickCampaign(setStep, stepIndex, c)}
+          onRemove={() => {}}
+        />
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button onClick={onSave} disabled={saving}>
+            {saving ? "Salvando…" : "Salvar"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Lista de atendimentos embutida direto na página (não mais modal) —
+ * agrupada por dia, filtro de intervalo de data. Pedido do usuário:
+ * "fica mais organizado" e "algo que já tem costume, tipo agenda" —
+ * sem construir uma agenda de verdade, só a lista bem organizada por
+ * dia. */
+function AttendanceSection({ api, funnelId }: { api: Api; funnelId: string }) {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [attendances, setAttendances] = useState<Array<{
@@ -404,17 +495,7 @@ function PostsaleReportModal({
     phone: string | null;
   }> | null>(null);
 
-  useEffect(() => {
-    api(`/api/public/extension/postsale-report?funnel_id=${funnelId}&period=${period}`).then(
-      (r) => {
-        if (r?.ok) setReport(r.report as typeof report);
-        else setReport({ attendances: 0, postsale_sent: 0, return_sent: 0 });
-      },
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [period]);
-
-  async function loadAttendances() {
+  async function load() {
     setAttendances(null);
     const params = new URLSearchParams({ funnel_id: funnelId });
     if (dateFrom) params.set("from", dateFrom);
@@ -433,121 +514,77 @@ function PostsaleReportModal({
   }
 
   useEffect(() => {
-    void loadAttendances();
+    void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const groups = new Map<string, typeof attendances>();
+  for (const a of attendances ?? []) {
+    const day = new Date(a.entered_at).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "long",
+      weekday: "long",
+    });
+    if (!groups.has(day)) groups.set(day, []);
+    groups.get(day)!.push(a);
+  }
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="mb-3 text-base font-semibold text-neutral-900">Relatório de pós-venda</h3>
-        <div className="mb-4 grid grid-cols-3 gap-2">
-          <button
-            onClick={() => setPeriod("day")}
-            className={`rounded-lg border px-2 py-1.5 text-xs font-semibold ${period === "day" ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
-          >
-            Hoje
-          </button>
-          <button
-            onClick={() => setPeriod("week")}
-            className={`rounded-lg border px-2 py-1.5 text-xs font-semibold ${period === "week" ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
-          >
-            Semana
-          </button>
-          <button
-            onClick={() => setPeriod("month")}
-            className={`rounded-lg border px-2 py-1.5 text-xs font-semibold ${period === "month" ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white text-neutral-700"}`}
-          >
-            Mês
-          </button>
-        </div>
-        {!report ? (
-          <p className="text-sm text-neutral-500">Carregando…</p>
-        ) : (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between rounded-lg bg-neutral-50 px-3 py-2 text-sm">
-              <span className="text-neutral-600">Atendimentos marcados</span>
-              <span className="font-semibold text-neutral-900">{report.attendances}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg bg-neutral-50 px-3 py-2 text-sm">
-              <span className="text-neutral-600">Pós-vendas enviados</span>
-              <span className="font-semibold text-neutral-900">{report.postsale_sent}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg bg-neutral-50 px-3 py-2 text-sm">
-              <span className="text-neutral-600">Retornos enviados</span>
-              <span className="font-semibold text-neutral-900">{report.return_sent}</span>
-            </div>
-          </div>
-        )}
-
-        <div className="mt-5 border-t border-neutral-100 pt-4">
-          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-            Quem foi atendido
-          </h4>
-          <div className="mb-3 flex items-end gap-2">
-            <div>
-              <Label className="mb-1 block text-xs">De</Label>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="rounded-lg border border-neutral-300 px-2 py-1.5 text-xs"
-              />
-            </div>
-            <div>
-              <Label className="mb-1 block text-xs">Até</Label>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="rounded-lg border border-neutral-300 px-2 py-1.5 text-xs"
-              />
-            </div>
-            <Button size="sm" variant="outline" onClick={() => void loadAttendances()}>
-              Filtrar
-            </Button>
-          </div>
-          {attendances === null ? (
-            <p className="text-sm text-neutral-500">Carregando…</p>
-          ) : attendances.length === 0 ? (
-            <p className="text-sm text-neutral-500">Nenhum atendimento nesse período.</p>
-          ) : (
-            <div className="max-h-64 space-y-1.5 overflow-y-auto">
-              {attendances.map((a) => (
-                <div
-                  key={a.id}
-                  className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-2 text-sm"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate font-medium text-neutral-900">{a.name}</p>
-                    {a.phone && <p className="text-xs text-neutral-500">{a.phone}</p>}
-                  </div>
-                  <span className="shrink-0 text-xs text-neutral-500">
-                    {new Date(a.entered_at).toLocaleString("pt-BR", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="mt-4 flex justify-end">
-          <Button variant="outline" onClick={onClose}>
-            Fechar
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+          Atendimentos
+        </h4>
+        <div className="flex items-end gap-2">
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="rounded-lg border border-neutral-300 px-2 py-1 text-xs"
+          />
+          <span className="text-xs text-neutral-400">até</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="rounded-lg border border-neutral-300 px-2 py-1 text-xs"
+          />
+          <Button size="sm" variant="outline" onClick={() => void load()}>
+            Filtrar
           </Button>
         </div>
       </div>
+
+      {attendances === null ? (
+        <p className="text-sm text-neutral-500">Carregando…</p>
+      ) : attendances.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-6 text-center">
+          <p className="text-sm text-neutral-500">Nenhum atendimento nesse período.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {[...groups.entries()].map(([day, items]) => (
+            <div key={day} className="rounded-xl border border-neutral-200 bg-white">
+              <div className="rounded-t-xl border-b border-neutral-100 bg-neutral-50 px-4 py-2">
+                <span className="text-xs font-semibold capitalize text-neutral-600">{day}</span>
+              </div>
+              <div className="divide-y divide-neutral-100">
+                {items!.map((a) => (
+                  <div key={a.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                    <span className="font-medium text-neutral-900">{a.name}</span>
+                    <span className="text-xs text-neutral-500">
+                      {new Date(a.entered_at).toLocaleTimeString("pt-BR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
