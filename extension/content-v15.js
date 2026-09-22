@@ -2505,6 +2505,7 @@
     markAttendanceBtn.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
+      if (markAttendanceBtn.disabled) return; // trava contra clique duplo/repetido
       const chat = await activeChat();
       if (!chat?.phone) {
         crmToast("Não consegui identificar o telefone dessa conversa.", "err", markAttendanceBtn);
@@ -2516,6 +2517,7 @@
         danger: false,
       });
       if (!ok) return;
+      markAttendanceBtn.disabled = true;
       const r = await safeSendMessage({
         type: "api",
         path: "/api/public/extension/mark-attendance",
@@ -2524,6 +2526,7 @@
           body: JSON.stringify({ phone: chat.phone, title: chat.push_name, wa_contact_id: chat.contact_db_id }),
         },
       }).catch(() => null);
+      markAttendanceBtn.disabled = false;
       if (r?.ok) {
         crmToast("Atendimento marcado!", "ok", markAttendanceBtn);
       } else {

@@ -56,6 +56,7 @@ export function FunnelsView({
   const [err, setErr] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const { confirm, dialog: confirmDialog } = useConfirm();
+  const markingAttendanceRef = useRef<Set<string>>(new Set());
 
   async function handleMarkAttendance(card: {
     phone: string | null;
@@ -66,24 +67,33 @@ export function FunnelsView({
       toast.error("Esse lead não tem telefone, não dá pra marcar atendimento.");
       return;
     }
+    // Trava contra clique duplo/repetido enquanto a chamada anterior
+    // pra esse mesmo telefone ainda está em andamento.
+    if (markingAttendanceRef.current.has(card.phone)) return;
     const ok = await confirm({
       title: "Marcar atendimento?",
       description: `Confirma que ${card.title || card.phone} foi atendido agora? Ele vai entrar na aba Pós-venda.`,
       confirmLabel: "Marcar",
     });
     if (!ok) return;
-    const r = await api("/api/public/extension/mark-attendance", {
-      method: "POST",
-      body: JSON.stringify({
-        phone: card.phone,
-        title: card.title,
-        wa_contact_id: card.wa_contact_id || undefined,
-      }),
-    });
-    if (r?.ok) {
-      toast.success("Atendimento marcado.");
-    } else {
-      toast.error((r?.error as string) || "Não consegui marcar o atendimento.");
+    if (markingAttendanceRef.current.has(card.phone)) return;
+    markingAttendanceRef.current.add(card.phone);
+    try {
+      const r = await api("/api/public/extension/mark-attendance", {
+        method: "POST",
+        body: JSON.stringify({
+          phone: card.phone,
+          title: card.title,
+          wa_contact_id: card.wa_contact_id || undefined,
+        }),
+      });
+      if (r?.ok) {
+        toast.success("Atendimento marcado.");
+      } else {
+        toast.error((r?.error as string) || "Não consegui marcar o atendimento.");
+      }
+    } finally {
+      markingAttendanceRef.current.delete(card.phone);
     }
   }
   const [detail, setDetail] = useState<FunnelCard | null>(null);
