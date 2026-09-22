@@ -2,13 +2,14 @@
 // editar, reordenar, ativar/desativar. Cada campanha pertence a um mês
 // (ou fica "atemporal", sem mês fixo).
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   adminListCampaigns,
   adminCreateCampaign,
   adminUpdateCampaign,
   adminDeleteCampaign,
+  adminUploadCampaignCover,
   type CampaignCatalogRow,
 } from "@/lib/admin-campaigns.functions";
 import { useCachedFetch } from "@/lib/api-cache";
@@ -179,15 +180,41 @@ function CampaignFormModal({
   createCampaign: ReturnType<typeof useServerFn<typeof adminCreateCampaign>>;
   updateCampaign: ReturnType<typeof useServerFn<typeof adminUpdateCampaign>>;
 }) {
+  const uploadCover = useServerFn(adminUploadCampaignCover);
   const [title, setTitle] = useState(editing?.title ?? "");
   const [month, setMonth] = useState<number | "">(editing?.month ?? "");
   const [theme, setTheme] = useState(editing?.theme ?? "");
   const [ideaSummary, setIdeaSummary] = useState(editing?.idea_summary ?? "");
   const [suggestedCopy, setSuggestedCopy] = useState(editing?.suggested_copy ?? "");
   const [coverImageUrl, setCoverImageUrl] = useState(editing?.cover_image_url ?? "");
+  const [uploading, setUploading] = useState(false);
   const [sortOrder, setSortOrder] = useState(editing?.sort_order ?? 0);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setErr(null);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const result = await uploadCover({
+        data: { fileName: file.name, contentType: file.type, base64 },
+      });
+      setCoverImageUrl(result.url);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Erro ao enviar a imagem");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   const valid = title.trim() && ideaSummary.trim() && suggestedCopy.trim();
 
@@ -289,14 +316,35 @@ function CampaignFormModal({
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-neutral-600">
-              URL da imagem de capa (opcional)
+              Imagem de capa (opcional)
             </label>
-            <input
-              value={coverImageUrl}
-              onChange={(e) => setCoverImageUrl(e.target.value)}
-              placeholder="https://..."
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-brand"
-            />
+            <div className="flex items-start gap-3">
+              <div className="h-20 w-32 shrink-0 overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100">
+                {coverImageUrl && (
+                  <img src={coverImageUrl} alt="" className="h-full w-full object-cover" />
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+                <button
+                  type="button"
+                  disabled={uploading}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:bg-neutral-50 disabled:opacity-50"
+                >
+                  {uploading ? "Enviando..." : coverImageUrl ? "Trocar imagem" : "Enviar imagem"}
+                </button>
+                <p className="text-[11px] text-neutral-400">
+                  Formato paisagem funciona melhor pra capa de card.
+                </p>
+              </div>
+            </div>
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-neutral-600">Ordem</label>

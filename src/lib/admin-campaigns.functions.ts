@@ -92,3 +92,27 @@ export const adminDeleteCampaign = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// Upload da capa — recebe o arquivo em base64 (data URL), sobe pro
+// Storage via service_role, devolve a URL pública. Mesmo padrão de
+// adminUploadModuleCover (admin-modules.functions.ts).
+const uploadCoverSchema = z.object({
+  fileName: z.string().trim().min(1).max(200),
+  contentType: z.string().trim().min(1).max(100),
+  base64: z.string().min(1),
+});
+
+export const adminUploadCampaignCover = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => uploadCoverSchema.parse(data))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const bytes = Buffer.from(data.base64, "base64");
+    const path = `${Date.now()}-${data.fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+    const { error } = await supabaseAdmin.storage.from("campaign-covers").upload(path, bytes, {
+      contentType: data.contentType,
+      upsert: false,
+    });
+    if (error) throw new Error(error.message);
+    const { data: pub } = supabaseAdmin.storage.from("campaign-covers").getPublicUrl(path);
+    return { url: pub.publicUrl };
+  });
