@@ -461,7 +461,7 @@ function FollowupEditor({
   // (bug corrigido: antes escolher resposta rápida/campanha gravava
   // o texto delas no campo de escrever, e vice-versa).
   function pickQuickReply(i: number, qr: QuickReply) {
-    updateStep(i, { source: "quick_reply", selectedQuickReplyId: qr.id });
+    updateStep(i, { source: "quick_reply", selectedQuickReplyId: qr.id, selectedCampaignId: null });
   }
 
   // Mesma correção já aplicada no disparo (19/09) e na 1ª versão desse
@@ -473,6 +473,7 @@ function FollowupEditor({
       updateStep(i, {
         source: "campaign",
         selectedCampaignId: c.id,
+        selectedQuickReplyId: null,
         preparedCampaignActions: [{ type: "text", text: c.body_text }],
       });
       return;
@@ -497,6 +498,7 @@ function FollowupEditor({
       updateStep(i, {
         source: "campaign",
         selectedCampaignId: c.id,
+        selectedQuickReplyId: null,
         preparedCampaignActions: [
           {
             type: "image",
