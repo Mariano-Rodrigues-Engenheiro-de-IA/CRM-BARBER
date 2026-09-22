@@ -23,6 +23,7 @@ import { AgendaRemindersView } from "@/components/agenda-reminders-view";
 import { FollowupView } from "@/components/followup-view";
 import { PatientsView } from "@/components/patients-view";
 import { AulasView } from "@/components/aulas-view";
+import { CampaignsMarketplaceView } from "@/components/campaigns-marketplace-view";
 import { AgenteIaView } from "@/components/agente-ia-view";
 import {
   ServicesTab,
@@ -280,6 +281,7 @@ type Section =
   | "funis"
   | "follow-up"
   | "disparo"
+  | "campanhas"
   | "equipe"
   | "conexao"
   | "templates"
@@ -560,6 +562,23 @@ function IconSend() {
     >
       <path d="M22 2 11 13" />
       <path d="M22 2 15 22l-4-9-9-4Z" />
+    </svg>
+  );
+}
+function IconMegaphone() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m3 11 18-5v12L3 13v-2Z" />
+      <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
     </svg>
   );
 }
@@ -959,6 +978,7 @@ function Painel() {
     { key: "funis", label: "Funis de Vendas", icon: <IconChart /> },
     { key: "follow-up", label: "Follow-up", icon: <IconClock /> },
     { key: "disparo", label: "Disparo", icon: <IconSend /> },
+    { key: "campanhas", label: "Campanhas", icon: <IconMegaphone /> },
     ...(isClinicNiche(businessType)
       ? [{ key: "pacientes" as Section, label: "Pacientes", icon: <IconUsers /> }]
       : businessType === "barbearia"
@@ -1290,6 +1310,16 @@ function Painel() {
           </>
         )}
 
+        {section === "campanhas" && token && (
+          <>
+            <SectionHeader icon={<IconMegaphone />} title="Campanhas" />
+            <CampaignsMarketplaceView
+              api={(path: string, opts?: RequestInit) => api(token, path, opts)}
+              isMetaProvider={isMetaProvider}
+            />
+          </>
+        )}
+
         {section === "configuracoes" && token && (
           <>
             <SectionHeader
@@ -1385,7 +1415,7 @@ function Painel() {
                           : "text-neutral-500 hover:text-neutral-900")
                       }
                     >
-                      {t === "novo" ? "Novo disparo" : "Campanhas"}
+                      {t === "novo" ? "Novo disparo" : "Histórico"}
                     </button>
                   ))}
                 </nav>
