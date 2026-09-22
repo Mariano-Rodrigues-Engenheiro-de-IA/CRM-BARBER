@@ -63,7 +63,7 @@ export function FunnelsView({
     wa_contact_id?: string | null;
   }) {
     if (!card.phone) {
-      toast.error("Esse lead não tem telefone — não dá pra marcar atendimento.");
+      toast.error("Esse lead não tem telefone, não dá pra marcar atendimento.");
       return;
     }
     const ok = await confirm({
@@ -1806,7 +1806,7 @@ function BulkMoveModal({
     return (
       <Overlay title={`Mover leads para "${targetStageName}"`} onClose={onClose}>
         <p className="text-sm text-neutral-500">
-          Mover em massa precisa de outro funil pra puxar os leads — crie um funil novo primeiro.
+          Mover em massa precisa de outro funil pra puxar os leads. Crie um funil novo primeiro.
         </p>
       </Overlay>
     );
@@ -1816,7 +1816,7 @@ function BulkMoveModal({
     <Overlay title={`Mover leads para "${targetStageName}"`} onClose={onClose}>
       <div className="space-y-4">
         <p className="text-sm text-neutral-500">
-          Escolha de qual funil e etapa você quer puxar TODOS os leads — eles saem de lá e entram
+          Escolha de qual funil e etapa você quer puxar TODOS os leads. Eles saem de lá e entram
           aqui.
         </p>
         <div className="space-y-1">

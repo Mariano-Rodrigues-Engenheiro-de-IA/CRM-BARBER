@@ -63,6 +63,7 @@ import { Route as ApiPublicExtensionLessonsRouteImport } from './routes/api/publ
 import { Route as ApiPublicExtensionMarkAttendanceRouteImport } from './routes/api/public/extension/mark-attendance'
 import { Route as ApiPublicExtensionMetaRouteImport } from './routes/api/public/extension/meta'
 import { Route as ApiPublicExtensionPairRouteImport } from './routes/api/public/extension/pair'
+import { Route as ApiPublicExtensionPostsaleAttendancesRouteImport } from './routes/api/public/extension/postsale-attendances'
 import { Route as ApiPublicExtensionPostsaleReportRouteImport } from './routes/api/public/extension/postsale-report'
 import { Route as ApiPublicExtensionProductsRouteImport } from './routes/api/public/extension/products'
 import { Route as ApiPublicExtensionProfessionalsRouteImport } from './routes/api/public/extension/professionals'
@@ -416,6 +417,12 @@ const ApiPublicExtensionPairRoute = ApiPublicExtensionPairRouteImport.update({
   path: '/api/public/extension/pair',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicExtensionPostsaleAttendancesRoute =
+  ApiPublicExtensionPostsaleAttendancesRouteImport.update({
+    id: '/api/public/extension/postsale-attendances',
+    path: '/api/public/extension/postsale-attendances',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicExtensionPostsaleReportRoute =
   ApiPublicExtensionPostsaleReportRouteImport.update({
     id: '/api/public/extension/postsale-report',
@@ -783,6 +790,7 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/mark-attendance': typeof ApiPublicExtensionMarkAttendanceRoute
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
+  '/api/public/extension/postsale-attendances': typeof ApiPublicExtensionPostsaleAttendancesRoute
   '/api/public/extension/postsale-report': typeof ApiPublicExtensionPostsaleReportRoute
   '/api/public/extension/products': typeof ApiPublicExtensionProductsRouteWithChildren
   '/api/public/extension/professionals': typeof ApiPublicExtensionProfessionalsRouteWithChildren
@@ -891,6 +899,7 @@ export interface FileRoutesByTo {
   '/api/public/extension/mark-attendance': typeof ApiPublicExtensionMarkAttendanceRoute
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
+  '/api/public/extension/postsale-attendances': typeof ApiPublicExtensionPostsaleAttendancesRoute
   '/api/public/extension/postsale-report': typeof ApiPublicExtensionPostsaleReportRoute
   '/api/public/extension/products': typeof ApiPublicExtensionProductsRouteWithChildren
   '/api/public/extension/professionals': typeof ApiPublicExtensionProfessionalsRouteWithChildren
@@ -1000,6 +1009,7 @@ export interface FileRoutesById {
   '/api/public/extension/mark-attendance': typeof ApiPublicExtensionMarkAttendanceRoute
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
+  '/api/public/extension/postsale-attendances': typeof ApiPublicExtensionPostsaleAttendancesRoute
   '/api/public/extension/postsale-report': typeof ApiPublicExtensionPostsaleReportRoute
   '/api/public/extension/products': typeof ApiPublicExtensionProductsRouteWithChildren
   '/api/public/extension/professionals': typeof ApiPublicExtensionProfessionalsRouteWithChildren
@@ -1110,6 +1120,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/mark-attendance'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
+    | '/api/public/extension/postsale-attendances'
     | '/api/public/extension/postsale-report'
     | '/api/public/extension/products'
     | '/api/public/extension/professionals'
@@ -1218,6 +1229,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/mark-attendance'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
+    | '/api/public/extension/postsale-attendances'
     | '/api/public/extension/postsale-report'
     | '/api/public/extension/products'
     | '/api/public/extension/professionals'
@@ -1326,6 +1338,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/mark-attendance'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
+    | '/api/public/extension/postsale-attendances'
     | '/api/public/extension/postsale-report'
     | '/api/public/extension/products'
     | '/api/public/extension/professionals'
@@ -1433,6 +1446,7 @@ export interface RootRouteChildren {
   ApiPublicExtensionMarkAttendanceRoute: typeof ApiPublicExtensionMarkAttendanceRoute
   ApiPublicExtensionMetaRoute: typeof ApiPublicExtensionMetaRoute
   ApiPublicExtensionPairRoute: typeof ApiPublicExtensionPairRoute
+  ApiPublicExtensionPostsaleAttendancesRoute: typeof ApiPublicExtensionPostsaleAttendancesRoute
   ApiPublicExtensionPostsaleReportRoute: typeof ApiPublicExtensionPostsaleReportRoute
   ApiPublicExtensionProductsRoute: typeof ApiPublicExtensionProductsRouteWithChildren
   ApiPublicExtensionProfessionalsRoute: typeof ApiPublicExtensionProfessionalsRouteWithChildren
@@ -1840,6 +1854,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/extension/pair'
       fullPath: '/api/public/extension/pair'
       preLoaderRoute: typeof ApiPublicExtensionPairRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/postsale-attendances': {
+      id: '/api/public/extension/postsale-attendances'
+      path: '/api/public/extension/postsale-attendances'
+      fullPath: '/api/public/extension/postsale-attendances'
+      preLoaderRoute: typeof ApiPublicExtensionPostsaleAttendancesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/extension/postsale-report': {
@@ -2621,6 +2642,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicExtensionMarkAttendanceRoute: ApiPublicExtensionMarkAttendanceRoute,
   ApiPublicExtensionMetaRoute: ApiPublicExtensionMetaRoute,
   ApiPublicExtensionPairRoute: ApiPublicExtensionPairRoute,
+  ApiPublicExtensionPostsaleAttendancesRoute:
+    ApiPublicExtensionPostsaleAttendancesRoute,
   ApiPublicExtensionPostsaleReportRoute: ApiPublicExtensionPostsaleReportRoute,
   ApiPublicExtensionProductsRoute: ApiPublicExtensionProductsRouteWithChildren,
   ApiPublicExtensionProfessionalsRoute:

@@ -303,7 +303,7 @@ export function PostsaleView({ api }: { api: Api }) {
         </h4>
         <p className="mb-2 text-xs text-neutral-500">
           Enviada depois do tempo abaixo, contado a partir do MESMO atendimento (sempre o mais
-          recente — se o cliente voltar antes desse prazo, a contagem recomeça do zero).
+          recente. Se o cliente voltar antes desse prazo, a contagem recomeça do zero).
         </p>
         <StepEditor
           index={1}
@@ -358,6 +358,14 @@ function PostsaleReportModal({
     postsale_sent: number;
     return_sent: number;
   } | null>(null);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [attendances, setAttendances] = useState<Array<{
+    id: string;
+    entered_at: string;
+    name: string;
+    phone: string | null;
+  }> | null>(null);
 
   useEffect(() => {
     api(`/api/public/extension/postsale-report?funnel_id=${funnelId}&period=${period}`).then(
@@ -369,13 +377,36 @@ function PostsaleReportModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period]);
 
+  async function loadAttendances() {
+    setAttendances(null);
+    const params = new URLSearchParams({ funnel_id: funnelId });
+    if (dateFrom) params.set("from", dateFrom);
+    if (dateTo) params.set("to", dateTo);
+    const r = await api(`/api/public/extension/postsale-attendances?${params.toString()}`);
+    setAttendances(
+      r?.ok
+        ? (r.attendances as Array<{
+            id: string;
+            entered_at: string;
+            name: string;
+            phone: string | null;
+          }>)
+        : [],
+    );
+  }
+
+  useEffect(() => {
+    void loadAttendances();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl"
+        className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="mb-3 text-base font-semibold text-neutral-900">Relatório de pós-venda</h3>
@@ -417,6 +448,63 @@ function PostsaleReportModal({
             </div>
           </div>
         )}
+
+        <div className="mt-5 border-t border-neutral-100 pt-4">
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+            Quem foi atendido
+          </h4>
+          <div className="mb-3 flex items-end gap-2">
+            <div>
+              <Label className="mb-1 block text-xs">De</Label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="rounded-lg border border-neutral-300 px-2 py-1.5 text-xs"
+              />
+            </div>
+            <div>
+              <Label className="mb-1 block text-xs">Até</Label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="rounded-lg border border-neutral-300 px-2 py-1.5 text-xs"
+              />
+            </div>
+            <Button size="sm" variant="outline" onClick={() => void loadAttendances()}>
+              Filtrar
+            </Button>
+          </div>
+          {attendances === null ? (
+            <p className="text-sm text-neutral-500">Carregando…</p>
+          ) : attendances.length === 0 ? (
+            <p className="text-sm text-neutral-500">Nenhum atendimento nesse período.</p>
+          ) : (
+            <div className="max-h-64 space-y-1.5 overflow-y-auto">
+              {attendances.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-2 text-sm"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-neutral-900">{a.name}</p>
+                    {a.phone && <p className="text-xs text-neutral-500">{a.phone}</p>}
+                  </div>
+                  <span className="shrink-0 text-xs text-neutral-500">
+                    {new Date(a.entered_at).toLocaleString("pt-BR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="mt-4 flex justify-end">
           <Button variant="outline" onClick={onClose}>
             Fechar

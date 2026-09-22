@@ -19,8 +19,8 @@ const POSTSALE_STAGE_NAME = "Atendidos";
 
 const bodySchema = z.object({
   phone: z.string().trim().min(1),
-  title: z.string().trim().max(200).optional(),
-  wa_contact_id: z.string().uuid().optional(),
+  title: z.string().trim().max(200).nullable().optional(),
+  wa_contact_id: z.string().uuid().nullable().optional(),
 });
 
 function normalizePhone(raw: string): string | null {
