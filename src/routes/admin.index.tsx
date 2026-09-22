@@ -9,6 +9,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { AdminClientsPanel } from "@/components/admin/clients-panel";
 import { AdminSubscriptionsPanel } from "@/components/admin/subscriptions-panel";
 import { AdminLessonsPanel } from "@/components/admin/lessons-panel";
+import { AdminCampaignsPanel } from "@/components/admin/campaigns-panel";
 import { AdminModulesPanel } from "@/components/admin/modules-panel";
 import { AdminAgenteIaPanel } from "@/components/admin/agente-ia-panel";
 import { AdminLeadsPanel } from "@/components/admin/leads-panel";
@@ -33,6 +34,7 @@ type Tab =
   | "assinaturas"
   | "modulos"
   | "aulas"
+  | "campanhas"
   | "agente-ia"
   | "interessados"
   | "tokens"
@@ -45,6 +47,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "interessados", label: "Clientes interessados" },
   { key: "modulos", label: "Módulos" },
   { key: "aulas", label: "Aulas" },
+  { key: "campanhas", label: "Campanhas" },
   { key: "agente-ia", label: "Vídeo Agente de IA" },
   { key: "tokens", label: "Tokens de integração" },
   { key: "whatsapp", label: "WhatsApp / Meta" },
@@ -92,6 +95,7 @@ function AdminHome() {
           )}
           {tab === "modulos" && <AdminModulesPanel />}
           {tab === "aulas" && <AdminLessonsPanel />}
+          {tab === "campanhas" && <AdminCampaignsPanel />}
           {tab === "agente-ia" && <AdminAgenteIaPanel />}
           {tab === "tokens" && <AdminTokensPanel />}
           {tab === "whatsapp" && <AdminWhatsAppPanel />}
