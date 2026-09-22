@@ -30,9 +30,9 @@ import {
 } from "@/lib/quick-replies";
 import type { SavedCampaign } from "@/components/campaigns-marketplace-view";
 
-type Api = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
+export type Api = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
 
-type FollowupContent = {
+export type FollowupContent = {
   delay_minutes: number;
   actions: QuickReplyAction[];
   template_name: string | null;
@@ -52,25 +52,33 @@ type FollowupRule = {
   steps: FollowupContent[];
 };
 
-type TemplateOption = { name: string; language: string; status: string; hasImageHeader: boolean };
+export type TemplateOption = {
+  name: string;
+  language: string;
+  status: string;
+  hasImageHeader: boolean;
+};
 type Moment = "entered" | "left_stage" | "time_in_stage";
-type MessageSource = "write" | "quick_reply" | "campaign";
+export type MessageSource = "write" | "quick_reply" | "campaign";
 
 const inputCls =
   "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-brand";
 
-function acceptedFiles(type: QuickReplyActionType) {
+export function acceptedFiles(type: QuickReplyActionType) {
   if (type === "image") return "image/*,.jpg,.jpeg,.png,.webp,.gif";
   if (type === "video") return "video/*,.mp4,.mov,.m4v,.3gp,.webm";
   return "audio/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.amr";
 }
 
-function minutesToValueUnit(min: number): { value: number; unit: "minutos" | "horas" | "dias" } {
+export function minutesToValueUnit(min: number): {
+  value: number;
+  unit: "minutos" | "horas" | "dias";
+} {
   if (min % (60 * 24) === 0 && min > 0) return { value: min / (60 * 24), unit: "dias" };
   if (min % 60 === 0 && min > 0) return { value: min / 60, unit: "horas" };
   return { value: min, unit: "minutos" };
 }
-function valueUnitToMinutes(value: number, unit: "minutos" | "horas" | "dias") {
+export function valueUnitToMinutes(value: number, unit: "minutos" | "horas" | "dias") {
   if (unit === "dias") return value * 60 * 24;
   if (unit === "horas") return value * 60;
   return value;
@@ -91,7 +99,7 @@ export function FollowupView({ api }: { api: Api }) {
       api("/api/public/extension/funnels"),
       api("/api/public/extension/funnel-followup-rules"),
     ]);
-    if (f?.ok) setFunnels((f.funnels as Funnel[]) || []);
+    if (f?.ok) setFunnels(((f.funnels as Funnel[]) || []).filter((fn) => fn.mode !== "postsale"));
     if (r?.ok) setRules((r.rules as FollowupRule[]) || []);
   }
 
@@ -349,7 +357,7 @@ function FollowupReportModal({ api, onClose }: { api: Api; onClose: () => void }
 // separadas — trocar de fonte nunca mistura ou "vaza" o conteúdo de
 // uma na outra (bug corrigido: antes escolher uma campanha gravava o
 // texto dela no campo de escrever, e vice-versa).
-type StepUI = {
+export type StepUI = {
   delay_minutes: number;
   source: MessageSource;
   writeActions: QuickReplyAction[]; // só usado/editado quando source === "write"
@@ -363,7 +371,7 @@ type StepUI = {
   template_header_media_path: string | null;
 };
 
-function stepUIFromContent(content?: FollowupContent): StepUI {
+export function stepUIFromContent(content?: FollowupContent): StepUI {
   return {
     delay_minutes: content?.delay_minutes ?? 0,
     source: "write",
@@ -379,7 +387,7 @@ function stepUIFromContent(content?: FollowupContent): StepUI {
 
 /** Conteúdo efetivo de um passo, conforme a fonte escolhida — usado na
  * hora de salvar e na validação. */
-function resolveStepActions(step: StepUI, quickReplies: QuickReply[]): QuickReplyAction[] {
+export function resolveStepActions(step: StepUI, quickReplies: QuickReply[]): QuickReplyAction[] {
   if (step.source === "quick_reply") {
     return quickReplies.find((q) => q.id === step.selectedQuickReplyId)?.actions ?? [];
   }
@@ -813,7 +821,7 @@ function FollowupEditor({
  * o conteúdo em si. A escolha de resposta rápida/campanha FICA visível
  * na própria aba (bug corrigido: antes sumia ao trocar pra "Escrever"
  * sem indicar o que tinha sido escolhido). */
-function StepEditor({
+export function StepEditor({
   index,
   step,
   showRemove,

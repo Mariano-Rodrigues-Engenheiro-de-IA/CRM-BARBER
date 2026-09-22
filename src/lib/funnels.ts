@@ -9,7 +9,7 @@ import { z } from "zod";
 // "tab"   → funil que também vira uma aba no topo do WhatsApp Web
 // "label" → alimentado por uma etiqueta nativa do WhatsApp
 // "manual"→ funil livre, o usuário monta as colunas e adiciona os leads
-export const FUNNEL_MODES = ["manual", "label", "tab"] as const;
+export const FUNNEL_MODES = ["manual", "label", "tab", "postsale"] as const;
 export type FunnelMode = (typeof FUNNEL_MODES)[number];
 
 export const DEFAULT_STAGES = ["Novo lead", "Em conversa", "Negociando", "Fechado"] as const;

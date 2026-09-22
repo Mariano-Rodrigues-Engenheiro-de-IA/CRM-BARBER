@@ -21,6 +21,7 @@ import { useConfirm } from "@/components/confirm-dialog";
 import { AgendaView } from "@/components/agenda-view";
 import { AgendaRemindersView } from "@/components/agenda-reminders-view";
 import { FollowupView } from "@/components/followup-view";
+import { PostsaleView } from "@/components/postsale-view";
 import { PatientsView } from "@/components/patients-view";
 import { AulasView } from "@/components/aulas-view";
 import { CampaignsMarketplaceView } from "@/components/campaigns-marketplace-view";
@@ -280,6 +281,7 @@ type Section =
   | "assinantes"
   | "funis"
   | "follow-up"
+  | "pos-venda"
   | "disparo"
   | "campanhas"
   | "equipe"
@@ -734,6 +736,7 @@ function Painel() {
       s === "conexao" ||
       s === "funis" ||
       s === "follow-up" ||
+      s === "pos-venda" ||
       s === "disparo" ||
       s === "templates" ||
       s === "pacientes"
@@ -987,6 +990,7 @@ function Painel() {
     },
     { key: "funis", label: "Funis de Vendas", icon: <IconChart /> },
     { key: "follow-up", label: "Follow-up", icon: <IconClock /> },
+    { key: "pos-venda", label: "Pós-venda", icon: <IconScissors /> },
     { key: "disparo", label: "Disparo", icon: <IconSend /> },
     { key: "campanhas", label: "Campanhas", icon: <IconMegaphone /> },
     ...(isClinicNiche(businessType)
@@ -1488,6 +1492,17 @@ function Painel() {
           </>
         )}
 
+        {section === "pos-venda" && token && (
+          <>
+            <SectionHeader icon={<IconScissors />} title="Pós-venda" />
+            <main className="px-4 py-4">
+              <PremiumSoftLock active={!!billing && !billing.premium} onUpgrade={openCheckout}>
+                <PostsaleView api={(path: string, opts?: RequestInit) => api(token, path, opts)} />
+              </PremiumSoftLock>
+            </main>
+          </>
+        )}
+
         {section === "pacientes" && token && (
           <>
             <header className="print:hidden sticky top-0 z-10 border-b border-neutral-200 bg-white/95 backdrop-blur mt-14 md:mt-0">
@@ -1618,6 +1633,25 @@ function IconClock() {
       <circle cx="11" cy="13" r="8" />
       <path d="M11 9.2V13l2.6 1.6" />
       <path d="M8.2 2.6h5.6M18.5 5l1.6-1.6" />
+    </svg>
+  );
+}
+
+function IconScissors() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="6" cy="6" r="3" />
+      <circle cx="6" cy="18" r="3" />
+      <path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12" />
     </svg>
   );
 }
