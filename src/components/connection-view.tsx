@@ -231,7 +231,7 @@ export function ConnectionView({ api, businessType }: { api: Api; businessType?:
   // app. https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/hosted-es
   function openHostedSignup() {
     window.open(
-      "https://business.facebook.com/messaging/whatsapp/onboard/?app_id=1608564974165087&config_id=2248207349309254",
+      "https://business.facebook.com/messaging/whatsapp/onboard/?app_id=1608564974165087&config_id=1285199543658482",
       "_blank",
       "noopener,noreferrer",
     );
