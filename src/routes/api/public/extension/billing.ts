@@ -23,13 +23,14 @@ export const Route = createFileRoute("/api/public/extension/billing")({
         // de criar outra chamada só pra isso.
         const { data: shop } = await supabaseAdmin
           .from("barbershops")
-          .select("business_type")
+          .select("business_type, is_admin")
           .eq("id", auth.token.barbershop_id)
           .maybeSingle();
         return jsonResponse(request, {
           ok: true,
           barbershop_id: auth.token.barbershop_id,
           business_type: shop?.business_type ?? "barbearia",
+          is_admin: Boolean(shop?.is_admin),
           billing,
         });
       },

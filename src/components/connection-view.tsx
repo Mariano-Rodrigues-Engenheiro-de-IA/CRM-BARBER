@@ -121,6 +121,21 @@ export function ConnectionView({ api, businessType }: { api: Api; businessType?:
   const actionRef = useRef<"connect" | "disconnect" | null>(null);
   const statusRef = useRef<Connection["status"]>("disconnected");
 
+  // API oficial (Meta) temporariamente em manutenção pra clientes - só a
+  // conta admin (Mariano) continua com acesso, enquanto a questão da
+  // opção de coexistência não é resolvida. Pedido explícito dele.
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    api("/api/public/extension/billing").then((r) => {
+      if (!cancelled && r?.ok) setIsAdmin(Boolean((r as { is_admin?: boolean }).is_admin));
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function clearPoll() {
     if (pollRef.current) {
       clearTimeout(pollRef.current);
@@ -589,14 +604,20 @@ export function ConnectionView({ api, businessType }: { api: Api; businessType?:
                 <BenefitItem>Funciona no celular e no computador ao mesmo tempo</BenefitItem>
               </ul>
 
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => requestSwitchProvider("meta")}
-                className="mt-5 w-full rounded-xl bg-brand px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-strong"
-              >
-                Conectar API
-              </button>
+              {isAdmin ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => requestSwitchProvider("meta")}
+                  className="mt-5 w-full rounded-xl bg-brand px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-strong"
+                >
+                  Conectar API
+                </button>
+              ) : (
+                <div className="mt-5 rounded-xl border border-neutral-200 bg-neutral-100 px-4 py-3 text-center text-sm font-semibold text-neutral-500">
+                  Em manutenção
+                </div>
+              )}
             </div>
 
             {/* API não oficial */}
