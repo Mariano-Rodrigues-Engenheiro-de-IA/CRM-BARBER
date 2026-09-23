@@ -203,7 +203,15 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
             // Nunca deixar uma exceção de rede matar a rodada com o job in_flight.
             let result: SendResult;
 
-            if (job.template_name) {
+            // Decide modelo vs texto livre pela CONEXÃO REAL no momento do
+            // envio, não só pelo que foi configurado no passo - pedido do
+            // Mariano: conectado via Meta, sempre modelo aprovado; via
+            // UAZAPI ou sem conexão nenhuma (fallback), sempre texto livre,
+            // mesmo que o passo tenha um template_name configurado (nesse
+            // caso ignora o modelo e usa o texto livre/rendered_body como
+            // mensagem de verdade).
+            const useTemplate = !!job.template_name && inst.status === "connected" && inst.provider === "meta";
+            if (useTemplate && job.template_name) {
               // Disparo via modelo aprovado (API oficial) — exige o
               // provider "meta" com sendTemplate implementado. UAZAPI não
               // suporta, dá erro claro em vez de mandar texto por engano
