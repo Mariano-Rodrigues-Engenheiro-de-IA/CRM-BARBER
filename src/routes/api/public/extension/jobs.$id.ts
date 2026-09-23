@@ -39,6 +39,36 @@ export const Route = createFileRoute("/api/public/extension/jobs/$id")({
           return jsonResponse(request, { ok: false, error: "Invalid body" }, { status: 400 });
         }
 
+        // Esse endpoint existe pro modo UAZAPI (extensão manda pelo WhatsApp
+        // Web do próprio navegador e reporta o resultado de volta) - não
+        // verifica entrega de verdade, só confia no relato. Barbearia no
+        // provedor Meta só pode reportar "sent" por aqui pra pós-venda/
+        // retorno (funnel_followup_step_id) - pedido do Mariano, deve
+        // tentar por qualquer conexão disponível. Disparo normal e outras
+        // mensagens continuam exigindo confirmação real do dispatch-jobs.ts.
+        if (parsed.data.status === "sent") {
+          const { data: shop } = await supabaseAdmin
+            .from("whatsapp_instances")
+            .select("provider")
+            .eq("barbershop_id", auth.token.barbershop_id)
+            .maybeSingle();
+          if (shop?.provider === "meta") {
+            const { data: job } = await supabaseAdmin
+              .from("message_jobs")
+              .select("funnel_followup_step_id")
+              .eq("id", params.id)
+              .eq("barbershop_id", auth.token.barbershop_id)
+              .maybeSingle();
+            if (!job?.funnel_followup_step_id) {
+              return jsonResponse(
+                request,
+                { ok: false, error: "Barbearia no provedor Meta: envio precisa ser confirmado pelo servidor, não pela extensão." },
+                { status: 403 },
+              );
+            }
+          }
+        }
+
         const nowIso = new Date().toISOString();
         const patch = {
           status: parsed.data.status,

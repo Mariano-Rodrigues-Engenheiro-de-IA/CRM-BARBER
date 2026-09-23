@@ -33,10 +33,11 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
         // usuário perceber, e nesse caso o envio nunca sairia.
         const { data: srvInstance } = await supabaseAdmin
           .from("whatsapp_instances")
-          .select("status")
+          .select("status, provider")
           .eq("barbershop_id", auth.token.barbershop_id)
           .maybeSingle();
         const serverConnected = !!(srvInstance && srvInstance.status === "connected");
+        const isMetaShop = srvInstance?.provider === "meta";
 
         const nowIso = new Date().toISOString();
         const staleClaimIso = new Date(Date.now() - 6 * 60 * 1000).toISOString();
@@ -87,9 +88,19 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
           .eq("status", "pending")
           .lte("scheduled_for", nowIso);
         // Com conexão oficial ativa, o servidor cuida do resto — a
-        // extensão só pega os marcados force_extension aqui.
+        // extensão só pega os marcados force_extension, ou pós-venda/
+        // retorno (funnel_followup_step_id), que deve tentar por
+        // QUALQUER conexão disponível, mesmo que a oficial esteja
+        // marcada como desconectada - pedido explícito do Mariano:
+        // pós-venda e retorno são importantes demais pra depender só do
+        // status de conexão, diferente de disparo normal (que continua
+        // exigindo conexão de verdade). Sem conexão oficial e barbearia
+        // no provedor Meta, só pós-venda/retorno ainda tenta pela
+        // extensão - o resto (disparo, etc) segue exigindo conexão real.
         if (serverConnected) {
-          pickQ = pickQ.eq("force_extension", true);
+          pickQ = pickQ.or("force_extension.eq.true,funnel_followup_step_id.not.is.null");
+        } else if (isMetaShop) {
+          pickQ = pickQ.not("funnel_followup_step_id", "is", null);
         }
         if (blockedIds.length > 0) {
           pickQ = pickQ.not("campaign_id", "in", `(${blockedIds.join(",")})`);

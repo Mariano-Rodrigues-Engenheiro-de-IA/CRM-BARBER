@@ -68,14 +68,16 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
           .lte("expires_at", nowIso);
 
 
-        // Instâncias conectadas.
+        // Todas as instâncias, não só conectadas - pós-venda/retorno deve
+        // tentar mesmo com a instância desconectada (pedido do Mariano);
+        // a filtragem por conexão real acontece job a job mais abaixo,
+        // não aqui.
         const { data: instances } = await supabaseAdmin
           .from("whatsapp_instances")
-          .select("barbershop_id, provider, instance_token, phone_number_id, meta_access_token")
-          .eq("status", "connected");
+          .select("barbershop_id, provider, instance_token, phone_number_id, meta_access_token, status");
 
         if (!instances || instances.length === 0) {
-          return jsonOk({ processed: 0, reason: "no connected instances" });
+          return jsonOk({ processed: 0, reason: "no instances" });
         }
 
         // Campanhas pausadas/canceladas.
@@ -101,18 +103,25 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
           // válidas esperando atrás na fila. (Evitamos filtrar campaign_id
           // direto na query com NOT IN porque, em SQL, isso excluiria
           // silenciosamente jobs com campaign_id nulo, se algum existir.)
-          const { data: jobs, error: jobsError } = await supabaseAdmin
-            .from("message_jobs")
-            .select("id, customer_id, rendered_body, message_actions, template_name, template_language, template_header_media_path, template_carousel_media_paths, template_body_params, campaign_id, attempts, agenda_reminder_rule_id, appointment_id, funnel_followup_step_id")
-            .eq("barbershop_id", inst.barbershop_id)
-            .eq("status", "pending")
-            // Jobs marcados force_extension nunca passam pela API oficial
-            // (agendamento criado pelo ícone da conversa no WhatsApp) —
-            // só a extensão do navegador envia esses.
-            .eq("force_extension", false)
-            .lte("scheduled_for", nowIso)
-            .order("scheduled_for", { ascending: true })
-            .limit(200);
+          const { data: jobs, error: jobsError } = await (() => {
+            let q = supabaseAdmin
+              .from("message_jobs")
+              .select("id, customer_id, rendered_body, message_actions, template_name, template_language, template_header_media_path, template_carousel_media_paths, template_body_params, campaign_id, attempts, agenda_reminder_rule_id, appointment_id, funnel_followup_step_id")
+              .eq("barbershop_id", inst.barbershop_id)
+              .eq("status", "pending")
+              // Jobs marcados force_extension nunca passam pela API oficial
+              // (agendamento criado pelo ícone da conversa no WhatsApp),
+              // só a extensão do navegador envia esses.
+              .eq("force_extension", false)
+              .lte("scheduled_for", nowIso);
+            // Instância desconectada: só pós-venda/retorno tenta mesmo
+            // assim (pedido do Mariano) - disparo normal e outras
+            // mensagens continuam exigindo conexão real.
+            if (inst.status !== "connected") {
+              q = q.not("funnel_followup_step_id", "is", null);
+            }
+            return q.order("scheduled_for", { ascending: true }).limit(200);
+          })();
 
           // ⚠️ Adicionado (19/09): antes, um erro aqui (ex: coluna ausente
           // por migration não aplicada) ficava indistinguível de "sem jobs
