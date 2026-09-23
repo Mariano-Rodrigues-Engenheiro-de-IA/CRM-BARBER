@@ -72,14 +72,24 @@ export const Route = createFileRoute("/api/public/extension/funnel-followup-rule
         }
         const shop = auth.token.barbershop_id;
 
-        const { getBillingStatus } = await import("@/lib/billing.server");
+        const { getBillingStatus, followUpActiveBlock } = await import("@/lib/billing.server");
         const billing = await getBillingStatus(supabaseAdmin, shop);
-        if (!billing.premium) {
-          return jsonResponse(
-            request,
-            { ok: false, error: "Follow-up faz parte do plano Premium." },
-            { status: 402 },
-          );
+        // Pós-venda não entra nessa trava - ele é limitado por volume de
+        // mensagem enviada por dia (postSaleDailyBlock), não por poder
+        // configurar a regra. Só follow-up normal (funil que não é o de
+        // pós-venda) trava em 1 sequência ativa no grátis.
+        const { data: targetFunnel } = await supabaseAdmin
+          .from("funnels")
+          .select("mode")
+          .eq("id", parsed.data.funnel_id)
+          .eq("barbershop_id", shop)
+          .maybeSingle();
+        const isPostSaleFunnel = targetFunnel?.mode === "postsale";
+        if (!isPostSaleFunnel && (parsed.data.active ?? true)) {
+          const blocked = followUpActiveBlock(billing);
+          if (blocked) {
+            return jsonResponse(request, { ok: false, error: blocked }, { status: 402 });
+          }
         }
 
         const moment = parsed.data.moment ?? "time_in_stage";

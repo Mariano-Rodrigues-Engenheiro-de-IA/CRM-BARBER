@@ -55,19 +55,33 @@ export const FREE_LIMITS = {
   agendaDaily: 5,
   /** Máximo de profissionais/atendentes cadastrados no plano grátis. */
   professionals: 1,
+  /** Máximo de mensagens de pós-venda enviadas por dia no plano grátis. */
+  postSaleDaily: 5,
+  /** Máximo de sequências de follow-up ativas ao mesmo tempo no plano grátis. */
+  followUpActive: 1,
 } as const;
 
 export type BillingStatus = {
   premium: boolean;
   status: string | null;
   current_period_end: string | null;
-  usage: { customers: number; messages: number; dispatchToday: number; agendaToday: number; professionals: number };
+  usage: {
+    customers: number;
+    messages: number;
+    dispatchToday: number;
+    agendaToday: number;
+    professionals: number;
+    postSaleToday: number;
+    followUpActive: number;
+  };
   limits: {
     customers: number;
     dispatchBatch: number;
     dispatchDaily: number;
     agendaDaily: number;
     professionals: number;
+    postSaleDaily: number;
+    followUpActive: number;
   };
   ai_addon: {
     active: boolean;
@@ -81,7 +95,7 @@ export type BillingStatus = {
 
 export function remaining(
   status: BillingStatus,
-  kind: "customers" | "dispatchToday" | "agendaToday" | "professionals",
+  kind: "customers" | "dispatchToday" | "agendaToday" | "professionals" | "postSaleToday" | "followUpActive",
 ): number {
   if (status.premium) return Number.POSITIVE_INFINITY;
   const usageKey = kind;
@@ -92,6 +106,10 @@ export function remaining(
         ? "dispatchDaily"
         : kind === "agendaToday"
           ? "agendaDaily"
-          : "professionals";
+          : kind === "postSaleToday"
+            ? "postSaleDaily"
+            : kind === "followUpActive"
+              ? "followUpActive"
+              : "professionals";
   return Math.max(0, status.limits[limitKey] - status.usage[usageKey]);
 }

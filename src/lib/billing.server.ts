@@ -38,6 +38,58 @@ function startOfTodayBrazilIso(): string {
   return new Date(startBrazil - BRAZIL_OFFSET_MS).toISOString();
 }
 
+// Pós-venda e follow-up usam a MESMA engrenagem (funnel_followup_rules
+// vinculada a uma etapa de funil) - a distinção pedida pelo Mariano
+// (contar separado) usa o campo "mode" do funil: mode='postsale' é o
+// funil dedicado de pós-venda (mesmo criterio ja usado em
+// postsale-report.ts); qualquer outro funil conta como follow-up normal.
+async function getPostSaleAndFollowUpUsage(
+  supabaseAdmin: SupabaseClient<Database>,
+  barbershopId: string,
+  todayStart: string,
+): Promise<{ postSaleToday: number; followUpActive: number }> {
+  const { data: funnels } = await supabaseAdmin
+    .from("funnels")
+    .select("id, mode")
+    .eq("barbershop_id", barbershopId);
+
+  const postsaleFunnelId = (funnels ?? []).find((f) => f.mode === "postsale")?.id ?? null;
+  const otherFunnelIds = (funnels ?? []).filter((f) => f.mode !== "postsale").map((f) => f.id);
+
+  let postSaleToday = 0;
+  if (postsaleFunnelId) {
+    const { data: rules } = await supabaseAdmin
+      .from("funnel_followup_rules")
+      .select("id, funnel_followup_steps (id)")
+      .eq("funnel_id", postsaleFunnelId)
+      .eq("barbershop_id", barbershopId);
+    const stepIds = ((rules ?? []) as Array<{ funnel_followup_steps: Array<{ id: string }> | null }>).flatMap(
+      (r) => (r.funnel_followup_steps ?? []).map((s) => s.id),
+    );
+    if (stepIds.length > 0) {
+      const { count } = await supabaseAdmin
+        .from("funnel_followup_sent_log")
+        .select("id", { count: "exact", head: true })
+        .in("step_id", stepIds)
+        .gte("sent_at", todayStart);
+      postSaleToday = count ?? 0;
+    }
+  }
+
+  let followUpActive = 0;
+  if (otherFunnelIds.length > 0) {
+    const { count } = await supabaseAdmin
+      .from("funnel_followup_rules")
+      .select("id", { count: "exact", head: true })
+      .in("funnel_id", otherFunnelIds)
+      .eq("barbershop_id", barbershopId)
+      .eq("active", true);
+    followUpActive = count ?? 0;
+  }
+
+  return { postSaleToday, followUpActive };
+}
+
 export async function getBillingStatus(
   supabaseAdmin: SupabaseClient<Database>,
   barbershopId: string,
@@ -83,6 +135,12 @@ export async function getBillingStatus(
         .eq("active", true),
     ]);
 
+  const { postSaleToday, followUpActive } = await getPostSaleAndFollowUpUsage(
+    supabaseAdmin,
+    barbershopId,
+    todayStart,
+  );
+
   const now = Date.now();
   const allSubs = subRes.data ?? [];
   // Importante: cada "produto" (Premium do CRM vs Add-on de IA) tem seus
@@ -120,6 +178,8 @@ export async function getBillingStatus(
       dispatchToday: dispatchTodayRes.count ?? 0,
       agendaToday: agendaTodayRes.count ?? 0,
       professionals: professionalsRes.count ?? 0,
+      postSaleToday,
+      followUpActive,
     },
     limits: {
       customers: FREE_LIMITS.customers,
@@ -127,6 +187,8 @@ export async function getBillingStatus(
       dispatchDaily: FREE_LIMITS.dispatchDaily,
       agendaDaily: FREE_LIMITS.agendaDaily,
       professionals: FREE_LIMITS.professionals,
+      postSaleDaily: FREE_LIMITS.postSaleDaily,
+      followUpActive: FREE_LIMITS.followUpActive,
     },
     ai_addon: {
       active: Boolean(activeAi),
@@ -175,4 +237,18 @@ export function professionalBlock(status: BillingStatus): string | null {
   if (status.premium) return null;
   if (status.usage.professionals < status.limits.professionals) return null;
   return `Plano grátis permite até ${status.limits.professionals} profissional cadastrado. Assine o Premium para adicionar mais atendentes.`;
+}
+
+/** Bloqueio de mensagens de pós-venda enviadas no dia. */
+export function postSaleDailyBlock(status: BillingStatus): string | null {
+  if (status.premium) return null;
+  if (status.usage.postSaleToday < status.limits.postSaleDaily) return null;
+  return `Plano grátis envia até ${status.limits.postSaleDaily} mensagens de pós-venda por dia (você já enviou ${status.usage.postSaleToday} hoje). Assine o Premium para pós-venda ilimitado.`;
+}
+
+/** Bloqueio de sequências de follow-up ativas ao mesmo tempo. */
+export function followUpActiveBlock(status: BillingStatus): string | null {
+  if (status.premium) return null;
+  if (status.usage.followUpActive < status.limits.followUpActive) return null;
+  return `Plano grátis permite até ${status.limits.followUpActive} sequência de follow-up ativa por vez (você já tem ${status.usage.followUpActive}). Assine o Premium para sequências ilimitadas.`;
 }

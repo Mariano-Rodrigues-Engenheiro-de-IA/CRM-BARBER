@@ -66,6 +66,25 @@ type Rule = {
   funnel_followup_steps: Step[];
 };
 
+/** Pós-venda (funil mode='postsale') trava em N mensagens/dia no plano
+ * grátis - checado uma vez no início do processamento de cada regra
+ * (cron roda com frequência, então o excesso possível dentro de UMA
+ * execução fica naturalmente pequeno). Regras de follow-up normal
+ * (fora do funil de pós-venda) não passam por aqui - essas já foram
+ * limitadas na CRIACAO da regra (1 ativa por vez no grátis). */
+async function isPostSaleLimitReached(supabaseAdmin: SupabaseClient, rule: Rule): Promise<boolean> {
+  const { data: funnel } = await supabaseAdmin
+    .from("funnels")
+    .select("mode")
+    .eq("id", rule.funnel_id)
+    .maybeSingle();
+  if (funnel?.mode !== "postsale") return false;
+
+  const { getBillingStatus, postSaleDailyBlock } = await import("@/lib/billing.server");
+  const billing = await getBillingStatus(supabaseAdmin as any, rule.barbershop_id);
+  return postSaleDailyBlock(billing) !== null;
+}
+
 /** Verifica se teve atividade na conversa depois do momento de
  * referência (entrada ou saída, conforme o gatilho) — sinal de
  * "conversa já em andamento", usado por skip_if_replied. */
@@ -202,6 +221,7 @@ async function processTimeInStageRule(
   now: Date,
 ): Promise<number> {
   let created = 0;
+  if (await isPostSaleLimitReached(supabaseAdmin, rule)) return 0;
 
   const { data: cards, error: cardsErr } = await supabaseAdmin
     .from("funnel_cards")
@@ -297,6 +317,7 @@ async function processLeftStageRule(
   now: Date,
 ): Promise<number> {
   let created = 0;
+  if (await isPostSaleLimitReached(supabaseAdmin, rule)) return 0;
 
   // Só olha saídas dos últimos 90 dias (o maior delay possível) — sem
   // isso, a query cresceria sem limite com o tempo.
