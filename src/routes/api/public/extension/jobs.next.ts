@@ -37,7 +37,16 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
           .eq("barbershop_id", auth.token.barbershop_id)
           .maybeSingle();
         const serverConnected = !!(srvInstance && srvInstance.status === "connected");
+        // Barbearia no provedor Meta NUNCA deve cair pra extensão como
+        // "reserva" quando desconectada, mesmo pós-venda/retorno - decisão
+        // final do Mariano depois de reconsiderar os riscos do fallback
+        // (mensagem depender do computador ligado e Chrome aberto). Sem
+        // conexão real, pós-venda/retorno simplesmente não sai, igual
+        // disparo normal.
         const isMetaShop = srvInstance?.provider === "meta";
+        if (isMetaShop) {
+          return jsonResponse(request, { ok: true, job: null });
+        }
 
         const nowIso = new Date().toISOString();
         const staleClaimIso = new Date(Date.now() - 6 * 60 * 1000).toISOString();
@@ -88,19 +97,9 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
           .eq("status", "pending")
           .lte("scheduled_for", nowIso);
         // Com conexão oficial ativa, o servidor cuida do resto — a
-        // extensão só pega os marcados force_extension, ou pós-venda/
-        // retorno (funnel_followup_step_id), que deve tentar por
-        // QUALQUER conexão disponível, mesmo que a oficial esteja
-        // marcada como desconectada - pedido explícito do Mariano:
-        // pós-venda e retorno são importantes demais pra depender só do
-        // status de conexão, diferente de disparo normal (que continua
-        // exigindo conexão de verdade). Sem conexão oficial e barbearia
-        // no provedor Meta, só pós-venda/retorno ainda tenta pela
-        // extensão - o resto (disparo, etc) segue exigindo conexão real.
+        // extensão só pega os marcados force_extension aqui.
         if (serverConnected) {
-          pickQ = pickQ.or("force_extension.eq.true,funnel_followup_step_id.not.is.null");
-        } else if (isMetaShop) {
-          pickQ = pickQ.not("funnel_followup_step_id", "is", null);
+          pickQ = pickQ.eq("force_extension", true);
         }
         if (blockedIds.length > 0) {
           pickQ = pickQ.not("campaign_id", "in", `(${blockedIds.join(",")})`);

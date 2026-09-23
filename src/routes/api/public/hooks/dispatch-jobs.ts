@@ -68,16 +68,16 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
           .lte("expires_at", nowIso);
 
 
-        // Todas as instâncias, não só conectadas - pós-venda/retorno deve
-        // tentar mesmo com a instância desconectada (pedido do Mariano);
-        // a filtragem por conexão real acontece job a job mais abaixo,
-        // não aqui.
+        // Instâncias conectadas - pós-venda e retorno voltaram a exigir
+        // conexão real, igual disparo normal (sem fallback), pedido final
+        // do Mariano depois de reconsiderar os riscos.
         const { data: instances } = await supabaseAdmin
           .from("whatsapp_instances")
-          .select("barbershop_id, provider, instance_token, phone_number_id, meta_access_token, status");
+          .select("barbershop_id, provider, instance_token, phone_number_id, meta_access_token, status")
+          .eq("status", "connected");
 
         if (!instances || instances.length === 0) {
-          return jsonOk({ processed: 0, reason: "no instances" });
+          return jsonOk({ processed: 0, reason: "no connected instances" });
         }
 
         // Campanhas pausadas/canceladas.
@@ -103,25 +103,18 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
           // válidas esperando atrás na fila. (Evitamos filtrar campaign_id
           // direto na query com NOT IN porque, em SQL, isso excluiria
           // silenciosamente jobs com campaign_id nulo, se algum existir.)
-          const { data: jobs, error: jobsError } = await (() => {
-            let q = supabaseAdmin
-              .from("message_jobs")
-              .select("id, customer_id, rendered_body, message_actions, template_name, template_language, template_header_media_path, template_carousel_media_paths, template_body_params, campaign_id, attempts, agenda_reminder_rule_id, appointment_id, funnel_followup_step_id")
-              .eq("barbershop_id", inst.barbershop_id)
-              .eq("status", "pending")
-              // Jobs marcados force_extension nunca passam pela API oficial
-              // (agendamento criado pelo ícone da conversa no WhatsApp),
-              // só a extensão do navegador envia esses.
-              .eq("force_extension", false)
-              .lte("scheduled_for", nowIso);
-            // Instância desconectada: só pós-venda/retorno tenta mesmo
-            // assim (pedido do Mariano) - disparo normal e outras
-            // mensagens continuam exigindo conexão real.
-            if (inst.status !== "connected") {
-              q = q.not("funnel_followup_step_id", "is", null);
-            }
-            return q.order("scheduled_for", { ascending: true }).limit(200);
-          })();
+          const { data: jobs, error: jobsError } = await supabaseAdmin
+            .from("message_jobs")
+            .select("id, customer_id, rendered_body, message_actions, template_name, template_language, template_header_media_path, template_carousel_media_paths, template_body_params, campaign_id, attempts, agenda_reminder_rule_id, appointment_id, funnel_followup_step_id")
+            .eq("barbershop_id", inst.barbershop_id)
+            .eq("status", "pending")
+            // Jobs marcados force_extension nunca passam pela API oficial
+            // (agendamento criado pelo ícone da conversa no WhatsApp),
+            // só a extensão do navegador envia esses.
+            .eq("force_extension", false)
+            .lte("scheduled_for", nowIso)
+            .order("scheduled_for", { ascending: true })
+            .limit(200);
 
           // ⚠️ Adicionado (19/09): antes, um erro aqui (ex: coluna ausente
           // por migration não aplicada) ficava indistinguível de "sem jobs
@@ -203,15 +196,7 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
             // Nunca deixar uma exceção de rede matar a rodada com o job in_flight.
             let result: SendResult;
 
-            // Decide modelo vs texto livre pela CONEXÃO REAL no momento do
-            // envio, não só pelo que foi configurado no passo - pedido do
-            // Mariano: conectado via Meta, sempre modelo aprovado; via
-            // UAZAPI ou sem conexão nenhuma (fallback), sempre texto livre,
-            // mesmo que o passo tenha um template_name configurado (nesse
-            // caso ignora o modelo e usa o texto livre/rendered_body como
-            // mensagem de verdade).
-            const useTemplate = !!job.template_name && inst.status === "connected" && inst.provider === "meta";
-            if (useTemplate && job.template_name) {
+            if (job.template_name) {
               // Disparo via modelo aprovado (API oficial) — exige o
               // provider "meta" com sendTemplate implementado. UAZAPI não
               // suporta, dá erro claro em vez de mandar texto por engano
