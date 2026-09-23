@@ -26,32 +26,62 @@ function isRowActive(
   return false;
 }
 
+// Mesmo deslocamento de Brasília usado em send-payment-reminders, sem
+// isso, "hoje" bateria à meia-noite UTC (21h no Brasil), cortando o dia
+// errado.
+const BRAZIL_OFFSET_MS = -3 * 60 * 60 * 1000;
+
+function startOfTodayBrazilIso(): string {
+  const now = new Date();
+  const brazilNow = new Date(now.getTime() + BRAZIL_OFFSET_MS);
+  const startBrazil = Date.UTC(brazilNow.getUTCFullYear(), brazilNow.getUTCMonth(), brazilNow.getUTCDate());
+  return new Date(startBrazil - BRAZIL_OFFSET_MS).toISOString();
+}
+
 export async function getBillingStatus(
   supabaseAdmin: SupabaseClient<Database>,
   barbershopId: string,
 ): Promise<BillingStatus> {
-  const [subRes, customersRes, messagesRes, shopRes] = await Promise.all([
-    supabaseAdmin
-      .from("shop_subscriptions")
-      .select("status, current_period_end, price_id")
-      .eq("barbershop_id", barbershopId)
-      .order("created_at", { ascending: false })
-      .limit(10),
-    supabaseAdmin
-      .from("customers")
-      .select("id", { count: "exact", head: true })
-      .eq("barbershop_id", barbershopId)
-      .is("archived_at", null),
-    supabaseAdmin
-      .from("message_jobs")
-      .select("id", { count: "exact", head: true })
-      .eq("barbershop_id", barbershopId),
-    supabaseAdmin
-      .from("barbershops")
-      .select("ai_access_enabled, is_admin")
-      .eq("id", barbershopId)
-      .maybeSingle(),
-  ]);
+  const todayStart = startOfTodayBrazilIso();
+  const [subRes, customersRes, messagesRes, shopRes, dispatchTodayRes, agendaTodayRes, professionalsRes] =
+    await Promise.all([
+      supabaseAdmin
+        .from("shop_subscriptions")
+        .select("status, current_period_end, price_id")
+        .eq("barbershop_id", barbershopId)
+        .order("created_at", { ascending: false })
+        .limit(10),
+      supabaseAdmin
+        .from("customers")
+        .select("id", { count: "exact", head: true })
+        .eq("barbershop_id", barbershopId)
+        .is("archived_at", null),
+      supabaseAdmin
+        .from("message_jobs")
+        .select("id", { count: "exact", head: true })
+        .eq("barbershop_id", barbershopId),
+      supabaseAdmin
+        .from("barbershops")
+        .select("ai_access_enabled, is_admin")
+        .eq("id", barbershopId)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("message_jobs")
+        .select("id", { count: "exact", head: true })
+        .eq("barbershop_id", barbershopId)
+        .eq("status", "sent")
+        .gte("sent_at", todayStart),
+      supabaseAdmin
+        .from("appointments")
+        .select("id", { count: "exact", head: true })
+        .eq("barbershop_id", barbershopId)
+        .gte("created_at", todayStart),
+      supabaseAdmin
+        .from("professionals")
+        .select("id", { count: "exact", head: true })
+        .eq("barbershop_id", barbershopId)
+        .eq("active", true),
+    ]);
 
   const now = Date.now();
   const allSubs = subRes.data ?? [];
@@ -78,19 +108,35 @@ export async function getBillingStatus(
   // painel de Clientes (antes era uma variável de ambiente editada na
   // mão no Lovable).
   const courtesy = Boolean(shopRes.data?.is_admin);
+  const premium = courtesy || Boolean(activeCrm);
 
   return {
-    premium: courtesy || Boolean(activeCrm),
+    premium,
     status: activeCrm?.status ?? (courtesy ? "courtesy" : null),
     current_period_end: activeCrm?.current_period_end ?? null,
-    usage: { customers: customersRes.count ?? 0, messages: messagesRes.count ?? 0 },
-    limits: { customers: FREE_LIMITS.customers, dispatchBatch: FREE_LIMITS.dispatchBatch },
+    usage: {
+      customers: customersRes.count ?? 0,
+      messages: messagesRes.count ?? 0,
+      dispatchToday: dispatchTodayRes.count ?? 0,
+      agendaToday: agendaTodayRes.count ?? 0,
+      professionals: professionalsRes.count ?? 0,
+    },
+    limits: {
+      customers: FREE_LIMITS.customers,
+      dispatchBatch: FREE_LIMITS.dispatchBatch,
+      dispatchDaily: FREE_LIMITS.dispatchDaily,
+      agendaDaily: FREE_LIMITS.agendaDaily,
+      professionals: FREE_LIMITS.professionals,
+    },
     ai_addon: {
       active: Boolean(activeAi),
       status: activeAi?.status ?? null,
       current_period_end: activeAi?.current_period_end ?? null,
     },
     ai_access_enabled: Boolean(shopRes.data?.ai_access_enabled),
+    // Ranking bloqueado por completo no grátis, igual a IA - pedido do
+    // Mariano.
+    ranking_enabled: premium,
   };
 }
 
@@ -107,4 +153,26 @@ export function dispatchBlock(status: BillingStatus, targetCount: number): strin
   if (status.premium) return null;
   if (targetCount <= status.limits.dispatchBatch) return null;
   return `Plano grátis envia até ${status.limits.dispatchBatch} contatos por disparo (você selecionou ${targetCount}). Assine o Premium para disparos ilimitados.`;
+}
+
+/** Bloqueio de volume diário de disparo. */
+export function dispatchDailyBlock(status: BillingStatus, extra: number): string | null {
+  if (status.premium) return null;
+  const total = status.usage.dispatchToday + extra;
+  if (total <= status.limits.dispatchDaily) return null;
+  return `Plano grátis envia até ${status.limits.dispatchDaily} mensagens de disparo por dia (você já enviou ${status.usage.dispatchToday} hoje). Assine o Premium para disparos ilimitados.`;
+}
+
+/** Bloqueio de agendamentos criados no dia. */
+export function agendaDailyBlock(status: BillingStatus): string | null {
+  if (status.premium) return null;
+  if (status.usage.agendaToday < status.limits.agendaDaily) return null;
+  return `Plano grátis permite até ${status.limits.agendaDaily} agendamentos por dia (você já tem ${status.usage.agendaToday} hoje). Assine o Premium para agendamentos ilimitados.`;
+}
+
+/** Bloqueio de cadastro de profissional/atendente. */
+export function professionalBlock(status: BillingStatus): string | null {
+  if (status.premium) return null;
+  if (status.usage.professionals < status.limits.professionals) return null;
+  return `Plano grátis permite até ${status.limits.professionals} profissional cadastrado. Assine o Premium para adicionar mais atendentes.`;
 }

@@ -46,26 +46,52 @@ export function priceIdForAiAddonPlan(plan: AiAddonPlanId): string {
 
 export const FREE_LIMITS = {
   /** Máximo de assinantes/contatos cadastrados no plano grátis. */
-  customers: 100,
+  customers: 50,
   /** Máximo de contatos por disparo no plano grátis. */
   dispatchBatch: 5,
+  /** Máximo de mensagens de disparo enviadas por dia no plano grátis. */
+  dispatchDaily: 15,
+  /** Máximo de agendamentos criados por dia no plano grátis. */
+  agendaDaily: 5,
+  /** Máximo de profissionais/atendentes cadastrados no plano grátis. */
+  professionals: 1,
 } as const;
 
 export type BillingStatus = {
   premium: boolean;
   status: string | null;
   current_period_end: string | null;
-  usage: { customers: number; messages: number };
-  limits: { customers: number; dispatchBatch: number };
+  usage: { customers: number; messages: number; dispatchToday: number; agendaToday: number; professionals: number };
+  limits: {
+    customers: number;
+    dispatchBatch: number;
+    dispatchDaily: number;
+    agendaDaily: number;
+    professionals: number;
+  };
   ai_addon: {
     active: boolean;
     status: string | null;
     current_period_end: string | null;
   };
   ai_access_enabled: boolean;
+  /** Ranking da equipe - bloqueado por completo no grátis, igual a IA. */
+  ranking_enabled: boolean;
 };
 
-export function remaining(status: BillingStatus, kind: "customers"): number {
+export function remaining(
+  status: BillingStatus,
+  kind: "customers" | "dispatchToday" | "agendaToday" | "professionals",
+): number {
   if (status.premium) return Number.POSITIVE_INFINITY;
-  return Math.max(0, status.limits[kind] - status.usage[kind]);
+  const usageKey = kind;
+  const limitKey =
+    kind === "customers"
+      ? "customers"
+      : kind === "dispatchToday"
+        ? "dispatchDaily"
+        : kind === "agendaToday"
+          ? "agendaDaily"
+          : "professionals";
+  return Math.max(0, status.limits[limitKey] - status.usage[usageKey]);
 }

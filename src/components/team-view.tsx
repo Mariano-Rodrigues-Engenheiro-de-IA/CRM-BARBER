@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import confetti from "canvas-confetti";
 import { useConfirm } from "@/components/confirm-dialog";
+import { useCachedFetch } from "@/lib/api-cache";
 
 type Member = { id: string; name: string; photo?: string; emoji?: string };
 
@@ -198,6 +199,16 @@ export function TeamView({
   const [customTo, setCustomTo] = useState(todayIso);
   const celebratedRef = useRef<Set<string>>(new Set());
 
+  // Ranking bloqueado no plano grátis, igual a IA - mesma rota de billing
+  // já usada pelo resto do sistema pra essa checagem.
+  const { data: rankingEnabled, loading: loadingRankingAccess } = useCachedFetch<boolean>(
+    "ranking-access",
+    async () => {
+      const r = await api("/api/public/extension/billing");
+      return r?.ok ? Boolean(r.billing?.ranking_enabled) : true;
+    },
+  );
+
   useEffect(() => {
     setState(loadState(shopId));
     setReady(true);
@@ -360,7 +371,16 @@ export function TeamView({
         />
       )}
 
-      {tab === "ranking" && (
+      {tab === "ranking" && !loadingRankingAccess && !rankingEnabled && (
+        <div className="rounded-xl border border-neutral-300 bg-white p-10 text-center shadow-sm">
+          <h2 className="text-xl font-semibold text-neutral-900">Ranking da equipe é um recurso Premium</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-neutral-500">
+            Acompanhe faturamento, pontos e metas de cada profissional. Assine o Premium para liberar.
+          </p>
+        </div>
+      )}
+
+      {tab === "ranking" && (rankingEnabled || loadingRankingAccess) && (
       <>
       {/* Header + KPIs */}
       <div className="rounded-xl border border-neutral-300 bg-white p-6 shadow-sm">

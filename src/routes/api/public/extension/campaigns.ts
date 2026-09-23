@@ -270,9 +270,9 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
           );
         }
 
-        const { getBillingStatus, dispatchBlock } = await import("@/lib/billing.server");
+        const { getBillingStatus, dispatchBlock, dispatchDailyBlock } = await import("@/lib/billing.server");
         const billing = await getBillingStatus(supabaseAdmin, barbershopId);
-        const blockedMsg = dispatchBlock(billing, targets.length);
+        const blockedMsg = dispatchBlock(billing, targets.length) ?? dispatchDailyBlock(billing, targets.length);
         if (blockedMsg) {
           return jsonResponse(
             request,

@@ -5,6 +5,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { jsonResponse, preflight } from "@/lib/extension-cors";
 import { authenticateExtension } from "@/lib/extension-auth";
+import { getBillingStatus, agendaDailyBlock } from "@/lib/billing.server";
 
 const createSchema = z.object({
   title: z.string().trim().min(1).max(160),
@@ -61,6 +62,11 @@ export const Route = createFileRoute("/api/public/extension/appointments")({
         const parsed = createSchema.safeParse(await request.json().catch(() => ({})));
         if (!parsed.success) {
           return jsonResponse(request, { ok: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos" }, { status: 400 });
+        }
+        const billing = await getBillingStatus(supabaseAdmin, auth.token.barbershop_id);
+        const blocked = agendaDailyBlock(billing);
+        if (blocked) {
+          return jsonResponse(request, { ok: false, error: blocked }, { status: 402 });
         }
         const { data, error } = await supabaseAdmin
           .from("appointments")
