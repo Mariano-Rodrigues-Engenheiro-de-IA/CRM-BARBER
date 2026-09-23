@@ -957,7 +957,13 @@ function Painel() {
 
   /** Abre o checkout do Premium em nova aba, já identificando a barbearia. */
   function openCheckout() {
-    const params = new URLSearchParams({ plano: "premium" });
+    // ⚠️ Corrigido (23/09): estava fixo em "premium" (R$ 97, plano
+    // antigo) — desde a decisão de empacotar o Agente de IA nos planos
+    // novos (commit 79cd5ef), o preço vigente é o "premium_197". Bug
+    // real reportado pelo usuário: botão de dentro do painel (esse
+    // aqui) mandava R$97 no checkout, diferente do link da landing
+    // page (Plans.tsx no IA-BARBER-ATENDIMENTO), que já estava certo.
+    const params = new URLSearchParams({ plano: "premium_197" });
     // Manda os dois quando disponíveis (não só um OU outro) — mais chance
     // de a página /assinar reconhecer a conta na hora e pular a etapa de
     // formulário, direto pro checkout.
