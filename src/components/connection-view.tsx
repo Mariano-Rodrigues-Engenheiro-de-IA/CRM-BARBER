@@ -412,6 +412,12 @@ export function ConnectionView({ api, businessType }: { api: Api; businessType?:
       setBusy(false);
       // Trocar o modo sozinho não conecta nada — dispara a ação de conectar
       // correspondente na sequência, pra ficar tudo em um clique só.
+      // IMPORTANTE: connect() (fluxo SDK/FB.login) só funciona pra conta
+      // dona do app - o app está em Standard Access, nao Advanced Access
+      // (formulario de tratamento de dados pendente na revisao da Meta).
+      // Testei trocar pra connect() aqui e reverti - quebraria a conexao
+      // de clientes externos de vez, nao so a opcao de coexistencia.
+      // Mantido openHostedSignup() ate a Advanced Access ser aprovada.
       if (provider === "meta") {
         openHostedSignup();
       } else {
