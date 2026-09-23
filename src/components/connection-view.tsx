@@ -329,7 +329,12 @@ export function ConnectionView({ api, businessType }: { api: Api; businessType?:
               // usada aqui — feature/sessionInfoVersion/version numérico —
               // é de uma versão mais antiga do fluxo, v2/v3, e pode não ser
               // compatível com um config_id criado já na v4).
-              extras: { setup: {} },
+              // featureType habilita a tela de "conectar WhatsApp Business
+              // App existente" (coexistência) na selecao de numero -
+              // documentacao oficial da Meta (Onboard WhatsApp Business
+              // app users). Sem isso, a Meta so mostra as opcoes de numero
+              // novo ou nome de exibicao com numero virtual.
+              extras: { setup: {}, featureType: "whatsapp_business_app_onboarding", sessionInfoVersion: "3" },
             },
           );
           return;
