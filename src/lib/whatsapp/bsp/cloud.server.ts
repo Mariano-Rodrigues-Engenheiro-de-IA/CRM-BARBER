@@ -249,9 +249,16 @@ export const cloudAdapter: BspAdapter = {
     url.searchParams.set("override_default_response_type", "true");
 
     url.searchParams.set("config_id", configId);
+    // Mesmo extras usado no FB.login() do frontend (connection-view.tsx) -
+    // antes esse trecho usava "feature" (chave errada) em vez de
+    // "featureType", e nem tinha "setup" - inconsistência encontrada numa
+    // investigação do Mariano com outra IA. Essa URL em si não é usada
+    // pelo fluxo ativo hoje (o SDK monta seu próprio FB.login() a partir
+    // só de params.app_id/config_id, não do conteúdo de params.url), mas
+    // deixar os dois consistentes evita confusão numa próxima investigação.
     url.searchParams.set(
       "extras",
-      JSON.stringify({ feature: "whatsapp_embedded_signup", sessionInfoVersion: 3, version: 3 }),
+      JSON.stringify({ setup: {}, featureType: "whatsapp_business_app_onboarding", sessionInfoVersion: "3" }),
     );
 
     return { url: url.toString(), params: { app_id: appId, config_id: configId } };
