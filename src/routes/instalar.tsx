@@ -52,15 +52,8 @@ function Install() {
   const naStore = hasChromeStore();
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-neutral-950 px-4 py-10 text-neutral-100">
-      <div
-        className="pointer-events-none absolute inset-0 -z-0"
-        style={{
-          background:
-            "radial-gradient(circle at 20% 20%, rgba(59,130,246,0.18), transparent 55%), radial-gradient(circle at 80% 80%, rgba(6,182,212,0.14), transparent 55%)",
-        }}
-      />
-      <Card className="relative z-10 w-full max-w-lg border-blue-500/30 bg-neutral-900/95 text-neutral-100 shadow-[0_0_50px_-15px_rgba(59,130,246,0.4)] backdrop-blur-sm">
+    <div className="relative flex min-h-screen items-center justify-center bg-neutral-950 px-4 py-10 text-neutral-100">
+      <Card className="w-full max-w-lg border-blue-500/30 bg-neutral-900/95 text-neutral-100 shadow-[0_0_50px_-15px_rgba(59,130,246,0.4)]">
         <CardHeader>
           <CardTitle>Cadastro concluído</CardTitle>
           <CardDescription className="text-neutral-400">
@@ -74,8 +67,7 @@ function Install() {
             <>
               <Button
                 asChild
-                size="lg"
-                className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 font-black uppercase tracking-wide text-white shadow-[0_0_25px_-5px_rgba(59,130,246,0.6)] transition hover:scale-[1.02] hover:brightness-110"
+                className="mx-auto block w-fit bg-gradient-to-r from-blue-600 to-cyan-500 px-6 font-bold text-white shadow-[0_0_20px_-5px_rgba(59,130,246,0.6)] transition hover:scale-[1.02] hover:brightness-110"
               >
                 <a href={CHROME_STORE_URL} target="_blank" rel="noreferrer">
                   ADICIONAR AO CHROME
@@ -90,8 +82,7 @@ function Install() {
           ) : (
             <>
               <Button
-                size="lg"
-                className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 font-black uppercase tracking-wide text-white shadow-[0_0_25px_-5px_rgba(59,130,246,0.6)] transition hover:scale-[1.02] hover:brightness-110"
+                className="mx-auto block w-fit bg-gradient-to-r from-blue-600 to-cyan-500 px-6 font-bold text-white shadow-[0_0_20px_-5px_rgba(59,130,246,0.6)] transition hover:scale-[1.02] hover:brightness-110"
                 onClick={downloadZip}
               >
                 Baixar extensão (.zip)
