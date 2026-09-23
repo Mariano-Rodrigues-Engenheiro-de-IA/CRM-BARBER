@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import confetti from "canvas-confetti";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useCachedFetch } from "@/lib/api-cache";
+import { PremiumLock } from "@/components/premium-lock";
 
 type Member = { id: string; name: string; photo?: string; emoji?: string };
 
@@ -372,12 +373,10 @@ export function TeamView({
       )}
 
       {tab === "ranking" && !loadingRankingAccess && !rankingEnabled && (
-        <div className="rounded-xl border border-neutral-300 bg-white p-10 text-center shadow-sm">
-          <h2 className="text-xl font-semibold text-neutral-900">Ranking da equipe é um recurso Premium</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-neutral-500">
-            Acompanhe faturamento, pontos e metas de cada profissional. Assine o Premium para liberar.
-          </p>
-        </div>
+        <PremiumLock
+          title="Ranking da equipe é um recurso Premium"
+          description="Acompanhe faturamento, pontos e metas de cada profissional. Assine o Premium para liberar."
+        />
       )}
 
       {tab === "ranking" && (rankingEnabled || loadingRankingAccess) && (

@@ -147,6 +147,26 @@ export function DispatchCenter({
   const [selectedAudience, setSelectedAudience] = useState<Map<string, AudienceContact>>(new Map());
   const [finalAudience, setFinalAudience] = useState<AudienceContact[]>([]);
 
+  // Limite de seleção do plano grátis - trava JÁ na Etapa 1 (seleção de
+  // contatos), não só no envio final, pra ficar claro pro usuário logo
+  // de cara. null = sem limite (Premium).
+  const [maxSelectable, setMaxSelectable] = useState<number | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    api("/api/public/extension/billing").then((r) => {
+      if (cancelled || !r?.ok) return;
+      const b = r.billing as any;
+      if (b?.premium) {
+        setMaxSelectable(null);
+      } else {
+        setMaxSelectable(Math.max(0, (b?.limits?.dispatchDaily ?? 0) - (b?.usage?.dispatchToday ?? 0)));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [api]);
+
   const [name, setName] = useState("");
   const [variants, setVariants] = useState<string[]>([""]);
   const [actions, setActions] = useState<QuickReplyAction[]>([{ type: "text", text: "" }]);
@@ -500,6 +520,7 @@ export function DispatchCenter({
             onSourceChange={setAudienceSource}
             selected={selectedAudience}
             onSelectedChange={setSelectedAudience}
+            maxSelectable={maxSelectable}
             onNext={(list) => {
               setFinalAudience(list);
               setStep(2);

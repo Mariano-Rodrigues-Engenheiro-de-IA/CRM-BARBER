@@ -29,6 +29,7 @@ import {
   type QuickReplyActionType,
 } from "@/lib/quick-replies";
 import type { SavedCampaign } from "@/components/campaigns-marketplace-view";
+import { PremiumLock } from "@/components/premium-lock";
 
 export type Api = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
 
@@ -94,6 +95,14 @@ export function FollowupView({ api }: { api: Api }) {
   const [isMetaProvider, setIsMetaProvider] = useState(false);
   const [editingRuleId, setEditingRuleId] = useState<string | "new" | null>(null);
   const [showReport, setShowReport] = useState(false);
+  const [premiumEnabled, setPremiumEnabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    api("/api/public/extension/billing").then((r) => {
+      setPremiumEnabled(r?.ok ? Boolean((r.billing as any)?.premium) : true);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function reloadAll() {
     const [f, r] = await Promise.all([
@@ -182,6 +191,15 @@ export function FollowupView({ api }: { api: Api }) {
     editingRuleId && editingRuleId !== "new"
       ? rules.find((r) => r.id === editingRuleId) || null
       : null;
+
+  if (premiumEnabled === false) {
+    return (
+      <PremiumLock
+        title="Follow-up é um recurso Premium"
+        description="Programe sequências automáticas de mensagens quando um lead entra ou sai de uma etapa. Assine o Premium para liberar."
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">

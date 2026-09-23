@@ -58,14 +58,11 @@ export const Route = createFileRoute("/api/public/extension/mark-attendance")({
           return jsonResponse(request, { ok: false, error: "Telefone inválido." }, { status: 400 });
         }
 
-        const { getBillingStatus } = await import("@/lib/billing.server");
+        const { getBillingStatus, postSaleDailyBlock } = await import("@/lib/billing.server");
         const billing = await getBillingStatus(supabaseAdmin, shop);
-        if (!billing.premium) {
-          return jsonResponse(
-            request,
-            { ok: false, error: "Pós-venda faz parte do plano Premium." },
-            { status: 402 },
-          );
+        const blocked = postSaleDailyBlock(billing);
+        if (blocked) {
+          return jsonResponse(request, { ok: false, error: blocked }, { status: 402 });
         }
 
         // Garante o funil especial "Pós-venda" + etapa fixa "Atendidos"

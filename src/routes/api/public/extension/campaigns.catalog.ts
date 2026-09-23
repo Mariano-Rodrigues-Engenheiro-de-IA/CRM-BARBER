@@ -116,6 +116,16 @@ export const Route = createFileRoute("/api/public/extension/campaigns/catalog")(
           return jsonResponse(request, { ok: false, error: auth.error }, { status: auth.status });
         }
 
+        const { getBillingStatus } = await import("@/lib/billing.server");
+        const billing = await getBillingStatus(supabaseAdmin, auth.token.barbershop_id);
+        if (!billing.premium) {
+          return jsonResponse(
+            request,
+            { ok: false, error: "Usar campanhas prontas é um recurso Premium. Você pode continuar navegando pelo catálogo." },
+            { status: 402 },
+          );
+        }
+
         let body: Record<string, unknown>;
         try {
           body = await request.json();

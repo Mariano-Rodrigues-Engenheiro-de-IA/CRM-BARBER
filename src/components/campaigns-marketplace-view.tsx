@@ -4,7 +4,7 @@
 // campanhas" embaixo (o que o usuário já adotou, pronto pra disparar
 // ou aguardando aprovação da Meta).
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ApiFn } from "@/lib/label-funnel-sync";
 
 type CatalogCampaign = {
@@ -91,6 +91,14 @@ export function CampaignsMarketplaceView({
   const [openMonth, setOpenMonth] = useState<number | null>(new Date().getMonth() + 1);
   const [detail, setDetail] = useState<CatalogCampaign | null>(null);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const [isPremium, setIsPremium] = useState(true);
+
+  useEffect(() => {
+    api("/api/public/extension/billing").then((r) => {
+      setIsPremium(r?.ok ? Boolean((r.billing as any)?.premium) : true);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function load() {
     try {
@@ -334,6 +342,7 @@ export function CampaignsMarketplaceView({
         <CampaignDetailModal
           campaign={detail}
           isMetaProvider={isMetaProvider}
+          isPremium={isPremium}
           onClose={() => setDetail(null)}
           onAdopt={() => handleAdopt(detail)}
         />
@@ -375,11 +384,13 @@ function CampaignCard({ campaign, onOpen }: { campaign: CatalogCampaign; onOpen:
 function CampaignDetailModal({
   campaign,
   isMetaProvider,
+  isPremium,
   onClose,
   onAdopt,
 }: {
   campaign: CatalogCampaign;
   isMetaProvider: boolean;
+  isPremium: boolean;
   onClose: () => void;
   onAdopt: () => void;
 }) {
@@ -436,13 +447,27 @@ function CampaignDetailModal({
             >
               Fechar
             </button>
-            <button
-              onClick={handleClick}
-              disabled={adopting}
-              className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
-            >
-              {adopting ? "Salvando..." : isMetaProvider ? "Usar modelo" : "Usar campanha"}
-            </button>
+            {isPremium ? (
+              <button
+                onClick={handleClick}
+                disabled={adopting}
+                className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
+              >
+                {adopting ? "Salvando..." : isMetaProvider ? "Usar modelo" : "Usar campanha"}
+              </button>
+            ) : (
+              <a
+                href={`${window.location.origin}/assinar?plano=premium_197`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 rounded-lg bg-neutral-800 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-900"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
+                  <path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm0 2a3 3 0 0 1 3 3v3H9V7a3 3 0 0 1 3-3Zm0 10a2 2 0 1 1 0 4 2 2 0 0 1 0-4Z" />
+                </svg>
+                Usar é Premium
+              </a>
+            )}
           </div>
         </div>
       </div>

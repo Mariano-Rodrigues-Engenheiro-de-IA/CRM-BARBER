@@ -12,6 +12,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { youtubeEmbedUrl } from "@/lib/youtube";
 import { useCachedFetch } from "@/lib/api-cache";
+import { PremiumLock } from "@/components/premium-lock";
 
 type Api = (path: string, opts?: RequestInit) => Promise<any>;
 
@@ -79,92 +80,14 @@ export function AgenteIaView({ api }: { api: Api }) {
     return <AiAccessGranted api={api} />;
   }
 
-  if (freeTenant?.found) {
-    return <FreeAiAccess api={api} onboardingCompleted={!!freeTenant.onboarding_completed} />;
-  }
-
-  const embedUrl = salesVideoUrl ? youtubeEmbedUrl(salesVideoUrl) : null;
-
-  if (sent) {
-    return (
-      <div className="mx-auto max-w-lg rounded-2xl border border-neutral-200 bg-white p-8 text-center">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50">
-          <svg
-            viewBox="0 0 24 24"
-            width="28"
-            height="28"
-            fill="none"
-            stroke="#059669"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M20 6 9 17l-5-5" />
-          </svg>
-        </div>
-        <h1 className="text-xl font-bold text-neutral-900">Ótimo!</h1>
-        <p className="mt-2 text-sm text-neutral-500">
-          Um de nossos especialistas vai entrar em contato com você pra agendar uma demonstração.
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      {embedUrl ? (
-        <div className="mx-auto aspect-video w-full max-w-2xl overflow-hidden rounded-2xl border-2 border-brand shadow-lg">
-          <iframe
-            src={embedUrl}
-            title="Conheça o Agente de IA"
-            className="h-full w-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-        </div>
-      ) : (
-        <div className="mx-auto max-w-2xl rounded-2xl border-2 border-dashed border-neutral-300 bg-neutral-50 p-10 text-center">
-          <p className="text-sm text-neutral-400">Vídeo de apresentação em breve.</p>
-        </div>
-      )}
-
-      <div className="grid gap-5 md:grid-cols-2">
-        <FreeSetupCard api={api} />
-        <div className="rounded-2xl border-2 border-brand bg-white p-6 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-brand">
-            Feita pela nossa equipe
-          </p>
-          <h3 className="mt-2 text-lg font-bold text-neutral-900">Configuração assistida</h3>
-          <p className="mt-2 text-sm text-neutral-500">
-            Um especialista configura o agente com você numa chamada, já testado e afinado pro seu
-            tipo de negócio.
-          </p>
-          <button
-            onClick={() => setFormOpen(true)}
-            className="mt-5 block rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-brand-strong mx-auto"
-          >
-            Agendar demonstração
-          </button>
-        </div>
-      </div>
-
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Agendar demonstração</DialogTitle>
-          </DialogHeader>
-          <DemoForm
-            api={api}
-            onSent={() => {
-              setFormOpen(false);
-              setSent(true);
-            }}
-          />
-        </DialogContent>
-      </Dialog>
-    </div>
+    <PremiumLock
+      title="Agente de IA é um recurso Premium"
+      description="Atendimento automático 24h no WhatsApp da sua barbearia. Assine o Premium para liberar."
+    />
   );
 }
+
 
 /** Cartão do caminho grátis — clique já dispara a criação do tenant
  * (create=1) e abre o onboarding numa aba nova. */

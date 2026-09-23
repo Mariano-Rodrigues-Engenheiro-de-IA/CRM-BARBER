@@ -56,22 +56,24 @@ async function getPostSaleAndFollowUpUsage(
   const postsaleFunnelId = (funnels ?? []).find((f) => f.mode === "postsale")?.id ?? null;
   const otherFunnelIds = (funnels ?? []).filter((f) => f.mode !== "postsale").map((f) => f.id);
 
+  // Pós-venda trava no ato de MARCAR o atendimento (botão da tesourinha
+  // no funil) - conta entradas na etapa de pós-venda hoje, não mensagens
+  // enviadas (pedido do Mariano depois de esclarecer o ponto certo de
+  // travar).
   let postSaleToday = 0;
   if (postsaleFunnelId) {
-    const { data: rules } = await supabaseAdmin
-      .from("funnel_followup_rules")
-      .select("id, funnel_followup_steps (id)")
+    const { data: stage } = await supabaseAdmin
+      .from("funnel_stages")
+      .select("id")
       .eq("funnel_id", postsaleFunnelId)
-      .eq("barbershop_id", barbershopId);
-    const stepIds = ((rules ?? []) as Array<{ funnel_followup_steps: Array<{ id: string }> | null }>).flatMap(
-      (r) => (r.funnel_followup_steps ?? []).map((s) => s.id),
-    );
-    if (stepIds.length > 0) {
+      .eq("barbershop_id", barbershopId)
+      .maybeSingle();
+    if (stage) {
       const { count } = await supabaseAdmin
-        .from("funnel_followup_sent_log")
+        .from("funnel_card_stage_history")
         .select("id", { count: "exact", head: true })
-        .in("step_id", stepIds)
-        .gte("sent_at", todayStart);
+        .eq("stage_id", stage.id)
+        .gte("entered_at", todayStart);
       postSaleToday = count ?? 0;
     }
   }
@@ -239,11 +241,11 @@ export function professionalBlock(status: BillingStatus): string | null {
   return `Plano grátis permite até ${status.limits.professionals} profissional cadastrado. Assine o Premium para adicionar mais atendentes.`;
 }
 
-/** Bloqueio de mensagens de pós-venda enviadas no dia. */
+/** Bloqueio de atendimentos marcados (pós-venda) no dia. */
 export function postSaleDailyBlock(status: BillingStatus): string | null {
   if (status.premium) return null;
   if (status.usage.postSaleToday < status.limits.postSaleDaily) return null;
-  return `Plano grátis envia até ${status.limits.postSaleDaily} mensagens de pós-venda por dia (você já enviou ${status.usage.postSaleToday} hoje). Assine o Premium para pós-venda ilimitado.`;
+  return `Plano grátis permite marcar até ${status.limits.postSaleDaily} atendimentos por dia (você já marcou ${status.usage.postSaleToday} hoje). Assine o Premium para atendimentos ilimitados.`;
 }
 
 /** Bloqueio de sequências de follow-up ativas ao mesmo tempo. */

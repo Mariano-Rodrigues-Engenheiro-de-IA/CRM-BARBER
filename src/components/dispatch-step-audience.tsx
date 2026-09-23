@@ -309,6 +309,7 @@ export function AudienceStep({
   selected,
   onSelectedChange,
   onNext,
+  maxSelectable,
 }: {
   funnels: Funnel[];
   contacts: WaContact[];
@@ -322,6 +323,8 @@ export function AudienceStep({
   selected: Map<string, AudienceContact>;
   onSelectedChange: (next: Map<string, AudienceContact>) => void;
   onNext: (finalList: AudienceContact[]) => void;
+  /** Limite de contatos selecionáveis no plano grátis - null = sem limite (Premium). */
+  maxSelectable: number | null;
 }) {
   const availableKinds: AudienceSourceKind[] = isBarbearia
     ? ["inbox", "labels", "funnel", "subscribers", "sheet"]
@@ -379,14 +382,21 @@ export function AudienceStep({
     if (allDisplayedSelected) {
       for (const c of displayed) removeContact(c, next);
     } else {
-      for (const c of displayed) addContact(c, next);
+      for (const c of displayed) {
+        if (maxSelectable !== null && next.size >= maxSelectable) break;
+        addContact(c, next);
+      }
     }
     onSelectedChange(next);
   }
   function toggleOne(c: AudienceContact) {
     const next = new Map(selected);
-    if (isContactSelected(c, next)) removeContact(c, next);
-    else addContact(c, next);
+    if (isContactSelected(c, next)) {
+      removeContact(c, next);
+    } else {
+      if (maxSelectable !== null && next.size >= maxSelectable) return;
+      addContact(c, next);
+    }
     onSelectedChange(next);
   }
 
@@ -514,6 +524,14 @@ export function AudienceStep({
           </div>
         </div>
       </div>
+
+      {maxSelectable !== null && (
+        <p className="mt-2 text-right text-xs text-neutral-500">
+          {selected.size >= maxSelectable
+            ? `Limite do plano grátis atingido: ${maxSelectable} contato(s) restantes hoje. Assine o Premium para disparos ilimitados.`
+            : `Plano grátis: até ${maxSelectable} contato(s) restantes hoje.`}
+        </p>
+      )}
 
       <div className="mt-3 flex justify-end">
         <button
