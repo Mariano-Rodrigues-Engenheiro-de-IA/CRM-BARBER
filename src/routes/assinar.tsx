@@ -43,16 +43,16 @@ type Identity = {
 };
 
 function Assinar() {
-  const [plan, setPlan] = useState<PlanId>("premium");
+  const [plan, setPlan] = useState<PlanId>("premium_197");
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
 
   useEffect(() => {
     const url = new URL(window.location.href);
     const planParam = url.searchParams.get("plano");
-    // Premium (R$ 97) é o plano padrão; os demais só saem por link explícito.
+    // Premium (R$ 197) é o plano padrão; os demais só saem por link explícito.
     const validPlans: PlanId[] = ["premium", "promo", "premium_197", "premium_297"];
-    setPlan(validPlans.includes(planParam as PlanId) ? (planParam as PlanId) : "premium");
+    setPlan(validPlans.includes(planParam as PlanId) ? (planParam as PlanId) : "premium_197");
 
     const stored = localStorage.getItem(TOKEN_KEY);
     const token =

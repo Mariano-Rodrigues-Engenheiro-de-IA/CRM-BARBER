@@ -152,7 +152,7 @@ export const createPremiumCheckout = createServerFn({ method: "POST" })
         .maybeSingle();
 
       const stripe = createStripeClient(data.environment);
-      const lookupKey = priceIdForPlan(data.plan ?? "premium");
+      const lookupKey = priceIdForPlan(data.plan ?? "premium_197");
       const prices = await stripe.prices.list({ lookup_keys: [lookupKey] });
       if (!prices.data.length) return { error: `Preço não encontrado (${lookupKey})` };
       const price = prices.data[0];
