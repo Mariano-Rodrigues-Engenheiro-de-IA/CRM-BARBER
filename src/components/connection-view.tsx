@@ -412,17 +412,15 @@ export function ConnectionView({ api, businessType }: { api: Api; businessType?:
       setBusy(false);
       // Trocar o modo sozinho não conecta nada — dispara a ação de conectar
       // correspondente na sequência, pra ficar tudo em um clique só.
-      // IMPORTANTE: connect() (fluxo SDK/FB.login) só funciona pra conta
-      // dona do app - o app está em Standard Access, nao Advanced Access
-      // (formulario de tratamento de dados pendente na revisao da Meta).
-      // Testei trocar pra connect() aqui e reverti - quebraria a conexao
-      // de clientes externos de vez, nao so a opcao de coexistencia.
-      // Mantido openHostedSignup() ate a Advanced Access ser aprovada.
-      if (provider === "meta") {
-        openHostedSignup();
-      } else {
-        void connect();
-      }
+      // Meta: usa connect() (fluxo SDK/FB.login, com featureType pra
+      // habilitar a opção de coexistência) em vez de openHostedSignup()
+      // (link estático hospedado pela própria Meta, que parou de
+      // oferecer a opção de conectar WhatsApp Business existente) -
+      // confirmado pelo Mariano que o SDK já funciona normalmente pra
+      // conectar números diferentes hoje (a ressalva antiga de Standard
+      // vs Advanced Access, registrada num comentário anterior, não se
+      // aplica mais).
+      void connect();
       return;
     } else {
       setErr(res.error || "Falha ao trocar modo de conexão");
