@@ -50,11 +50,9 @@ import { PatientsView } from "@/components/patients-view";
 import { AulasView } from "@/components/aulas-view";
 import { CampaignsMarketplaceView } from "@/components/campaigns-marketplace-view";
 import { AgenteIaView } from "@/components/agente-ia-view";
-import {
-  ServicesTab,
-  ProfessionalsTab,
-  ProductsTab,
-} from "@/components/professionals-services-dialog";
+import { ServicesTab } from "@/components/services-tab";
+import { ProfessionalsTab } from "@/components/professionals-tab";
+import { ProductsTab } from "@/components/products-tab";
 import { GeneralSettingsTab } from "@/components/agenda-settings-dialog";
 import { AccountTab } from "@/components/account-tab";
 import { CustomersTab } from "@/components/customers-tab";

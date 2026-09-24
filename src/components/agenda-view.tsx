@@ -10,7 +10,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { User, Phone, Scissors, Clock, CircleCheck, StickyNote, DollarSign, UserRound } from "lucide-react";
 import { type AgendaSettings } from "@/components/agenda-settings-dialog";
-import { type Professional, type Service, ProfessionalAvatar } from "@/components/professionals-services-dialog";
+import { type Professional, ProfessionalAvatar } from "@/components/professionals-tab";
+import { type Service } from "@/components/services-tab";
 import { useConfirm } from "@/components/confirm-dialog";
 
 type Api = (path: string, opts?: RequestInit) => Promise<any>;
