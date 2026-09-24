@@ -464,14 +464,35 @@ function StepEditModal({
   );
 }
 
-/** Lista de atendimentos embutida direto na página (não mais modal) —
- * agrupada por dia, filtro de intervalo de data. Pedido do usuário:
- * "fica mais organizado" e "algo que já tem costume, tipo agenda" —
- * sem construir uma agenda de verdade, só a lista bem organizada por
- * dia. */
+/** Lista de atendimentos embutida direto na página (não mais modal),
+ * agrupada por dia (cada dia expande/retrai com um clique), com filtro
+ * por período: Mês (padrão), Semana, Dia, ou Personalizado (escolhe as
+ * datas). Pedido do usuário: filtro por preset em vez de sempre pedir
+ * pra escolher data de/até na mão, e lista mais compacta (só o dia
+ * aparece de cara, os atendimentos daquele dia só na hora de expandir). */
+type AttendancePeriod = "month" | "week" | "day" | "custom";
+
+function periodToRange(period: AttendancePeriod, customFrom: string, customTo: string): { from: string; to: string } {
+  const today = new Date();
+  const toIso = (d: Date) => d.toISOString().slice(0, 10);
+  if (period === "day") return { from: toIso(today), to: toIso(today) };
+  if (period === "week") {
+    const from = new Date(today);
+    from.setDate(from.getDate() - 6);
+    return { from: toIso(from), to: toIso(today) };
+  }
+  if (period === "custom") return { from: customFrom, to: customTo };
+  // "month" (padrão): últimos 30 dias corridos, não o mês-calendário.
+  const from = new Date(today);
+  from.setDate(from.getDate() - 29);
+  return { from: toIso(from), to: toIso(today) };
+}
+
 function AttendanceSection({ api, funnelId }: { api: Api; funnelId: string }) {
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [period, setPeriod] = useState<AttendancePeriod>("month");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
   const [attendances, setAttendances] = useState<Array<{
     id: string;
     entered_at: string;
@@ -479,11 +500,11 @@ function AttendanceSection({ api, funnelId }: { api: Api; funnelId: string }) {
     phone: string | null;
   }> | null>(null);
 
-  async function load() {
+  async function load(p: AttendancePeriod, from: string, to: string) {
     setAttendances(null);
     const params = new URLSearchParams({ funnel_id: funnelId });
-    if (dateFrom) params.set("from", dateFrom);
-    if (dateTo) params.set("to", dateTo);
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
     const r = await api(`/api/public/extension/postsale-attendances?${params.toString()}`);
     setAttendances(
       r?.ok
@@ -498,9 +519,23 @@ function AttendanceSection({ api, funnelId }: { api: Api; funnelId: string }) {
   }
 
   useEffect(() => {
-    void load();
+    const { from, to } = periodToRange(period, customFrom, customTo);
+    // Personalizado só busca quando as duas datas já foram escolhidas -
+    // busca com uma só (ou nenhuma) não faz sentido e pode trazer tudo.
+    if (period === "custom" && (!from || !to)) return;
+    void load(period, from, to);
+    setExpandedDays(new Set());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [period, customFrom, customTo]);
+
+  function toggleDay(day: string) {
+    setExpandedDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(day)) next.delete(day);
+      else next.add(day);
+      return next;
+    });
+  }
 
   const groups = new Map<string, typeof attendances>();
   for (const a of attendances ?? []) {
@@ -515,27 +550,51 @@ function AttendanceSection({ api, funnelId }: { api: Api; funnelId: string }) {
 
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h4 className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
           Atendimentos
         </h4>
-        <div className="flex items-end gap-2">
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="rounded-lg border border-neutral-300 px-2 py-1 text-xs"
-          />
-          <span className="text-xs text-neutral-400">até</span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="rounded-lg border border-neutral-300 px-2 py-1 text-xs"
-          />
-          <Button size="sm" variant="outline" onClick={() => void load()}>
-            Filtrar
-          </Button>
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="flex overflow-hidden rounded-lg border border-neutral-300">
+            {(
+              [
+                { key: "month", label: "Mês" },
+                { key: "week", label: "Semana" },
+                { key: "day", label: "Dia" },
+                { key: "custom", label: "Personalizado" },
+              ] as { key: AttendancePeriod; label: string }[]
+            ).map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setPeriod(opt.key)}
+                className={`px-3 py-1 text-xs font-medium transition ${
+                  period === opt.key
+                    ? "bg-brand text-white"
+                    : "bg-white text-neutral-600 hover:bg-neutral-50"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {period === "custom" && (
+            <>
+              <input
+                type="date"
+                value={customFrom}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                className="rounded-lg border border-neutral-300 px-2 py-1 text-xs"
+              />
+              <span className="text-xs text-neutral-400">até</span>
+              <input
+                type="date"
+                value={customTo}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className="rounded-lg border border-neutral-300 px-2 py-1 text-xs"
+              />
+            </>
+          )}
         </div>
       </div>
 
@@ -546,27 +605,40 @@ function AttendanceSection({ api, funnelId }: { api: Api; funnelId: string }) {
           <p className="text-sm text-neutral-500">Nenhum atendimento nesse período.</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {[...groups.entries()].map(([day, items]) => (
-            <div key={day} className="rounded-xl border border-neutral-200 bg-white">
-              <div className="rounded-t-xl border-b border-neutral-100 bg-neutral-50 px-4 py-2">
-                <span className="text-xs font-semibold capitalize text-neutral-600">{day}</span>
-              </div>
-              <div className="divide-y divide-neutral-100">
-                {items!.map((a) => (
-                  <div key={a.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
-                    <span className="font-medium text-neutral-900">{a.name}</span>
-                    <span className="text-xs text-neutral-500">
-                      {new Date(a.entered_at).toLocaleTimeString("pt-BR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
+        <div className="space-y-2">
+          {[...groups.entries()].map(([day, items]) => {
+            const isOpen = expandedDays.has(day);
+            return (
+              <div key={day} className="rounded-xl border border-neutral-200 bg-white">
+                <button
+                  type="button"
+                  onClick={() => toggleDay(day)}
+                  className="flex w-full items-center justify-between rounded-xl px-4 py-2 text-left hover:bg-neutral-50"
+                >
+                  <span className="text-xs font-semibold capitalize text-neutral-600">{day}</span>
+                  <span className="flex items-center gap-2 text-xs text-neutral-400">
+                    {items!.length} {items!.length === 1 ? "atendimento" : "atendimentos"}
+                    <span className={`transition ${isOpen ? "rotate-90" : ""}`}>›</span>
+                  </span>
+                </button>
+                {isOpen && (
+                  <div className="divide-y divide-neutral-100 border-t border-neutral-100">
+                    {items!.map((a) => (
+                      <div key={a.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                        <span className="font-medium text-neutral-900">{a.name}</span>
+                        <span className="text-xs text-neutral-500">
+                          {new Date(a.entered_at).toLocaleTimeString("pt-BR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
