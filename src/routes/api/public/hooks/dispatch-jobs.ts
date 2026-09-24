@@ -302,6 +302,23 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
 
 
             if (result.ok) {
+              // LOG DE DIAGNÓSTICO TEMPORÁRIO - achar a causa real de
+              // mensagem saindo com instância marcada como desconectada.
+              // Remover depois de identificar o problema.
+              await supabaseAdmin.from("health_events").insert({
+                barbershop_id: inst.barbershop_id,
+                kind: "debug_dispatch_sent_path",
+                severity: "info",
+                details: {
+                  job_id: job.id,
+                  instance_status: inst.status,
+                  instance_provider: inst.provider,
+                  job_template_name: job.template_name,
+                  job_funnel_followup_step_id: job.funnel_followup_step_id,
+                  result_provider_message_id: result.provider_message_id ?? null,
+                  timestamp: new Date().toISOString(),
+                },
+              });
               await supabaseAdmin
                 .from("message_jobs")
                 .update({

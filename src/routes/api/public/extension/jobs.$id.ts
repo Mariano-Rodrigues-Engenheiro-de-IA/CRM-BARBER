@@ -39,6 +39,22 @@ export const Route = createFileRoute("/api/public/extension/jobs/$id")({
           return jsonResponse(request, { ok: false, error: "Invalid body" }, { status: 400 });
         }
 
+        // LOG DE DIAGNÓSTICO TEMPORÁRIO - achar a causa real de mensagem
+        // saindo com instância marcada como desconectada. Registra TODA
+        // chamada nesse endpoint, mesmo as que vão ser bloqueadas logo
+        // abaixo, pra confirmar se esse caminho está mesmo sendo usado.
+        // Remover depois de identificar o problema.
+        await supabaseAdmin.from("health_events").insert({
+          barbershop_id: auth.token.barbershop_id,
+          kind: "debug_extension_report_path",
+          severity: "info",
+          details: {
+            job_id: params.id,
+            reported_status: parsed.data.status,
+            timestamp: new Date().toISOString(),
+          },
+        });
+
         // Esse endpoint existe pro modo UAZAPI (extensão manda pelo WhatsApp
         // Web do próprio navegador e reporta o resultado de volta) - não
         // verifica entrega de verdade, só confia no relato. Barbearia no
