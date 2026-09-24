@@ -92,24 +92,3 @@ export type BillingStatus = {
   /** Ranking da equipe - bloqueado por completo no grátis, igual a IA. */
   ranking_enabled: boolean;
 };
-
-export function remaining(
-  status: BillingStatus,
-  kind: "customers" | "dispatchToday" | "agendaToday" | "professionals" | "postSaleToday" | "followUpActive",
-): number {
-  if (status.premium) return Number.POSITIVE_INFINITY;
-  const usageKey = kind;
-  const limitKey =
-    kind === "customers"
-      ? "customers"
-      : kind === "dispatchToday"
-        ? "dispatchDaily"
-        : kind === "agendaToday"
-          ? "agendaDaily"
-          : kind === "postSaleToday"
-            ? "postSaleDaily"
-            : kind === "followUpActive"
-              ? "followUpActive"
-              : "professionals";
-  return Math.max(0, status.limits[limitKey] - status.usage[usageKey]);
-}
