@@ -14,6 +14,7 @@ import type { SendResult } from "@/lib/whatsapp/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { moveLeadToStage } from "@/lib/funnel-move.server";
+import { renderQuickReplyText } from "@/lib/quick-replies";
 
 const MAX_JOBS_PER_SHOP_PER_RUN = 4;
 const DELAY_BETWEEN_SENDS_MS = 6000;
@@ -156,14 +157,24 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
               .eq("id", job.id)
               .maybeSingle();
             phone = jobRow?.phone ?? null;
+            let customerName: string | null = null;
             if (!phone) {
               const { data: customer } = await supabaseAdmin
                 .from("customers")
-                .select("phone")
+                .select("phone, name")
                 .eq("id", job.customer_id)
                 .eq("barbershop_id", inst.barbershop_id)
                 .maybeSingle();
               phone = customer?.phone ?? null;
+              customerName = customer?.name ?? null;
+            } else {
+              const { data: customer } = await supabaseAdmin
+                .from("customers")
+                .select("name")
+                .eq("id", job.customer_id)
+                .eq("barbershop_id", inst.barbershop_id)
+                .maybeSingle();
+              customerName = customer?.name ?? null;
             }
 
             if (!phone) {
@@ -273,7 +284,20 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
                   .filter((a) => a?.type === "text" && a.text?.trim())
                   .map((a) => String(a.text).trim())
               : [];
-            const textsToSend = sequenceTexts.length > 0 ? sequenceTexts : [job.rendered_body];
+            const rawTexts = sequenceTexts.length > 0 ? sequenceTexts : [job.rendered_body];
+            // Substitui {nome}, {primeiro_nome} e {telefone} pelo dado real
+            // do cliente antes de enviar - achado real: essa variável já
+            // existia na configuração (QUICK_REPLY_VARIABLES) mas nunca
+            // era de fato aplicada em nenhum envio, em nenhuma parte do
+            // sistema (só existia pra preview). Pedido do Mariano pra
+            // pós-venda/retorno, corrigido aqui pra valer pra todo envio.
+            const nameForVars = customerName?.trim() || "";
+            const varValues = {
+              nome: nameForVars,
+              primeiro_nome: nameForVars.split(/\s+/)[0] || nameForVars,
+              telefone: phone,
+            };
+            const textsToSend = rawTexts.map((t) => renderQuickReplyText(t, varValues));
 
             result = { ok: true };
             for (let i = 0; i < textsToSend.length; i += 1) {

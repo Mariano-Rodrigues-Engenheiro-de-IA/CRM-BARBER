@@ -24,6 +24,7 @@ import {
   actionLabel,
   QUICK_REPLY_ACTION_TYPES,
   QUICK_REPLY_FUNNEL_TYPES,
+  QUICK_REPLY_VARIABLES,
   type QuickReply,
   type QuickReplyAction,
   type QuickReplyActionType,
@@ -1183,13 +1184,30 @@ export function StepEditor({
                     )}
                   </div>
                   {action.type === "text" ? (
-                    <Textarea
-                      value={action.text ?? ""}
-                      onChange={(e) => updateAction(i, { text: e.target.value })}
-                      rows={2}
-                      placeholder="Escreva esse bloco da mensagem…"
-                      className="mt-2"
-                    />
+                    <>
+                      <Textarea
+                        value={action.text ?? ""}
+                        onChange={(e) => updateAction(i, { text: e.target.value })}
+                        rows={2}
+                        placeholder="Escreva esse bloco da mensagem…"
+                        className="mt-2"
+                      />
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {QUICK_REPLY_VARIABLES.map((v) => (
+                          <button
+                            key={v.key}
+                            type="button"
+                            title={v.label}
+                            onClick={() =>
+                              updateAction(i, { text: `${action.text ?? ""}{${v.key}}` })
+                            }
+                            className="rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[11px] text-neutral-600 hover:bg-neutral-100"
+                          >
+                            {`{${v.key}}`}
+                          </button>
+                        ))}
+                      </div>
+                    </>
                   ) : action.type === "funnel_add" || action.type === "funnel_remove" ? (
                     <div className="mt-2 grid gap-2 sm:grid-cols-2">
                       <select

@@ -605,41 +605,52 @@ function AttendanceSection({ api, funnelId }: { api: Api; funnelId: string }) {
           <p className="text-sm text-neutral-500">Nenhum atendimento nesse período.</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
           {[...groups.entries()].map(([day, items]) => {
             const isOpen = expandedDays.has(day);
             return (
-              <div key={day} className="rounded-xl border border-neutral-200 bg-white">
-                <button
-                  type="button"
-                  onClick={() => toggleDay(day)}
-                  className="flex w-full items-center justify-between rounded-xl px-4 py-2 text-left hover:bg-neutral-50"
-                >
-                  <span className="text-xs font-semibold capitalize text-neutral-600">{day}</span>
-                  <span className="flex items-center gap-2 text-xs text-neutral-400">
-                    {items!.length} {items!.length === 1 ? "atendimento" : "atendimentos"}
-                    <span className={`transition ${isOpen ? "rotate-90" : ""}`}>›</span>
-                  </span>
-                </button>
-                {isOpen && (
-                  <div className="divide-y divide-neutral-100 border-t border-neutral-100">
-                    {items!.map((a) => (
-                      <div key={a.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
-                        <span className="font-medium text-neutral-900">{a.name}</span>
-                        <span className="text-xs text-neutral-500">
-                          {new Date(a.entered_at).toLocaleTimeString("pt-BR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <button
+                key={day}
+                type="button"
+                onClick={() => toggleDay(day)}
+                className={`rounded-xl border p-3 text-left transition ${
+                  isOpen
+                    ? "border-brand bg-brand/5"
+                    : "border-neutral-200 bg-white hover:bg-neutral-50"
+                }`}
+              >
+                <p className="text-xs font-semibold capitalize text-neutral-700">{day}</p>
+                <p className="mt-1 text-[11px] text-neutral-400">
+                  {items!.length} {items!.length === 1 ? "atendimento" : "atendimentos"}
+                </p>
+              </button>
             );
           })}
         </div>
+        {[...groups.entries()]
+          .filter(([day]) => expandedDays.has(day))
+          .map(([day, items]) => (
+            <div key={day} className="mt-2 rounded-xl border border-neutral-200 bg-white">
+              <div className="rounded-t-xl border-b border-neutral-100 bg-neutral-50 px-4 py-2">
+                <span className="text-xs font-semibold capitalize text-neutral-600">{day}</span>
+              </div>
+              <div className="divide-y divide-neutral-100">
+                {items!.map((a) => (
+                  <div key={a.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                    <span className="font-medium text-neutral-900">{a.name}</span>
+                    <span className="text-xs text-neutral-500">
+                      {new Date(a.entered_at).toLocaleTimeString("pt-BR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </>
       )}
     </div>
   );
