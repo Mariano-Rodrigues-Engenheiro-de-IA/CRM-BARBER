@@ -181,7 +181,7 @@ export function AgendaRemindersView({ api }: { api: Api }) {
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="grid gap-2 sm:grid-cols-2">
           {rules.map((rule) => {
             const { value, unit } = minutesToValueUnit(rule.offset_minutes);
             return (

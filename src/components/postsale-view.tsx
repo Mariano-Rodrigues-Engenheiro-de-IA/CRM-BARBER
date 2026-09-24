@@ -9,6 +9,7 @@
 // de disparo, avaliação e limite construída e refinada em Follow-up.
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import type { Funnel } from "@/lib/funnels";
@@ -54,6 +55,7 @@ export function PostsaleView({ api }: { api: Api }) {
   const [saving, setSaving] = useState(false);
   const [preparingIndex, setPreparingIndex] = useState<number | null>(null);
   const [editingStep, setEditingStep] = useState<"postsale" | "return" | null>(null);
+  const [showReport, setShowReport] = useState(false);
 
   async function reloadAll() {
     // Garante o funil especial existe ANTES de qualquer coisa — a
@@ -300,6 +302,9 @@ export function PostsaleView({ api }: { api: Api }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => setShowReport(true)}>
+            Relatório
+          </Button>
           <span className="text-xs text-neutral-500">{active ? "Ativo" : "Pausado"}</span>
           <Switch checked={active} onCheckedChange={(v) => void saveActiveToggle(v)} />
         </div>
@@ -366,7 +371,16 @@ export function PostsaleView({ api }: { api: Api }) {
         />
       )}
 
-      <AttendanceSection api={api} funnelId={funnel.id} />
+      {showReport && (
+        <Dialog open onOpenChange={(v) => !v && setShowReport(false)}>
+          <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Relatório de atendimentos</DialogTitle>
+            </DialogHeader>
+            <AttendanceSection api={api} funnelId={funnel.id} />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

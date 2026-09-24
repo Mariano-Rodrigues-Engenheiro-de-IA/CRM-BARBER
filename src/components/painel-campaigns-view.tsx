@@ -258,7 +258,7 @@ export function CampaignsView({ token, scope }: { token: string; scope?: "assina
                 usuário expande, pra não pesar com polling desnecessário
                 para campanhas que ninguém está olhando no momento. */}
             {expandedId === c.id && (
-              <div className="mt-4 overflow-hidden rounded-lg border border-neutral-200">
+              <div className="mt-4 max-w-md overflow-hidden rounded-lg border border-neutral-200">
                 {expandedLoading && expandedJobs.length === 0 ? (
                   <p className="p-4 text-center text-sm text-neutral-500">Carregando...</p>
                 ) : expandedJobs.length === 0 ? (
