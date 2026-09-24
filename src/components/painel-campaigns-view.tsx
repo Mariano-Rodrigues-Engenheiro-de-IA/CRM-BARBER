@@ -84,12 +84,23 @@ export function CampaignsView({ token, scope }: { token: string; scope?: "assina
 
   useEffect(() => {
     reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const hasRunningCampaign = campaigns.some((c) => c.status === "running");
+  useEffect(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    // Só faz polling da lista enquanto existir pelo menos uma campanha
+    // realmente em andamento — sem isso, ficava consultando o servidor
+    // a cada 4s pra sempre, mesmo com tudo parado/cancelado. Achado real
+    // na varredura de performance do Mariano.
+    if (!hasRunningCampaign) return;
     timerRef.current = setInterval(reload, 4000);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [hasRunningCampaign]);
 
   async function toggleStatus(c: Campaign) {
     const next = c.status === "running" ? "paused" : "running";

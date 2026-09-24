@@ -23,6 +23,7 @@ import { applyFunnelActions, canOpenWhatsapp, openWhatsappChat } from "@/lib/wa-
 import { ensureDefaultFunnels, syncLabelFunnel } from "@/lib/label-funnel-sync";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { sendableActions, type QuickReply } from "@/lib/quick-replies";
+import { getWaData } from "@/lib/wa-data-cache";
 import {
   IconWhatsapp,
   IconNote,
@@ -165,10 +166,17 @@ export function FunnelsView({
   const draggedStageId = useRef<string | null>(null);
   const pendingContacts = useRef<Set<string>>(new Set());
 
+// wa/data busca até 3000 contatos do WhatsApp - pesado. Antes, reload()
+// buscava funis + wa/data juntos toda vez, e a inicialização podia chamar
+// reload() até 3 vezes em sequência (ensureDefaultFunnels/syncLabelFunnel),
+// repetindo essa busca pesada 3 vezes seguidas só pra abrir a tela. Agora
+// usa o cache compartilhado (getWaData) - achado real na varredura de
+// performance do Mariano.
+
   async function reload() {
-    const [f, w] = await Promise.all([
+    const [f, waData] = await Promise.all([
       api("/api/public/extension/funnels?include_attendance=1"),
-      api("/api/public/extension/wa/data"),
+      getWaData(api),
     ]);
     let list: Funnel[] = funnelsCache?.funnels ?? [];
     if (f?.ok) {
@@ -178,14 +186,10 @@ export function FunnelsView({
     } else {
       setErr((f?.error as string) || "Erro ao carregar funis");
     }
-    let ls = funnelsCache?.labels ?? [];
-    let cs = funnelsCache?.contacts ?? [];
-    if (w?.ok) {
-      ls = (w.labels as WaLabel[]) || [];
-      cs = (w.contacts as WaContact[]) || [];
-      setLabels(ls);
-      setContacts(cs);
-    }
+    const ls = waData.labels;
+    const cs = waData.contacts;
+    setLabels(ls);
+    setContacts(cs);
     funnelsCache = { funnels: list, labels: ls, contacts: cs };
     setLoading(false);
     return { list, labels: ls, contacts: cs };

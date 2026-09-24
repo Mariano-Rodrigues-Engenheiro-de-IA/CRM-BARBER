@@ -20,6 +20,7 @@ import { TemplatePreview } from "@/components/whatsapp-template-preview";
 import type { AudienceContact, AudienceSource, DispatchCustomer } from "@/lib/dispatch-audience";
 export type { DispatchCustomer } from "@/lib/dispatch-audience";
 import { ensureFreshLabelFunnels } from "@/lib/label-funnel-sync";
+import { getWaData } from "@/lib/wa-data-cache";
 
 type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
 
@@ -200,10 +201,10 @@ export function DispatchCenter({
 
   useEffect(() => {
     void (async () => {
-      const [f, q, w, t, st, camp] = await Promise.all([
+      const [f, q, waData, t, st, camp] = await Promise.all([
         api("/api/public/extension/funnels"),
         api("/api/public/extension/quick-replies"),
-        api("/api/public/extension/wa/data"),
+        getWaData(api),
         api("/api/public/extension/whatsapp/templates"),
         api("/api/public/extension/whatsapp/status"),
         api("/api/public/extension/campaigns/catalog"),
@@ -216,19 +217,17 @@ export function DispatchCenter({
         const all = (camp.saved as SavedCampaign[]) || [];
         setSavedCampaigns(all.filter((c) => c.status === "approved"));
       }
-      if (w?.ok) {
-        setLabels((w.labels as WaLabel[]) || []);
-        setContacts((w.contacts as WaContact[]) || []);
-      }
+      setLabels(waData.labels);
+      setContacts(waData.contacts);
       // Garante que "Listas" existe e está em dia com as etiquetas reais
       // do WhatsApp — antes só rodava se o usuário tivesse passado pela
       // aba Funis naquela sessão; indo direto pro Disparo, via dados
       // desatualizados (bug real reportado pelo usuário).
-      if (f?.ok && w?.ok) {
+      if (f?.ok) {
         const freshFunnels = await ensureFreshLabelFunnels(
           api,
           (f.funnels as Funnel[]) || [],
-          (w.labels as WaLabel[]) || [],
+          waData.labels,
           async () => {
             const r = await api("/api/public/extension/funnels");
             return r?.ok ? (r.funnels as Funnel[]) || [] : [];
