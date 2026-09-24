@@ -197,12 +197,14 @@ export async function getBillingStatus(
       status: activeAi?.status ?? null,
       current_period_end: activeAi?.current_period_end ?? null,
     },
-    // Conta admin (cortesia) tambem libera o Agente de IA, igual libera
-    // o resto - achado real: is_admin dava cortesia em quase tudo, mas
-    // esse campo especifico so olhava o valor cru do banco (setado pelo
-    // webhook de pagamento pra quem assina R$197/297), deixando a conta
-    // admin do Mariano vendo "Comprar Premium" mesmo sendo admin.
-    ai_access_enabled: courtesy || Boolean(shopRes.data?.ai_access_enabled),
+    // ai_access_enabled reflete se um tenant de IA de verdade foi
+    // vinculado (webhook de pagamento R$197/297, ou vinculacao manual) -
+    // NAO deve incluir cortesia de admin aqui. Achado real: misturar
+    // is_admin nesse campo fazia a tela pular direto pra "seu Agente
+    // esta pronto" mesmo sem nenhum tenant vinculado de verdade - o
+    // bypass de admin pro Agente de IA e tratado a parte, no proprio
+    // componente da tela (agente-ia-view.tsx), usando is_admin puro.
+    ai_access_enabled: Boolean(shopRes.data?.ai_access_enabled),
     // Ranking bloqueado por completo no grátis, igual a IA - pedido do
     // Mariano.
     ranking_enabled: premium,
