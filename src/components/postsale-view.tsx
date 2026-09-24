@@ -294,23 +294,14 @@ export function PostsaleView({ api }: { api: Api }) {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-semibold text-neutral-900">Pós-venda / Retorno</h3>
-          <p className="text-xs text-neutral-500">
-            {active ? "Ativo" : "Pausado"} · dispara pra quem for marcado com atendimento
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => setShowReport(true)}>
-            Relatório
-          </Button>
-          <span className="text-xs text-neutral-500">{active ? "Ativo" : "Pausado"}</span>
-          <Switch checked={active} onCheckedChange={(v) => void saveActiveToggle(v)} />
-        </div>
+      <div className="flex items-center justify-end gap-2">
+        <Button size="sm" variant="outline" onClick={() => setShowReport(true)}>
+          Relatório
+        </Button>
+        <Switch checked={active} onCheckedChange={(v) => void saveActiveToggle(v)} />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="max-w-md space-y-3">
         <button
           onClick={() => setEditingStep("postsale")}
           className="flex flex-col gap-1.5 rounded-xl border border-neutral-200 bg-white p-4 text-left shadow-sm transition hover:border-brand/40"

@@ -166,7 +166,7 @@ export function AgendaRemindersView({ api }: { api: Api }) {
   return (
     <div className="space-y-4">
       {dialog}
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-start">
         <Button onClick={() => setEditing("new")} className="gap-1.5">
           <Plus className="h-4 w-4" /> Nova regra
         </Button>
@@ -181,7 +181,7 @@ export function AgendaRemindersView({ api }: { api: Api }) {
           </p>
         </div>
       ) : (
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="space-y-2">
           {rules.map((rule) => {
             const { value, unit } = minutesToValueUnit(rule.offset_minutes);
             return (
