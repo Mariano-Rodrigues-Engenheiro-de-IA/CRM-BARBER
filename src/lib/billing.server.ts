@@ -197,7 +197,12 @@ export async function getBillingStatus(
       status: activeAi?.status ?? null,
       current_period_end: activeAi?.current_period_end ?? null,
     },
-    ai_access_enabled: Boolean(shopRes.data?.ai_access_enabled),
+    // Conta admin (cortesia) tambem libera o Agente de IA, igual libera
+    // o resto - achado real: is_admin dava cortesia em quase tudo, mas
+    // esse campo especifico so olhava o valor cru do banco (setado pelo
+    // webhook de pagamento pra quem assina R$197/297), deixando a conta
+    // admin do Mariano vendo "Comprar Premium" mesmo sendo admin.
+    ai_access_enabled: courtesy || Boolean(shopRes.data?.ai_access_enabled),
     // Ranking bloqueado por completo no grátis, igual a IA - pedido do
     // Mariano.
     ranking_enabled: premium,
