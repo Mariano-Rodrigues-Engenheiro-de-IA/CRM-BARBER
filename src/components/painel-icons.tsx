@@ -346,3 +346,108 @@ export function IconScissors() {
     </svg>
   );
 }
+
+export function IconProfile() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="3" y="3.5" width="18" height="17" rx="3.2" />
+      <circle cx="12" cy="10" r="3" />
+      <path d="M6.5 17.2c.9-2.3 3-3.7 5.5-3.7s4.6 1.4 5.5 3.7" />
+    </svg>
+  );
+}
+
+export function IconDeal() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="2" y="6" width="20" height="12" rx="2.5" />
+      <circle cx="12" cy="12" r="2.6" />
+      <path d="M6 9v.01M18 15v.01" />
+    </svg>
+  );
+}
+
+export function IconTrashMini() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+    </svg>
+  );
+}
+
+export function IconPencilMini() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M17 3a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
+/** Ícone de etiqueta (formato de bandeirinha inclinada), colorido com a cor
+ * real da etiqueta do WhatsApp. Mostra o nome só no hover (title), sem
+ * poluir o card com texto fixo. */
+export function IconTag({ color, title }: { color: string | null; title: string }) {
+  return (
+    <span
+      title={title}
+      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-xl border border-neutral-300 bg-white"
+    >
+      {color ? (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill={color}>
+          <path d="M20.59 13.41 12 22l-9-9V4a1 1 0 0 1 1-1h9l9 9a2 2 0 0 1 0 2.82Z" />
+          <circle cx="6.5" cy="6.5" r="1.5" fill="white" />
+        </svg>
+      ) : (
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#d4d4d4"
+          strokeWidth="1.5"
+        >
+          <path d="M20.59 13.41 12 22l-9-9V4a1 1 0 0 1 1-1h9l9 9a2 2 0 0 1 0 2.82Z" />
+          <circle cx="6.5" cy="6.5" r="1.5" />
+        </svg>
+      )}
+    </span>
+  );
+}

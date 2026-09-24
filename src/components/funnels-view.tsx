@@ -23,6 +23,17 @@ import { applyFunnelActions, canOpenWhatsapp, openWhatsappChat } from "@/lib/wa-
 import { ensureDefaultFunnels, syncLabelFunnel } from "@/lib/label-funnel-sync";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { sendableActions, type QuickReply } from "@/lib/quick-replies";
+import {
+  IconWhatsapp,
+  IconNote,
+  IconClock,
+  IconScissors,
+  IconProfile,
+  IconDeal,
+  IconTrashMini,
+  IconPencilMini,
+  IconTag,
+} from "@/components/painel-icons";
 
 type ApiFn = (path: string, opts?: RequestInit) => Promise<Record<string, unknown>>;
 
@@ -1580,163 +1591,6 @@ function CardAction({
     >
       {children}
     </button>
-  );
-}
-
-const IconWhatsapp = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-    <path d="M12 2C6.5 2 2 6.4 2 11.8c0 1.9.5 3.7 1.5 5.3L2 22l5.1-1.4c1.5.8 3.2 1.3 4.9 1.3 5.5 0 10-4.4 10-9.9C22 6.4 17.5 2 12 2Zm5.6 14c-.2.7-1.4 1.3-2 1.4-.5.1-1.2.1-1.9-.1-.4-.1-1-.3-1.7-.6-3-1.3-4.9-4.3-5.1-4.5-.1-.2-1.2-1.6-1.2-3.1s.8-2.2 1.1-2.5c.3-.3.6-.4.8-.4h.6c.2 0 .5 0 .7.6l1 2.3c.1.2.1.4 0 .6l-.5.6-.4.5c-.1.2-.3.4-.1.7.2.3.9 1.4 1.9 2.3 1.3 1.2 2.4 1.5 2.7 1.7.3.2.5.1.7-.1l.9-1c.2-.3.4-.2.7-.1l2.1 1c.3.1.6.2.6.4.1.2.1.9-.1 1.6Z" />
-  </svg>
-);
-const IconNote = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <rect x="5" y="4" width="14" height="17" rx="2" />
-    <path d="M9 4V3.3A1.3 1.3 0 0 1 10.3 2h3.4A1.3 1.3 0 0 1 15 3.3V4" />
-    <path d="m10 17 6.2-6.2a1.15 1.15 0 0 0-1.6-1.6L8.4 15.4l-.5 2.1z" />
-  </svg>
-);
-const IconClock = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <path d="M3 9.5h11" />
-    <path d="M14.5 4.5H5.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2H10" />
-    <path d="M8 3v3M12 3v3" />
-    <circle cx="16.5" cy="15.5" r="5" />
-    <path d="M16.5 13v2.5l1.7 1" />
-  </svg>
-);
-const IconScissors = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <circle cx="6" cy="6" r="3" />
-    <circle cx="6" cy="18" r="3" />
-    <path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12" />
-  </svg>
-);
-const IconProfile = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <rect x="3" y="3.5" width="18" height="17" rx="3.2" />
-    <circle cx="12" cy="10" r="3" />
-    <path d="M6.5 17.2c.9-2.3 3-3.7 5.5-3.7s4.6 1.4 5.5 3.7" />
-  </svg>
-);
-const IconDeal = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <rect x="2" y="6" width="20" height="12" rx="2.5" />
-    <circle cx="12" cy="12" r="2.6" />
-    <path d="M6 9v.01M18 15v.01" />
-  </svg>
-);
-const IconTrashMini = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.9"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <path d="M3 6h18" />
-    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-  </svg>
-);
-const IconPencilMini = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.9"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <path d="M17 3a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-  </svg>
-);
-
-/** Ícone de etiqueta (formato de bandeirinha inclinada), colorido com a cor
- * real da etiqueta do WhatsApp. Mostra o nome só no hover (title), sem
- * poluir o card com texto fixo. */
-function IconTag({ color, title }: { color: string | null; title: string }) {
-  return (
-    <span
-      title={title}
-      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-xl border border-neutral-300 bg-white"
-    >
-      {color ? (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill={color} aria-hidden>
-          <path d="M20.59 13.41 12 22l-9-9V4a1 1 0 0 1 1-1h9l9 9a2 2 0 0 1 0 2.82Z" />
-          <circle cx="6.5" cy="6.5" r="1.5" fill="white" />
-        </svg>
-      ) : (
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="#d4d4d4"
-          strokeWidth="1.5"
-          aria-hidden
-        >
-          <path d="M20.59 13.41 12 22l-9-9V4a1 1 0 0 1 1-1h9l9 9a2 2 0 0 1 0 2.82Z" />
-          <circle cx="6.5" cy="6.5" r="1.5" />
-        </svg>
-      )}
-    </span>
   );
 }
 
