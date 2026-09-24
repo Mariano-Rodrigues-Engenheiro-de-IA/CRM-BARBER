@@ -8,7 +8,8 @@ import { toast } from "sonner";
 import { type FunnelCard } from "@/lib/funnels";
 import { canOpenWhatsapp, openWhatsappChat } from "@/lib/wa-actions";
 import { IconDeal, IconPencilMini, IconTrashMini, IconWhatsapp } from "@/components/painel-icons";
-import { type ApiFn, Overlay, inputCls } from "@/components/funnels-view";
+import { type ApiFn, inputCls } from "@/components/funnels-view";
+import { Overlay } from "@/components/funnels-helpers";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
