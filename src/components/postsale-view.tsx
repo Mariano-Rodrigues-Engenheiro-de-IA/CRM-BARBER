@@ -41,17 +41,28 @@ type PostsaleRule = {
 // performance do Mariano (aba "carregando" toda vez que abria, agravado
 // aqui por uma chamada extra bloqueante de "garantir que o funil existe"
 // rodando antes de toda visita, não só a primeira).
-let postsaleCache: Funnel | null | undefined;
+let postsaleCache: {
+  funnel: Funnel | null;
+  active: boolean;
+  postSaleStep: StepUI;
+  returnStep: StepUI;
+} | undefined;
 
 export function PostsaleView({ api }: { api: Api }) {
-  const [funnel, setFunnel] = useState<Funnel | null | undefined>(postsaleCache); // undefined = carregando
+  const [funnel, setFunnel] = useState<Funnel | null | undefined>(
+    postsaleCache ? postsaleCache.funnel : undefined,
+  ); // undefined = carregando
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
   const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
   const [savedCampaigns, setSavedCampaigns] = useState<SavedCampaign[]>([]);
   const [isMetaProvider, setIsMetaProvider] = useState(false);
-  const [active, setActive] = useState(true);
-  const [postSaleStep, setPostSaleStep] = useState<StepUI>(stepUIFromContent());
-  const [returnStep, setReturnStep] = useState<StepUI>(stepUIFromContent());
+  const [active, setActive] = useState(postsaleCache?.active ?? true);
+  const [postSaleStep, setPostSaleStep] = useState<StepUI>(
+    postsaleCache?.postSaleStep ?? stepUIFromContent(),
+  );
+  const [returnStep, setReturnStep] = useState<StepUI>(
+    postsaleCache?.returnStep ?? stepUIFromContent(),
+  );
   const [saving, setSaving] = useState(false);
   const [preparingIndex, setPreparingIndex] = useState<number | null>(null);
   const [editingStep, setEditingStep] = useState<"postsale" | "return" | null>(null);
@@ -76,7 +87,6 @@ export function PostsaleView({ api }: { api: Api }) {
       ? ((f.funnels as Funnel[]) || []).find((fn) => fn.mode === "postsale") || null
       : null;
     setFunnel(postsaleFunnel);
-    postsaleCache = postsaleFunnel;
 
     if (t?.ok) {
       setTemplates(
@@ -113,9 +123,18 @@ export function PostsaleView({ api }: { api: Api }) {
         `/api/public/extension/funnel-followup-rules?funnel_id=${postsaleFunnel.id}`,
       );
       const found = r?.ok ? ((r.rules as PostsaleRule[]) || [])[0] || null : null;
-      setActive(found?.active ?? true);
-      setPostSaleStep(stepUIFromContent(found?.steps[0]));
-      setReturnStep(stepUIFromContent(found?.steps[1]));
+      const nextActive = found?.active ?? true;
+      const nextPostSaleStep = stepUIFromContent(found?.steps[0]);
+      const nextReturnStep = stepUIFromContent(found?.steps[1]);
+      setActive(nextActive);
+      setPostSaleStep(nextPostSaleStep);
+      setReturnStep(nextReturnStep);
+      postsaleCache = {
+        funnel: postsaleFunnel,
+        active: nextActive,
+        postSaleStep: nextPostSaleStep,
+        returnStep: nextReturnStep,
+      };
     }
   }
 
@@ -294,23 +313,24 @@ export function PostsaleView({ api }: { api: Api }) {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex items-center justify-start gap-2">
         <Button size="sm" variant="outline" onClick={() => setShowReport(true)}>
           Relatório
         </Button>
         <Switch checked={active} onCheckedChange={(v) => void saveActiveToggle(v)} />
+        <span className="text-xs text-neutral-500">{active ? "Ativo" : "Pausado"}</span>
       </div>
 
       <div className="max-w-md space-y-3">
         <button
           onClick={() => setEditingStep("postsale")}
-          className="flex flex-col gap-1.5 rounded-xl border border-neutral-200 bg-white p-4 text-left shadow-sm transition hover:border-brand/40"
+          className="flex w-full min-w-0 flex-col gap-1.5 overflow-hidden rounded-xl border border-neutral-200 bg-white p-4 text-left shadow-sm transition hover:border-brand/40"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-neutral-400">
               Pós-venda
             </span>
-            <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-600">
+            <span className="shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-600">
               {postSaleSummary.time}
             </span>
           </div>
@@ -320,13 +340,13 @@ export function PostsaleView({ api }: { api: Api }) {
 
         <button
           onClick={() => setEditingStep("return")}
-          className="flex flex-col gap-1.5 rounded-xl border border-neutral-200 bg-white p-4 text-left shadow-sm transition hover:border-brand/40"
+          className="flex w-full min-w-0 flex-col gap-1.5 overflow-hidden rounded-xl border border-neutral-200 bg-white p-4 text-left shadow-sm transition hover:border-brand/40"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-neutral-400">
               Retorno
             </span>
-            <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-600">
+            <span className="shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-600">
               {returnSummary.time}
             </span>
           </div>

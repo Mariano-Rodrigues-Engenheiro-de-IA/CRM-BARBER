@@ -270,7 +270,7 @@ export function CampaignsMarketplaceView({
             Você ainda não adotou nenhuma campanha do calendário acima.
           </p>
         ) : (
-          <div className="max-w-md space-y-2">
+          <div className="max-w-xl space-y-2">
             {saved.map((s) => {
               const st = STATUS_LABEL[s.status];
               return (

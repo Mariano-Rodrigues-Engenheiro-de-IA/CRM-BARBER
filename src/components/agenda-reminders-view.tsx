@@ -181,7 +181,7 @@ export function AgendaRemindersView({ api }: { api: Api }) {
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="max-w-md space-y-2">
           {rules.map((rule) => {
             const { value, unit } = minutesToValueUnit(rule.offset_minutes);
             return (
