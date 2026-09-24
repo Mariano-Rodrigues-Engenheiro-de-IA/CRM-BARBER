@@ -505,7 +505,7 @@ export function DispatchCenter({
   }
 
   return (
-    <div className={"mx-auto w-full " + (step === 1 || step === 2 ? "max-w-3xl" : "max-w-xl")}>
+    <div className={"mx-auto w-full " + (step === 1 || step === 2 ? "max-w-5xl" : "max-w-xl")}>
       {step === 1 ? (
         <div className="space-y-5 rounded-xl border border-neutral-300 bg-white p-6 shadow-sm">
           <AudienceStep
