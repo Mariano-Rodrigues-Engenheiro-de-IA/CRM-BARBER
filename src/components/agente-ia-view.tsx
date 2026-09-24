@@ -275,7 +275,7 @@ function FreeAiAccess({ api, onboardingCompleted }: { api: Api; onboardingComple
       <button
         onClick={handleAccess}
         disabled={loading}
-        className="block w-full rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
+        className="rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
       >
         {loading ? "Abrindo..." : onboardingCompleted ? "Acessar minha IA" : "Continuar configuração"}
       </button>
@@ -414,7 +414,7 @@ function AiAccessGranted({ api }: { api: Api }) {
       <button
         onClick={handleAccess}
         disabled={loading}
-        className="block rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50 mx-auto"
+        className="rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
       >
         {loading ? "Abrindo..." : "Acessar minha IA"}
       </button>
