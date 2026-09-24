@@ -214,12 +214,12 @@ export function FollowupView({ api }: { api: Api }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-start gap-2">
+        <Button variant="outline" size="sm" onClick={() => setShowReport(true)} className="gap-1.5">
+          <FileText className="h-3.5 w-3.5" /> Relatório
+        </Button>
         <Button size="sm" onClick={() => setEditingRuleId("new")} className="gap-1.5">
           <Plus className="h-3.5 w-3.5" /> Novo follow-up
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => setShowReport(true)} className="gap-1.5">
-          <FileText className="h-3.5 w-3.5" /> Relatório completo
         </Button>
       </div>
 
@@ -232,7 +232,7 @@ export function FollowupView({ api }: { api: Api }) {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="max-w-md space-y-3">
           {rules.map((rule) => {
             const { funnelName, stageName, isList } = labelFor(rule.funnel_id, rule.stage_id);
             return (
@@ -310,11 +310,18 @@ function FollowupReportModal({ api, onClose }: { api: Api; onClose: () => void }
     stage_name: string;
     sent_at: string;
   }> | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     api("/api/public/extension/funnel-followup-report").then((r) => {
-      if (r?.ok) setEntries((r.entries as typeof entries) || []);
-      else setEntries([]);
+      if (r?.ok) {
+        setEntries((r.entries as typeof entries) || []);
+      } else {
+        // Achado real: antes um erro aqui virava silenciosamente "nenhuma
+        // mensagem enviada" pro usuário, escondendo o problema de verdade.
+        setError((r?.error as string) || "Não consegui carregar o relatório.");
+        setEntries([]);
+      }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -345,6 +352,8 @@ function FollowupReportModal({ api, onClose }: { api: Api; onClose: () => void }
         <div className="max-h-[70vh] overflow-y-auto">
           {entries === null ? (
             <p className="p-5 text-sm text-neutral-500">Carregando…</p>
+          ) : error ? (
+            <p className="p-5 text-sm text-red-600">{error}</p>
           ) : entries.length === 0 ? (
             <p className="p-5 text-sm text-neutral-500">
               Nenhuma mensagem de follow-up enviada ainda.
