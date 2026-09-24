@@ -34,8 +34,16 @@ type PostsaleRule = {
   steps: FollowupContent[];
 };
 
+// Cache entre navegações: voltar pra Pós-venda depois de já ter visitado
+// não mostra mais a tela de carregamento do zero - mostra o funil já
+// buscado antes na hora, e atualiza por trás. Achado real na varredura de
+// performance do Mariano (aba "carregando" toda vez que abria, agravado
+// aqui por uma chamada extra bloqueante de "garantir que o funil existe"
+// rodando antes de toda visita, não só a primeira).
+let postsaleCache: Funnel | null | undefined;
+
 export function PostsaleView({ api }: { api: Api }) {
-  const [funnel, setFunnel] = useState<Funnel | null | undefined>(undefined); // undefined = carregando
+  const [funnel, setFunnel] = useState<Funnel | null | undefined>(postsaleCache); // undefined = carregando
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
   const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
   const [savedCampaigns, setSavedCampaigns] = useState<SavedCampaign[]>([]);
@@ -66,6 +74,7 @@ export function PostsaleView({ api }: { api: Api }) {
       ? ((f.funnels as Funnel[]) || []).find((fn) => fn.mode === "postsale") || null
       : null;
     setFunnel(postsaleFunnel);
+    postsaleCache = postsaleFunnel;
 
     if (t?.ok) {
       setTemplates(

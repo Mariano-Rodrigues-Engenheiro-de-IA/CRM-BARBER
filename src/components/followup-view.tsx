@@ -86,9 +86,16 @@ export function valueUnitToMinutes(value: number, unit: "minutos" | "horas" | "d
   return value;
 }
 
+// Cache entre navegações: voltar pra Follow-up depois de já ter visitado
+// não mostra mais a tela de carregamento do zero - mostra o que já foi
+// buscado antes na hora, e atualiza por trás. Achado real na varredura de
+// performance do Mariano (aba "carregando" toda vez que abria, diferente
+// de Agenda/Clientes/Kanban, que já usam esse mesmo padrão).
+let followupCache: { funnels: Funnel[]; rules: FollowupRule[] } | null = null;
+
 export function FollowupView({ api }: { api: Api }) {
-  const [funnels, setFunnels] = useState<Funnel[] | null>(null);
-  const [rules, setRules] = useState<FollowupRule[]>([]);
+  const [funnels, setFunnels] = useState<Funnel[] | null>(followupCache?.funnels ?? null);
+  const [rules, setRules] = useState<FollowupRule[]>(followupCache?.rules ?? []);
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
   const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
   const [savedCampaigns, setSavedCampaigns] = useState<SavedCampaign[]>([]);
@@ -110,19 +117,22 @@ export function FollowupView({ api }: { api: Api }) {
       api("/api/public/extension/funnel-followup-rules"),
     ]);
     const allFunnels = f?.ok ? (f.funnels as Funnel[]) || [] : [];
-    setFunnels(allFunnels.filter((fn) => fn.mode !== "postsale"));
+    const filteredFunnels = allFunnels.filter((fn) => fn.mode !== "postsale");
+    setFunnels(filteredFunnels);
     // A regra de Pós-venda/Retorno usa a mesma engrenagem por baixo,
-    // mas tem tela própria — não deve aparecer aqui, pedido explícito
+    // mas tem tela própria, não deve aparecer aqui, pedido explícito
     // do usuário pra não "poluir" a aba genérica de Follow-up.
     const postsaleFunnelIds = new Set(
       allFunnels.filter((fn) => fn.mode === "postsale").map((fn) => fn.id),
     );
-    if (r?.ok)
-      setRules(
-        ((r.rules as FollowupRule[]) || []).filter(
-          (rule) => !postsaleFunnelIds.has(rule.funnel_id),
-        ),
+    let filteredRules = followupCache?.rules ?? [];
+    if (r?.ok) {
+      filteredRules = ((r.rules as FollowupRule[]) || []).filter(
+        (rule) => !postsaleFunnelIds.has(rule.funnel_id),
       );
+      setRules(filteredRules);
+    }
+    followupCache = { funnels: filteredFunnels, rules: filteredRules };
   }
 
   useEffect(() => {
