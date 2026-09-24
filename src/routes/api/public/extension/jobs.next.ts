@@ -33,7 +33,7 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
         // usuário perceber, e nesse caso o envio nunca sairia.
         const { data: srvInstance } = await supabaseAdmin
           .from("whatsapp_instances")
-          .select("status, provider")
+          .select("status")
           .eq("barbershop_id", auth.token.barbershop_id)
           .maybeSingle();
         const serverConnected = !!(srvInstance && srvInstance.status === "connected");
@@ -86,17 +86,14 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
           .eq("barbershop_id", auth.token.barbershop_id)
           .eq("status", "pending")
           .lte("scheduled_for", nowIso);
-        // Com conexão oficial ativa, o servidor cuida do resto — a
+        // Com conexão oficial ativa, o servidor cuida do resto - a
         // extensão só pega os marcados force_extension aqui.
         if (serverConnected) {
           pickQ = pickQ.eq("force_extension", true);
         } else {
-          // Sem conexão real (nenhum provedor), pós-venda e retorno NUNCA
-          // caem pra extensão como reserva - decisão final do Mariano:
-          // sem conexão de verdade, essas mensagens simplesmente não
-          // saem, ponto. O fallback da extensão continua existindo pra
-          // disparo normal via UAZAPI (comportamento antigo, intencional,
-          // não mexido aqui) - só pós-venda/retorno fica de fora dele.
+          // Sem conexão real, pós-venda/retorno nunca cai pra extensão
+          // como reserva - exige conexão de verdade, sempre. Disparo
+          // normal continua caindo pra extensão via UAZAPI normalmente.
           pickQ = pickQ.is("funnel_followup_step_id", null);
         }
         if (blockedIds.length > 0) {

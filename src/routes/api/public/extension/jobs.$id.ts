@@ -42,13 +42,9 @@ export const Route = createFileRoute("/api/public/extension/jobs/$id")({
         // Esse endpoint existe pro modo UAZAPI (extensão manda pelo WhatsApp
         // Web do próprio navegador e reporta o resultado de volta) - não
         // verifica entrega de verdade, só confia no relato. Pós-venda e
-        // retorno NUNCA podem ser reportados como "sent" por aqui,
-        // independente do provedor - decisão final do Mariano: sem
-        // conexão real, essas mensagens simplesmente não saem, ponto. Só
-        // o dispatch-jobs.ts (que confere de verdade com a API oficial)
-        // pode marcar pós-venda/retorno como enviado. Disparo normal via
-        // UAZAPI continua podendo reportar por aqui (comportamento
-        // antigo, intencional, não mexido).
+        // retorno nunca podem ser reportados como "sent" por aqui - exigem
+        // conexão real, sempre. Só o dispatch-jobs.ts (que confere de
+        // verdade com a API) pode marcar pós-venda/retorno como enviado.
         if (parsed.data.status === "sent") {
           const { data: job } = await supabaseAdmin
             .from("message_jobs")

@@ -241,17 +241,6 @@ export function ConnectionView({ api, businessType }: { api: Api; businessType?:
     return () => window.removeEventListener("message", onMessage);
   }, []);
 
-  // Integração Zero (hosted embedded signup): link pronto da Meta, sem
-  // depender do SDK JS (FB.login) que só funcionava com a conta dona do
-  // app. https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/hosted-es
-  function openHostedSignup() {
-    window.open(
-      "https://business.facebook.com/messaging/whatsapp/onboard/?app_id=1608564974165087&config_id=1285199543658482",
-      "_blank",
-      "noopener,noreferrer",
-    );
-  }
-
   async function connect() {
     actionRef.current = "connect";
 
@@ -425,16 +414,8 @@ export function ConnectionView({ api, businessType }: { api: Api; businessType?:
       actionRef.current = null;
       operationSeqRef.current += 1;
       setBusy(false);
-      // Trocar o modo sozinho não conecta nada — dispara a ação de conectar
+      // Trocar o modo sozinho não conecta nada, dispara a ação de conectar
       // correspondente na sequência, pra ficar tudo em um clique só.
-      // Meta: usa connect() (fluxo SDK/FB.login, com featureType pra
-      // habilitar a opção de coexistência) em vez de openHostedSignup()
-      // (link estático hospedado pela própria Meta, que parou de
-      // oferecer a opção de conectar WhatsApp Business existente) -
-      // confirmado pelo Mariano que o SDK já funciona normalmente pra
-      // conectar números diferentes hoje (a ressalva antiga de Standard
-      // vs Advanced Access, registrada num comentário anterior, não se
-      // aplica mais).
       void connect();
       return;
     } else {

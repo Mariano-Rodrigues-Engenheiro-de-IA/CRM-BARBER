@@ -68,12 +68,10 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
           .lte("expires_at", nowIso);
 
 
-        // Instâncias conectadas - pós-venda e retorno voltaram a exigir
-        // conexão real, igual disparo normal (sem fallback), pedido final
-        // do Mariano depois de reconsiderar os riscos.
+        // Só barbearias com instância conectada de verdade.
         const { data: instances } = await supabaseAdmin
           .from("whatsapp_instances")
-          .select("barbershop_id, provider, instance_token, phone_number_id, meta_access_token, status")
+          .select("barbershop_id, provider, instance_token, phone_number_id, meta_access_token")
           .eq("status", "connected");
 
         if (!instances || instances.length === 0) {

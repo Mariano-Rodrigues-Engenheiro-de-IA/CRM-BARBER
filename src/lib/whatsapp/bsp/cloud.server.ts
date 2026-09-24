@@ -407,17 +407,12 @@ export const cloudAdapter: BspAdapter = {
     }
     const json = (await res.json().catch(() => ({}))) as Json;
     const phone = str(json.display_phone_number);
-    // Buscar os metadados básicos (nome, telefone) com sucesso NÃO prova
+    // Buscar os metadados básicos (nome, telefone) com sucesso não prova
     // que o número está de fato registrado pra enviar mensagens - um
-    // número que passou por uma tentativa de Cadastro Incorporado que
-    // falhou no meio do caminho (ex: erro de coexistência) ainda responde
-    // aqui normalmente, mesmo sem estar pronto pra enviar. platform_type
-    // só vem preenchido quando o registro pra Cloud API realmente
-    // completou - é o campo que a própria documentação da Meta recomenda
-    // pra confirmar isso (ver "Check onboarding status" na doc de
-    // Coexistence). Achado real: mensagem de pós-venda saindo com a
-    // barbearia "desconectada" no painel, porque esse endpoint marcava
-    // como connected de volta no banco só com base no metadado básico.
+    // número com Cadastro Incorporado incompleto ainda responde aqui
+    // normalmente. platform_type só vem preenchido quando o registro pra
+    // Cloud API realmente completou (ver "Check onboarding status" na
+    // documentação de Coexistence da Meta).
     if (!str(json.platform_type)) {
       return { status: "connecting", error: "Número ainda não concluiu o registro na API oficial (platform_type ausente)." };
     }
