@@ -37,16 +37,6 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
           .eq("barbershop_id", auth.token.barbershop_id)
           .maybeSingle();
         const serverConnected = !!(srvInstance && srvInstance.status === "connected");
-        // Barbearia no provedor Meta NUNCA deve cair pra extensão como
-        // "reserva" quando desconectada, mesmo pós-venda/retorno - decisão
-        // final do Mariano depois de reconsiderar os riscos do fallback
-        // (mensagem depender do computador ligado e Chrome aberto). Sem
-        // conexão real, pós-venda/retorno simplesmente não sai, igual
-        // disparo normal.
-        const isMetaShop = srvInstance?.provider === "meta";
-        if (isMetaShop) {
-          return jsonResponse(request, { ok: true, job: null });
-        }
 
         const nowIso = new Date().toISOString();
         const staleClaimIso = new Date(Date.now() - 6 * 60 * 1000).toISOString();
@@ -100,6 +90,14 @@ export const Route = createFileRoute("/api/public/extension/jobs/next")({
         // extensão só pega os marcados force_extension aqui.
         if (serverConnected) {
           pickQ = pickQ.eq("force_extension", true);
+        } else {
+          // Sem conexão real (nenhum provedor), pós-venda e retorno NUNCA
+          // caem pra extensão como reserva - decisão final do Mariano:
+          // sem conexão de verdade, essas mensagens simplesmente não
+          // saem, ponto. O fallback da extensão continua existindo pra
+          // disparo normal via UAZAPI (comportamento antigo, intencional,
+          // não mexido aqui) - só pós-venda/retorno fica de fora dele.
+          pickQ = pickQ.is("funnel_followup_step_id", null);
         }
         if (blockedIds.length > 0) {
           pickQ = pickQ.not("campaign_id", "in", `(${blockedIds.join(",")})`);
