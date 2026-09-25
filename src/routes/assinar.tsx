@@ -107,17 +107,19 @@ function Assinar() {
             className="mt-8 max-w-md space-y-4 rounded-2xl border p-6"
             onSubmit={(e) => {
               e.preventDefault();
+              // Achado real: o fix anterior só contava dígitos DEPOIS de
+              // tirar tudo que não é número - só isso não bastava, porque
+              // "11999990a00" tem 11 dígitos válidos escondidos ali (a
+              // letra "a" que sobra some no replace), passando pela
+              // checagem mesmo tendo letra misturada de verdade. Agora
+              // primeiro rejeita QUALQUER caractere que não seja dígito
+              // ou formatação comum (espaço, parênteses, hífen, +) -
+              // antes mesmo de contar quantos dígitos sobraram.
+              const allowedCharsOnly = /^[\d\s()+-]+$/.test(form.phone);
               const phone = form.phone.replace(/\D+/g, "");
-              // Telefone brasileiro: DDD (2 dígitos) + número (8 ou 9
-              // dígitos) = 10 ou 11 dígitos no total. Antes só checava
-              // "pelo menos 10 dígitos", sem limite máximo e sem avisar
-              // o cliente quando errado - deixava passar número com
-              // letras misturadas (que sobravam dígitos suficientes
-              // depois de tirar as letras) ou com dígito a mais/a menos,
-              // travando o cadastro da barbearia depois da compra sem
-              // ninguém perceber. Achado real reportado pelo Mariano.
-              if (phone.length !== 10 && phone.length !== 11) {
-                setPhoneError("Confira o número - deve ter DDD + telefone (10 ou 11 dígitos).");
+              const validLength = phone.length === 10 || phone.length === 11;
+              if (!allowedCharsOnly || !validLength) {
+                setPhoneError("Confira o número - deve ter DDD + telefone (10 ou 11 dígitos), sem letra.");
                 return;
               }
               setPhoneError(null);
