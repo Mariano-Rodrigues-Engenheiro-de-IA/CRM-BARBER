@@ -46,6 +46,7 @@ function Assinar() {
   const [plan, setPlan] = useState<PlanId>("premium_197");
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -79,18 +80,18 @@ function Assinar() {
     <div className="min-h-screen bg-background">
       <PaymentTestModeBanner />
       <div className="mx-auto max-w-3xl px-4 py-10">
-        <h1 className="text-2xl font-semibold tracking-tight">Zaylo CRM</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Falta pouco pra liberar tudo</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {plan === "promo" ? (
             <>
               Oferta especial: <strong>{PROMO_PRICE_LABEL}</strong> (valor normal{" "}
-              {PREMIUM_PRICE_LABEL}) · IA, disparos, follow-up automático, agenda, funis e
-              organização, tudo ilimitado.
+              {PREMIUM_PRICE_LABEL}). IA de atendimento, disparos em massa, follow-up e pós-venda
+              automáticos, agenda com lembrete e Kanban de leads, tudo sem limite.
             </>
           ) : (
             <>
-              {labelForPlan(plan)} · IA, disparos, follow-up automático, agenda, funis e
-              organização, tudo ilimitado.
+              {labelForPlan(plan)}. IA de atendimento, disparos em massa, follow-up e pós-venda
+              automáticos, agenda com lembrete e Kanban de leads, tudo sem limite.
             </>
           )}
         </p>
@@ -107,7 +108,19 @@ function Assinar() {
             onSubmit={(e) => {
               e.preventDefault();
               const phone = form.phone.replace(/\D+/g, "");
-              if (phone.length < 10) return;
+              // Telefone brasileiro: DDD (2 dígitos) + número (8 ou 9
+              // dígitos) = 10 ou 11 dígitos no total. Antes só checava
+              // "pelo menos 10 dígitos", sem limite máximo e sem avisar
+              // o cliente quando errado - deixava passar número com
+              // letras misturadas (que sobravam dígitos suficientes
+              // depois de tirar as letras) ou com dígito a mais/a menos,
+              // travando o cadastro da barbearia depois da compra sem
+              // ninguém perceber. Achado real reportado pelo Mariano.
+              if (phone.length !== 10 && phone.length !== 11) {
+                setPhoneError("Confira o número - deve ter DDD + telefone (10 ou 11 dígitos).");
+                return;
+              }
+              setPhoneError(null);
               setIdentity({
                 phone,
                 email: form.email.trim() || undefined,
@@ -146,8 +159,14 @@ function Assinar() {
                 maxLength={20}
                 placeholder="ex: 11 99999-0000"
                 value={form.phone}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                aria-invalid={!!phoneError}
+                className={phoneError ? "border-red-500 focus-visible:ring-red-500" : undefined}
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, phone: e.target.value }));
+                  if (phoneError) setPhoneError(null);
+                }}
               />
+              {phoneError && <p className="text-sm text-red-600">{phoneError}</p>}
             </div>
             <Button type="submit" size="lg" className="w-full">
               Ir para o pagamento
