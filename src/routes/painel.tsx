@@ -400,6 +400,8 @@ function Painel() {
       s === "follow-up" ||
       s === "pos-venda" ||
       s === "disparo" ||
+      s === "campanhas" ||
+      s === "assinantes" ||
       s === "templates" ||
       s === "pacientes"
     )
