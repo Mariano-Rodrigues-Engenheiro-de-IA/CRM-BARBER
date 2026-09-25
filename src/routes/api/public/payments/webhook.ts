@@ -61,23 +61,26 @@ async function resolveBarbershopId(subscription: any, env: StripeEnv): Promise<s
   }
 }
 
-// Barbearia usada como "número emissor" da Zaylo pra mensagens
-// administrativas (boas-vindas pos-compra, etc) - a mesma conta de teste
-// do Mariano, ja conectada via UAZAPI. Nao e um cliente de verdade, e o
-// numero que a Zaylo usa pra falar com clientes novos.
-const ZAYLO_SENDER_BARBERSHOP_ID = "3d9dc380-9341-4d4d-8874-e32e2643ae36";
-
 /** Manda uma mensagem de boas-vindas pro WhatsApp do cliente assim que a
  * primeira assinatura e criada (customer.subscription.created, nao
  * "updated" - so dispara uma vez, na entrada, nao em toda renovacao).
  * Pedido do Mariano: fechar o gap entre "pagou pelo celular" e "vai
  * instalar no computador depois" - o Stripe so manda recibo por e-mail,
  * nao tem WhatsApp nativo, entao a mensagem sai pelo nosso proprio
- * sistema, usando a instancia UAZAPI que a Zaylo ja tem conectada. */
+ * sistema, usando a instancia UAZAPI configurada em /admin (numero
+ * emissor). Configuravel pelo painel, nao mais fixo no codigo - pedido
+ * do Mariano pra poder trocar quando quiser, sem precisar de deploy. */
 async function sendWelcomeMessage(barbershopId: string) {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { uazapiProvider } = await import("@/lib/whatsapp/uazapi.server");
+    const { getSenderBarbershopId } = await import("@/lib/admin-whatsapp.server");
+
+    const senderBarbershopId = await getSenderBarbershopId(supabaseAdmin);
+    if (!senderBarbershopId) {
+      console.error("Nenhum número emissor configurado em /admin - boas-vindas não enviada.");
+      return;
+    }
 
     const { data: newShop } = await supabaseAdmin
       .from("barbershops")
@@ -89,7 +92,7 @@ async function sendWelcomeMessage(barbershopId: string) {
     const { data: senderInstance } = await supabaseAdmin
       .from("whatsapp_instances")
       .select("instance_token, status")
-      .eq("barbershop_id", ZAYLO_SENDER_BARBERSHOP_ID)
+      .eq("barbershop_id", senderBarbershopId)
       .maybeSingle();
     if (!senderInstance?.instance_token || senderInstance.status !== "connected") {
       console.error("Instância emissora da Zaylo não está conectada - boas-vindas não enviada.");

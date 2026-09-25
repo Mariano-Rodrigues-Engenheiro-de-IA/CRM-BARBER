@@ -14,6 +14,7 @@ import {
   adminListPendingMetaConnections,
   adminClaimPendingMetaConnection,
 } from "@/lib/admin-whatsapp.functions";
+import { adminGetSenderSettings, adminSetSenderBarbershop } from "@/lib/admin-settings.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCachedFetch } from "@/lib/api-cache";
@@ -38,6 +39,12 @@ export function AdminWhatsAppPanel() {
   const [testPhone, setTestPhone] = useState("");
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState<"save" | "test" | "register" | "provider" | null>(null);
+  const getSenderSettings = useServerFn(adminGetSenderSettings);
+  const setSenderBarbershop = useServerFn(adminSetSenderBarbershop);
+  const [senderSettings, setSenderSettingsState] = useState<
+    Awaited<ReturnType<typeof adminGetSenderSettings>> | null
+  >(null);
+  const [savingSender, setSavingSender] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [claimTarget, setClaimTarget] = useState<Record<string, string>>({});
   const [claimingId, setClaimingId] = useState<string | null>(null);
@@ -79,6 +86,11 @@ export function AdminWhatsAppPanel() {
   useEffect(() => {
     if (rows && rows.length > 0) setSelected((prev) => prev || rows[0].barbershop_id);
   }, [rows]);
+
+  useEffect(() => {
+    getSenderSettings().then(setSenderSettingsState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const current = rows?.find((r) => r.barbershop_id === selected) ?? null;
 
@@ -172,6 +184,53 @@ export function AdminWhatsAppPanel() {
             Meta for Developers. Sem QR code e sem pop-up de login.
           </p>
         </header>
+
+        <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            Número emissor (mensagens administrativas)
+          </p>
+          <p className="mt-1 text-sm text-neutral-600">
+            Instância usada pra mandar mensagens da própria Zaylo pros clientes (ex: boas-vindas
+            depois de uma assinatura nova). Troque quando quiser, sem precisar de deploy.
+          </p>
+          {senderSettings && (
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <select
+                className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                value={senderSettings.senderBarbershopId ?? ""}
+                onChange={async (e) => {
+                  const barbershop_id = e.target.value;
+                  setSavingSender(true);
+                  try {
+                    await setSenderBarbershop({ data: { barbershop_id } });
+                    const fresh = await getSenderSettings();
+                    setSenderSettingsState(fresh);
+                  } catch (err: any) {
+                    setError(err?.message || "Erro ao salvar número emissor");
+                  } finally {
+                    setSavingSender(false);
+                  }
+                }}
+                disabled={savingSender}
+              >
+                {senderSettings.allShops.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                  senderSettings.senderConnected
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-red-100 text-red-700"
+                }`}
+              >
+                {senderSettings.senderConnected ? "Conectado" : "Não conectado"}
+              </span>
+            </div>
+          )}
+        </div>
 
         {error && (
           <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">{error}</div>

@@ -146,6 +146,30 @@ export async function setIsAdmin(
   return { ok: true };
 }
 
+/** Qual barbearia serve de "número emissor" pra mensagens
+ * administrativas da Zaylo (boas-vindas pos-compra, etc) - configurável
+ * pelo painel admin, sem precisar mexer em código pra trocar. */
+export async function getSenderBarbershopId(supabaseAdmin: Admin): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from("zaylo_settings")
+    .select("sender_barbershop_id")
+    .eq("id", true)
+    .maybeSingle();
+  return data?.sender_barbershop_id ?? null;
+}
+
+export async function setSenderBarbershopId(
+  supabaseAdmin: Admin,
+  input: { barbershop_id: string },
+): Promise<{ ok: true }> {
+  const { error } = await supabaseAdmin
+    .from("zaylo_settings")
+    .update({ sender_barbershop_id: input.barbershop_id, updated_at: new Date().toISOString() })
+    .eq("id", true);
+  if (error) throw new Error(error.message);
+  return { ok: true };
+}
+
 type Admin = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
 
 export async function listShops(supabaseAdmin: Admin): Promise<AdminShopRow[]> {

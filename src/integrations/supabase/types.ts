@@ -2634,6 +2634,32 @@ export type Database = {
           },
         ];
       };
+      zaylo_settings: {
+        Row: {
+          id: boolean;
+          sender_barbershop_id: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          id?: boolean;
+          sender_barbershop_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          id?: boolean;
+          sender_barbershop_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "zaylo_settings_sender_barbershop_id_fkey";
+            columns: ["sender_barbershop_id"];
+            isOneToOne: false;
+            referencedRelation: "barbershops";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
