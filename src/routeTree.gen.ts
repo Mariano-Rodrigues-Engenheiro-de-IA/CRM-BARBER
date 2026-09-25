@@ -24,7 +24,7 @@ import { Route as AdminTokensRouteImport } from './routes/admin.tokens'
 import { Route as AdminWhatsappRouteImport } from './routes/admin.whatsapp'
 import { Route as AgendarSlugRouteImport } from './routes/agendar.$slug'
 import { Route as AgenteIaRetornoRouteImport } from './routes/agente-ia.retorno'
-import { Route as AssinarRetornoRouteImport } from './routes/assinar.retorno'
+import { Route as AssinarRetornoRouteImport } from './routes/assinar_.retorno'
 import { Route as ApiPublicSignupRouteImport } from './routes/api/public/signup'
 import { Route as PainelAgendaTokenRouteImport } from './routes/painel.agenda.$token'
 import { Route as ApiPublicAdminIssueTokenRouteImport } from './routes/api/public/admin/issue-token'
@@ -195,9 +195,9 @@ const AgenteIaRetornoRoute = AgenteIaRetornoRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AssinarRetornoRoute = AssinarRetornoRouteImport.update({
-  id: '/retorno',
-  path: '/retorno',
-  getParentRoute: () => AssinarRoute,
+  id: '/assinar_/retorno',
+  path: '/assinar/retorno',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicSignupRoute = ApiPublicSignupRouteImport.update({
   id: '/api/public/signup',
@@ -751,7 +751,7 @@ const ApiPublicExtensionCampaignsSavedIdSubmitRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/assinar': typeof AssinarRouteWithChildren
+  '/assinar': typeof AssinarRoute
   '/baixar': typeof BaixarRoute
   '/instalar': typeof InstalarRoute
   '/link': typeof LinkRoute
@@ -862,7 +862,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/assinar': typeof AssinarRouteWithChildren
+  '/assinar': typeof AssinarRoute
   '/baixar': typeof BaixarRoute
   '/instalar': typeof InstalarRoute
   '/link': typeof LinkRoute
@@ -974,7 +974,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/assinar': typeof AssinarRouteWithChildren
+  '/assinar': typeof AssinarRoute
   '/baixar': typeof BaixarRoute
   '/instalar': typeof InstalarRoute
   '/link': typeof LinkRoute
@@ -987,7 +987,7 @@ export interface FileRoutesById {
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/agendar/$slug': typeof AgendarSlugRoute
   '/agente-ia/retorno': typeof AgenteIaRetornoRoute
-  '/assinar/retorno': typeof AssinarRetornoRoute
+  '/assinar_/retorno': typeof AssinarRetornoRoute
   '/admin/': typeof AdminIndexRoute
   '/api/public/signup': typeof ApiPublicSignupRoute
   '/painel/agenda/$token': typeof PainelAgendaTokenRoute
@@ -1322,7 +1322,7 @@ export interface FileRouteTypes {
     | '/admin/whatsapp'
     | '/agendar/$slug'
     | '/agente-ia/retorno'
-    | '/assinar/retorno'
+    | '/assinar_/retorno'
     | '/admin/'
     | '/api/public/signup'
     | '/painel/agenda/$token'
@@ -1421,7 +1421,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AssinarRoute: typeof AssinarRouteWithChildren
+  AssinarRoute: typeof AssinarRoute
   BaixarRoute: typeof BaixarRoute
   InstalarRoute: typeof InstalarRoute
   LinkRoute: typeof LinkRoute
@@ -1434,6 +1434,7 @@ export interface RootRouteChildren {
   AdminWhatsappRoute: typeof AdminWhatsappRoute
   AgendarSlugRoute: typeof AgendarSlugRoute
   AgenteIaRetornoRoute: typeof AgenteIaRetornoRoute
+  AssinarRetornoRoute: typeof AssinarRetornoRoute
   AdminIndexRoute: typeof AdminIndexRoute
   ApiPublicSignupRoute: typeof ApiPublicSignupRoute
   ApiPublicAdminIssueTokenRoute: typeof ApiPublicAdminIssueTokenRoute
@@ -1611,12 +1612,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgenteIaRetornoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/assinar/retorno': {
-      id: '/assinar/retorno'
-      path: '/retorno'
+    '/assinar_/retorno': {
+      id: '/assinar_/retorno'
+      path: '/assinar/retorno'
       fullPath: '/assinar/retorno'
       preLoaderRoute: typeof AssinarRetornoRouteImport
-      parentRoute: typeof AssinarRoute
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/signup': {
       id: '/api/public/signup'
@@ -2272,17 +2273,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AssinarRouteChildren {
-  AssinarRetornoRoute: typeof AssinarRetornoRoute
-}
-
-const AssinarRouteChildren: AssinarRouteChildren = {
-  AssinarRetornoRoute: AssinarRetornoRoute,
-}
-
-const AssinarRouteWithChildren =
-  AssinarRoute._addFileChildren(AssinarRouteChildren)
-
 interface PainelRouteChildren {
   PainelAgendaTokenRoute: typeof PainelAgendaTokenRoute
 }
@@ -2616,7 +2606,7 @@ const ApiPublicExtensionWhatsappTemplatesRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AssinarRoute: AssinarRouteWithChildren,
+  AssinarRoute: AssinarRoute,
   BaixarRoute: BaixarRoute,
   InstalarRoute: InstalarRoute,
   LinkRoute: LinkRoute,
@@ -2629,6 +2619,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminWhatsappRoute: AdminWhatsappRoute,
   AgendarSlugRoute: AgendarSlugRoute,
   AgenteIaRetornoRoute: AgenteIaRetornoRoute,
+  AssinarRetornoRoute: AssinarRetornoRoute,
   AdminIndexRoute: AdminIndexRoute,
   ApiPublicSignupRoute: ApiPublicSignupRoute,
   ApiPublicAdminIssueTokenRoute: ApiPublicAdminIssueTokenRoute,

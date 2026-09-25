@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
-export const Route = createFileRoute("/assinar/retorno")({
+export const Route = createFileRoute("/assinar_/retorno")({
   head: () => ({
     meta: [
       { title: "Assinatura confirmada | CRM Zaylo" },
