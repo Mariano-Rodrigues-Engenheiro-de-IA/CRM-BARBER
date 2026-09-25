@@ -61,6 +61,56 @@ async function resolveBarbershopId(subscription: any, env: StripeEnv): Promise<s
   }
 }
 
+// Barbearia usada como "número emissor" da Zaylo pra mensagens
+// administrativas (boas-vindas pos-compra, etc) - a mesma conta de teste
+// do Mariano, ja conectada via UAZAPI. Nao e um cliente de verdade, e o
+// numero que a Zaylo usa pra falar com clientes novos.
+const ZAYLO_SENDER_BARBERSHOP_ID = "3d9dc380-9341-4d4d-8874-e32e2643ae36";
+
+/** Manda uma mensagem de boas-vindas pro WhatsApp do cliente assim que a
+ * primeira assinatura e criada (customer.subscription.created, nao
+ * "updated" - so dispara uma vez, na entrada, nao em toda renovacao).
+ * Pedido do Mariano: fechar o gap entre "pagou pelo celular" e "vai
+ * instalar no computador depois" - o Stripe so manda recibo por e-mail,
+ * nao tem WhatsApp nativo, entao a mensagem sai pelo nosso proprio
+ * sistema, usando a instancia UAZAPI que a Zaylo ja tem conectada. */
+async function sendWelcomeMessage(barbershopId: string) {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { uazapiProvider } = await import("@/lib/whatsapp/uazapi.server");
+
+    const { data: newShop } = await supabaseAdmin
+      .from("barbershops")
+      .select("name, owner_phone")
+      .eq("id", barbershopId)
+      .maybeSingle();
+    if (!newShop?.owner_phone) return;
+
+    const { data: senderInstance } = await supabaseAdmin
+      .from("whatsapp_instances")
+      .select("instance_token, status")
+      .eq("barbershop_id", ZAYLO_SENDER_BARBERSHOP_ID)
+      .maybeSingle();
+    if (!senderInstance?.instance_token || senderInstance.status !== "connected") {
+      console.error("Instância emissora da Zaylo não está conectada - boas-vindas não enviada.");
+      return;
+    }
+
+    const firstName = (newShop.name || "").trim().split(/\s+/)[0] || "";
+    const text = `Fala${firstName ? `, ${firstName}` : ""}! 🎉 Sua assinatura do CRM Zaylo foi confirmada. Quando você estiver no computador, é só entrar em crm.zayloia.com/instalar que o passo a passo está todo lá, com vídeo incluído. Qualquer dúvida, é só chamar por aqui mesmo.`;
+
+    await uazapiProvider.sendText({
+      instance_token: senderInstance.instance_token,
+      to: newShop.owner_phone,
+      text,
+    });
+  } catch (e) {
+    // Falha ao mandar a mensagem nao deve derrubar o processamento do
+    // webhook - a assinatura ja foi ativada, isso e so um extra.
+    console.error("Falha ao enviar mensagem de boas-vindas:", e);
+  }
+}
+
 async function upsertSubscription(subscription: any, env: StripeEnv) {
   const barbershopId = await resolveBarbershopId(subscription, env);
   if (!barbershopId) {
@@ -163,7 +213,13 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
         try {
           const event = await verifyWebhook(request, env);
           switch (event.type) {
-            case "customer.subscription.created":
+            case "customer.subscription.created": {
+              const sub = event.data.object as any;
+              await upsertSubscription(sub, env);
+              const barbershopId = await resolveBarbershopId(sub, env);
+              if (barbershopId) await sendWelcomeMessage(barbershopId);
+              break;
+            }
             case "customer.subscription.updated":
               await upsertSubscription(event.data.object, env);
               break;
