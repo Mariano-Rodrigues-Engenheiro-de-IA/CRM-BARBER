@@ -507,7 +507,19 @@ function Painel() {
   // pisca-pisca que o Mariano viu ao recarregar a página com nicho
   // "outros". Com string vazia, a barra não mostra nada da parte
   // condicionada por nicho até saber a resposta certa.
-  const [businessType, setBusinessType] = useState<string>("");
+  const [businessType, setBusinessType] = useState<string>(() => {
+    // Mesmo padrão do isAdmin/isMetaProvider/billing - achado de bug
+    // real: sem isso, as abas Ranking e Assinaturas (só aparecem pra
+    // business_type "barbearia") ficavam escondidas do início de toda
+    // entrada no CRM até essa checagem de rede resolver, dando a
+    // sensação de "essas duas abas demoram a aparecer" (reportado pelo
+    // Mariano, cuja própria conta é barbearia).
+    try {
+      return sessionStorage.getItem("crm_business_type") || "";
+    } catch {
+      return "";
+    }
+  });
   const [showFunnelMovePopup, setShowFunnelMovePopup] = useState(false);
   const [showTemplateCreatePopup, setShowTemplateCreatePopup] = useState(false);
   const [brand, setBrand] = useState<Brand>({});
@@ -585,7 +597,14 @@ function Painel() {
           /* sessionStorage indisponível — sem cache, sem problema */
         }
       }
-      if (r?.ok && typeof r.business_type === "string") setBusinessType(r.business_type);
+      if (r?.ok && typeof r.business_type === "string") {
+        setBusinessType(r.business_type);
+        try {
+          sessionStorage.setItem("crm_business_type", r.business_type);
+        } catch {
+          /* sessionStorage indisponível — sem cache, sem problema */
+        }
+      }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
