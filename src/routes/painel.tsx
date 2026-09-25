@@ -487,7 +487,19 @@ function Painel() {
       return false;
     }
   });
-  const [billing, setBilling] = useState<BillingStatus | null>(null);
+  const [billing, setBilling] = useState<BillingStatus | null>(() => {
+    // Mesmo padrão do isAdmin/isMetaProvider acima - sem isso, a aba
+    // Assinatura (e qualquer outra que dependa de billing) sempre
+    // mostrava carregando de novo a cada F5/nova entrada no CRM, mesmo
+    // com o valor de segundos atrás ainda válido. Achado de bug real
+    // reportado pelo Mariano.
+    try {
+      const raw = sessionStorage.getItem("crm_billing");
+      return raw ? (JSON.parse(raw) as BillingStatus) : null;
+    } catch {
+      return null;
+    }
+  });
   // Vazio, não "barbearia" — se começasse com um nicho pré-definido, a
   // barra lateral mostraria Assinaturas/Ranking (ou qualquer outro
   // nicho) por um instante antes do valor de verdade chegar do
@@ -565,7 +577,14 @@ function Painel() {
       }
     });
     api(token, "/api/public/extension/billing").then((r) => {
-      if (r?.ok && r.billing) setBilling(r.billing as BillingStatus);
+      if (r?.ok && r.billing) {
+        setBilling(r.billing as BillingStatus);
+        try {
+          sessionStorage.setItem("crm_billing", JSON.stringify(r.billing));
+        } catch {
+          /* sessionStorage indisponível — sem cache, sem problema */
+        }
+      }
       if (r?.ok && typeof r.business_type === "string") setBusinessType(r.business_type);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
