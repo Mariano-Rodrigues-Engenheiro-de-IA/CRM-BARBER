@@ -2,7 +2,7 @@
 // Determinístico e sempre validado no servidor — o front usa só pra UI.
 
 export const PREMIUM_PRICE_ID = "crm_premium_monthly";
-export const PREMIUM_PRICE_LABEL = "R$ 97/mês";
+export const PREMIUM_PRICE_LABEL = "R$ 197/mês";
 
 /** Oferta de lançamento (vagas limitadas). */
 export const PROMO_PRICE_ID = "crm_premium_promotional";

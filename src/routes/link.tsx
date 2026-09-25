@@ -239,7 +239,7 @@ function Landing() {
           <div className="rounded-2xl border-2 border-[#2f6df6] bg-[#0d1830] p-6 shadow-[0_0_60px_-20px_#2f6df6]">
             <p className="text-sm font-semibold text-[#8fb6ff]">Premium</p>
             <p className="mt-2 text-3xl font-bold">
-              R$ 97<span className="text-base font-medium text-slate-400">/mês</span>
+              R$ 197<span className="text-base font-medium text-slate-400">/mês</span>
             </p>
             <ul className="mt-5 space-y-2 text-sm text-slate-200">
               <li>✓ Contatos ilimitados</li>

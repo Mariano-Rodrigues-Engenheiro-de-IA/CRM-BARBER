@@ -283,7 +283,7 @@ function LandingOdonto() {
           <div className="rounded-2xl border-2 border-teal-600 bg-white p-6 shadow-[0_0_60px_-20px_theme(colors.teal.400)]">
             <p className="text-sm font-semibold text-teal-700">Premium</p>
             <p className="mt-2 text-3xl font-bold text-slate-900">
-              R$ 97<span className="text-base font-medium text-slate-400">/mês</span>
+              R$ 197<span className="text-base font-medium text-slate-400">/mês</span>
             </p>
             <ul className="mt-5 space-y-2 text-sm text-slate-700">
               <li>✓ Pacientes ilimitados</li>

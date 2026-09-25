@@ -200,7 +200,7 @@ function PoliticasPage() {
           <Section id="pagamentos" titulo="10. Planos e pagamentos">
             <p>
               O Zaylo CRM oferece um plano gratuito com limites de uso (assinalantes e mensagens) e
-              um plano Premium (R$ 97/mês) com uso ampliado. A cobrança do Premium é processada pela
+              um plano Premium (R$ 197/mês) com uso ampliado. A cobrança do Premium é processada pela
               Stripe e é recorrente mensalmente, sem fidelidade. Você pode cancelar quando quiser.
             </p>
             <p>
