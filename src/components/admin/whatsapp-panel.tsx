@@ -14,7 +14,11 @@ import {
   adminListPendingMetaConnections,
   adminClaimPendingMetaConnection,
 } from "@/lib/admin-whatsapp.functions";
-import { adminGetSenderSettings, adminSetSenderBarbershop } from "@/lib/admin-settings.functions";
+import {
+  adminGetSenderSettings,
+  adminSetSenderBarbershop,
+  adminSetWelcomeMessage,
+} from "@/lib/admin-settings.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCachedFetch } from "@/lib/api-cache";
@@ -41,10 +45,14 @@ export function AdminWhatsAppPanel() {
   const [busy, setBusy] = useState<"save" | "test" | "register" | "provider" | null>(null);
   const getSenderSettings = useServerFn(adminGetSenderSettings);
   const setSenderBarbershop = useServerFn(adminSetSenderBarbershop);
+  const saveWelcomeMessage = useServerFn(adminSetWelcomeMessage);
   const [senderSettings, setSenderSettingsState] = useState<
     Awaited<ReturnType<typeof adminGetSenderSettings>> | null
   >(null);
   const [savingSender, setSavingSender] = useState(false);
+  const [welcomeText, setWelcomeText] = useState("");
+  const [savingMessage, setSavingMessage] = useState(false);
+  const [messageSaved, setMessageSaved] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [claimTarget, setClaimTarget] = useState<Record<string, string>>({});
   const [claimingId, setClaimingId] = useState<string | null>(null);
@@ -88,7 +96,10 @@ export function AdminWhatsAppPanel() {
   }, [rows]);
 
   useEffect(() => {
-    getSenderSettings().then(setSenderSettingsState);
+    getSenderSettings().then((s) => {
+      setSenderSettingsState(s);
+      setWelcomeText(s.welcomeMessageTemplate);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -230,6 +241,44 @@ export function AdminWhatsAppPanel() {
               </span>
             </div>
           )}
+          <div className="mt-4 space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+              Texto da mensagem de boas-vindas
+            </label>
+            <p className="text-xs text-neutral-500">
+              Use <code className="rounded bg-neutral-200 px-1">{"{nome}"}</code> pra inserir o
+              nome da barbearia automaticamente.
+            </p>
+            <textarea
+              className="w-full rounded-lg border border-neutral-300 p-3 text-sm"
+              rows={4}
+              value={welcomeText}
+              onChange={(e) => {
+                setWelcomeText(e.target.value);
+                setMessageSaved(false);
+              }}
+            />
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                disabled={savingMessage || !welcomeText.trim()}
+                onClick={async () => {
+                  setSavingMessage(true);
+                  try {
+                    await saveWelcomeMessage({ data: { text: welcomeText.trim() } });
+                    setMessageSaved(true);
+                  } catch (err: any) {
+                    setError(err?.message || "Erro ao salvar a mensagem");
+                  } finally {
+                    setSavingMessage(false);
+                  }
+                }}
+              >
+                {savingMessage ? "Salvando..." : "Salvar mensagem"}
+              </Button>
+              {messageSaved && <span className="text-sm text-emerald-600">Salvo!</span>}
+            </div>
+          </div>
         </div>
 
         {error && (

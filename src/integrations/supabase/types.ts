@@ -2639,16 +2639,19 @@ export type Database = {
           id: boolean;
           sender_barbershop_id: string | null;
           updated_at: string;
+          welcome_message_template: string;
         };
         Insert: {
           id?: boolean;
           sender_barbershop_id?: string | null;
           updated_at?: string;
+          welcome_message_template?: string;
         };
         Update: {
           id?: boolean;
           sender_barbershop_id?: string | null;
           updated_at?: string;
+          welcome_message_template?: string;
         };
         Relationships: [
           {

@@ -99,8 +99,14 @@ async function sendWelcomeMessage(barbershopId: string) {
       return;
     }
 
+    const { data: settingsRow } = await supabaseAdmin
+      .from("zaylo_settings")
+      .select("welcome_message_template")
+      .eq("id", true)
+      .maybeSingle();
     const firstName = (newShop.name || "").trim().split(/\s+/)[0] || "";
-    const text = `Fala${firstName ? `, ${firstName}` : ""}! 🎉 Sua assinatura do CRM Zaylo foi confirmada. Quando você estiver no computador, é só entrar em crm.zayloia.com/instalar que o passo a passo está todo lá, com vídeo incluído. Qualquer dúvida, é só chamar por aqui mesmo.`;
+    const template = settingsRow?.welcome_message_template || "Fala, {nome}! Sua assinatura foi confirmada.";
+    const text = template.replace(/\{nome\}/g, firstName);
 
     await uazapiProvider.sendText({
       instance_token: senderInstance.instance_token,
