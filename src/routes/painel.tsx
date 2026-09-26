@@ -619,6 +619,14 @@ function Painel() {
   // conteúdo. Assim que o nicho de verdade chega (billing carrega),
   // tira a pessoa de uma seção que não faz sentido pra ela.
   useEffect(() => {
+    // Só redireciona quando businessType já chegou de verdade (não
+    // vazio) - achado de bug real: esse efeito disparava também no
+    // instante inicial, com businessType ainda vazio (carregando),
+    // tratando "ainda não sei" como "não é barbearia" e tirando a
+    // pessoa de Ranking/Assinaturas antes do valor real (que podia ser
+    // "barbearia" mesmo) chegar da rede - reportado pelo Mariano, cuja
+    // própria conta é barbearia e ainda assim caía em Agenda.
+    if (!businessType) return;
     const isBarbeariaOnly = section === "assinantes" || section === "equipe";
     const isClinicOnly = section === "pacientes";
     if (isBarbeariaOnly && businessType !== "barbearia") setSection("agenda");
