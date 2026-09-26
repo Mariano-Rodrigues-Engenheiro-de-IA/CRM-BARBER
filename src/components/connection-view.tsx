@@ -485,11 +485,21 @@ export function ConnectionView({ api, businessType }: { api: Api; businessType?:
             </div>
             <div className="mt-4">
               {isMetaConnection ? (
-                <p className="text-xs text-neutral-500">
-                  Para desconectar ou trocar de conexão, use o WhatsApp Business no seu celular:
-                  Configurações, Conta, Plataforma do WhatsApp Business. Depois de desconectar por
-                  lá, volte aqui para escolher a nova conexão.
-                </p>
+                <div className="space-y-2">
+                  <p className="text-xs text-neutral-500">
+                    Para desconectar ou trocar de conexão, use o WhatsApp Business no seu celular:
+                    Configurações, Conta, Plataforma do WhatsApp Business. Depois de desconectar por
+                    lá, volte aqui para escolher a nova conexão.
+                  </p>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => setConfirmAction("disconnect")}
+                    className="text-xs font-medium text-red-600 underline hover:text-red-700"
+                  >
+                    Não consigo desconectar pelo app (ex: número virtual), desconectar por aqui
+                  </button>
+                </div>
               ) : (
                 <button
                   type="button"
