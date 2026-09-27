@@ -16,6 +16,12 @@ import { Label } from "@/components/ui/label";
 
 type Phase = "checking" | "setpw" | "login" | "verifying" | "denied";
 
+/** Logo da Zaylo no topo das telas de login. O arquivo tem margem propria
+ * em volta, entao a altura visivel e menor que a do elemento. */
+function LoginLogo() {
+  return <img src="/brand/zaylo-logo.png" alt="Zaylo CRM" className="mx-auto -mb-1 h-14 w-auto object-contain" />;
+}
+
 export function PanelLoginGate({ token, onAuthed }: { token: string; onAuthed: () => void }) {
   const [phase, setPhase] = useState<Phase>("checking");
   const [knownEmail, setKnownEmail] = useState<string | null>(null);
@@ -157,7 +163,8 @@ export function PanelLoginGate({ token, onAuthed }: { token: string; onAuthed: (
     return (
       <div className="flex min-h-screen items-center justify-center bg-neutral-100 p-6">
         <div className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-8 text-center shadow-sm">
-          <h1 className="text-lg font-semibold text-neutral-900">Acesso não liberado</h1>
+          <LoginLogo />
+          <h1 className="mt-2 text-lg font-semibold text-neutral-900">Acesso não liberado</h1>
           <p className="mt-2 text-sm text-neutral-600">{error}</p>
           <Button className="mt-5 w-full" variant="outline" onClick={handleSignOut}>
             Entrar de novo
@@ -175,7 +182,8 @@ export function PanelLoginGate({ token, onAuthed }: { token: string; onAuthed: (
         onSubmit={isSet ? handleSetPassword : handleLogin}
         className="w-full max-w-sm space-y-4 rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm"
       >
-        <div>
+        <LoginLogo />
+        <div className="text-center">
           <h1 className="text-xl font-semibold text-neutral-900">
             {isSet ? "Defina sua senha" : "Entre no seu CRM"}
           </h1>
