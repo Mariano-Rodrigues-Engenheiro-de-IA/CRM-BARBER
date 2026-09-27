@@ -19,7 +19,7 @@ type Phase = "checking" | "setpw" | "login" | "verifying" | "denied";
 /** Logo da Zaylo no topo das telas de login. O arquivo tem margem propria
  * em volta, entao a altura visivel e menor que a do elemento. */
 function LoginLogo() {
-  return <img src="/brand/zaylo-logo.png" alt="Zaylo CRM" className="mx-auto -mb-1 h-14 w-auto object-contain" />;
+  return <img src="/brand/zaylo-logo.png" alt="Zaylo CRM" className="mx-auto h-8 w-auto object-contain" />;
 }
 
 export function PanelLoginGate({ token, onAuthed }: { token: string; onAuthed: () => void }) {
