@@ -396,6 +396,32 @@ export type Database = {
           },
         ];
       };
+      barbershop_owners: {
+        Row: {
+          barbershop_id: string;
+          created_at: string;
+          user_id: string;
+        };
+        Insert: {
+          barbershop_id: string;
+          created_at?: string;
+          user_id: string;
+        };
+        Update: {
+          barbershop_id?: string;
+          created_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "barbershop_owners_barbershop_id_fkey";
+            columns: ["barbershop_id"];
+            isOneToOne: true;
+            referencedRelation: "barbershops";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       barbershops: {
         Row: {
           ai_access_enabled: boolean;
@@ -404,6 +430,7 @@ export type Database = {
           created_by: string | null;
           id: string;
           is_admin: boolean;
+          login_required: boolean;
           logo_url: string | null;
           name: string;
           owner_email: string | null;
@@ -418,6 +445,7 @@ export type Database = {
           created_by?: string | null;
           id?: string;
           is_admin?: boolean;
+          login_required?: boolean;
           logo_url?: string | null;
           name: string;
           owner_email?: string | null;
@@ -432,6 +460,7 @@ export type Database = {
           created_by?: string | null;
           id?: string;
           is_admin?: boolean;
+          login_required?: boolean;
           logo_url?: string | null;
           name?: string;
           owner_email?: string | null;

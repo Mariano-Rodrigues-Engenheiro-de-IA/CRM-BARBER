@@ -19,6 +19,7 @@ import { type BillingStatus } from "@/lib/billing";
 
 import { useConfirm } from "@/components/confirm-dialog";
 import { api, apiViaExtension, EXTENSION_BRIDGE_TOKEN } from "@/lib/painel-api";
+import { PanelLoginGate } from "@/components/panel-login-gate";
 import { CampaignsView } from "@/components/painel-campaigns-view";
 import { KanbanView, inputCls } from "@/components/painel-kanban";
 import { OverviewView, SettingsView } from "@/components/painel-settings-view";
@@ -383,6 +384,15 @@ export function writeSystem(shopId: string, id: SubscriptionSystemId) {
 function Painel() {
   const [token, setToken] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  // Portao de login (so exige de verdade nas barbearias com login_required).
+  // Guardado por aba: depois de liberado, recarregar nao pergunta de novo.
+  const [loginOk, setLoginOk] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem("crm_login_ok") === "1";
+    } catch {
+      return false;
+    }
+  });
   const [customers, setCustomers] = useState<Customer[]>(() => customersCache ?? []);
   const [loading, setLoading] = useState(false);
 
@@ -653,6 +663,22 @@ function Painel() {
           </p>
         </div>
       </div>
+    );
+  }
+
+  if (!loginOk) {
+    return (
+      <PanelLoginGate
+        token={token}
+        onAuthed={() => {
+          try {
+            sessionStorage.setItem("crm_login_ok", "1");
+          } catch {
+            /* sem sessionStorage: so vai perguntar de novo no proximo carregamento */
+          }
+          setLoginOk(true);
+        }}
+      />
     );
   }
 

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AssinarRouteImport } from './routes/assinar'
 import { Route as BaixarRouteImport } from './routes/baixar'
+import { Route as EmailConfirmadoRouteImport } from './routes/email-confirmado'
 import { Route as InstalarRouteImport } from './routes/instalar'
 import { Route as LinkRouteImport } from './routes/link'
 import { Route as OdontologiaRouteImport } from './routes/odontologia'
@@ -63,6 +64,7 @@ import { Route as ApiPublicExtensionLessonsRouteImport } from './routes/api/publ
 import { Route as ApiPublicExtensionMarkAttendanceRouteImport } from './routes/api/public/extension/mark-attendance'
 import { Route as ApiPublicExtensionMetaRouteImport } from './routes/api/public/extension/meta'
 import { Route as ApiPublicExtensionPairRouteImport } from './routes/api/public/extension/pair'
+import { Route as ApiPublicExtensionPanelAuthRouteImport } from './routes/api/public/extension/panel-auth'
 import { Route as ApiPublicExtensionPostsaleAttendanceCountRouteImport } from './routes/api/public/extension/postsale-attendance-count'
 import { Route as ApiPublicExtensionPostsaleAttendancesRouteImport } from './routes/api/public/extension/postsale-attendances'
 import { Route as ApiPublicExtensionPostsaleEnsureRouteImport } from './routes/api/public/extension/postsale-ensure'
@@ -132,6 +134,11 @@ const AssinarRoute = AssinarRouteImport.update({
 const BaixarRoute = BaixarRouteImport.update({
   id: '/baixar',
   path: '/baixar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmailConfirmadoRoute = EmailConfirmadoRouteImport.update({
+  id: '/email-confirmado',
+  path: '/email-confirmado',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InstalarRoute = InstalarRouteImport.update({
@@ -419,6 +426,12 @@ const ApiPublicExtensionPairRoute = ApiPublicExtensionPairRouteImport.update({
   path: '/api/public/extension/pair',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicExtensionPanelAuthRoute =
+  ApiPublicExtensionPanelAuthRouteImport.update({
+    id: '/api/public/extension/panel-auth',
+    path: '/api/public/extension/panel-auth',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicExtensionPostsaleAttendanceCountRoute =
   ApiPublicExtensionPostsaleAttendanceCountRouteImport.update({
     id: '/api/public/extension/postsale-attendance-count',
@@ -753,6 +766,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/assinar': typeof AssinarRoute
   '/baixar': typeof BaixarRoute
+  '/email-confirmado': typeof EmailConfirmadoRoute
   '/instalar': typeof InstalarRoute
   '/link': typeof LinkRoute
   '/odontologia': typeof OdontologiaRoute
@@ -804,6 +818,7 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/mark-attendance': typeof ApiPublicExtensionMarkAttendanceRoute
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
+  '/api/public/extension/panel-auth': typeof ApiPublicExtensionPanelAuthRoute
   '/api/public/extension/postsale-attendance-count': typeof ApiPublicExtensionPostsaleAttendanceCountRoute
   '/api/public/extension/postsale-attendances': typeof ApiPublicExtensionPostsaleAttendancesRoute
   '/api/public/extension/postsale-ensure': typeof ApiPublicExtensionPostsaleEnsureRoute
@@ -864,6 +879,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/assinar': typeof AssinarRoute
   '/baixar': typeof BaixarRoute
+  '/email-confirmado': typeof EmailConfirmadoRoute
   '/instalar': typeof InstalarRoute
   '/link': typeof LinkRoute
   '/odontologia': typeof OdontologiaRoute
@@ -915,6 +931,7 @@ export interface FileRoutesByTo {
   '/api/public/extension/mark-attendance': typeof ApiPublicExtensionMarkAttendanceRoute
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
+  '/api/public/extension/panel-auth': typeof ApiPublicExtensionPanelAuthRoute
   '/api/public/extension/postsale-attendance-count': typeof ApiPublicExtensionPostsaleAttendanceCountRoute
   '/api/public/extension/postsale-attendances': typeof ApiPublicExtensionPostsaleAttendancesRoute
   '/api/public/extension/postsale-ensure': typeof ApiPublicExtensionPostsaleEnsureRoute
@@ -976,6 +993,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/assinar': typeof AssinarRoute
   '/baixar': typeof BaixarRoute
+  '/email-confirmado': typeof EmailConfirmadoRoute
   '/instalar': typeof InstalarRoute
   '/link': typeof LinkRoute
   '/odontologia': typeof OdontologiaRoute
@@ -1027,6 +1045,7 @@ export interface FileRoutesById {
   '/api/public/extension/mark-attendance': typeof ApiPublicExtensionMarkAttendanceRoute
   '/api/public/extension/meta': typeof ApiPublicExtensionMetaRoute
   '/api/public/extension/pair': typeof ApiPublicExtensionPairRoute
+  '/api/public/extension/panel-auth': typeof ApiPublicExtensionPanelAuthRoute
   '/api/public/extension/postsale-attendance-count': typeof ApiPublicExtensionPostsaleAttendanceCountRoute
   '/api/public/extension/postsale-attendances': typeof ApiPublicExtensionPostsaleAttendancesRoute
   '/api/public/extension/postsale-ensure': typeof ApiPublicExtensionPostsaleEnsureRoute
@@ -1089,6 +1108,7 @@ export interface FileRouteTypes {
     | '/'
     | '/assinar'
     | '/baixar'
+    | '/email-confirmado'
     | '/instalar'
     | '/link'
     | '/odontologia'
@@ -1140,6 +1160,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/mark-attendance'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
+    | '/api/public/extension/panel-auth'
     | '/api/public/extension/postsale-attendance-count'
     | '/api/public/extension/postsale-attendances'
     | '/api/public/extension/postsale-ensure'
@@ -1200,6 +1221,7 @@ export interface FileRouteTypes {
     | '/'
     | '/assinar'
     | '/baixar'
+    | '/email-confirmado'
     | '/instalar'
     | '/link'
     | '/odontologia'
@@ -1251,6 +1273,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/mark-attendance'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
+    | '/api/public/extension/panel-auth'
     | '/api/public/extension/postsale-attendance-count'
     | '/api/public/extension/postsale-attendances'
     | '/api/public/extension/postsale-ensure'
@@ -1311,6 +1334,7 @@ export interface FileRouteTypes {
     | '/'
     | '/assinar'
     | '/baixar'
+    | '/email-confirmado'
     | '/instalar'
     | '/link'
     | '/odontologia'
@@ -1362,6 +1386,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/mark-attendance'
     | '/api/public/extension/meta'
     | '/api/public/extension/pair'
+    | '/api/public/extension/panel-auth'
     | '/api/public/extension/postsale-attendance-count'
     | '/api/public/extension/postsale-attendances'
     | '/api/public/extension/postsale-ensure'
@@ -1423,6 +1448,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AssinarRoute: typeof AssinarRoute
   BaixarRoute: typeof BaixarRoute
+  EmailConfirmadoRoute: typeof EmailConfirmadoRoute
   InstalarRoute: typeof InstalarRoute
   LinkRoute: typeof LinkRoute
   OdontologiaRoute: typeof OdontologiaRoute
@@ -1473,6 +1499,7 @@ export interface RootRouteChildren {
   ApiPublicExtensionMarkAttendanceRoute: typeof ApiPublicExtensionMarkAttendanceRoute
   ApiPublicExtensionMetaRoute: typeof ApiPublicExtensionMetaRoute
   ApiPublicExtensionPairRoute: typeof ApiPublicExtensionPairRoute
+  ApiPublicExtensionPanelAuthRoute: typeof ApiPublicExtensionPanelAuthRoute
   ApiPublicExtensionPostsaleAttendanceCountRoute: typeof ApiPublicExtensionPostsaleAttendanceCountRoute
   ApiPublicExtensionPostsaleAttendancesRoute: typeof ApiPublicExtensionPostsaleAttendancesRoute
   ApiPublicExtensionPostsaleEnsureRoute: typeof ApiPublicExtensionPostsaleEnsureRoute
@@ -1526,6 +1553,13 @@ declare module '@tanstack/react-router' {
       path: '/baixar'
       fullPath: '/baixar'
       preLoaderRoute: typeof BaixarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/email-confirmado': {
+      id: '/email-confirmado'
+      path: '/email-confirmado'
+      fullPath: '/email-confirmado'
+      preLoaderRoute: typeof EmailConfirmadoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/instalar': {
@@ -1883,6 +1917,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/extension/pair'
       fullPath: '/api/public/extension/pair'
       preLoaderRoute: typeof ApiPublicExtensionPairRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/panel-auth': {
+      id: '/api/public/extension/panel-auth'
+      path: '/api/public/extension/panel-auth'
+      fullPath: '/api/public/extension/panel-auth'
+      preLoaderRoute: typeof ApiPublicExtensionPanelAuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/extension/postsale-attendance-count': {
@@ -2608,6 +2649,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AssinarRoute: AssinarRoute,
   BaixarRoute: BaixarRoute,
+  EmailConfirmadoRoute: EmailConfirmadoRoute,
   InstalarRoute: InstalarRoute,
   LinkRoute: LinkRoute,
   OdontologiaRoute: OdontologiaRoute,
@@ -2675,6 +2717,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicExtensionMarkAttendanceRoute: ApiPublicExtensionMarkAttendanceRoute,
   ApiPublicExtensionMetaRoute: ApiPublicExtensionMetaRoute,
   ApiPublicExtensionPairRoute: ApiPublicExtensionPairRoute,
+  ApiPublicExtensionPanelAuthRoute: ApiPublicExtensionPanelAuthRoute,
   ApiPublicExtensionPostsaleAttendanceCountRoute:
     ApiPublicExtensionPostsaleAttendanceCountRoute,
   ApiPublicExtensionPostsaleAttendancesRoute:
