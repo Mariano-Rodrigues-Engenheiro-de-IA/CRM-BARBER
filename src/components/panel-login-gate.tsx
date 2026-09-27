@@ -90,9 +90,14 @@ export function PanelLoginGate({ token, onAuthed }: { token: string; onAuthed: (
         }
         if (data.session) {
           await verify(data.session.access_token);
+        } else if (data.user && (data.user.identities?.length ?? 0) === 0) {
+          // O Supabase responde "sucesso" sem criar nada (e sem mandar e-mail)
+          // quando o e-mail ja tem conta - de proposito, pra nao revelar quem
+          // esta cadastrado. Identities vazio e o sinal disso.
+          setError("Esse e-mail já tem uma conta. Use \"Já tenho conta\" e entre com a senha dele, ou cadastre outro e-mail.");
         } else {
           setInfo(
-            "Enviamos um link de confirmação pro seu e-mail. Depois de confirmar, volte aqui e clique em Entrar.",
+            "Conta criada. Enviamos um link de confirmação pro seu e-mail (olhe também o spam). Depois de confirmar, volte aqui e clique em Entrar.",
           );
           setMode("entrar");
         }
