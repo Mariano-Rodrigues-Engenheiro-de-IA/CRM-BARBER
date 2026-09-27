@@ -1,11 +1,11 @@
-// Portão de login do painel (e-mail + senha via Supabase Auth), liberado por
+// Portao de login do painel (e-mail + senha via Supabase Auth), liberado por
 // barbearia: so aparece quando barbershops.login_required = true. Para as
 // demais, confere o status uma vez por aba e libera direto.
 //
-// Fluxo: (1) pergunta ao servidor se essa barbearia exige login; (2) se sim e
-// nao ha sessao salva, mostra "Entrar / Criar conta"; (3) com sessao, o
-// servidor confere se esse login e o dono da barbearia (ou faz a primeira
-// vinculacao, provada pelo token da extensao).
+// Todo cliente ja tem a barbearia e o e-mail desde o checkout, entao nao ha
+// "criar conta": na primeira vez a pessoa so DEFINE A SENHA do e-mail que ja
+// esta cadastrado; depois, so entra com ela. O token da extensao (que prova o
+// controle do WhatsApp) e o que autoriza definir a senha.
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,13 +14,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-type Phase = "checking" | "form" | "verifying" | "denied";
+type Phase = "checking" | "setpw" | "login" | "verifying" | "denied";
 
 export function PanelLoginGate({ token, onAuthed }: { token: string; onAuthed: () => void }) {
   const [phase, setPhase] = useState<Phase>("checking");
-  const [mode, setMode] = useState<"entrar" | "criar">("entrar");
+  const [knownEmail, setKnownEmail] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -29,7 +30,7 @@ export function PanelLoginGate({ token, onAuthed }: { token: string; onAuthed: (
     setPhase("verifying");
     const r = await api(token, "/api/public/extension/panel-auth", {
       method: "POST",
-      body: JSON.stringify({ access_token: accessToken }),
+      body: JSON.stringify({ action: "verify", access_token: accessToken }),
     });
     if (r?.ok) {
       onAuthed();
@@ -45,7 +46,7 @@ export function PanelLoginGate({ token, onAuthed }: { token: string; onAuthed: (
       const st = await api(token, "/api/public/extension/panel-auth");
       if (cancelled) return;
       // Se a checagem falhar (rede, extensao fora do ar), NAO trava a barbearia
-      // de fora do painel - segue como antes e registra o aviso. Enquanto o
+      // de fora do painel: segue como antes e registra o aviso. Enquanto o
       // login so vale pra contas de teste, disponibilidade importa mais.
       if (!st?.ok) {
         console.warn("[panel-login] falha ao checar login_required:", st?.error);
@@ -56,10 +57,16 @@ export function PanelLoginGate({ token, onAuthed }: { token: string; onAuthed: (
         onAuthed();
         return;
       }
+      const mail = (st.owner_email as string | null) ?? null;
+      setKnownEmail(mail);
+      if (mail) setEmail(mail);
       const { data } = await supabase.auth.getSession();
       if (cancelled) return;
-      if (data.session) await verify(data.session.access_token);
-      else setPhase("form");
+      if (data.session) {
+        await verify(data.session.access_token);
+      } else {
+        setPhase(st.has_owner ? "login" : "setpw");
+      }
     })();
     return () => {
       cancelled = true;
@@ -67,54 +74,65 @@ export function PanelLoginGate({ token, onAuthed }: { token: string; onAuthed: (
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function signInAndVerify(mail: string, pass: string) {
+    const { data, error: err } = await supabase.auth.signInWithPassword({ email: mail, password: pass });
+    if (err || !data.session) {
+      setError(err?.message?.includes("Invalid login") ? "E-mail ou senha incorretos." : err?.message || "Não foi possível entrar.");
+      setPhase("login");
+      return;
+    }
+    await verify(data.session.access_token);
+  }
+
+  async function handleSetPassword(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setInfo(null);
-    const mail = email.trim();
-    if (!mail || password.length < 8) {
-      setError("Informe o e-mail e uma senha de pelo menos 8 caracteres.");
+    if (!knownEmail && !email.trim()) {
+      setError("Informe o seu e-mail.");
+      return;
+    }
+    if (password.length < 8) {
+      setError("A senha precisa ter pelo menos 8 caracteres.");
+      return;
+    }
+    if (password !== confirm) {
+      setError("As duas senhas não são iguais.");
       return;
     }
     setBusy(true);
     try {
-      if (mode === "criar") {
-        const { data, error: err } = await supabase.auth.signUp({
-          email: mail,
-          password,
-          options: { emailRedirectTo: `${window.location.origin}/email-confirmado` },
-        });
-        if (err) {
-          setError(err.message.includes("already") ? "Esse e-mail já tem conta. Use \"Entrar\"." : err.message);
-          return;
-        }
-        if (data.session) {
-          await verify(data.session.access_token);
-        } else if (data.user && (data.user.identities?.length ?? 0) === 0) {
-          // O Supabase responde "sucesso" sem criar nada (e sem mandar e-mail)
-          // quando o e-mail ja tem conta - de proposito, pra nao revelar quem
-          // esta cadastrado. Identities vazio e o sinal disso.
-          setError("Esse e-mail já tem uma conta. Use \"Já tenho conta\" e entre com a senha dele, ou cadastre outro e-mail.");
-        } else {
-          setInfo(
-            "Conta criada. Enviamos um link de confirmação pro seu e-mail (olhe também o spam). Depois de confirmar, volte aqui e clique em Entrar.",
-          );
-          setMode("entrar");
-        }
-      } else {
-        const { data, error: err } = await supabase.auth.signInWithPassword({ email: mail, password });
-        if (err) {
-          setError(
-            err.message.includes("Invalid login")
-              ? "E-mail ou senha incorretos."
-              : err.message.includes("not confirmed")
-                ? "Confirme seu e-mail primeiro (o link foi enviado quando você criou a conta)."
-                : err.message,
-          );
-          return;
-        }
-        await verify(data.session.access_token);
+      const r = await api(token, "/api/public/extension/panel-auth", {
+        method: "POST",
+        body: JSON.stringify({ action: "set_password", password, email: email.trim() }),
+      });
+      if (r?.ok) {
+        await signInAndVerify(((r.email as string) || email).trim(), password);
+        return;
       }
+      if (r?.code === "email_exists" || r?.code === "has_owner") {
+        // Esse e-mail ja tinha login (ou a senha ja foi definida): segue pro Entrar.
+        setInfo(r.error as string);
+        setConfirm("");
+        setPhase("login");
+        return;
+      }
+      setError((r?.error as string) || "Não foi possível definir a senha.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!email.trim() || !password) {
+      setError("Informe o e-mail e a senha.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await signInAndVerify(email.trim(), password);
     } finally {
       setBusy(false);
     }
@@ -123,7 +141,8 @@ export function PanelLoginGate({ token, onAuthed }: { token: string; onAuthed: (
   async function handleSignOut() {
     await supabase.auth.signOut();
     setError(null);
-    setPhase("form");
+    setPassword("");
+    setPhase("login");
   }
 
   if (phase === "checking" || phase === "verifying") {
@@ -141,31 +160,33 @@ export function PanelLoginGate({ token, onAuthed }: { token: string; onAuthed: (
           <h1 className="text-lg font-semibold text-neutral-900">Acesso não liberado</h1>
           <p className="mt-2 text-sm text-neutral-600">{error}</p>
           <Button className="mt-5 w-full" variant="outline" onClick={handleSignOut}>
-            Entrar com outro e-mail
+            Entrar de novo
           </Button>
         </div>
       </div>
     );
   }
 
+  const isSet = phase === "setpw";
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-neutral-100 p-6">
       <form
-        onSubmit={handleSubmit}
+        onSubmit={isSet ? handleSetPassword : handleLogin}
         className="w-full max-w-sm space-y-4 rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm"
       >
         <div>
           <h1 className="text-xl font-semibold text-neutral-900">
-            {mode === "entrar" ? "Entre no seu CRM" : "Crie seu acesso"}
+            {isSet ? "Defina sua senha" : "Entre no seu CRM"}
           </h1>
           <p className="mt-1 text-sm text-neutral-500">
-            {mode === "entrar"
-              ? "Use o e-mail e a senha que você cadastrou."
-              : "Cadastre um e-mail e uma senha. Você só faz isso uma vez."}
+            {isSet
+              ? "Você só faz isso uma vez. Depois é só entrar com essa senha."
+              : "Use o e-mail e a senha que você definiu."}
           </p>
         </div>
 
-        {info && <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{info}</p>}
+        {info && <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{info}</p>}
         {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
         <div className="space-y-1.5">
@@ -175,35 +196,37 @@ export function PanelLoginGate({ token, onAuthed }: { token: string; onAuthed: (
             type="email"
             autoComplete="email"
             value={email}
+            readOnly={Boolean(knownEmail)}
+            className={knownEmail ? "bg-neutral-50 text-neutral-600" : undefined}
             onChange={(e) => setEmail(e.target.value)}
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="pl-pass">Senha</Label>
+          <Label htmlFor="pl-pass">{isSet ? "Nova senha" : "Senha"}</Label>
           <Input
             id="pl-pass"
             type="password"
-            autoComplete={mode === "entrar" ? "current-password" : "new-password"}
+            autoComplete={isSet ? "new-password" : "current-password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
         </div>
+        {isSet && (
+          <div className="space-y-1.5">
+            <Label htmlFor="pl-confirm">Repita a senha</Label>
+            <Input
+              id="pl-confirm"
+              type="password"
+              autoComplete="new-password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+            />
+          </div>
+        )}
 
         <Button type="submit" className="w-full" disabled={busy}>
-          {busy ? "Aguarde..." : mode === "entrar" ? "Entrar" : "Criar conta"}
+          {busy ? "Aguarde..." : isSet ? "Definir senha e entrar" : "Entrar"}
         </Button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setMode(mode === "entrar" ? "criar" : "entrar");
-            setError(null);
-            setInfo(null);
-          }}
-          className="w-full text-center text-sm text-neutral-500 underline hover:text-neutral-700"
-        >
-          {mode === "entrar" ? "Primeira vez? Criar conta" : "Já tenho conta. Entrar"}
-        </button>
       </form>
     </div>
   );

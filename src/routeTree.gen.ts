@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AssinarRouteImport } from './routes/assinar'
 import { Route as BaixarRouteImport } from './routes/baixar'
-import { Route as EmailConfirmadoRouteImport } from './routes/email-confirmado'
 import { Route as InstalarRouteImport } from './routes/instalar'
 import { Route as LinkRouteImport } from './routes/link'
 import { Route as OdontologiaRouteImport } from './routes/odontologia'
@@ -134,11 +133,6 @@ const AssinarRoute = AssinarRouteImport.update({
 const BaixarRoute = BaixarRouteImport.update({
   id: '/baixar',
   path: '/baixar',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EmailConfirmadoRoute = EmailConfirmadoRouteImport.update({
-  id: '/email-confirmado',
-  path: '/email-confirmado',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InstalarRoute = InstalarRouteImport.update({
@@ -766,7 +760,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/assinar': typeof AssinarRoute
   '/baixar': typeof BaixarRoute
-  '/email-confirmado': typeof EmailConfirmadoRoute
   '/instalar': typeof InstalarRoute
   '/link': typeof LinkRoute
   '/odontologia': typeof OdontologiaRoute
@@ -879,7 +872,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/assinar': typeof AssinarRoute
   '/baixar': typeof BaixarRoute
-  '/email-confirmado': typeof EmailConfirmadoRoute
   '/instalar': typeof InstalarRoute
   '/link': typeof LinkRoute
   '/odontologia': typeof OdontologiaRoute
@@ -993,7 +985,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/assinar': typeof AssinarRoute
   '/baixar': typeof BaixarRoute
-  '/email-confirmado': typeof EmailConfirmadoRoute
   '/instalar': typeof InstalarRoute
   '/link': typeof LinkRoute
   '/odontologia': typeof OdontologiaRoute
@@ -1108,7 +1099,6 @@ export interface FileRouteTypes {
     | '/'
     | '/assinar'
     | '/baixar'
-    | '/email-confirmado'
     | '/instalar'
     | '/link'
     | '/odontologia'
@@ -1221,7 +1211,6 @@ export interface FileRouteTypes {
     | '/'
     | '/assinar'
     | '/baixar'
-    | '/email-confirmado'
     | '/instalar'
     | '/link'
     | '/odontologia'
@@ -1334,7 +1323,6 @@ export interface FileRouteTypes {
     | '/'
     | '/assinar'
     | '/baixar'
-    | '/email-confirmado'
     | '/instalar'
     | '/link'
     | '/odontologia'
@@ -1448,7 +1436,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AssinarRoute: typeof AssinarRoute
   BaixarRoute: typeof BaixarRoute
-  EmailConfirmadoRoute: typeof EmailConfirmadoRoute
   InstalarRoute: typeof InstalarRoute
   LinkRoute: typeof LinkRoute
   OdontologiaRoute: typeof OdontologiaRoute
@@ -1553,13 +1540,6 @@ declare module '@tanstack/react-router' {
       path: '/baixar'
       fullPath: '/baixar'
       preLoaderRoute: typeof BaixarRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/email-confirmado': {
-      id: '/email-confirmado'
-      path: '/email-confirmado'
-      fullPath: '/email-confirmado'
-      preLoaderRoute: typeof EmailConfirmadoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/instalar': {
@@ -2649,7 +2629,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AssinarRoute: AssinarRoute,
   BaixarRoute: BaixarRoute,
-  EmailConfirmadoRoute: EmailConfirmadoRoute,
   InstalarRoute: InstalarRoute,
   LinkRoute: LinkRoute,
   OdontologiaRoute: OdontologiaRoute,
