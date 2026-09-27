@@ -8,7 +8,7 @@
 // controle do WhatsApp) e o que autoriza definir a senha.
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { getPanelAuth } from "@/lib/panel-auth-client";
 import { api } from "@/lib/painel-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,7 +60,7 @@ export function PanelLoginGate({ token, onAuthed }: { token: string; onAuthed: (
       const mail = (st.owner_email as string | null) ?? null;
       setKnownEmail(mail);
       if (mail) setEmail(mail);
-      const { data } = await supabase.auth.getSession();
+      const { data } = await getPanelAuth().getSession();
       if (cancelled) return;
       if (data.session) {
         await verify(data.session.access_token);
@@ -75,7 +75,7 @@ export function PanelLoginGate({ token, onAuthed }: { token: string; onAuthed: (
   }, []);
 
   async function signInAndVerify(mail: string, pass: string) {
-    const { data, error: err } = await supabase.auth.signInWithPassword({ email: mail, password: pass });
+    const { data, error: err } = await getPanelAuth().signInWithPassword({ email: mail, password: pass });
     if (err || !data.session) {
       setError(err?.message?.includes("Invalid login") ? "E-mail ou senha incorretos." : err?.message || "Não foi possível entrar.");
       setPhase("login");
@@ -139,7 +139,7 @@ export function PanelLoginGate({ token, onAuthed }: { token: string; onAuthed: (
   }
 
   async function handleSignOut() {
-    await supabase.auth.signOut();
+    await getPanelAuth().signOut();
     setError(null);
     setPassword("");
     setPhase("login");
