@@ -82,7 +82,6 @@ import { Route as ApiPublicHooksEvaluateFollowupsRouteImport } from './routes/ap
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicWhatsappSignupCallbackRouteImport } from './routes/api/public/whatsapp.signup-callback'
 import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp.webhook'
-import { Route as ApiPublicAiProductsSearchRouteImport } from './routes/api/public/ai/products.search'
 import { Route as ApiPublicExtensionAgendaReminderRulesIdRouteImport } from './routes/api/public/extension/agenda-reminder-rules.$id'
 import { Route as ApiPublicExtensionAppointmentsIdRouteImport } from './routes/api/public/extension/appointments.$id'
 import { Route as ApiPublicExtensionBodyMapMarkingsIdRouteImport } from './routes/api/public/extension/body-map-markings.$id'
@@ -115,7 +114,6 @@ import { Route as ApiPublicExtensionWhatsappProviderRouteImport } from './routes
 import { Route as ApiPublicExtensionWhatsappSendTemplateRouteImport } from './routes/api/public/extension/whatsapp.send-template'
 import { Route as ApiPublicExtensionWhatsappStatusRouteImport } from './routes/api/public/extension/whatsapp.status'
 import { Route as ApiPublicExtensionWhatsappTemplatesRouteImport } from './routes/api/public/extension/whatsapp.templates'
-import { Route as ApiPublicAiProductsIdCalcularRouteImport } from './routes/api/public/ai/products.$id.calcular'
 import { Route as ApiPublicExtensionCampaignsSavedIdRouteImport } from './routes/api/public/extension/campaigns.saved.$id'
 import { Route as ApiPublicExtensionWhatsappTemplatesIdRouteImport } from './routes/api/public/extension/whatsapp.templates.$id'
 import { Route as ApiPublicExtensionCampaignsSavedIdSubmitRouteImport } from './routes/api/public/extension/campaigns.saved.$id.submit'
@@ -533,12 +531,6 @@ const ApiPublicWhatsappWebhookRoute =
     path: '/api/public/whatsapp/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicAiProductsSearchRoute =
-  ApiPublicAiProductsSearchRouteImport.update({
-    id: '/api/public/ai/products/search',
-    path: '/api/public/ai/products/search',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiPublicExtensionAgendaReminderRulesIdRoute =
   ApiPublicExtensionAgendaReminderRulesIdRouteImport.update({
     id: '/$id',
@@ -731,12 +723,6 @@ const ApiPublicExtensionWhatsappTemplatesRoute =
     path: '/api/public/extension/whatsapp/templates',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicAiProductsIdCalcularRoute =
-  ApiPublicAiProductsIdCalcularRouteImport.update({
-    id: '/api/public/ai/products/$id/calcular',
-    path: '/api/public/ai/products/$id/calcular',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiPublicExtensionCampaignsSavedIdRoute =
   ApiPublicExtensionCampaignsSavedIdRouteImport.update({
     id: '/saved/$id',
@@ -830,7 +816,6 @@ export interface FileRoutesByFullPath {
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
-  '/api/public/ai/products/search': typeof ApiPublicAiProductsSearchRoute
   '/api/public/extension/agenda-reminder-rules/$id': typeof ApiPublicExtensionAgendaReminderRulesIdRoute
   '/api/public/extension/appointments/$id': typeof ApiPublicExtensionAppointmentsIdRoute
   '/api/public/extension/body-map-markings/$id': typeof ApiPublicExtensionBodyMapMarkingsIdRoute
@@ -863,7 +848,6 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/whatsapp/send-template': typeof ApiPublicExtensionWhatsappSendTemplateRoute
   '/api/public/extension/whatsapp/status': typeof ApiPublicExtensionWhatsappStatusRoute
   '/api/public/extension/whatsapp/templates': typeof ApiPublicExtensionWhatsappTemplatesRouteWithChildren
-  '/api/public/ai/products/$id/calcular': typeof ApiPublicAiProductsIdCalcularRoute
   '/api/public/extension/campaigns/saved/$id': typeof ApiPublicExtensionCampaignsSavedIdRouteWithChildren
   '/api/public/extension/whatsapp/templates/$id': typeof ApiPublicExtensionWhatsappTemplatesIdRoute
   '/api/public/extension/campaigns/saved/$id/submit': typeof ApiPublicExtensionCampaignsSavedIdSubmitRoute
@@ -942,7 +926,6 @@ export interface FileRoutesByTo {
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
-  '/api/public/ai/products/search': typeof ApiPublicAiProductsSearchRoute
   '/api/public/extension/agenda-reminder-rules/$id': typeof ApiPublicExtensionAgendaReminderRulesIdRoute
   '/api/public/extension/appointments/$id': typeof ApiPublicExtensionAppointmentsIdRoute
   '/api/public/extension/body-map-markings/$id': typeof ApiPublicExtensionBodyMapMarkingsIdRoute
@@ -975,7 +958,6 @@ export interface FileRoutesByTo {
   '/api/public/extension/whatsapp/send-template': typeof ApiPublicExtensionWhatsappSendTemplateRoute
   '/api/public/extension/whatsapp/status': typeof ApiPublicExtensionWhatsappStatusRoute
   '/api/public/extension/whatsapp/templates': typeof ApiPublicExtensionWhatsappTemplatesRouteWithChildren
-  '/api/public/ai/products/$id/calcular': typeof ApiPublicAiProductsIdCalcularRoute
   '/api/public/extension/campaigns/saved/$id': typeof ApiPublicExtensionCampaignsSavedIdRouteWithChildren
   '/api/public/extension/whatsapp/templates/$id': typeof ApiPublicExtensionWhatsappTemplatesIdRoute
   '/api/public/extension/campaigns/saved/$id/submit': typeof ApiPublicExtensionCampaignsSavedIdSubmitRoute
@@ -1055,7 +1037,6 @@ export interface FileRoutesById {
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/whatsapp/signup-callback': typeof ApiPublicWhatsappSignupCallbackRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
-  '/api/public/ai/products/search': typeof ApiPublicAiProductsSearchRoute
   '/api/public/extension/agenda-reminder-rules/$id': typeof ApiPublicExtensionAgendaReminderRulesIdRoute
   '/api/public/extension/appointments/$id': typeof ApiPublicExtensionAppointmentsIdRoute
   '/api/public/extension/body-map-markings/$id': typeof ApiPublicExtensionBodyMapMarkingsIdRoute
@@ -1088,7 +1069,6 @@ export interface FileRoutesById {
   '/api/public/extension/whatsapp/send-template': typeof ApiPublicExtensionWhatsappSendTemplateRoute
   '/api/public/extension/whatsapp/status': typeof ApiPublicExtensionWhatsappStatusRoute
   '/api/public/extension/whatsapp/templates': typeof ApiPublicExtensionWhatsappTemplatesRouteWithChildren
-  '/api/public/ai/products/$id/calcular': typeof ApiPublicAiProductsIdCalcularRoute
   '/api/public/extension/campaigns/saved/$id': typeof ApiPublicExtensionCampaignsSavedIdRouteWithChildren
   '/api/public/extension/whatsapp/templates/$id': typeof ApiPublicExtensionWhatsappTemplatesIdRoute
   '/api/public/extension/campaigns/saved/$id/submit': typeof ApiPublicExtensionCampaignsSavedIdSubmitRoute
@@ -1169,7 +1149,6 @@ export interface FileRouteTypes {
     | '/api/public/payments/webhook'
     | '/api/public/whatsapp/signup-callback'
     | '/api/public/whatsapp/webhook'
-    | '/api/public/ai/products/search'
     | '/api/public/extension/agenda-reminder-rules/$id'
     | '/api/public/extension/appointments/$id'
     | '/api/public/extension/body-map-markings/$id'
@@ -1202,7 +1181,6 @@ export interface FileRouteTypes {
     | '/api/public/extension/whatsapp/send-template'
     | '/api/public/extension/whatsapp/status'
     | '/api/public/extension/whatsapp/templates'
-    | '/api/public/ai/products/$id/calcular'
     | '/api/public/extension/campaigns/saved/$id'
     | '/api/public/extension/whatsapp/templates/$id'
     | '/api/public/extension/campaigns/saved/$id/submit'
@@ -1281,7 +1259,6 @@ export interface FileRouteTypes {
     | '/api/public/payments/webhook'
     | '/api/public/whatsapp/signup-callback'
     | '/api/public/whatsapp/webhook'
-    | '/api/public/ai/products/search'
     | '/api/public/extension/agenda-reminder-rules/$id'
     | '/api/public/extension/appointments/$id'
     | '/api/public/extension/body-map-markings/$id'
@@ -1314,7 +1291,6 @@ export interface FileRouteTypes {
     | '/api/public/extension/whatsapp/send-template'
     | '/api/public/extension/whatsapp/status'
     | '/api/public/extension/whatsapp/templates'
-    | '/api/public/ai/products/$id/calcular'
     | '/api/public/extension/campaigns/saved/$id'
     | '/api/public/extension/whatsapp/templates/$id'
     | '/api/public/extension/campaigns/saved/$id/submit'
@@ -1393,7 +1369,6 @@ export interface FileRouteTypes {
     | '/api/public/payments/webhook'
     | '/api/public/whatsapp/signup-callback'
     | '/api/public/whatsapp/webhook'
-    | '/api/public/ai/products/search'
     | '/api/public/extension/agenda-reminder-rules/$id'
     | '/api/public/extension/appointments/$id'
     | '/api/public/extension/body-map-markings/$id'
@@ -1426,7 +1401,6 @@ export interface FileRouteTypes {
     | '/api/public/extension/whatsapp/send-template'
     | '/api/public/extension/whatsapp/status'
     | '/api/public/extension/whatsapp/templates'
-    | '/api/public/ai/products/$id/calcular'
     | '/api/public/extension/campaigns/saved/$id'
     | '/api/public/extension/whatsapp/templates/$id'
     | '/api/public/extension/campaigns/saved/$id/submit'
@@ -1505,7 +1479,6 @@ export interface RootRouteChildren {
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiPublicWhatsappSignupCallbackRoute: typeof ApiPublicWhatsappSignupCallbackRoute
   ApiPublicWhatsappWebhookRoute: typeof ApiPublicWhatsappWebhookRoute
-  ApiPublicAiProductsSearchRoute: typeof ApiPublicAiProductsSearchRoute
   ApiPublicExtensionJobsIdRoute: typeof ApiPublicExtensionJobsIdRoute
   ApiPublicExtensionJobsNextRoute: typeof ApiPublicExtensionJobsNextRoute
   ApiPublicExtensionWaDataRoute: typeof ApiPublicExtensionWaDataRoute
@@ -1516,7 +1489,6 @@ export interface RootRouteChildren {
   ApiPublicExtensionWhatsappSendTemplateRoute: typeof ApiPublicExtensionWhatsappSendTemplateRoute
   ApiPublicExtensionWhatsappStatusRoute: typeof ApiPublicExtensionWhatsappStatusRoute
   ApiPublicExtensionWhatsappTemplatesRoute: typeof ApiPublicExtensionWhatsappTemplatesRouteWithChildren
-  ApiPublicAiProductsIdCalcularRoute: typeof ApiPublicAiProductsIdCalcularRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -2032,13 +2004,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWhatsappWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/ai/products/search': {
-      id: '/api/public/ai/products/search'
-      path: '/api/public/ai/products/search'
-      fullPath: '/api/public/ai/products/search'
-      preLoaderRoute: typeof ApiPublicAiProductsSearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/extension/agenda-reminder-rules/$id': {
       id: '/api/public/extension/agenda-reminder-rules/$id'
       path: '/$id'
@@ -2261,13 +2226,6 @@ declare module '@tanstack/react-router' {
       path: '/api/public/extension/whatsapp/templates'
       fullPath: '/api/public/extension/whatsapp/templates'
       preLoaderRoute: typeof ApiPublicExtensionWhatsappTemplatesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/ai/products/$id/calcular': {
-      id: '/api/public/ai/products/$id/calcular'
-      path: '/api/public/ai/products/$id/calcular'
-      fullPath: '/api/public/ai/products/$id/calcular'
-      preLoaderRoute: typeof ApiPublicAiProductsIdCalcularRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/extension/campaigns/saved/$id': {
@@ -2723,7 +2681,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiPublicWhatsappSignupCallbackRoute: ApiPublicWhatsappSignupCallbackRoute,
   ApiPublicWhatsappWebhookRoute: ApiPublicWhatsappWebhookRoute,
-  ApiPublicAiProductsSearchRoute: ApiPublicAiProductsSearchRoute,
   ApiPublicExtensionJobsIdRoute: ApiPublicExtensionJobsIdRoute,
   ApiPublicExtensionJobsNextRoute: ApiPublicExtensionJobsNextRoute,
   ApiPublicExtensionWaDataRoute: ApiPublicExtensionWaDataRoute,
@@ -2739,7 +2696,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicExtensionWhatsappStatusRoute: ApiPublicExtensionWhatsappStatusRoute,
   ApiPublicExtensionWhatsappTemplatesRoute:
     ApiPublicExtensionWhatsappTemplatesRouteWithChildren,
-  ApiPublicAiProductsIdCalcularRoute: ApiPublicAiProductsIdCalcularRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

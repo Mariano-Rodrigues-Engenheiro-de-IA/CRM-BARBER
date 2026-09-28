@@ -1929,26 +1929,11 @@ export type Database = {
           category: string | null;
           description: string | null;
           created_at: string;
-          formula_calculo: Json | null;
           id: string;
-          link_catalogo: string | null;
-          mensagem_apresentacao: string | null;
-          moeda: string;
-          motivo_escalar: string | null;
           name: string;
-          observacoes_regras_especiais: string | null;
-          palavras_chave_negativas: string[];
-          palavras_chave_positivas: string[];
-          pedido_minimo: string | null;
           price: number | null;
-          produto_alternativo_sugerido: string | null;
-          roteiro_atendimento: Json | null;
-          sempre_escalar_humano: boolean;
           sort_order: number;
-          tabela_precos: Json | null;
-          tipo_precificacao: Database["public"]["Enums"]["product_pricing_type"];
           updated_at: string;
-          variaveis_obrigatorias: string[];
         };
         Insert: {
           active?: boolean;
@@ -1956,26 +1941,11 @@ export type Database = {
           category?: string | null;
           description?: string | null;
           created_at?: string;
-          formula_calculo?: Json | null;
           id?: string;
-          link_catalogo?: string | null;
-          mensagem_apresentacao?: string | null;
-          moeda?: string;
-          motivo_escalar?: string | null;
           name: string;
-          observacoes_regras_especiais?: string | null;
-          palavras_chave_negativas?: string[];
-          palavras_chave_positivas?: string[];
-          pedido_minimo?: string | null;
           price?: number | null;
-          produto_alternativo_sugerido?: string | null;
-          roteiro_atendimento?: Json | null;
-          sempre_escalar_humano?: boolean;
           sort_order?: number;
-          tabela_precos?: Json | null;
-          tipo_precificacao?: Database["public"]["Enums"]["product_pricing_type"];
           updated_at?: string;
-          variaveis_obrigatorias?: string[];
         };
         Update: {
           active?: boolean;
@@ -1983,26 +1953,11 @@ export type Database = {
           category?: string | null;
           description?: string | null;
           created_at?: string;
-          formula_calculo?: Json | null;
           id?: string;
-          link_catalogo?: string | null;
-          mensagem_apresentacao?: string | null;
-          moeda?: string;
-          motivo_escalar?: string | null;
           name?: string;
-          observacoes_regras_especiais?: string | null;
-          palavras_chave_negativas?: string[];
-          palavras_chave_positivas?: string[];
-          pedido_minimo?: string | null;
           price?: number | null;
-          produto_alternativo_sugerido?: string | null;
-          roteiro_atendimento?: Json | null;
-          sempre_escalar_humano?: boolean;
           sort_order?: number;
-          tabela_precos?: Json | null;
-          tipo_precificacao?: Database["public"]["Enums"]["product_pricing_type"];
           updated_at?: string;
-          variaveis_obrigatorias?: string[];
         };
         Relationships: [
           {
@@ -2010,13 +1965,6 @@ export type Database = {
             columns: ["barbershop_id"];
             isOneToOne: false;
             referencedRelation: "barbershops";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "products_produto_alternativo_sugerido_fkey";
-            columns: ["produto_alternativo_sugerido"];
-            isOneToOne: false;
-            referencedRelation: "products";
             referencedColumns: ["id"];
           },
         ];
@@ -2715,7 +2663,6 @@ export type Database = {
     };
     Enums: {
       app_role: "owner" | "staff";
-      product_pricing_type: "fixo" | "tabela_faixa" | "formula_area";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -2838,7 +2785,6 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["owner", "staff"],
-      product_pricing_type: ["fixo", "tabela_faixa", "formula_area"],
     },
   },
 } as const;
