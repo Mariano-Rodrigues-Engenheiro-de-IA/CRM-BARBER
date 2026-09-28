@@ -184,7 +184,7 @@ export function PanelLoginGate({ token, onAuthed }: { token: string; onAuthed: (
       >
         <LoginLogo />
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-neutral-900">
+          <h1 className={`font-semibold text-neutral-900 ${isSet ? "text-xl" : "text-base"}`}>
             {isSet ? "Defina sua senha" : "Entre no seu CRM"}
           </h1>
           {isSet && (
