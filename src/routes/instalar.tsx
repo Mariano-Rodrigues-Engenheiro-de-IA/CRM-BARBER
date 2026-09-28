@@ -163,10 +163,6 @@ function Install() {
               </ol>
             </>
           )}
-          <p className="text-xs text-neutral-500">
-            O plano grátis já vem liberado. Quando bater o limite, o painel mostra o botão de assinar
-            o Premium por R$ 197/mês.
-          </p>
           <Button asChild variant="ghost" className="w-full text-neutral-300 hover:text-neutral-50">
             <a href={BARBER_SALES_URL}>Voltar para a página inicial</a>
           </Button>
