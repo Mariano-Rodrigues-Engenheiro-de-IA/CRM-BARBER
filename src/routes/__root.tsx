@@ -101,13 +101,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         property: "og:image",
         content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2865b1f1-d0fc-4253-ae81-ec65dd0e051d/id-preview-9e7bc48a--652f97f5-da54-4335-aff1-092273b48f7a.lovable.app-1784750247337.png",
+          "https://crm.zayloia.com/brand/og-zaylo-v2.jpg",
       },
       {
         name: "twitter:image",
         content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2865b1f1-d0fc-4253-ae81-ec65dd0e051d/id-preview-9e7bc48a--652f97f5-da54-4335-aff1-092273b48f7a.lovable.app-1784750247337.png",
+          "https://crm.zayloia.com/brand/og-zaylo-v2.jpg",
       },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "Zaylo CRM: automação de WhatsApp para o seu negócio" },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
       // PWA: deixa instalável como app na tela de início, com ícone e
