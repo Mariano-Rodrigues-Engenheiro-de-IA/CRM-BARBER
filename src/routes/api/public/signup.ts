@@ -89,49 +89,58 @@ export const Route = createFileRoute("/api/public/signup")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-        // Look up an existing barbershop by phone or email so refills of the form
-        // don't create duplicates.
-        const { data: existingByPhone } = await supabaseAdmin
+        // REGRA: o cadastro NUNCA duplica e NUNCA altera quem ja existe.
+        //  - telefone ja cadastrado -> reconhece (ok + already_registered) e nao
+        //    muda nada: a pessoa segue usando o mesmo cadastro.
+        //  - e-mail ja cadastrado com OUTRO telefone -> recusa (409) e nao muda
+        //    nada. Antes esse caso TROCAVA o telefone da barbearia existente, o
+        //    que derrubava o pareamento do dono e deixava qualquer um trocar o
+        //    numero de outro cliente so sabendo o e-mail dele.
+        //  - so cria quando nem o telefone nem o e-mail existem.
+        // Se a checagem falhar, recusa em vez de arriscar criar duplicado.
+        const jsonHeaders = { "Content-Type": "application/json", ...cors };
+
+        const { data: phoneMatches, error: phoneErr } = await supabaseAdmin
           .from("barbershops")
           .select("id")
           .in("owner_phone", phoneLookupCandidates(phone))
-          .limit(1)
-          .maybeSingle();
-        if (existingByPhone) {
-          return new Response(JSON.stringify({ ok: true, barbershop_id: existingByPhone.id }), {
-            status: 200,
-            headers: { "Content-Type": "application/json", ...cors },
+          .limit(1);
+        if (phoneErr) {
+          return new Response(JSON.stringify({ ok: false, error: "Falha ao verificar cadastro" }), {
+            status: 500,
+            headers: jsonHeaders,
           });
         }
-        const { data: existingByEmail } = await supabaseAdmin
+        if (phoneMatches && phoneMatches.length > 0) {
+          return new Response(
+            JSON.stringify({ ok: true, already_registered: true, barbershop_id: phoneMatches[0].id }),
+            { status: 200, headers: jsonHeaders },
+          );
+        }
+
+        // ilike sem curinga = compara sem diferenciar maiusculas (ha e-mails
+        // antigos gravados com maiuscula). % e _ do e-mail sao escapados.
+        const emailPattern = email.replace(/[\\%_]/g, "\\$&");
+        const { data: emailMatches, error: emailErr } = await supabaseAdmin
           .from("barbershops")
-          .select("id, owner_phone")
-          .eq("owner_email", email)
-          .maybeSingle();
-        if (existingByEmail) {
-          if (existingByEmail.owner_phone !== phone) {
-            const { error: updateError } = await supabaseAdmin
-              .from("barbershops")
-              .update({
-                name,
-                owner_name: name,
-                owner_phone: phone,
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", existingByEmail.id);
-
-            if (updateError) {
-              return new Response(
-                JSON.stringify({ ok: false, error: "Falha ao atualizar cadastro" }),
-                { status: 500, headers: { "Content-Type": "application/json", ...cors } },
-              );
-            }
-          }
-
-          return new Response(JSON.stringify({ ok: true, barbershop_id: existingByEmail.id }), {
-            status: 200,
-            headers: { "Content-Type": "application/json", ...cors },
+          .select("id")
+          .ilike("owner_email", emailPattern)
+          .limit(1);
+        if (emailErr) {
+          return new Response(JSON.stringify({ ok: false, error: "Falha ao verificar cadastro" }), {
+            status: 500,
+            headers: jsonHeaders,
           });
+        }
+        if (emailMatches && emailMatches.length > 0) {
+          return new Response(
+            JSON.stringify({
+              ok: false,
+              code: "email_in_use",
+              error: "Este e-mail já tem cadastro com outro WhatsApp. Use o mesmo número do primeiro cadastro.",
+            }),
+            { status: 409, headers: jsonHeaders },
+          );
         }
 
         const { data: inserted, error: insertError } = await supabaseAdmin
