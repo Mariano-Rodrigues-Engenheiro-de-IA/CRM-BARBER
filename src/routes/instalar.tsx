@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CHROME_STORE_URL, hasChromeStore } from "@/lib/site-config";
+import { BARBER_SALES_URL, CHROME_STORE_URL, hasChromeStore } from "@/lib/site-config";
 
 export const Route = createFileRoute("/instalar")({
   head: () => ({
@@ -168,7 +168,7 @@ function Install() {
             o Premium por R$ 197/mês.
           </p>
           <Button asChild variant="ghost" className="w-full text-neutral-300 hover:text-neutral-50">
-            <Link to="/">Voltar para a página inicial</Link>
+            <a href={BARBER_SALES_URL}>Voltar para a página inicial</a>
           </Button>
         </CardContent>
       </Card>
