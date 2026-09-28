@@ -17,6 +17,7 @@ import type { Json } from "@/integrations/supabase/types";
 const patchSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   category: z.string().trim().max(60).optional().nullable(),
+  description: z.string().trim().max(1000).optional().nullable(),
   price: z.number().min(0).max(1000000).optional().nullable(),
   active: z.boolean().optional(),
   sort_order: z.number().int().optional(),

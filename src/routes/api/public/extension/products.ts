@@ -16,6 +16,7 @@ import type { Json } from "@/integrations/supabase/types";
 const createSchema = z.object({
   name: z.string().trim().min(1).max(120),
   category: z.string().trim().max(60).optional(),
+  description: z.string().trim().max(1000).optional().nullable(),
   price: z.number().min(0).max(1000000).optional(),
   palavras_chave_positivas: z.array(z.string().trim().min(1)).optional(),
   palavras_chave_negativas: z.array(z.string().trim().min(1)).optional(),
@@ -35,7 +36,7 @@ const createSchema = z.object({
 });
 
 const LIST_SELECT =
-  "id, name, category, price, active, sort_order, palavras_chave_positivas, palavras_chave_negativas, tipo_precificacao, tabela_precos, formula_calculo, variaveis_obrigatorias, roteiro_atendimento, pedido_minimo, sempre_escalar_humano, motivo_escalar, link_catalogo, mensagem_apresentacao, observacoes_regras_especiais";
+  "id, name, category, description, price, active, sort_order, palavras_chave_positivas, palavras_chave_negativas, tipo_precificacao, tabela_precos, formula_calculo, variaveis_obrigatorias, roteiro_atendimento, pedido_minimo, sempre_escalar_humano, motivo_escalar, link_catalogo, mensagem_apresentacao, observacoes_regras_especiais";
 
 export const Route = createFileRoute("/api/public/extension/products")({
   server: {

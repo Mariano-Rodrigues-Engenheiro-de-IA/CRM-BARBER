@@ -1927,6 +1927,7 @@ export type Database = {
           active: boolean;
           barbershop_id: string;
           category: string | null;
+          description: string | null;
           created_at: string;
           formula_calculo: Json | null;
           id: string;
@@ -1953,6 +1954,7 @@ export type Database = {
           active?: boolean;
           barbershop_id: string;
           category?: string | null;
+          description?: string | null;
           created_at?: string;
           formula_calculo?: Json | null;
           id?: string;
@@ -1979,6 +1981,7 @@ export type Database = {
           active?: boolean;
           barbershop_id?: string;
           category?: string | null;
+          description?: string | null;
           created_at?: string;
           formula_calculo?: Json | null;
           id?: string;

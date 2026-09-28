@@ -1,32 +1,17 @@
-// Aba "Produtos" das configurações - cadastro de produtos, tabela de
-// preços por faixa, fórmula de cálculo por área. Extraído de
-// professionals-services-dialog.tsx pra reduzir o tamanho desse arquivo
-// (era um dos 3 arquivos gigantes apontados na varredura de código
-// morto/arquitetura).
+// Aba "Produtos" das configuracoes: cadastro simples e igual pra qualquer tipo
+// de negocio (nome, valor, descricao, categoria).
+//
+// Antes esta aba era um catalogo complexo pra IA calcular orcamento (preco por
+// tabela de faixa, formula por m2, roteiro de atendimento, palavras-chave,
+// "sempre escalar pra equipe"), que ninguem usa. As colunas antigas continuam
+// na tabela e nas rotas do servidor, so nao aparecem mais aqui.
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { useConfirm } from "@/components/confirm-dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 type Api = (path: string, opts?: RequestInit) => Promise<any>;
@@ -35,54 +20,10 @@ export type Product = {
   id: string;
   name: string;
   category: string | null;
+  description: string | null;
   price: number | null;
   active: boolean;
-  palavras_chave_positivas?: string[];
-  palavras_chave_negativas?: string[];
-  tipo_precificacao?: "fixo" | "tabela_faixa" | "formula_area";
-  tabela_precos?: TabelaPrecos | null;
-  formula_calculo?: FormulaCalculo | null;
-  variaveis_obrigatorias?: string[];
-  roteiro_atendimento?: { campo: string; pergunta: string }[] | null;
-  pedido_minimo?: string | null;
-  sempre_escalar_humano?: boolean;
-  motivo_escalar?: string | null;
-  link_catalogo?: string | null;
-  mensagem_apresentacao?: string | null;
-  observacoes_regras_especiais?: string | null;
 };
-
-type Faixa = {
-  quantidade_min: number;
-  quantidade_max: number;
-  variacoes: { nome: string; valor: number }[];
-};
-type TabelaPrecos = {
-  faixas: { quantidade_min: number; quantidade_max: number; variacoes: Record<string, number> }[];
-};
-type Adicional = { nome: string; valor: number; aplica_apenas_se?: string };
-type FormulaCalculo = {
-  valor_m2: number;
-  pedido_minimo_valor?: number;
-  sangra_cm?: number;
-  adicionais?: Adicional[];
-  regra_solda?: { aplica_se: string; valor_por_metro_linear_menor_medida: number };
-};
-
-function priceSummary(p: Product): string | null {
-  if (p.sempre_escalar_humano) return "Sempre escala para a equipe";
-  if (p.tipo_precificacao === "formula_area" && p.formula_calculo?.valor_m2 != null) {
-    return `R$ ${p.formula_calculo.valor_m2.toFixed(2)} / m²`;
-  }
-  if (p.tipo_precificacao === "tabela_faixa" && p.tabela_precos?.faixas?.length) {
-    const valores = p.tabela_precos.faixas.flatMap((f) => Object.values(f.variacoes ?? {}));
-    if (valores.length > 0)
-      return `Tabela por faixa · a partir de R$ ${Math.min(...valores).toFixed(2)}`;
-    return "Tabela por faixa";
-  }
-  if (p.price != null) return `R$ ${p.price.toFixed(2)}`;
-  return null;
-}
 
 export function ProductsTab({ api, onChanged }: { api: Api; onChanged?: () => void }) {
   const [products, setProducts] = useState<Product[]>([]);
@@ -134,15 +75,11 @@ export function ProductsTab({ api, onChanged }: { api: Api; onChanged?: () => vo
       ) : (
         <div className="space-y-2">
           {products.map((p) => (
-            <div
-              key={p.id}
-              className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3"
-            >
+            <div key={p.id} className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3">
               <div className="min-w-0 flex-1">
                 <p
                   className={
-                    "truncate text-sm font-medium " +
-                    (p.active ? "text-neutral-900" : "text-neutral-400 line-through")
+                    "truncate text-sm font-medium " + (p.active ? "text-neutral-900" : "text-neutral-400 line-through")
                   }
                 >
                   {p.name}
@@ -152,9 +89,10 @@ export function ProductsTab({ api, onChanged }: { api: Api; onChanged?: () => vo
                     </span>
                   )}
                 </p>
-                {priceSummary(p) && (
-                  <p className="truncate text-xs text-neutral-400">{priceSummary(p)}</p>
-                )}
+                <p className="truncate text-xs text-neutral-400">
+                  {p.price != null ? `R$ ${p.price.toFixed(2)}` : "Sem valor"}
+                  {p.description ? ` · ${p.description}` : ""}
+                </p>
               </div>
               <Button
                 variant="ghost"
@@ -188,61 +126,6 @@ export function ProductsTab({ api, onChanged }: { api: Api; onChanged?: () => vo
   );
 }
 
-/** Editor simples de lista de textos curtos (palavras-chave, variáveis
- * obrigatórias) — digita e aperta Enter pra adicionar, clica no X pra
- * remover. Sem edição de JSON bruto, pensado pra alguém não técnico usar. */
-function TagListEditor({
-  values,
-  onChange,
-  placeholder,
-  badgeVariant = "secondary",
-}: {
-  values: string[];
-  onChange: (next: string[]) => void;
-  placeholder: string;
-  badgeVariant?: "secondary" | "destructive";
-}) {
-  const [draft, setDraft] = useState("");
-
-  function addDraft() {
-    const v = draft.trim();
-    if (!v || values.includes(v)) return;
-    onChange([...values, v]);
-    setDraft("");
-  }
-
-  return (
-    <div className="space-y-1.5">
-      <div className="flex flex-wrap gap-1.5">
-        {values.map((v) => (
-          <Badge key={v} variant={badgeVariant} className="gap-1 pr-1">
-            {v}
-            <button
-              type="button"
-              onClick={() => onChange(values.filter((x) => x !== v))}
-              className="ml-0.5 rounded-full px-1 hover:bg-black/10"
-            >
-              ×
-            </button>
-          </Badge>
-        ))}
-      </div>
-      <Input
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            addDraft();
-          }
-        }}
-        onBlur={addDraft}
-        placeholder={placeholder}
-      />
-    </div>
-  );
-}
-
 function ProductFormDialog({
   open,
   onOpenChange,
@@ -257,158 +140,46 @@ function ProductFormDialog({
   onSaved: () => void;
 }) {
   const [name, setName] = useState("");
-  const [category, setCategory] = useState("");
   const [price, setPrice] = useState("");
+  const [category, setCategory] = useState("");
+  const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Identificação (usado por buscar_produto)
-  const [palavrasPositivas, setPalavrasPositivas] = useState<string[]>([]);
-  const [palavrasNegativas, setPalavrasNegativas] = useState<string[]>([]);
-
-  // Precificação
-  const [tipoPrecificacao, setTipoPrecificacao] = useState<
-    "fixo" | "tabela_faixa" | "formula_area"
-  >("fixo");
-  const [faixas, setFaixas] = useState<Faixa[]>([]);
-  const [valorM2, setValorM2] = useState("");
-  const [pedidoMinimoValor, setPedidoMinimoValor] = useState("");
-  const [sangraCm, setSangraCm] = useState("");
-  const [adicionais, setAdicionais] = useState<Adicional[]>([]);
-  const [soldaAtiva, setSoldaAtiva] = useState(false);
-  const [soldaAplicaSe, setSoldaAplicaSe] = useState("largura > 1.75 E altura > 1.75");
-  const [soldaValor, setSoldaValor] = useState("");
-
-  // Coleta e escalonamento
-  const [variaveisObrigatorias, setVariaveisObrigatorias] = useState<string[]>([]);
-  const [roteiro, setRoteiro] = useState<{ campo: string; pergunta: string }[]>([]);
-  const [pedidoMinimo, setPedidoMinimo] = useState("");
-  const [sempreEscalarHumano, setSempreEscalarHumano] = useState(false);
-  const [motivoEscalar, setMotivoEscalar] = useState("");
-  const [linkCatalogo, setLinkCatalogo] = useState("");
-  const [mensagemApresentacao, setMensagemApresentacao] = useState("");
-  const [observacoes, setObservacoes] = useState("");
-
   useEffect(() => {
-    if (!open) return;
-    setName(editing?.name ?? "");
-    setCategory(editing?.category ?? "");
-    setPrice(editing?.price != null ? String(editing.price) : "");
-    setPalavrasPositivas(editing?.palavras_chave_positivas ?? []);
-    setPalavrasNegativas(editing?.palavras_chave_negativas ?? []);
-    setTipoPrecificacao(editing?.tipo_precificacao ?? "fixo");
-
-    const tabela = editing?.tabela_precos;
-    setFaixas(
-      (tabela?.faixas ?? []).map((f) => ({
-        quantidade_min: f.quantidade_min,
-        quantidade_max: f.quantidade_max,
-        variacoes: Object.entries(f.variacoes ?? {}).map(([nome, valor]) => ({ nome, valor })),
-      })),
-    );
-
-    const formula = editing?.formula_calculo;
-    setValorM2(formula?.valor_m2 != null ? String(formula.valor_m2) : "");
-    setPedidoMinimoValor(
-      formula?.pedido_minimo_valor != null ? String(formula.pedido_minimo_valor) : "",
-    );
-    setSangraCm(formula?.sangra_cm != null ? String(formula.sangra_cm) : "");
-    setAdicionais(formula?.adicionais ?? []);
-    setSoldaAtiva(!!formula?.regra_solda);
-    setSoldaAplicaSe(formula?.regra_solda?.aplica_se ?? "largura > 1.75 E altura > 1.75");
-    setSoldaValor(
-      formula?.regra_solda?.valor_por_metro_linear_menor_medida != null
-        ? String(formula.regra_solda.valor_por_metro_linear_menor_medida)
-        : "",
-    );
-
-    setVariaveisObrigatorias(editing?.variaveis_obrigatorias ?? []);
-    setRoteiro(editing?.roteiro_atendimento ?? []);
-    setPedidoMinimo(editing?.pedido_minimo ?? "");
-    setSempreEscalarHumano(editing?.sempre_escalar_humano ?? false);
-    setMotivoEscalar(editing?.motivo_escalar ?? "");
-    setLinkCatalogo(editing?.link_catalogo ?? "");
-    setMensagemApresentacao(editing?.mensagem_apresentacao ?? "");
-    setObservacoes(editing?.observacoes_regras_especiais ?? "");
+    if (open) {
+      setName(editing?.name ?? "");
+      setPrice(editing?.price != null ? String(editing.price) : "");
+      setCategory(editing?.category ?? "");
+      setDescription(editing?.description ?? "");
+    }
   }, [open, editing]);
-
-  function addFaixa() {
-    setFaixas((prev) => [
-      ...prev,
-      { quantidade_min: 0, quantidade_max: 0, variacoes: [{ nome: "padrao", valor: 0 }] },
-    ]);
-  }
-  function addAdicional() {
-    setAdicionais((prev) => [...prev, { nome: "", valor: 0, aplica_apenas_se: "" }]);
-  }
 
   async function handleSave() {
     if (!name.trim()) return;
+    // Aceita "12,50" e "12.50".
+    const value = price.trim() === "" ? null : Number(price.trim().replace(",", "."));
+    if (value !== null && (Number.isNaN(value) || value < 0)) {
+      toast.error("Valor inválido");
+      return;
+    }
     setSaving(true);
     try {
-      const payload: Record<string, unknown> = {
-        name: name.trim(),
-        category: category.trim() || undefined,
-        price: price ? Number(price) : undefined,
-        palavras_chave_positivas: palavrasPositivas,
-        palavras_chave_negativas: palavrasNegativas,
-        tipo_precificacao: tipoPrecificacao,
-        variaveis_obrigatorias: variaveisObrigatorias,
-        roteiro_atendimento:
-          roteiro.filter((r) => r.campo.trim() && r.pergunta.trim()).length > 0
-            ? roteiro.filter((r) => r.campo.trim() && r.pergunta.trim())
-            : null,
-        pedido_minimo: pedidoMinimo.trim() || null,
-        sempre_escalar_humano: sempreEscalarHumano,
-        motivo_escalar: sempreEscalarHumano ? motivoEscalar.trim() || null : null,
-        link_catalogo: linkCatalogo.trim() || null,
-        mensagem_apresentacao: mensagemApresentacao.trim() || null,
-        observacoes_regras_especiais: observacoes.trim() || null,
-      };
-
-      if (tipoPrecificacao === "tabela_faixa") {
-        payload.tabela_precos = {
-          faixas: faixas.map((f) => ({
-            quantidade_min: f.quantidade_min,
-            quantidade_max: f.quantidade_max,
-            variacoes: Object.fromEntries(
-              f.variacoes.filter((v) => v.nome.trim()).map((v) => [v.nome.trim(), v.valor]),
-            ),
-          })),
-        };
-        payload.formula_calculo = null;
-      } else if (tipoPrecificacao === "formula_area") {
-        payload.formula_calculo = {
-          valor_m2: Number(valorM2) || 0,
-          pedido_minimo_valor: pedidoMinimoValor ? Number(pedidoMinimoValor) : undefined,
-          sangra_cm: sangraCm ? Number(sangraCm) : undefined,
-          adicionais: adicionais
-            .filter((a) => a.nome.trim())
-            .map((a) => ({
-              nome: a.nome.trim(),
-              valor: a.valor,
-              aplica_apenas_se: a.aplica_apenas_se?.trim() || undefined,
-            })),
-          regra_solda: soldaAtiva
-            ? {
-                aplica_se: soldaAplicaSe.trim(),
-                valor_por_metro_linear_menor_medida: Number(soldaValor) || 0,
-              }
-            : undefined,
-        };
-        payload.tabela_precos = null;
-      } else {
-        payload.tabela_precos = null;
-        payload.formula_calculo = null;
-      }
-
+      const cat = category.trim();
+      const desc = description.trim();
       const r = editing
         ? await api(`/api/public/extension/products/${editing.id}`, {
             method: "PATCH",
-            body: JSON.stringify(payload),
+            // Na edicao, campo vazio limpa o que estava salvo.
+            body: JSON.stringify({ name: name.trim(), price: value, category: cat || null, description: desc || null }),
           })
         : await api("/api/public/extension/products", {
             method: "POST",
-            body: JSON.stringify(payload),
+            body: JSON.stringify({
+              name: name.trim(),
+              price: value ?? undefined,
+              category: cat || undefined,
+              description: desc || undefined,
+            }),
           });
       if (!r?.ok) throw new Error(r?.error || "Erro ao salvar");
       toast.success(editing ? "Produto atualizado" : "Produto adicionado");
@@ -423,460 +194,35 @@ function ProductFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{editing ? "Editar produto" : "Novo produto"}</DialogTitle>
         </DialogHeader>
-
-        <Tabs defaultValue="basico" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="basico">Básico</TabsTrigger>
-            <TabsTrigger value="identificacao">Identificação</TabsTrigger>
-            <TabsTrigger value="preco">Preço</TabsTrigger>
-            <TabsTrigger value="regras">Regras</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="basico" className="space-y-3 pt-3">
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Nome do produto</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Pomada modeladora" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Nome do produto</Label>
+              <Label>Valor (opcional)</Label>
               <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ex: Banner com acabamento em madeira"
+                inputMode="decimal"
+                placeholder="R$"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
               />
             </div>
             <div className="space-y-1.5">
               <Label>Categoria (opcional)</Label>
-              <Input
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                placeholder="Ex: Comunicação Visual, Papelaria"
-              />
+              <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Ex: Cabelo" />
             </div>
-            <div className="space-y-1.5">
-              <Label>Link do catálogo do WhatsApp (opcional)</Label>
-              <Input
-                value={linkCatalogo}
-                onChange={(e) => setLinkCatalogo(e.target.value)}
-                placeholder="https://wa.me/p/..."
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Mensagem de apresentação (opcional)</Label>
-              <Textarea
-                value={mensagemApresentacao}
-                onChange={(e) => setMensagemApresentacao(e.target.value)}
-                placeholder="Frase que a IA usa ao identificar interesse nesse produto. Deixe em branco para usar uma genérica."
-                rows={2}
-              />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="identificacao" className="space-y-4 pt-3">
-            <p className="text-xs text-neutral-500">
-              Essas palavras ajudam a IA a reconhecer quando o cliente está pedindo este produto, e
-              a não confundir com produtos parecidos.
-            </p>
-            <div className="space-y-1.5">
-              <Label>Palavras-chave (sinônimos que o cliente usaria)</Label>
-              <TagListEditor
-                values={palavrasPositivas}
-                onChange={setPalavrasPositivas}
-                placeholder="Digite e aperte Enter (ex: banner, faixa promocional)"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Palavras que NÃO são este produto (evita confusão com produto parecido)</Label>
-              <TagListEditor
-                values={palavrasNegativas}
-                onChange={setPalavrasNegativas}
-                placeholder="Digite e aperte Enter (ex: interditado, prefeitura, placa)"
-                badgeVariant="destructive"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Dados que a IA precisa perguntar ao cliente antes de calcular</Label>
-              <TagListEditor
-                values={variaveisObrigatorias}
-                onChange={setVariaveisObrigatorias}
-                placeholder="Digite e aperte Enter (ex: tamanho, quantidade, tipo_impressao)"
-              />
-            </div>
-
-            <div className="space-y-2 rounded-lg border border-neutral-200 p-3">
-              <div>
-                <Label>Roteiro de atendimento (opcional, mas recomendado)</Label>
-                <p className="text-xs text-neutral-500">
-                  Defina a ordem exata das perguntas e o texto exato que a IA deve usar para este
-                  produto. Se deixar vazio, a IA formula a pergunta sozinha a partir da lista acima.
-                </p>
-              </div>
-              {roteiro.map((passo, pi) => (
-                <div key={pi} className="flex items-start gap-2">
-                  <span className="mt-2 text-xs font-semibold text-neutral-400">{pi + 1}.</span>
-                  <div className="flex-1 space-y-1">
-                    <Input
-                      placeholder="Campo (ex: largura_m)"
-                      value={passo.campo}
-                      onChange={(e) =>
-                        setRoteiro((prev) =>
-                          prev.map((p, i) => (i === pi ? { ...p, campo: e.target.value } : p)),
-                        )
-                      }
-                    />
-                    <Textarea
-                      rows={2}
-                      placeholder="Pergunta exata (ex: Qual a largura, em metros?)"
-                      value={passo.pergunta}
-                      onChange={(e) =>
-                        setRoteiro((prev) =>
-                          prev.map((p, i) => (i === pi ? { ...p, pergunta: e.target.value } : p)),
-                        )
-                      }
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setRoteiro((prev) => prev.filter((_, i) => i !== pi))}
-                    className="mt-2 text-neutral-400 hover:text-red-600"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setRoteiro((prev) => [...prev, { campo: "", pergunta: "" }])}
-              >
-                + Adicionar passo do roteiro
-              </Button>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="preco" className="space-y-4 pt-3">
-            <div className="space-y-1.5">
-              <Label>Como esse produto é precificado</Label>
-              <Select
-                value={tipoPrecificacao}
-                onValueChange={(v) => setTipoPrecificacao(v as typeof tipoPrecificacao)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="fixo">Preço fixo por unidade</SelectItem>
-                  <SelectItem value="tabela_faixa">Tabela por faixa de quantidade</SelectItem>
-                  <SelectItem value="formula_area">Fórmula por área (largura × altura)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {tipoPrecificacao === "fixo" && (
-              <div className="space-y-1.5">
-                <Label>Preço unitário</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  placeholder="R$"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                />
-              </div>
-            )}
-
-            {tipoPrecificacao === "tabela_faixa" && (
-              <div className="space-y-3">
-                {faixas.map((faixa, fi) => (
-                  <div key={fi} className="space-y-2 rounded-lg border border-neutral-200 p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-neutral-500">Faixa {fi + 1}</span>
-                      <button
-                        type="button"
-                        onClick={() => setFaixas((prev) => prev.filter((_, i) => i !== fi))}
-                        className="text-xs text-red-600 hover:underline"
-                      >
-                        Remover faixa
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Quantidade mínima</Label>
-                        <Input
-                          type="number"
-                          value={faixa.quantidade_min}
-                          onChange={(e) =>
-                            setFaixas((prev) =>
-                              prev.map((f, i) =>
-                                i === fi ? { ...f, quantidade_min: Number(e.target.value) } : f,
-                              ),
-                            )
-                          }
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Quantidade máxima</Label>
-                        <Input
-                          type="number"
-                          value={faixa.quantidade_max}
-                          onChange={(e) =>
-                            setFaixas((prev) =>
-                              prev.map((f, i) =>
-                                i === fi ? { ...f, quantidade_max: Number(e.target.value) } : f,
-                              ),
-                            )
-                          }
-                        />
-                      </div>
-                    </div>
-                    <Label className="text-xs">
-                      Variações e valores (ex: 4x0, 4x1, 4x4, ou "padrao" se só tiver um valor)
-                    </Label>
-                    {faixa.variacoes.map((v, vi) => (
-                      <div key={vi} className="flex items-center gap-2">
-                        <Input
-                          className="flex-1"
-                          placeholder="Nome (ex: 4x0)"
-                          value={v.nome}
-                          onChange={(e) =>
-                            setFaixas((prev) =>
-                              prev.map((f, i) =>
-                                i === fi
-                                  ? {
-                                      ...f,
-                                      variacoes: f.variacoes.map((vv, vvi) =>
-                                        vvi === vi ? { ...vv, nome: e.target.value } : vv,
-                                      ),
-                                    }
-                                  : f,
-                              ),
-                            )
-                          }
-                        />
-                        <Input
-                          className="w-28"
-                          type="number"
-                          step={0.01}
-                          placeholder="R$"
-                          value={v.valor}
-                          onChange={(e) =>
-                            setFaixas((prev) =>
-                              prev.map((f, i) =>
-                                i === fi
-                                  ? {
-                                      ...f,
-                                      variacoes: f.variacoes.map((vv, vvi) =>
-                                        vvi === vi ? { ...vv, valor: Number(e.target.value) } : vv,
-                                      ),
-                                    }
-                                  : f,
-                              ),
-                            )
-                          }
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setFaixas((prev) =>
-                              prev.map((f, i) =>
-                                i === fi
-                                  ? { ...f, variacoes: f.variacoes.filter((_, vvi) => vvi !== vi) }
-                                  : f,
-                              ),
-                            )
-                          }
-                          className="text-neutral-400 hover:text-red-600"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFaixas((prev) =>
-                          prev.map((f, i) =>
-                            i === fi
-                              ? { ...f, variacoes: [...f.variacoes, { nome: "", valor: 0 }] }
-                              : f,
-                          ),
-                        )
-                      }
-                      className="text-xs text-brand hover:underline"
-                    >
-                      + adicionar variação
-                    </button>
-                  </div>
-                ))}
-                <Button type="button" variant="outline" size="sm" onClick={addFaixa}>
-                  + Adicionar faixa de quantidade
-                </Button>
-              </div>
-            )}
-
-            {tipoPrecificacao === "formula_area" && (
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1.5">
-                    <Label>Valor por m²</Label>
-                    <Input
-                      type="number"
-                      step={0.01}
-                      placeholder="R$"
-                      value={valorM2}
-                      onChange={(e) => setValorM2(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Pedido mínimo (R$, opcional)</Label>
-                    <Input
-                      type="number"
-                      step={0.01}
-                      placeholder="R$"
-                      value={pedidoMinimoValor}
-                      onChange={(e) => setPedidoMinimoValor(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Sangra em cm (opcional, só pra peças pequenas)</Label>
-                  <Input
-                    type="number"
-                    step={0.1}
-                    placeholder="Ex: 0.2"
-                    value={sangraCm}
-                    onChange={(e) => setSangraCm(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Adicionais condicionais (ex: ilhós só se acabamento for madeira)</Label>
-                  {adicionais.map((ad, ai) => (
-                    <div key={ai} className="flex items-center gap-2">
-                      <Input
-                        className="flex-1"
-                        placeholder="Nome (ex: ilhos_4_pontas)"
-                        value={ad.nome}
-                        onChange={(e) =>
-                          setAdicionais((prev) =>
-                            prev.map((a, i) => (i === ai ? { ...a, nome: e.target.value } : a)),
-                          )
-                        }
-                      />
-                      <Input
-                        className="w-24"
-                        type="number"
-                        step={0.01}
-                        placeholder="R$"
-                        value={ad.valor}
-                        onChange={(e) =>
-                          setAdicionais((prev) =>
-                            prev.map((a, i) =>
-                              i === ai ? { ...a, valor: Number(e.target.value) } : a,
-                            ),
-                          )
-                        }
-                      />
-                      <Input
-                        className="flex-1"
-                        placeholder="Condição (ex: acabamento = madeira)"
-                        value={ad.aplica_apenas_se ?? ""}
-                        onChange={(e) =>
-                          setAdicionais((prev) =>
-                            prev.map((a, i) =>
-                              i === ai ? { ...a, aplica_apenas_se: e.target.value } : a,
-                            ),
-                          )
-                        }
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setAdicionais((prev) => prev.filter((_, i) => i !== ai))}
-                        className="text-neutral-400 hover:text-red-600"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                  <Button type="button" variant="outline" size="sm" onClick={addAdicional}>
-                    + Adicionar adicional
-                  </Button>
-                </div>
-
-                <div className="space-y-2 rounded-lg border border-neutral-200 p-3">
-                  <div className="flex items-center justify-between">
-                    <Label>Regra de solda (peças grandes)</Label>
-                    <Switch checked={soldaAtiva} onCheckedChange={setSoldaAtiva} />
-                  </div>
-                  {soldaAtiva && (
-                    <>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Quando aplica</Label>
-                        <Input
-                          value={soldaAplicaSe}
-                          onChange={(e) => setSoldaAplicaSe(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Valor por metro linear (da menor medida)</Label>
-                        <Input
-                          type="number"
-                          step={0.01}
-                          placeholder="R$"
-                          value={soldaValor}
-                          onChange={(e) => setSoldaValor(e.target.value)}
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="regras" className="space-y-4 pt-3">
-            <div className="space-y-1.5">
-              <Label>Pedido mínimo (texto livre, opcional)</Label>
-              <Input
-                value={pedidoMinimo}
-                onChange={(e) => setPedidoMinimo(e.target.value)}
-                placeholder="Ex: 10 unidades"
-              />
-            </div>
-            <div className="flex items-center justify-between rounded-lg border border-neutral-200 p-3">
-              <div>
-                <Label>Sempre escalar para atendente humano</Label>
-                <p className="text-xs text-neutral-500">
-                  A IA nunca calcula nem informa preço deste produto sozinha.
-                </p>
-              </div>
-              <Switch checked={sempreEscalarHumano} onCheckedChange={setSempreEscalarHumano} />
-            </div>
-            {sempreEscalarHumano && (
-              <div className="space-y-1.5">
-                <Label>Motivo (a IA explica isso ao cliente com suas próprias palavras)</Label>
-                <Textarea
-                  value={motivoEscalar}
-                  onChange={(e) => setMotivoEscalar(e.target.value)}
-                  placeholder="Ex: preço varia muito conforme material e local de aplicação, sem tabela fixa"
-                  rows={2}
-                />
-              </div>
-            )}
-            <div className="space-y-1.5">
-              <Label>Observações e regras especiais (opcional)</Label>
-              <Textarea
-                value={observacoes}
-                onChange={(e) => setObservacoes(e.target.value)}
-                placeholder="Qualquer regra que não se encaixe nos campos acima"
-                rows={3}
-              />
-            </div>
-          </TabsContent>
-        </Tabs>
-
+          </div>
+          <div className="space-y-1.5">
+            <Label>Descrição (opcional)</Label>
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+          </div>
+        </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
@@ -889,4 +235,3 @@ function ProductFormDialog({
     </Dialog>
   );
 }
-
