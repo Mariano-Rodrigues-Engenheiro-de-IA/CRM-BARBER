@@ -101,12 +101,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         property: "og:image",
         content:
-          "https://crm.zayloia.com/brand/og-zaylo-v2.jpg",
+          "https://crm.zayloia.com/brand/og-zaylo-v3.jpg",
       },
       {
         name: "twitter:image",
         content:
-          "https://crm.zayloia.com/brand/og-zaylo-v2.jpg",
+          "https://crm.zayloia.com/brand/og-zaylo-v3.jpg",
       },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
