@@ -13,6 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { Pencil, Plus } from "lucide-react";
+import { ConfigTable, type ConfigColumn } from "@/components/config-table";
 
 type Api = (path: string, opts?: RequestInit) => Promise<any>;
 
@@ -53,64 +55,100 @@ export function ProductsTab({ api, onChanged }: { api: Api; onChanged?: () => vo
 
   const editing = products.find((p) => p.id === editingId) ?? null;
 
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-neutral-700">Produtos cadastrados</h3>
-        <Button
-          size="sm"
-          onClick={() => {
-            setEditingId(null);
-            setFormOpen(true);
-          }}
-        >
-          + Novo produto
-        </Button>
-      </div>
+  const money = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-      {products.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-neutral-300 p-6 text-center text-sm text-neutral-400">
-          Nenhum produto cadastrado ainda.
-        </p>
-      ) : (
-        <div className="space-y-2">
-          {products.map((p) => (
-            <div key={p.id} className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-3">
-              <div className="min-w-0 flex-1">
-                <p
-                  className={
-                    "truncate text-sm font-medium " + (p.active ? "text-neutral-900" : "text-neutral-400 line-through")
-                  }
-                >
-                  {p.name}
-                  {p.category && (
-                    <span className="ml-2 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-500">
-                      {p.category}
-                    </span>
-                  )}
-                </p>
-                <p className="truncate text-xs text-neutral-400">
-                  {p.price != null ? `R$ ${p.price.toFixed(2)}` : "Sem valor"}
-                  {p.description ? ` · ${p.description}` : ""}
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setEditingId(p.id);
-                  setFormOpen(true);
-                }}
-              >
-                Editar
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => toggleActive(p)}>
-                {p.active ? "Desativar" : "Reativar"}
-              </Button>
-            </div>
-          ))}
+  const columns: ConfigColumn<Product>[] = [
+    {
+      key: "name",
+      label: "Descrição",
+      sortValue: (p) => p.name,
+      render: (p) => (
+        <div className="min-w-0">
+          <p className={"font-medium " + (p.active ? "text-neutral-900" : "text-neutral-400")}>{p.name}</p>
+          {p.description && <p className="max-w-xs truncate text-xs text-neutral-400">{p.description}</p>}
         </div>
-      )}
+      ),
+    },
+    {
+      key: "category",
+      label: "Categoria",
+      sortValue: (p) => p.category,
+      render: (p) => <span className="text-neutral-600">{p.category ?? "-"}</span>,
+    },
+    {
+      key: "price",
+      label: "Valor (R$)",
+      align: "right",
+      sortValue: (p) => p.price,
+      render: (p) => <span className="tabular-nums">{p.price != null ? money(p.price) : "-"}</span>,
+    },
+    {
+      key: "status",
+      label: "Status",
+      sortValue: (p) => (p.active ? 0 : 1),
+      render: (p) => (
+        <span
+          className={
+            "rounded-full px-2 py-0.5 text-[11px] font-semibold " +
+            (p.active ? "bg-emerald-100 text-emerald-700" : "bg-neutral-200 text-neutral-500")
+          }
+        >
+          {p.active ? "Ativo" : "Inativo"}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      label: "Ações",
+      align: "right",
+      render: (p) => (
+        <div className="flex justify-end gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setEditingId(p.id);
+              setFormOpen(true);
+            }}
+          >
+            <Pencil className="mr-1 h-3.5 w-3.5" />
+            Editar
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className={p.active ? "text-red-600 hover:text-red-700" : "text-emerald-700 hover:text-emerald-800"}
+            onClick={() => toggleActive(p)}
+          >
+            {p.active ? "Desativar" : "Reativar"}
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <>
+      <ConfigTable
+        rows={products}
+        columns={columns}
+        rowKey={(p) => p.id}
+        searchText={(p) => `${p.name} ${p.category ?? ""} ${p.description ?? ""}`}
+        defaultSort={{ key: "name", dir: "asc" }}
+        emptyMessage="Nenhum produto cadastrado ainda."
+        rowClassName={(p) => (p.active ? "" : "opacity-70")}
+        toolbar={
+          <Button
+            onClick={() => {
+              setEditingId(null);
+              setFormOpen(true);
+            }}
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            Novo produto
+          </Button>
+        }
+      />
 
       <ProductFormDialog
         open={formOpen}
@@ -122,7 +160,7 @@ export function ProductsTab({ api, onChanged }: { api: Api; onChanged?: () => vo
           onChanged?.();
         }}
       />
-    </div>
+    </>
   );
 }
 
