@@ -9,4 +9,6 @@ export function hasChromeStore() {
 /** Pagina de vendas da barbearia (projeto IA-BARBER-ATENDIMENTO). E pra ca que os
  * botoes "voltar" das paginas de cadastro/instalacao devem levar, e nao pra "/"
  * deste site (que hoje e a pagina das clinicas, fora de uso por enquanto). */
-export const BARBER_SALES_URL = "https://zayloia.com.br";
+// Atencao: a raiz (zayloia.com.br) redireciona pro LOGIN quando a pessoa nao esta
+// logada; a pagina de vendas e a rota /planos.
+export const BARBER_SALES_URL = "https://zayloia.com.br/planos";
