@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,30 @@ function downloadZip() {
 
 function Install() {
   const naStore = hasChromeStore();
+  const [isMobile, setIsMobile] = useState(false);
+  const [link, setLink] = useState("https://crm.zayloia.com/instalar");
+
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    // iPad novo se apresenta como Mac, mas tem toque.
+    const ipadAsMac = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+    setIsMobile(/Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(ua) || ipadAsMac);
+    setLink(`${window.location.origin}/instalar`);
+  }, []);
+
+  function sendToWhatsApp() {
+    const text = `Abra este link no computador para instalar a extensão do CRM Zaylo no Google Chrome: ${link}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  }
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(link);
+      toast.success("Link copiado. Cole no navegador do computador.");
+    } catch {
+      toast.error("Não consegui copiar. Segure o link e copie manualmente.");
+    }
+  }
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-neutral-950 px-4 py-10 text-neutral-100">
@@ -57,13 +82,43 @@ function Install() {
         <CardHeader>
           <CardTitle>Cadastro concluído</CardTitle>
           <CardDescription className="text-neutral-400">
-            {naStore
+            {isMobile
+              ? "Seu cadastro foi feito. Falta só instalar a extensão, e isso é feito no computador."
+              : naStore
               ? "Agora é só adicionar a extensão ao Chrome e abrir o WhatsApp Web. Pronto, nada mais pra configurar."
               : "A extensão está em publicação na Chrome Web Store. Enquanto isso, instale como extensão descompactada (30 segundos)."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {naStore ? (
+          {isMobile ? (
+            <div className="space-y-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
+              <p className="text-sm font-bold text-amber-300">Você está no celular</p>
+              <p className="text-sm text-amber-100/90">
+                A extensão só funciona no <strong>Google Chrome do computador</strong>. Abra este link no
+                computador para instalar.
+              </p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  type="button"
+                  onClick={sendToWhatsApp}
+                  className="flex-1 bg-emerald-600 font-bold text-white hover:bg-emerald-500"
+                >
+                  Enviar o link pro meu WhatsApp
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={copyLink}
+                  className="flex-1 border-neutral-600 bg-transparent text-neutral-100 hover:bg-neutral-800"
+                >
+                  Copiar link
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-neutral-500">A extensão funciona no Google Chrome, no computador.</p>
+          )}
+          {isMobile ? null : naStore ? (
             <>
               <Button
                 asChild
