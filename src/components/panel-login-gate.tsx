@@ -19,7 +19,7 @@ type Phase = "checking" | "setpw" | "login" | "verifying" | "denied";
 /** Logo da Zaylo no topo das telas de login. O arquivo tem margem propria
  * em volta, entao a altura visivel e menor que a do elemento. */
 function LoginLogo() {
-  return <img src="/brand/zaylo-logo.png" alt="Zaylo CRM" className="mx-auto h-8 w-auto object-contain" />;
+  return <img src="/brand/zaylo-logo.png" alt="Zaylo CRM" className="mx-auto h-11 w-auto object-contain" />;
 }
 
 export function PanelLoginGate({ token, onAuthed }: { token: string; onAuthed: () => void }) {
@@ -187,11 +187,11 @@ export function PanelLoginGate({ token, onAuthed }: { token: string; onAuthed: (
           <h1 className="text-xl font-semibold text-neutral-900">
             {isSet ? "Defina sua senha" : "Entre no seu CRM"}
           </h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            {isSet
-              ? "Você só faz isso uma vez. Depois é só entrar com essa senha."
-              : "Use o e-mail e a senha que você definiu."}
-          </p>
+          {isSet && (
+            <p className="mt-1 text-sm text-neutral-500">
+              Você só faz isso uma vez. Depois é só entrar com essa senha.
+            </p>
+          )}
         </div>
 
         {info && <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{info}</p>}
