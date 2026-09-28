@@ -58,7 +58,13 @@ function Install() {
     const ua = navigator.userAgent;
     // iPad novo se apresenta como Mac, mas tem toque.
     const ipadAsMac = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
-    setIsMobile(/Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(ua) || ipadAsMac);
+    const uaMobile = /Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(ua) || ipadAsMac;
+    // Celular com "Site para computador" ligado se apresenta como PC e escapa
+    // do user agent. Pega pelo aparelho: toque como entrada principal + tela
+    // pequena (notebook, mesmo com tela de toque, tem tela maior).
+    const coarse = window.matchMedia?.("(pointer: coarse)").matches ?? false;
+    const smallScreen = Math.min(window.screen.width, window.screen.height) < 900;
+    setIsMobile(uaMobile || (coarse && smallScreen));
     setLink(`${window.location.origin}/instalar`);
   }, []);
 
