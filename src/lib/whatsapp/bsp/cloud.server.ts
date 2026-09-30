@@ -494,12 +494,17 @@ export const cloudAdapter: BspAdapter = {
     }
   },
 
-  async sendMedia({ access_token, phone_number_id, to, media_type, media_url, caption }): Promise<SendResult> {
+  async sendMedia({ access_token, phone_number_id, to, media_type, media_url, caption, filename }): Promise<SendResult> {
     if (!phone_number_id) {
       return { ok: false, error: "phone_number_id ausente na instância", retryable: false };
     }
     // Áudio não aceita legenda na Cloud API: a Meta rejeita o campo se enviado.
-    const mediaObj: Json = media_type === "audio" ? { link: media_url } : { link: media_url, caption: caption || undefined };
+    // Documento: filename é o que o destinatário vê como nome do arquivo
+    // (sem isso, o WhatsApp mostra um nome genérico/aleatório).
+    const mediaObj: Json =
+      media_type === "audio"
+        ? { link: media_url }
+        : { link: media_url, caption: caption || undefined, filename: media_type === "document" ? filename || undefined : undefined };
     try {
       const res = await fetch(graphUrl(`${phone_number_id}/messages`), {
         method: "POST",

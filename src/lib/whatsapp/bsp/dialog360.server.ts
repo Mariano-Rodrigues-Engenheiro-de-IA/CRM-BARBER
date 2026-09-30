@@ -192,9 +192,12 @@ export const dialog360Adapter: BspAdapter = {
     return { status: "connected", phone: phone ? phone.replace(/\D/g, "") : null, qrcode: null };
   },
 
-  async sendMedia({ access_token, to, media_type, media_url, caption }): Promise<SendResult> {
+  async sendMedia({ access_token, to, media_type, media_url, caption, filename }): Promise<SendResult> {
     // Áudio não aceita legenda no formato WhatsApp Business API: omite se enviado.
-    const mediaObj: Json = media_type === "audio" ? { link: media_url } : { link: media_url, caption: caption || undefined };
+    const mediaObj: Json =
+      media_type === "audio"
+        ? { link: media_url }
+        : { link: media_url, caption: caption || undefined, filename: media_type === "document" ? filename || undefined : undefined };
     try {
       const res = await fetch(`${wabaUrl()}/messages`, {
         method: "POST",
