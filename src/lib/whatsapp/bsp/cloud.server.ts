@@ -494,6 +494,42 @@ export const cloudAdapter: BspAdapter = {
     }
   },
 
+  async sendMedia({ access_token, phone_number_id, to, media_type, media_url, caption }): Promise<SendResult> {
+    if (!phone_number_id) {
+      return { ok: false, error: "phone_number_id ausente na instância", retryable: false };
+    }
+    // Áudio não aceita legenda na Cloud API: a Meta rejeita o campo se enviado.
+    const mediaObj: Json = media_type === "audio" ? { link: media_url } : { link: media_url, caption: caption || undefined };
+    try {
+      const res = await fetch(graphUrl(`${phone_number_id}/messages`), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${access_token}`,
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: toE164BR(to),
+          type: media_type,
+          [media_type]: mediaObj,
+        }),
+      });
+      const json = (await res.json().catch(() => ({}))) as Json;
+      if (!res.ok) {
+        return {
+          ok: false,
+          error: `${extractErrorMessage(json, res.status)} | to_usado[${toE164BR(to)}] | phone_number_id[${phone_number_id}]`,
+          retryable: res.status === 429 || res.status >= 500,
+        };
+      }
+      const messages = Array.isArray(json.messages) ? (json.messages[0] as Json | undefined) : undefined;
+      return { ok: true, provider_message_id: str(messages?.id) ?? undefined };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err), retryable: true };
+    }
+  },
+
   async sendTemplate({
     access_token,
     phone_number_id,

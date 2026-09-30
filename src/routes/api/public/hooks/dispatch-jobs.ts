@@ -273,18 +273,32 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
                   }));
               }
             } else {
-            // Resposta Rápida com múltiplas mensagens sequenciais: envia
-            // cada texto, em ordem, pro mesmo contato. Antes disso, o
-            // disparo via servidor só mandava `rendered_body` (o primeiro
-            // texto da sequência) e ignorava o resto — as demais mensagens
-            // "sumiam" silenciosamente. Sem message_actions (caso comum,
-            // mensagem única), cai no comportamento de sempre.
-            const sequenceTexts = Array.isArray(job.message_actions)
-              ? (job.message_actions as Array<{ type?: string; text?: string }>)
-                  .filter((a) => a?.type === "text" && a.text?.trim())
-                  .map((a) => String(a.text).trim())
+            // Resposta Rápida com múltiplas ações sequenciais (texto e/ou
+            // mídia): envia cada uma, em ordem, pro mesmo contato.
+            //
+            // ACHADO REAL (bug): antes disso, esse trecho só olhava ações do
+            // tipo "text": um passo de imagem/vídeo/áudio (mesmo com
+            // legenda) era filtrado e descartado em silêncio. Cliente via a
+            // legenda de OUTRO passo de texto chegar e achava que só a
+            // legenda tinha sido enviada, quando na verdade a imagem inteira
+            // nunca saiu. Agora todo tipo de ação é enviado, na ordem.
+            //
+            // Sem message_actions (caso comum, mensagem única), cai no
+            // comportamento de sempre (um texto só).
+            type SeqAction = {
+              type?: string;
+              text?: string;
+              caption?: string;
+              path?: string;
+              filename?: string;
+            };
+            const rawActions: SeqAction[] = Array.isArray(job.message_actions)
+              ? (job.message_actions as SeqAction[]).filter((a) =>
+                  a?.type === "text" ? Boolean(a.text?.trim()) : Boolean(a?.path),
+                )
               : [];
-            const rawTexts = sequenceTexts.length > 0 ? sequenceTexts : [job.rendered_body];
+            const steps: SeqAction[] = rawActions.length > 0 ? rawActions : [{ type: "text", text: job.rendered_body }];
+
             // Substitui {nome}, {primeiro_nome} e {telefone} pelo dado real
             // do cliente antes de enviar - achado real: essa variável já
             // existia na configuração (QUICK_REPLY_VARIABLES) mas nunca
@@ -297,27 +311,63 @@ export const Route = createFileRoute("/api/public/hooks/dispatch-jobs")({
               primeiro_nome: nameForVars.split(/\s+/)[0] || nameForVars,
               telefone: phone,
             };
-            const textsToSend = rawTexts.map((t) => renderQuickReplyText(t, varValues));
 
             result = { ok: true };
-            for (let i = 0; i < textsToSend.length; i += 1) {
-              result = await provider
-                .sendText({
-                  instance_token: instanceToken,
-                  phone_number_id: inst.phone_number_id ?? null,
-                  to: phone,
-                  text: textsToSend[i],
-                })
-                .catch((e: unknown) => ({
-                  ok: false as const,
-                  error: e instanceof Error ? e.message : "Falha de rede no envio",
-                  retryable: true,
-                }));
+            for (let i = 0; i < steps.length; i += 1) {
+              const step = steps[i];
+              if (step.type === "text") {
+                result = await provider
+                  .sendText({
+                    instance_token: instanceToken,
+                    phone_number_id: inst.phone_number_id ?? null,
+                    to: phone,
+                    text: renderQuickReplyText(String(step.text ?? ""), varValues),
+                  })
+                  .catch((e: unknown) => ({
+                    ok: false as const,
+                    error: e instanceof Error ? e.message : "Falha de rede no envio",
+                    retryable: true,
+                  }));
+              } else if (step.path && provider.sendMedia) {
+                const { data: signed } = await supabaseAdmin.storage
+                  .from("quick-reply-media")
+                  .createSignedUrl(step.path, 60 * 60);
+                if (!signed?.signedUrl) {
+                  result = { ok: false, error: `Falha ao gerar URL assinada da mídia: ${step.path}`, retryable: true };
+                } else {
+                  const mediaType = (["image", "video", "audio", "document"] as const).includes(
+                    step.type as "image" | "video" | "audio" | "document",
+                  )
+                    ? (step.type as "image" | "video" | "audio" | "document")
+                    : "document";
+                  result = await provider
+                    .sendMedia({
+                      instance_token: instanceToken,
+                      phone_number_id: inst.phone_number_id ?? null,
+                      to: phone,
+                      media_type: mediaType,
+                      media_url: signed.signedUrl,
+                      caption: step.caption ? renderQuickReplyText(step.caption, varValues) : undefined,
+                      filename: step.filename ?? undefined,
+                    })
+                    .catch((e: unknown) => ({
+                      ok: false as const,
+                      error: e instanceof Error ? e.message : "Falha de rede no envio",
+                      retryable: true,
+                    }));
+                }
+              } else if (step.path) {
+                // Provider não suporta mídia avulsa (ex: BSP sem sendMedia):
+                // não trava a fila silenciosamente: registra o erro real.
+                result = { ok: false, error: `Provider atual não envia mídia avulsa (passo: ${step.type})`, retryable: false };
+              } else {
+                continue;
+              }
               if (!result.ok) break;
-              // Pequena pausa entre as mensagens da MESMA sequência, pro
-              // mesmo contato — mais curta que a pausa entre contatos
-              // diferentes, só pra não chegar tudo colado instantaneamente.
-              if (i < textsToSend.length - 1) await sleep(1500 + Math.random() * 1500);
+              // Pequena pausa entre os passos da MESMA sequência, pro mesmo
+              // contato, mais curta que a pausa entre contatos diferentes,
+              // só pra não chegar tudo colado instantaneamente.
+              if (i < steps.length - 1) await sleep(1500 + Math.random() * 1500);
             }
             }
 

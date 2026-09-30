@@ -110,6 +110,21 @@ export interface WhatsAppProvider {
     text: string;
   }): Promise<SendResult>;
 
+  /**
+   * Envia imagem, vídeo, áudio ou documento com legenda opcional, fora de
+   * modelo aprovado (usado por disparo/funil/pós-venda quando a mensagem tem
+   * um passo de mídia). Some da fila se o provider não implementar.
+   */
+  sendMedia?(input: {
+    instance_token: string;
+    phone_number_id?: string | null;
+    to: string;
+    media_type: "image" | "video" | "audio" | "document";
+    media_url: string;
+    caption?: string | null;
+    filename?: string | null;
+  }): Promise<SendResult>;
+
   /** Só na API oficial (Cloud API) — envio de modelo de mensagem aprovado. */
   sendTemplate?(input: {
     instance_token: string;

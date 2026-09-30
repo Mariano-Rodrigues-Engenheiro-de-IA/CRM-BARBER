@@ -67,6 +67,22 @@ export const metaProvider: WhatsAppProvider = {
     });
   },
 
+  async sendMedia({ instance_token, phone_number_id, to, media_type, media_url, caption, filename }): Promise<SendResult> {
+    const bsp = getBspAdapter();
+    if (!bsp.sendMedia) {
+      return { ok: false, error: "Provider atual não suporta envio de mídia avulsa.", retryable: false };
+    }
+    return bsp.sendMedia({
+      access_token: instance_token,
+      phone_number_id: phone_number_id ?? null,
+      to,
+      media_type,
+      media_url,
+      caption,
+      filename,
+    });
+  },
+
   async sendTemplate({
     instance_token,
     phone_number_id,

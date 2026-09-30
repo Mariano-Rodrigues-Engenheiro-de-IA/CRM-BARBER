@@ -56,6 +56,17 @@ export interface BspAdapter {
     text: string;
   }): Promise<SendResult>;
 
+  /** Mídia avulsa (fora de modelo aprovado), com legenda opcional. */
+  sendMedia?(input: {
+    access_token: string;
+    phone_number_id?: string | null;
+    to: string;
+    media_type: "image" | "video" | "audio" | "document";
+    media_url: string;
+    caption?: string | null;
+    filename?: string | null;
+  }): Promise<SendResult>;
+
   /**
    * Envia um modelo de mensagem (message template) já aprovado pela Meta.
    * Necessário pra iniciar conversa fora da janela de 24h, ou pra mensagens

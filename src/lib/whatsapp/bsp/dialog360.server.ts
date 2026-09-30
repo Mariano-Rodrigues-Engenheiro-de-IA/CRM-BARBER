@@ -192,6 +192,37 @@ export const dialog360Adapter: BspAdapter = {
     return { status: "connected", phone: phone ? phone.replace(/\D/g, "") : null, qrcode: null };
   },
 
+  async sendMedia({ access_token, to, media_type, media_url, caption }): Promise<SendResult> {
+    // Áudio não aceita legenda no formato WhatsApp Business API: omite se enviado.
+    const mediaObj: Json = media_type === "audio" ? { link: media_url } : { link: media_url, caption: caption || undefined };
+    try {
+      const res = await fetch(`${wabaUrl()}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "D360-API-KEY": access_token },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: to.replace(/\D/g, ""),
+          type: media_type,
+          [media_type]: mediaObj,
+        }),
+      });
+      const json = (await res.json().catch(() => ({}))) as Json;
+      if (!res.ok) {
+        const error = (json.error as Json | undefined)?.message;
+        return {
+          ok: false,
+          error: typeof error === "string" ? error : `HTTP ${res.status}`,
+          retryable: res.status === 429 || res.status >= 500,
+        };
+      }
+      const messages = Array.isArray(json.messages) ? (json.messages[0] as Json | undefined) : undefined;
+      return { ok: true, provider_message_id: str(messages?.id) ?? undefined };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err), retryable: true };
+    }
+  },
+
   async sendText({ access_token, to, text }): Promise<SendResult> {
     try {
       const res = await fetch(`${wabaUrl()}/messages`, {
