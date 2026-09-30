@@ -400,25 +400,18 @@ export const uazapiProvider: WhatsAppProvider = {
     return { ok: false, error: `UAZAPI ${res.status}: ${msg}`, retryable };
   },
 
-  // Campos conforme a documentacao da UAZAPI (docs.uazapi.com): /send/media
-  // recebe number (telefone), type (image/video/document/ptt para audio),
-  // file (URL publica ou base64) e text (usado como legenda em imagem/video/
-  // documento). Confirmado no /send/text do proprio codigo (number + text);
-  // o restante segue o mesmo padrao descrito na documentacao de envio da
-  // UAZAPI, mas NAO foi testado ao vivo contra a API ainda: testar com uma
-  // campanha real de imagem antes de confiar 100%.
-  async sendMedia({ instance_token, to, media_type, media_url, caption, filename }) {
+  // Campos confirmados no codigo-fonte de uma integracao real e publicada
+  // contra a UAZAPI (n8n-nodes-uazapi-api, dist + sourcemap original):
+  // POST /send/media com body { number, type, file, text }. "text" e sempre
+  // enviado, mesmo vazio - e foi exatamente a falta desse campo (quando a
+  // midia nao tinha legenda) que causou "Missing required fields" na
+  // primeira versao daqui, que só mandava "text" quando havia legenda.
+  async sendMedia({ instance_token, to, media_type, media_url, caption }) {
     const number = toE164BR(to);
-    // A UAZAPI usa "ptt" para audio de WhatsApp (nota de voz); document e o
-    // unico tipo que usa "docName" em vez de "text" pro nome do arquivo.
-    const type = media_type === "audio" ? "ptt" : media_type;
-    const body: Record<string, unknown> = { number, type, file: media_url };
-    if (caption) body.text = caption;
-    if (media_type === "document" && filename) body.docName = filename;
     const res = await uaz("/send/media", {
       method: "POST",
       token: instance_token,
-      body,
+      body: { number, type: media_type, file: media_url, text: caption ?? "" },
     });
     if (res.ok) {
       const id =
