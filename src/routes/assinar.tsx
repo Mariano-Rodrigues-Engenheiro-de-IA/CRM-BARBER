@@ -63,6 +63,7 @@ function Assinar() {
   // aqui, pedido explicitamente pelo Mariano).
   const [form, setForm] = useState({ name: "", phone: "" });
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -105,22 +106,33 @@ function Assinar() {
   }, [form.phone, identity]);
 
   const fetchClientSecret = async (): Promise<string> => {
-    const result = await createPremiumCheckout({
-      data: {
-        ...(identity ?? {}),
-        plan,
-        returnUrl: `${window.location.origin}/assinar/retorno?session_id={CHECKOUT_SESSION_ID}`,
-        environment: getStripeEnvironment(),
-      },
-    });
-    if ("error" in result) throw new Error(result.error);
-    if (!result.clientSecret) throw new Error("Checkout indisponível no momento.");
+    setCheckoutError(null);
     try {
-      localStorage.setItem(SHOP_KEY, result.barbershopId);
-    } catch {
-      /* sem localStorage: so nao lembra na proxima visita, checkout segue normal */
+      const result = await createPremiumCheckout({
+        data: {
+          ...(identity ?? {}),
+          plan,
+          returnUrl: `${window.location.origin}/assinar/retorno?session_id={CHECKOUT_SESSION_ID}`,
+          environment: getStripeEnvironment(),
+        },
+      });
+      if ("error" in result) throw new Error(result.error);
+      if (!result.clientSecret) throw new Error("Checkout indisponível no momento.");
+      try {
+        localStorage.setItem(SHOP_KEY, result.barbershopId);
+      } catch {
+        /* sem localStorage: so nao lembra na proxima visita, checkout segue normal */
+      }
+      return result.clientSecret;
+    } catch (err) {
+      // Achado real: sem isso, uma falha aqui deixava a area do checkout
+      // completamente em branco, sem nenhuma pista do que aconteceu -
+      // parecia "o codigo nao funciona" quando na verdade so faltava
+      // mostrar o erro. Agora aparece uma mensagem de verdade na tela.
+      const message = err instanceof Error ? err.message : "Não foi possível carregar o checkout.";
+      setCheckoutError(message);
+      throw err;
     }
-    return result.clientSecret;
   };
 
   return (
@@ -144,7 +156,12 @@ function Assinar() {
         </p>
 
         {knownBrowser ? (
-          <div className="mt-8" id="checkout">
+          <div className="mt-8 min-h-[480px] w-full" id="checkout">
+            {checkoutError && (
+              <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {checkoutError}
+              </p>
+            )}
             <EmbeddedCheckoutProvider stripe={getStripe()} options={{ fetchClientSecret }}>
               <EmbeddedCheckout />
             </EmbeddedCheckoutProvider>
@@ -183,7 +200,12 @@ function Assinar() {
               </div>
             </div>
 
-            <div id="checkout">
+            <div id="checkout" className={identity ? "mt-4 min-h-[480px] w-full" : undefined}>
+              {checkoutError && (
+                <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {checkoutError}
+                </p>
+              )}
               {identity && (
                 <EmbeddedCheckoutProvider stripe={getStripe()} options={{ fetchClientSecret }}>
                   <EmbeddedCheckout />
