@@ -8,7 +8,7 @@ import {
   type AiAddonPlanId,
 } from "@/lib/billing";
 
-type CheckoutResult = { clientSecret: string } | { error: string };
+type CheckoutResult = { clientSecret: string; barbershopId: string } | { error: string };
 
 function normalizePhone(input: string): string {
   return input.replace(/\D+/g, "");
@@ -170,7 +170,7 @@ export const createPremiumCheckout = createServerFn({ method: "POST" })
         subscription_data: { metadata: { barbershop_id: barbershopId } },
       });
 
-      return { clientSecret: session.client_secret ?? "" };
+      return { clientSecret: session.client_secret ?? "", barbershopId };
     } catch (error) {
       return { error: getStripeErrorMessage(error) };
     }

@@ -33,6 +33,12 @@ export const Route = createFileRoute("/assinar")({
 });
 
 const TOKEN_KEY = "crm_ext_token_v1";
+// Guardado aqui assim que o checkout e criado (mesmo sem a extensao, via
+// formulario), pra reconhecer o mesmo navegador numa proxima visita sem
+// pedir nome/e-mail/telefone de novo - sem isso, cliente pagante via
+// formulario (nunca instalou a extensao) via o formulario toda vez que
+// voltasse no mesmo link.
+const SHOP_KEY = "crm_checkout_shop_v1";
 
 type Identity = {
   token?: string;
@@ -58,7 +64,8 @@ function Assinar() {
     const stored = localStorage.getItem(TOKEN_KEY);
     const token =
       url.searchParams.get("token") ?? (stored && stored.startsWith("ext_") ? stored : undefined);
-    const barbershopId = url.searchParams.get("shop") ?? undefined;
+    const barbershopId =
+      url.searchParams.get("shop") ?? localStorage.getItem(SHOP_KEY) ?? undefined;
     if (token || barbershopId) setIdentity({ token: token ?? undefined, barbershopId });
   }, []);
 
@@ -73,6 +80,11 @@ function Assinar() {
     });
     if ("error" in result) throw new Error(result.error);
     if (!result.clientSecret) throw new Error("Checkout indisponível no momento.");
+    try {
+      localStorage.setItem(SHOP_KEY, result.barbershopId);
+    } catch {
+      /* sem localStorage: so nao lembra na proxima visita, checkout segue normal */
+    }
     return result.clientSecret;
   };
 
