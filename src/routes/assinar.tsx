@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { Lock } from "lucide-react";
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { createPremiumCheckout } from "@/utils/payments.functions";
@@ -154,11 +155,14 @@ function Assinar() {
           // sem etapa separada. Assim que o WhatsApp fica valido, o
           // checkout de verdade entra no lugar do aviso cinza sozinho
           // (useEffect de debounce acima), sem precisar de botao.
-          <div className="mt-8 grid gap-6 md:grid-cols-2">
-            <div className="space-y-4 rounded-2xl border p-6">
-              <p className="text-sm text-muted-foreground">
-                Informe o WhatsApp da empresa. É por ele que a extensão libera o Premium.
-              </p>
+          <div className="mt-8 grid items-stretch gap-6 md:grid-cols-2">
+            <div className="flex flex-col justify-center space-y-5 rounded-2xl border bg-card p-6 shadow-sm">
+              <div>
+                <p className="text-sm font-medium">Seus dados</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  É pelo WhatsApp que a extensão libera o Premium automaticamente.
+                </p>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="name">Nome da empresa</Label>
                 <Input
@@ -185,14 +189,18 @@ function Assinar() {
               </div>
             </div>
 
-            <div id="checkout">
+            <div id="checkout" className="rounded-2xl border bg-card p-1 shadow-sm">
               {identity ? (
                 <EmbeddedCheckoutProvider stripe={getStripe()} options={{ fetchClientSecret }}>
                   <EmbeddedCheckout />
                 </EmbeddedCheckoutProvider>
               ) : (
-                <div className="flex h-full min-h-[280px] items-center justify-center rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-                  Preencha seu WhatsApp ao lado para continuar com o pagamento.
+                <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 p-6 text-center">
+                  <Lock className="h-7 w-7 text-muted-foreground/50" />
+                  <p className="text-sm font-medium text-foreground">Pagamento seguro</p>
+                  <p className="max-w-[220px] text-sm text-muted-foreground">
+                    Preencha seu WhatsApp ao lado e o checkout aparece aqui, processado pela Stripe.
+                  </p>
                 </div>
               )}
             </div>
