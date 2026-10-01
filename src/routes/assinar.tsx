@@ -155,6 +155,23 @@ function Assinar() {
           )}
         </p>
 
+        {/* DIAGNÓSTICO TEMPORÁRIO, tira depois de achar o problema. Mostra
+            o estado real da tela pro Mariano me copiar e colar, sem precisar
+            abrir o console do navegador. */}
+        <pre className="mt-4 overflow-x-auto rounded-lg border-2 border-yellow-400 bg-yellow-50 p-3 text-[11px] text-yellow-900">
+{JSON.stringify(
+  {
+    knownBrowser,
+    identity,
+    phoneError,
+    checkoutError,
+    form,
+  },
+  null,
+  2,
+)}
+        </pre>
+
         {knownBrowser ? (
           <div className="mt-8 min-h-[480px] w-full" id="checkout">
             {checkoutError && (
