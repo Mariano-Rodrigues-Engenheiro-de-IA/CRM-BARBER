@@ -57,6 +57,11 @@ function Retorno() {
   // Purchase: dispara uma unica vez por session_id (chave do proprio Stripe
   // pra essa compra), travado em localStorage - recarregar essa pagina, ou
   // voltar nela depois, nao conta a mesma compra de novo.
+  // PageView explicito so nesta pagina (funil de venda), nao no CRM inteiro.
+  useEffect(() => {
+    trackPixelEvent("PageView");
+  }, []);
+
   useEffect(() => {
     if (!session_id) return;
     const key = `fbq_purchase_${session_id}`;

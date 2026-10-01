@@ -196,7 +196,12 @@ function RootShell({ children }: { children: ReactNode }) {
               s.parentNode.insertBefore(t,s)}(window, document,'script',
               'https://connect.facebook.net/en_US/fbevents.js');
               fbq('init', '${META_PIXEL_ID}');
-              fbq('track', 'PageView');
+              // PageView NAO dispara aqui de proposito: isso rodaria em toda
+              // pagina do CRM, inclusive o painel de quem ja e cliente
+              // pagante usando o sistema no dia a dia - contaminaria o
+              // publico de remarketing com gente que ja comprou. Cada
+              // pagina do funil de venda (/assinar, /assinar/retorno,
+              // /instalar) dispara o proprio PageView explicitamente.
             `,
           }}
         />

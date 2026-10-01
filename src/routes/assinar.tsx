@@ -55,6 +55,11 @@ function Assinar() {
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
   const [phoneError, setPhoneError] = useState<string | null>(null);
 
+  // PageView explicito so nesta pagina (funil de venda), nao no CRM inteiro.
+  useEffect(() => {
+    trackPixelEvent("PageView");
+  }, []);
+
   useEffect(() => {
     const url = new URL(window.location.href);
     const planParam = url.searchParams.get("plano");

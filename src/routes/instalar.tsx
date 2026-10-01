@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BARBER_SALES_URL, CHROME_STORE_URL, hasChromeStore } from "@/lib/site-config";
+import { trackPixelEvent } from "@/lib/fbPixel";
 
 export const Route = createFileRoute("/instalar")({
   head: () => ({
@@ -51,6 +52,11 @@ function downloadZip() {
 
 function Install() {
   const naStore = hasChromeStore();
+
+  // PageView explicito so nesta pagina (funil de venda), nao no CRM inteiro.
+  useEffect(() => {
+    trackPixelEvent("PageView");
+  }, []);
   const [isMobile, setIsMobile] = useState(false);
   const [link, setLink] = useState("https://crm.zayloia.com/instalar");
 
