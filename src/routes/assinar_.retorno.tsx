@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { trackPixelEvent } from "@/lib/fbPixel";
 
 export const Route = createFileRoute("/assinar_/retorno")({
   head: () => ({
@@ -51,6 +53,22 @@ function StepNumber({ n }: { n: number }) {
 // próximos passos nem visual à altura do resto do site.
 function Retorno() {
   const { session_id } = Route.useSearch();
+
+  // Purchase: dispara uma unica vez por session_id (chave do proprio Stripe
+  // pra essa compra), travado em localStorage - recarregar essa pagina, ou
+  // voltar nela depois, nao conta a mesma compra de novo.
+  useEffect(() => {
+    if (!session_id) return;
+    const key = `fbq_purchase_${session_id}`;
+    try {
+      if (localStorage.getItem(key)) return;
+      localStorage.setItem(key, "1");
+    } catch {
+      /* sem localStorage: melhor arriscar nao contar do que contar em dobro */
+      return;
+    }
+    trackPixelEvent("Purchase", { value: 197, currency: "BRL" });
+  }, [session_id]);
 
   if (!session_id) {
     return (

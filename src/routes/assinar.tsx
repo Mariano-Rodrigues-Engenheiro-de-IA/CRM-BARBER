@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { trackPixelEvent } from "@/lib/fbPixel";
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { createPremiumCheckout } from "@/utils/payments.functions";
@@ -68,6 +69,16 @@ function Assinar() {
       url.searchParams.get("shop") ?? localStorage.getItem(SHOP_KEY) ?? undefined;
     if (token || barbershopId) setIdentity({ token: token ?? undefined, barbershopId });
   }, []);
+
+  // AddPaymentInfo: dispara uma unica vez, exatamente quando o checkout da
+  // Stripe fica visivel (identity passa de null pra preenchido) - tanto pra
+  // quem ja e reconhecido quanto pra quem acabou de preencher o formulario.
+  const paymentInfoFired = useRef(false);
+  useEffect(() => {
+    if (!identity || paymentInfoFired.current) return;
+    paymentInfoFired.current = true;
+    trackPixelEvent("AddPaymentInfo", { value: 197, currency: "BRL" });
+  }, [identity]);
 
   const fetchClientSecret = async (): Promise<string> => {
     const result = await createPremiumCheckout({
