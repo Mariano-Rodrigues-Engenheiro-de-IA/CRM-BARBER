@@ -166,6 +166,17 @@ function Assinar() {
     phoneError,
     checkoutError,
     form,
+    // Se isso der erro, a chave de pagamento (VITE_PAYMENTS_CLIENT_TOKEN)
+    // nao esta configurada neste ambiente - e essa funcao trava o
+    // desenho da tela ANTES do React conseguir mostrar qualquer coisa,
+    // por isso nada aparecia e nenhum erro vermelho era mostrado.
+    stripeEnv: (() => {
+      try {
+        return getStripeEnvironment();
+      } catch (e) {
+        return `ERRO: ${e instanceof Error ? e.message : String(e)}`;
+      }
+    })(),
   },
   null,
   2,
