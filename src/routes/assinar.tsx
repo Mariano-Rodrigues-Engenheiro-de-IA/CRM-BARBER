@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Lock } from "lucide-react";
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { createPremiumCheckout } from "@/utils/payments.functions";
@@ -151,18 +150,13 @@ function Assinar() {
             </EmbeddedCheckoutProvider>
           </div>
         ) : (
-          // Nome e WhatsApp ficam na MESMA tela do checkout, lado a lado -
-          // sem etapa separada. Assim que o WhatsApp fica valido, o
-          // checkout de verdade entra no lugar do aviso cinza sozinho
-          // (useEffect de debounce acima), sem precisar de botao.
-          <div className="mt-8 grid items-stretch gap-6 md:grid-cols-2">
-            <div className="flex flex-col justify-center space-y-5 rounded-2xl border bg-card p-6 shadow-sm">
-              <div>
-                <p className="text-sm font-medium">Seus dados</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  É pelo WhatsApp que a extensão libera o Premium automaticamente.
-                </p>
-              </div>
+          // Nome e WhatsApp entram como se fossem os PRIMEIROS campos do
+          // proprio formulario da Stripe - um unico cartao continuo, sem
+          // nenhuma divisoria entre eles e o checkout. Assim que o WhatsApp
+          // fica valido, o checkout de verdade aparece logo abaixo, dentro
+          // do mesmo cartao (useEffect de debounce acima), sem botao.
+          <div className="mx-auto mt-8 max-w-lg rounded-2xl border bg-card p-6 shadow-sm">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Nome da empresa</Label>
                 <Input
@@ -189,19 +183,11 @@ function Assinar() {
               </div>
             </div>
 
-            <div id="checkout" className="rounded-2xl border bg-card p-1 shadow-sm">
-              {identity ? (
+            <div id="checkout">
+              {identity && (
                 <EmbeddedCheckoutProvider stripe={getStripe()} options={{ fetchClientSecret }}>
                   <EmbeddedCheckout />
                 </EmbeddedCheckoutProvider>
-              ) : (
-                <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 p-6 text-center">
-                  <Lock className="h-7 w-7 text-muted-foreground/50" />
-                  <p className="text-sm font-medium text-foreground">Pagamento seguro</p>
-                  <p className="max-w-[220px] text-sm text-muted-foreground">
-                    Preencha seu WhatsApp ao lado e o checkout aparece aqui, processado pela Stripe.
-                  </p>
-                </div>
               )}
             </div>
           </div>
