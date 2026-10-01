@@ -73,6 +73,11 @@ function Retorno() {
       return;
     }
     trackPixelEvent("Purchase", { value: 197, currency: "BRL" });
+    // Subscribe junto do Purchase: negocio de assinatura recorrente, nao
+    // venda unica. Sinaliza pra Meta que comecou uma relacao recorrente,
+    // separado do valor da primeira cobranca (padrao confirmado em
+    // pesquisa: doacao recorrente e assinatura disparam os dois juntos).
+    trackPixelEvent("Subscribe", { value: 197, currency: "BRL", predicted_ltv: 197 * 12 });
   }, [session_id]);
 
   if (!session_id) {
