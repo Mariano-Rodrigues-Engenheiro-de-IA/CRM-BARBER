@@ -5,7 +5,6 @@ import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { createPremiumCheckout } from "@/utils/payments.functions";
 import { PaymentTestModeBanner } from "@/components/payment-test-mode-banner";
 import { PREMIUM_PRICE_LABEL, PROMO_PRICE_LABEL, labelForPlan, type PlanId } from "@/lib/billing";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -51,7 +50,18 @@ type Identity = {
 function Assinar() {
   const [plan, setPlan] = useState<PlanId>("premium_197");
   const [identity, setIdentity] = useState<Identity | null>(null);
-  const [form, setForm] = useState({ name: "", email: "", phone: "" });
+  // true só quando a identidade veio de token/shop já salvo (navegador
+  // conhecido) - nesse caso pula direto pro checkout, sem mostrar
+  // nome/WhatsApp de novo pra quem já é cliente.
+  const [knownBrowser, setKnownBrowser] = useState(false);
+  // Sem tela separada: nome e WhatsApp ficam na MESMA pagina do checkout,
+  // ao mesmo tempo, pedido do Mariano. O checkout so acende quando o
+  // WhatsApp fica valido (nao precisa de botao "continuar" - so digitar).
+  // E-mail sai do formulario: a propria Stripe pergunta isso na tela dela,
+  // sem risco de nome errado (diferente do nome, que puxaria o nome de
+  // quem esta no CARTAO caso a Stripe coletasse - por isso nome continua
+  // aqui, pedido explicitamente pelo Mariano).
+  const [form, setForm] = useState({ name: "", phone: "" });
   const [phoneError, setPhoneError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -66,8 +76,33 @@ function Assinar() {
       url.searchParams.get("token") ?? (stored && stored.startsWith("ext_") ? stored : undefined);
     const barbershopId =
       url.searchParams.get("shop") ?? localStorage.getItem(SHOP_KEY) ?? undefined;
-    if (token || barbershopId) setIdentity({ token: token ?? undefined, barbershopId });
+    if (token || barbershopId) {
+      setIdentity({ token: token ?? undefined, barbershopId });
+      setKnownBrowser(true);
+    }
   }, []);
+
+  useEffect(() => {
+    if (identity) return; // já identificado (token/shop salvo) - não mexe
+    const allowedCharsOnly = /^[\d\s()+-]+$/.test(form.phone);
+    const digits = form.phone.replace(/\D+/g, "");
+    const validLength = digits.length === 10 || digits.length === 11;
+    if (!form.phone) {
+      setPhoneError(null);
+      return;
+    }
+    if (!allowedCharsOnly || !validLength) {
+      setPhoneError("Confira o número - deve ter DDD + telefone (10 ou 11 dígitos), sem letra.");
+      return;
+    }
+    setPhoneError(null);
+    // Pequena espera pra não disparar o checkout a cada dígito digitado.
+    const t = setTimeout(() => {
+      setIdentity({ phone: digits, name: form.name.trim() || undefined });
+    }, 600);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.phone, identity]);
 
   const fetchClientSecret = async (): Promise<string> => {
     const result = await createPremiumCheckout({
@@ -108,84 +143,60 @@ function Assinar() {
           )}
         </p>
 
-        {identity ? (
+        {knownBrowser ? (
           <div className="mt-8" id="checkout">
             <EmbeddedCheckoutProvider stripe={getStripe()} options={{ fetchClientSecret }}>
               <EmbeddedCheckout />
             </EmbeddedCheckoutProvider>
           </div>
         ) : (
-          <form
-            className="mt-8 max-w-md space-y-4 rounded-2xl border p-6"
-            onSubmit={(e) => {
-              e.preventDefault();
-              // Achado real: o fix anterior só contava dígitos DEPOIS de
-              // tirar tudo que não é número - só isso não bastava, porque
-              // "11999990a00" tem 11 dígitos válidos escondidos ali (a
-              // letra "a" que sobra some no replace), passando pela
-              // checagem mesmo tendo letra misturada de verdade. Agora
-              // primeiro rejeita QUALQUER caractere que não seja dígito
-              // ou formatação comum (espaço, parênteses, hífen, +) -
-              // antes mesmo de contar quantos dígitos sobraram.
-              const allowedCharsOnly = /^[\d\s()+-]+$/.test(form.phone);
-              const phone = form.phone.replace(/\D+/g, "");
-              const validLength = phone.length === 10 || phone.length === 11;
-              if (!allowedCharsOnly || !validLength) {
-                setPhoneError("Confira o número - deve ter DDD + telefone (10 ou 11 dígitos), sem letra.");
-                return;
-              }
-              setPhoneError(null);
-              setIdentity({
-                phone,
-                email: form.email.trim() || undefined,
-                name: form.name.trim() || undefined,
-              });
-            }}
-          >
-            <p className="text-sm text-muted-foreground">
-              Informe o WhatsApp da empresa. É por ele que a extensão libera o Premium.
-            </p>
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome da empresa</Label>
-              <Input
-                id="name"
-                value={form.name}
-                maxLength={120}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              />
+          // Nome e WhatsApp ficam na MESMA tela do checkout, lado a lado -
+          // sem etapa separada. Assim que o WhatsApp fica valido, o
+          // checkout de verdade entra no lugar do aviso cinza sozinho
+          // (useEffect de debounce acima), sem precisar de botao.
+          <div className="mt-8 grid gap-6 md:grid-cols-2">
+            <div className="space-y-4 rounded-2xl border p-6">
+              <p className="text-sm text-muted-foreground">
+                Informe o WhatsApp da empresa. É por ele que a extensão libera o Premium.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome da empresa</Label>
+                <Input
+                  id="name"
+                  value={form.name}
+                  maxLength={120}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">WhatsApp (com DDD)</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  required
+                  maxLength={20}
+                  placeholder="ex: 11 99999-0000"
+                  value={form.phone}
+                  aria-invalid={!!phoneError}
+                  className={phoneError ? "border-red-500 focus-visible:ring-red-500" : undefined}
+                  onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                />
+                {phoneError && <p className="text-sm text-red-600">{phoneError}</p>}
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                value={form.email}
-                maxLength={255}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              />
+
+            <div id="checkout">
+              {identity ? (
+                <EmbeddedCheckoutProvider stripe={getStripe()} options={{ fetchClientSecret }}>
+                  <EmbeddedCheckout />
+                </EmbeddedCheckoutProvider>
+              ) : (
+                <div className="flex h-full min-h-[280px] items-center justify-center rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  Preencha seu WhatsApp ao lado para continuar com o pagamento.
+                </div>
+              )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">WhatsApp (com DDD)</Label>
-              <Input
-                id="phone"
-                type="tel"
-                required
-                maxLength={20}
-                placeholder="ex: 11 99999-0000"
-                value={form.phone}
-                aria-invalid={!!phoneError}
-                className={phoneError ? "border-red-500 focus-visible:ring-red-500" : undefined}
-                onChange={(e) => {
-                  setForm((f) => ({ ...f, phone: e.target.value }));
-                  if (phoneError) setPhoneError(null);
-                }}
-              />
-              {phoneError && <p className="text-sm text-red-600">{phoneError}</p>}
-            </div>
-            <Button type="submit" size="lg" className="w-full">
-              Ir para o pagamento
-            </Button>
-          </form>
+          </div>
         )}
       </div>
     </div>
