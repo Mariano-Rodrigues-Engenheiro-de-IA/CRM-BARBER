@@ -143,7 +143,7 @@ function Assinar() {
             }}
           >
             <p className="text-sm text-muted-foreground">
-              Informe o WhatsApp da empresa. É por ele que a extensão libera o Premium.
+              Informe o WhatsApp da empresa.
             </p>
             <div className="space-y-2">
               <Label htmlFor="name">Nome da empresa</Label>
