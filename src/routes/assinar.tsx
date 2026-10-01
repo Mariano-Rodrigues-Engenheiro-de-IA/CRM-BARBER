@@ -5,6 +5,7 @@ import { getStripe, getStripeEnvironment } from "@/lib/stripe";
 import { createPremiumCheckout } from "@/utils/payments.functions";
 import { PaymentTestModeBanner } from "@/components/payment-test-mode-banner";
 import { PREMIUM_PRICE_LABEL, PROMO_PRICE_LABEL, labelForPlan, type PlanId } from "@/lib/billing";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -50,20 +51,8 @@ type Identity = {
 function Assinar() {
   const [plan, setPlan] = useState<PlanId>("premium_197");
   const [identity, setIdentity] = useState<Identity | null>(null);
-  // true só quando a identidade veio de token/shop já salvo (navegador
-  // conhecido) - nesse caso pula direto pro checkout, sem mostrar
-  // nome/WhatsApp de novo pra quem já é cliente.
-  const [knownBrowser, setKnownBrowser] = useState(false);
-  // Sem tela separada: nome e WhatsApp ficam na MESMA pagina do checkout,
-  // ao mesmo tempo, pedido do Mariano. O checkout so acende quando o
-  // WhatsApp fica valido (nao precisa de botao "continuar" - so digitar).
-  // E-mail sai do formulario: a propria Stripe pergunta isso na tela dela,
-  // sem risco de nome errado (diferente do nome, que puxaria o nome de
-  // quem esta no CARTAO caso a Stripe coletasse - por isso nome continua
-  // aqui, pedido explicitamente pelo Mariano).
-  const [form, setForm] = useState({ name: "", phone: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "" });
   const [phoneError, setPhoneError] = useState<string | null>(null);
-  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -77,62 +66,26 @@ function Assinar() {
       url.searchParams.get("token") ?? (stored && stored.startsWith("ext_") ? stored : undefined);
     const barbershopId =
       url.searchParams.get("shop") ?? localStorage.getItem(SHOP_KEY) ?? undefined;
-    if (token || barbershopId) {
-      setIdentity({ token: token ?? undefined, barbershopId });
-      setKnownBrowser(true);
-    }
+    if (token || barbershopId) setIdentity({ token: token ?? undefined, barbershopId });
   }, []);
 
-  useEffect(() => {
-    if (identity) return; // já identificado (token/shop salvo) - não mexe
-    const allowedCharsOnly = /^[\d\s()+-]+$/.test(form.phone);
-    const digits = form.phone.replace(/\D+/g, "");
-    const validLength = digits.length === 10 || digits.length === 11;
-    if (!form.phone) {
-      setPhoneError(null);
-      return;
-    }
-    if (!allowedCharsOnly || !validLength) {
-      setPhoneError("Confira o número - deve ter DDD + telefone (10 ou 11 dígitos), sem letra.");
-      return;
-    }
-    setPhoneError(null);
-    // Pequena espera pra não disparar o checkout a cada dígito digitado.
-    const t = setTimeout(() => {
-      setIdentity({ phone: digits, name: form.name.trim() || undefined });
-    }, 600);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.phone, identity]);
-
   const fetchClientSecret = async (): Promise<string> => {
-    setCheckoutError(null);
+    const result = await createPremiumCheckout({
+      data: {
+        ...(identity ?? {}),
+        plan,
+        returnUrl: `${window.location.origin}/assinar/retorno?session_id={CHECKOUT_SESSION_ID}`,
+        environment: getStripeEnvironment(),
+      },
+    });
+    if ("error" in result) throw new Error(result.error);
+    if (!result.clientSecret) throw new Error("Checkout indisponível no momento.");
     try {
-      const result = await createPremiumCheckout({
-        data: {
-          ...(identity ?? {}),
-          plan,
-          returnUrl: `${window.location.origin}/assinar/retorno?session_id={CHECKOUT_SESSION_ID}`,
-          environment: getStripeEnvironment(),
-        },
-      });
-      if ("error" in result) throw new Error(result.error);
-      if (!result.clientSecret) throw new Error("Checkout indisponível no momento.");
-      try {
-        localStorage.setItem(SHOP_KEY, result.barbershopId);
-      } catch {
-        /* sem localStorage: so nao lembra na proxima visita, checkout segue normal */
-      }
-      return result.clientSecret;
-    } catch (err) {
-      // Achado real: sem isso, uma falha aqui deixava a area do checkout
-      // completamente em branco, sem nenhuma pista do que aconteceu -
-      // parecia "o codigo nao funciona" quando na verdade so faltava
-      // mostrar o erro. Agora aparece uma mensagem de verdade na tela.
-      const message = err instanceof Error ? err.message : "Não foi possível carregar o checkout.";
-      setCheckoutError(message);
-      throw err;
+      localStorage.setItem(SHOP_KEY, result.barbershopId);
+    } catch {
+      /* sem localStorage: so nao lembra na proxima visita, checkout segue normal */
     }
+    return result.clientSecret;
   };
 
   return (
@@ -155,92 +108,84 @@ function Assinar() {
           )}
         </p>
 
-        {/* DIAGNÓSTICO TEMPORÁRIO, tira depois de achar o problema. Mostra
-            o estado real da tela pro Mariano me copiar e colar, sem precisar
-            abrir o console do navegador. */}
-        <pre className="mt-4 overflow-x-auto rounded-lg border-2 border-yellow-400 bg-yellow-50 p-3 text-[11px] text-yellow-900">
-{JSON.stringify(
-  {
-    knownBrowser,
-    identity,
-    phoneError,
-    checkoutError,
-    form,
-    // Se isso der erro, a chave de pagamento (VITE_PAYMENTS_CLIENT_TOKEN)
-    // nao esta configurada neste ambiente - e essa funcao trava o
-    // desenho da tela ANTES do React conseguir mostrar qualquer coisa,
-    // por isso nada aparecia e nenhum erro vermelho era mostrado.
-    stripeEnv: (() => {
-      try {
-        return getStripeEnvironment();
-      } catch (e) {
-        return `ERRO: ${e instanceof Error ? e.message : String(e)}`;
-      }
-    })(),
-  },
-  null,
-  2,
-)}
-        </pre>
-
-        {knownBrowser ? (
-          <div className="mt-8 min-h-[480px] w-full" id="checkout">
-            {checkoutError && (
-              <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                {checkoutError}
-              </p>
-            )}
+        {identity ? (
+          <div className="mt-8" id="checkout">
             <EmbeddedCheckoutProvider stripe={getStripe()} options={{ fetchClientSecret }}>
               <EmbeddedCheckout />
             </EmbeddedCheckoutProvider>
           </div>
         ) : (
-          // Nome e WhatsApp entram como se fossem os PRIMEIROS campos do
-          // proprio formulario da Stripe - um unico cartao continuo, sem
-          // nenhuma divisoria entre eles e o checkout. Assim que o WhatsApp
-          // fica valido, o checkout de verdade aparece logo abaixo, dentro
-          // do mesmo cartao (useEffect de debounce acima), sem botao.
-          <div className="mx-auto mt-8 max-w-lg rounded-2xl border bg-card p-6 shadow-sm">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome da empresa</Label>
-                <Input
-                  id="name"
-                  value={form.name}
-                  maxLength={120}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">WhatsApp (com DDD)</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  required
-                  maxLength={20}
-                  placeholder="ex: 11 99999-0000"
-                  value={form.phone}
-                  aria-invalid={!!phoneError}
-                  className={phoneError ? "border-red-500 focus-visible:ring-red-500" : undefined}
-                  onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                />
-                {phoneError && <p className="text-sm text-red-600">{phoneError}</p>}
-              </div>
+          <form
+            className="mt-8 max-w-md space-y-4 rounded-2xl border p-6"
+            onSubmit={(e) => {
+              e.preventDefault();
+              // Achado real: o fix anterior só contava dígitos DEPOIS de
+              // tirar tudo que não é número - só isso não bastava, porque
+              // "11999990a00" tem 11 dígitos válidos escondidos ali (a
+              // letra "a" que sobra some no replace), passando pela
+              // checagem mesmo tendo letra misturada de verdade. Agora
+              // primeiro rejeita QUALQUER caractere que não seja dígito
+              // ou formatação comum (espaço, parênteses, hífen, +) -
+              // antes mesmo de contar quantos dígitos sobraram.
+              const allowedCharsOnly = /^[\d\s()+-]+$/.test(form.phone);
+              const phone = form.phone.replace(/\D+/g, "");
+              const validLength = phone.length === 10 || phone.length === 11;
+              if (!allowedCharsOnly || !validLength) {
+                setPhoneError("Confira o número - deve ter DDD + telefone (10 ou 11 dígitos), sem letra.");
+                return;
+              }
+              setPhoneError(null);
+              setIdentity({
+                phone,
+                email: form.email.trim() || undefined,
+                name: form.name.trim() || undefined,
+              });
+            }}
+          >
+            <p className="text-sm text-muted-foreground">
+              Informe o WhatsApp da empresa. É por ele que a extensão libera o Premium.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome da empresa</Label>
+              <Input
+                id="name"
+                value={form.name}
+                maxLength={120}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              />
             </div>
-
-            <div id="checkout" className={identity ? "mt-4 min-h-[480px] w-full" : undefined}>
-              {checkoutError && (
-                <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                  {checkoutError}
-                </p>
-              )}
-              {identity && (
-                <EmbeddedCheckoutProvider stripe={getStripe()} options={{ fetchClientSecret }}>
-                  <EmbeddedCheckout />
-                </EmbeddedCheckoutProvider>
-              )}
+            <div className="space-y-2">
+              <Label htmlFor="email">E-mail</Label>
+              <Input
+                id="email"
+                type="email"
+                value={form.email}
+                maxLength={255}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              />
             </div>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">WhatsApp (com DDD)</Label>
+              <Input
+                id="phone"
+                type="tel"
+                required
+                maxLength={20}
+                placeholder="ex: 11 99999-0000"
+                value={form.phone}
+                aria-invalid={!!phoneError}
+                className={phoneError ? "border-red-500 focus-visible:ring-red-500" : undefined}
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, phone: e.target.value }));
+                  if (phoneError) setPhoneError(null);
+                }}
+              />
+              {phoneError && <p className="text-sm text-red-600">{phoneError}</p>}
+            </div>
+            <Button type="submit" size="lg" className="w-full">
+              Ir para o pagamento
+            </Button>
+          </form>
         )}
       </div>
     </div>
