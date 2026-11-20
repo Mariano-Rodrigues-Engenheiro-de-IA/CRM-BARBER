@@ -433,6 +433,7 @@ export const Route = createFileRoute("/api/public/extension/campaigns")({
               template_header_media_path: template_header_media_path ?? null,
               template_carousel_media_paths: template_carousel_media_paths ?? null,
               template_body_params: nameValue ? [nameValue] : null,
+              template_body_param_names: nameValue && nameSource ? [nameSource] : null,
               status: "pending" as const,
               scheduled_for: new Date(cursor).toISOString(),
               expires_at: expiresAt,

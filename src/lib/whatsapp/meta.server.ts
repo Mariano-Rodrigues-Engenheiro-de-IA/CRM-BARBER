@@ -90,6 +90,7 @@ export const metaProvider: WhatsAppProvider = {
     template_name,
     language_code,
     body_params,
+    body_param_names,
     header_image_url,
     carousel_card_image_urls,
   }): Promise<SendResult> {
@@ -104,6 +105,7 @@ export const metaProvider: WhatsAppProvider = {
       template_name,
       language_code,
       body_params,
+      body_param_names,
       header_image_url,
       carousel_card_image_urls,
     });

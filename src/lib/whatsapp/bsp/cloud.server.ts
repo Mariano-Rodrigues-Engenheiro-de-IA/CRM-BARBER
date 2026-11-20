@@ -542,6 +542,7 @@ export const cloudAdapter: BspAdapter = {
     template_name,
     language_code,
     body_params,
+    body_param_names,
     header_image_url,
     carousel_card_image_urls,
   }): Promise<SendResult> {
@@ -563,7 +564,13 @@ export const cloudAdapter: BspAdapter = {
       if (body_params && body_params.length > 0) {
         components.push({
           type: "body",
-          parameters: body_params.map((text) => ({ type: "text", text })),
+          // Modelos criados com parameter_format "named" exigem
+          // parameter_name em cada parâmetro do corpo; sem nomes (jobs
+          // antigos), segue posicional como antes.
+          parameters: body_params.map((text, i) => {
+            const paramName = body_param_names?.[i];
+            return paramName ? { type: "text", parameter_name: paramName, text } : { type: "text", text };
+          }),
         });
       }
       if (carousel_card_image_urls && carousel_card_image_urls.length > 0) {
@@ -595,18 +602,9 @@ export const cloudAdapter: BspAdapter = {
       });
       const json = (await res.json().catch(() => ({}))) as Json;
       if (!res.ok) {
-        // Diagnóstico temporário: inclui um "raio-x" do token realmente
-        // usado nessa chamada (início/fim/tamanho, nunca o valor
-        // completo) — para confirmar, sem depender de logs de servidor,
-        // se o valor que chega até aqui bate com o que está salvo no
-        // banco, já que testes manuais com o mesmo token salvo passam,
-        // mas o sistema real reporta token inválido (code=190).
-        const tokenFingerprint = access_token
-          ? `len=${access_token.length} start=${access_token.slice(0, 8)} end=${access_token.slice(-8)}`
-          : "access_token vazio/undefined";
         return {
           ok: false,
-          error: `${extractErrorMessage(json, res.status)} | token_usado[${tokenFingerprint}] | to_usado[${toE164BR(to)}] | phone_number_id[${phone_number_id}]`,
+          error: `${extractErrorMessage(json, res.status)} | to_usado[${toE164BR(to)}] | phone_number_id[${phone_number_id}]`,
           retryable: res.status === 429 || res.status >= 500,
         };
       }

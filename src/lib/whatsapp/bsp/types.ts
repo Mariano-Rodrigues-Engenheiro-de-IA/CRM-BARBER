@@ -82,6 +82,9 @@ export interface BspAdapter {
     language_code: string;
     /** Textos das variáveis {{1}}, {{2}}... do corpo do template, na ordem. */
     body_params?: string[];
+    /** Nomes das variáveis do corpo (modelo com parameter_format "named"),
+     * na mesma ordem de body_params. Vazio = parâmetros posicionais. */
+    body_param_names?: string[];
     // URL (assinada, temporária) da imagem de cabeçalho do template — a
     // Meta exige isso a CADA envio quando o modelo tem cabeçalho de
     // imagem (não fica salvo no modelo aprovado em si).
