@@ -1772,6 +1772,7 @@ export type Database = {
           scheduled_for: string
           sent_at: string | null
           status: string
+          template_body_param_names: string[] | null
           template_body_params: string[] | null
           template_carousel_media_paths: string[] | null
           template_header_media_path: string | null
@@ -1802,6 +1803,7 @@ export type Database = {
           scheduled_for?: string
           sent_at?: string | null
           status?: string
+          template_body_param_names?: string[] | null
           template_body_params?: string[] | null
           template_carousel_media_paths?: string[] | null
           template_header_media_path?: string | null
@@ -1832,6 +1834,7 @@ export type Database = {
           scheduled_for?: string
           sent_at?: string | null
           status?: string
+          template_body_param_names?: string[] | null
           template_body_params?: string[] | null
           template_carousel_media_paths?: string[] | null
           template_header_media_path?: string | null
