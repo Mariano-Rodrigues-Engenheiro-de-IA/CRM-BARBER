@@ -1,0 +1,1 @@
+ALTER TABLE public.message_jobs ADD COLUMN IF NOT EXISTS template_body_param_names text[];
